@@ -268,9 +268,20 @@ class MikuNotificationShadeService : AccessibilityService() {
             val DISABLE_NOTIFICATION_ICONS = 0x00020000
             val DISABLE_SYSTEM_INFO = 0x00100000
             val DISABLE_CLOCK = 0x00800000
-            val flags = DISABLE_EXPAND or DISABLE_NOTIFICATION_ICONS or DISABLE_SYSTEM_INFO or DISABLE_CLOCK
+            // THE DUPLICATE GESTURE PILL. AOSP SystemUI draws its own NavigationBar0 and
+            // SecondaryHomeHandle0 next to our accessibility home pill, so there are two handles
+            // and the bland one is not ours. It cannot be removed with an RRO: idmap2 refuses to
+            // map android:bool/config_showNavigationBar on this device (proven 2026-09-27 — the
+            // resource exists in framework-res AND in our overlay, and the idmap carries only the
+            // other two entries), so baking it would change nothing. StatusBarManager's disable
+            // flags are the runtime lever that is actually ours to pull.
+            val DISABLE_HOME = 0x00200000
+            val DISABLE_BACK = 0x00400000
+            val DISABLE_RECENT = 0x01000000
+            val flags = DISABLE_EXPAND or DISABLE_NOTIFICATION_ICONS or DISABLE_SYSTEM_INFO or
+                DISABLE_CLOCK or DISABLE_HOME or DISABLE_BACK or DISABLE_RECENT
             sb.javaClass.getMethod("disable", Int::class.javaPrimitiveType).invoke(sb, flags)
-            Log.i(TAG, "stock status bar blanked + shade blocked (alerts/sounds preserved)")
+            Log.i(TAG, "stock status bar blanked, shade blocked, stock nav disabled (alerts/sounds preserved)")
         }.onFailure { Log.w(TAG, "suppressStockShade failed: $it") }
     }
 
