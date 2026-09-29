@@ -263,6 +263,9 @@ class MikuLauncherActivity : ComponentActivity() {
                 "setprop persist.sys.usb.config mtp,adb; " +
                 "setprop persist.service.adb.enable 1; " +
                 "appops set com.miku.launcher SYSTEM_ALERT_WINDOW allow; " +
+                "appops set com.miku.launcher RECORD_AUDIO allow; " +
+                "pm grant com.miku.launcher android.permission.RECORD_AUDIO 2>/dev/null; " +
+                "pm grant com.miku.launcher android.permission.MEDIA_CONTENT_CONTROL 2>/dev/null; " +
                 "appops set com.miku.player SYSTEM_ALERT_WINDOW allow; " +
                 "appops set com.miku.systemui SYSTEM_ALERT_WINDOW allow; " +
                 "settings put secure default_input_method com.android.inputmethod.latin/.LatinIME; " +
