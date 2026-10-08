@@ -212,10 +212,6 @@ object MikuHardwareGestureEngine {
         // Bumpy Tactile Feedback
         playBumpyLikeTexture(context)
 
-        // Pulsar LED Flash
-        if (isNowLiked) {
-            PulsarLight.indicateHearted(context)
-        }
 
         // Display Floating HUD
         showHeartToast(isLiked = isNowLiked, title = title, artist = artist)

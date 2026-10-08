@@ -192,15 +192,6 @@ fun MikuSettingsScreen(onBack: () -> Unit) {
                 onClick = { ctx.startActivity(Intent(ctx, HardwareSettingsActivity::class.java)) }
             ),
             SettingsCategoryItem(
-                id = "pulsar",
-                title = "Pulsar RGB Lighting",
-                subtitle = "SGM31324 PWM Breathing, Bitrate BPM Sync & Charging FX",
-                icon = Icons.Default.Lightbulb,
-                badge = "RGB PWM",
-                accentColor = MikuNeonPink,
-                onClick = { ctx.startActivity(Intent(ctx, PulsarSettingsActivity::class.java)) }
-            ),
-            SettingsCategoryItem(
                 id = "fn_lock",
                 title = "Hardware Keys & Wheel",
                 subtitle = "Physical Fn Switch, Rotary Volume Knob & Key Routing",
