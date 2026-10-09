@@ -49,6 +49,19 @@ public class FmReceiverJNI {
     public static int setV4L2RadioFrequency(int freqV4L2) { throw new RuntimeException("stub"); }
 
     /**
+     * The Si4705's own receive volume. Present in the device jar; stock FM2 never calls it.
+     *
+     * The scale is not documented anywhere available. The Si4705 part takes 0..63 for RX volume,
+     * so that is the assumption, and the debug hook sweeps it rather than trusting the guess.
+     */
+    public static int setV4L2RadioFmVolume(int volume) { throw new RuntimeException("stub"); }
+
+    /** Stock toggles this 0/1 and re-issues the frequency right after. Meaning undocumented. */
+    public static int setV4L2RadioChannelMode(int mode) { throw new RuntimeException("stub"); }
+
+    public static int getV4L2RadioChannelMode() { throw new RuntimeException("stub"); }
+
+    /**
      * Signal quality, read straight from the tuner. Stock FM2 labels the elements, in order:
      * [0] signal, [1] rssi, [2] snr, [3] multipath, [4] freqOffset, [5] freq, [6] valid.
      * Length is not documented anywhere; treat anything past the end as unavailable.

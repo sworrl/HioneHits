@@ -170,6 +170,31 @@ fun FmSettings(st: FmState) {
         )
 
         Spacer(Modifier.height(12.dp))
+        Text("CHANNEL GRID", color = MikuTextSecondary, fontSize = 7.5.sp, fontFamily = AudiowideFont)
+        Spacer(Modifier.height(4.dp))
+        FmChannelGrid.entries.forEach { g ->
+            val sel = g == st.channelGrid
+            Row(
+                Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp))
+                    .background(if (sel) MikuCyan.copy(alpha = 0.2f) else Color.Transparent)
+                    .clickable { FmRadioManager.setChannelGrid(g) }
+                    .padding(horizontal = 8.dp, vertical = 6.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(g.label, color = if (sel) MikuCyan else Color.White,
+                     fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                Spacer(Modifier.weight(1f))
+                Text(g.detail, color = MikuTextSecondary, fontSize = 7.5.sp)
+            }
+        }
+        Spacer(Modifier.height(3.dp))
+        SheetNote(
+            "North America puts every FM channel on an odd tenth, 200 kHz apart. Most of the " +
+                "rest of the world uses every tenth at 100 kHz. Automatic follows the region " +
+                "above and is right unless you are chasing something unusual."
+        )
+
+        Spacer(Modifier.height(12.dp))
         Text("SEEK SENSITIVITY", color = MikuTextSecondary, fontSize = 7.5.sp, fontFamily = AudiowideFont)
         Spacer(Modifier.height(4.dp))
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(5.dp)) {
@@ -264,8 +289,18 @@ fun FmDiagnosticsPanel(st: FmState) {
         DiagRow("Driver mute", when (d.driverMuted) { true -> "muted"; false -> "open"; null -> "—" })
         DiagRow("App mute", if (st.isMuted) "muted" else "open")
         DiagRow("PCM level", if (st.isPowerOn) String.format(Locale.US, "%.4f RMS", st.audioLevel) else "—")
+        DiagRow("Capture framing", when (st.captureFraming) {
+            true -> "vendor 6-byte frames, decoded to ${FmCaptureFrame.DECODED_RATE_HZ / 1000} kHz mono"
+            false -> "plain 16-bit PCM as advertised"
+            null -> "—"
+        })
+        DiagRow("Spectrum range", "60 Hz to ${st.spectrumTopHz} Hz")
         Spacer(Modifier.height(8.dp))
-        DiagRow("RSSI", s.rssi?.toString() ?: st.rssi?.toString() ?: "—")
+        // Two tuners, read separately. Only the one with an antenna will move with frequency.
+        DiagRow("RSSI · Si4705 (radio0)", d.rssiSi4705?.toString() ?: "—")
+        DiagRow("RSSI · Qualcomm (HCI)", d.rssiQualcomm?.toString() ?: "—")
+        DiagRow("SINR · Qualcomm (HCI)", d.sinrQualcomm?.toString() ?: "—")
+        DiagRow("RSSI in use", s.rssi?.toString() ?: st.rssi?.toString() ?: "—")
         DiagRow("SNR", s.snr?.toString() ?: "—")
         DiagRow("Multipath", s.multipath?.toString() ?: "—")
         DiagRow("Frequency offset", s.freqOffset?.toString() ?: "—")
@@ -304,8 +339,8 @@ fun ColumnScope.FmKeypad(st: FmState, onTuned: () -> Unit) {
         val mhzValue = entry.toDoubleOrNull() ?: return
         val khz = Math.round(mhzValue * 1000).toInt()
         if (khz in st.band.lowKHz..st.band.highKHz) {
-            val step = st.band.stepKHz
-            FmRadioManager.tune(((khz + step / 2) / step) * step)
+            // Engine snaps, using the band-anchored grid. Rounding here from zero was the bug.
+            FmRadioManager.tune(khz)
             onTuned()
         }
     }

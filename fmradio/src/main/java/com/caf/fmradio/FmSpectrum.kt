@@ -64,6 +64,9 @@ fun RadioWaterfallSpectrum(
     isHardwareOnline: Boolean,
     hardwareError: String?,
     spectrum: FloatArray,
+    signalHistory: FloatArray,
+    bandProfile: FloatArray,
+    bandHistory: List<FloatArray>,
     favorites: List<Int>,
     scanHits: List<Int>,
     onTuneFreq: (Int) -> Unit,
@@ -76,15 +79,23 @@ fun RadioWaterfallSpectrum(
         else List(rowCount) { FloatArray(binCount) }
     }
     val live = if (spectrum.size == binCount) spectrum else FloatArray(binCount)
+    // No capture means no spectrum. The panel says so rather than drawing a flat line that
+    // could be read as "the radio is silent": on a wired route this device does not expose the
+    // tuner audio to the app at all, so there is nothing here to measure.
+    val hasAudio = spectrum.size == binCount
+    // A band sweep gives RSSI per channel across the whole band, which is the display this
+    // panel wants: x is already frequency, so the sweep drops straight onto the same axis as
+    // the tuning strip, the presets and the marker.
+    val hasBand = bandProfile.isNotEmpty()
 
     val low = band.lowKHz.toFloat()
     val span = (band.highKHz - band.lowKHz).toFloat()
     val step = band.stepKHz
 
-    fun freqAt(fracX: Float): Int {
-        val target = (low + fracX.coerceIn(0f, 1f) * span).roundToInt()
-        return ((target + step / 2) / step) * step
-    }
+    // No rounding here. Snapping belongs to the engine, which anchors the grid to the band's
+    // low limit; doing it here as "nearest multiple of step" rounded from zero, which on a
+    // 200 kHz grid can only ever produce even tenths and made 100.1 untunable.
+    fun freqAt(fracX: Float): Int = (low + fracX.coerceIn(0f, 1f) * span).roundToInt()
 
     Box(
         Modifier
@@ -105,7 +116,7 @@ fun RadioWaterfallSpectrum(
         Canvas(Modifier.fillMaxSize()) {
             val w = size.width
             val h = size.height
-            val fftHeight = h * 0.40f
+            val fftHeight = h * 0.42f
             val scaleHeight = 10.dp.toPx()
             val waterfallHeight = h * 0.60f - scaleHeight
             val rowHeight = waterfallHeight / rowCount
@@ -113,19 +124,65 @@ fun RadioWaterfallSpectrum(
 
             fun xOf(khz: Int) = ((khz - low) / span).coerceIn(0f, 1f) * w
 
-            for (r in 0 until rowCount) {
-                val y = fftHeight + r * rowHeight
-                val row = rows.getOrNull(r)
-                for (b in 0 until binCount) {
-                    val mag = row?.getOrNull(b) ?: 0f
-                    val color = when {
-                        mag < 0.20f -> Color(0xFF031622)
-                        mag < 0.45f -> Color(0xFF004D5A)
-                        mag < 0.70f -> Color(0xFF00B4D8)
-                        mag < 0.85f -> Color(0xFF00E5FF)
-                        else -> Color(0xFFFF4081)
+            // Horizontal reference lines across the trace area. An SDR panel without a grid is
+            // a pretty shape; with one you can compare two peaks at a glance.
+            for (g in 1..3) {
+                val gy = fftHeight * g / 4f
+                drawLine(MikuTeal.copy(alpha = 0.10f), Offset(0f, gy), Offset(w, gy), strokeWidth = 1f)
+            }
+
+            // The tuned channel, as a block the width of one channel rather than a bare line,
+            // so you can see what the receiver is actually sitting on relative to its neighbours.
+            val halfCh = (step / 2f / span) * w
+            val cx = xOf(currentFreqKHz)
+            drawRect(
+                MikuTeal.copy(alpha = 0.16f),
+                Offset(cx - halfCh, 0f), Size(halfCh * 2f, fftHeight)
+            )
+
+            if (hasAudio) {
+                // Audio spectrum history, which only exists on Bluetooth where the capture is
+                // genuinely the audio path.
+                for (r in 0 until rowCount) {
+                    val y = fftHeight + r * rowHeight
+                    val row = rows.getOrNull(r)
+                    for (b in 0 until binCount) {
+                        drawRect(FmWaterfallPalette.lut(row?.getOrNull(b) ?: 0f),
+                                 Offset(b * binWidth, y), Size(binWidth + 0.5f, rowHeight + 0.5f))
                     }
-                    drawRect(color, Offset(b * binWidth, y), Size(binWidth + 0.5f, rowHeight + 0.5f))
+                }
+            } else if (hasBand) {
+                // Band waterfall: each row is one sweep, x is frequency, newest at the top.
+                // Adjacent signals show up as vertical streaks you can tap straight onto.
+                // Capped hard: each row is one drawRect per channel, so 24 sweeps across a US
+                // band is ~2,500 rects every frame. Twelve is plenty of history to read.
+                val rows = bandHistory.take(12)
+                val rh = if (rows.isEmpty()) 0f else waterfallHeight / rows.size.coerceAtLeast(1)
+                for (r in rows.indices) {
+                    val prof = rows[r]
+                    if (prof.isEmpty()) continue
+                    val cw = w / prof.size
+                    val y = fftHeight + r * rh
+                    for (i in prof.indices) {
+                        drawRect(FmWaterfallPalette.lut(prof[i]),
+                                 Offset(i * cw, y), Size(cw + 0.5f, rh + 0.5f))
+                    }
+                }
+            } else {
+                // Nothing swept yet: one column per poll of the tuned frequency's own RSSI, so
+                // the panel still responds while you aim the wire.
+                val cols = signalHistory.size
+                if (cols > 1) {
+                    val colW = w / cols
+                    for (i in 0 until cols) {
+                        val v = signalHistory[i].coerceIn(0f, 1f)
+                        val barH = v * (waterfallHeight - 2f)
+                        drawRect(
+                            FmWaterfallPalette.lut(v),
+                            Offset(w - (i + 1) * colW, fftHeight + (waterfallHeight - barH)),
+                            Size(colW + 0.5f, barH)
+                        )
+                    }
                 }
             }
 
@@ -149,11 +206,32 @@ fun RadioWaterfallSpectrum(
             }
 
             val fftPath = Path()
-            val dx = w / (binCount - 1)
-            for (i in 0 until binCount) {
-                val x = i * dx
-                val y = fftHeight - (live[i].coerceIn(0f, 1f) * (fftHeight - 6f))
-                if (i == 0) fftPath.moveTo(x, y) else fftPath.lineTo(x, y)
+            if (hasAudio) {
+                val dx = w / (binCount - 1)
+                for (i in 0 until binCount) {
+                    val x = i * dx
+                    val y = fftHeight - (live[i].coerceIn(0f, 1f) * (fftHeight - 6f))
+                    if (i == 0) fftPath.moveTo(x, y) else fftPath.lineTo(x, y)
+                }
+            } else if (hasBand) {
+                // Live trace of the newest sweep: RSSI against frequency, so peaks sit directly
+                // above the frequency that produced them and can be tapped.
+                val n = bandProfile.size
+                val dx = w / (n - 1).coerceAtLeast(1)
+                for (i in 0 until n) {
+                    val y = fftHeight - (bandProfile[i].coerceIn(0f, 1f) * (fftHeight - 6f))
+                    if (i == 0) fftPath.moveTo(0f, y) else fftPath.lineTo(i * dx, y)
+                }
+            } else {
+                val n = signalHistory.size
+                if (n > 1) {
+                    val dx = w / (n - 1)
+                    for (i in 0 until n) {
+                        val x = w - i * dx
+                        val y = fftHeight - (signalHistory[i].coerceIn(0f, 1f) * (fftHeight - 6f))
+                        if (i == 0) fftPath.moveTo(x, y) else fftPath.lineTo(x, y)
+                    }
+                }
             }
             val fillPath = Path().apply {
                 addPath(fftPath); lineTo(w, fftHeight); lineTo(0f, fftHeight); close()
@@ -173,7 +251,11 @@ fun RadioWaterfallSpectrum(
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Text(
-                "LIVE AUDIO SPECTRUM · FM PCM 60 Hz–15 kHz",
+                when {
+                    hasAudio -> "LIVE AUDIO SPECTRUM · FM PCM 60 Hz–15 kHz"
+                    hasBand -> "BAND SCAN · RSSI vs FREQUENCY · TAP A PEAK TO TUNE"
+                    else -> "SIGNAL · ${band.lowKHz / 1000}–${band.highKHz / 1000} MHz · SWEEP TO MAP THE BAND"
+                },
                 color = MikuTeal.copy(alpha = 0.85f), fontSize = 7.5.sp, fontWeight = FontWeight.Bold
             )
             Text(

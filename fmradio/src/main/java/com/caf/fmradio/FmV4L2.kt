@@ -50,6 +50,33 @@ object FmV4L2 {
     fun setTunedKHz(khz: Int): Boolean =
         guard("setV4L2RadioFrequency") { FmReceiverJNI.setV4L2RadioFrequency(khz * 16) } != null
 
+    /**
+     * Set the tuner part's own receive volume.
+     *
+     * Worth a look because of what the symptom is: the HAL enables the FM codec port and the
+     * output is constant noise that does not change with frequency, which is what an enabled
+     * port with nothing driving it sounds like. If the Si4705's output is sitting at zero then
+     * everything upstream can be correct and still produce exactly that.
+     *
+     * Range is a guess (the part takes 0..63), so the debug hook sweeps it rather than
+     * trusting the guess.
+     */
+    fun setRadioVolume(v: Int): Boolean =
+        guard("setV4L2RadioFmVolume") { FmReceiverJNI.setV4L2RadioFmVolume(v) } != null
+
+    /**
+     * The driver's channel-mode control. Stock toggles it between 0 and 1 and re-issues the
+     * frequency straight afterwards, which is the only JNI entry point stock uses that we did
+     * not. What it means on HiBy's driver is undocumented: mono/stereo is the obvious reading,
+     * but on a part whose digital output has to be configured before it drives the I2S bus at
+     * all, an audio-mode control is worth trying. Exposed through the debug hook so it can be
+     * swept rather than guessed.
+     */
+    fun setChannelMode(mode: Int): Boolean =
+        guard("setV4L2RadioChannelMode") { FmReceiverJNI.setV4L2RadioChannelMode(mode) } != null
+
+    fun channelMode(): Int? = guard("getV4L2RadioChannelMode") { FmReceiverJNI.getV4L2RadioChannelMode() }
+
     /** Frequency the driver believes it is on, in kHz. V4L2 counts in 1/16 kHz units. */
     fun tunedKHz(): Int? = guard("getV4L2RadioFrequency") {
         val raw = FmReceiverJNI.getV4L2RadioFrequency()

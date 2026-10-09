@@ -46,12 +46,26 @@ data class FmState(
     val isScanning: Boolean = false,
     val scanProgress: Float = 0f,
     val scanResults: List<FmScanHit> = emptyList(),
-    val volumeIndex: Int = 0,
-    val volumeMax: Int = 15,
+    val fmVolumeLevel: Int = 80,
     val afJump: Boolean = false,
     val softMute: Boolean = true,
     val seekSensitivity: Int = 1,
     val audioLevel: Float = 0f,
+    val captureFraming: Boolean? = null,
+    val spectrumTopHz: Int = 15000,
+    val signalHistory: FloatArray = FloatArray(0),
+    /** RSSI per channel from the newest band sweep; this is what the waterfall draws. */
+    val bandProfile: FloatArray = FloatArray(0),
+    val bandHistory: List<FloatArray> = emptyList(),
+    val rdsSupported: Boolean? = null,
+    val rdsArtist: String? = null,
+    val rdsTitle: String? = null,
+    val rdsGroups: Int = 0,
+    val channelGrid: FmChannelGrid = FmChannelGrid.AUTO,
+    val nearbyStations: List<FmStationCatalogue.Station> = emptyList(),
+    val tunedStation: FmStationCatalogue.Station? = null,
+    val listenerPlace: Pair<Double, Double>? = null,
+    val catalogueSize: Int = 0,
     val diagnostics: FmDiagnostics = FmDiagnostics(),
     val spectrum: FloatArray = FloatArray(0),
 ) {
@@ -73,10 +87,17 @@ data class FmState(
             programmeId == other.programmeId && rdsAvailable == other.rdsAvailable &&
             isHeadsetPlugged == other.isHeadsetPlugged && favorites == other.favorites &&
             isScanning == other.isScanning && scanProgress == other.scanProgress &&
-            scanResults == other.scanResults && volumeIndex == other.volumeIndex &&
-            volumeMax == other.volumeMax && afJump == other.afJump && softMute == other.softMute &&
+            scanResults == other.scanResults && fmVolumeLevel == other.fmVolumeLevel &&
+            afJump == other.afJump && softMute == other.softMute &&
             seekSensitivity == other.seekSensitivity && audioLevel == other.audioLevel &&
-            diagnostics == other.diagnostics && spectrum === other.spectrum
+            diagnostics == other.diagnostics && captureFraming == other.captureFraming &&
+            spectrumTopHz == other.spectrumTopHz && spectrum === other.spectrum &&
+            signalHistory === other.signalHistory && bandProfile === other.bandProfile &&
+            bandHistory === other.bandHistory && rdsSupported == other.rdsSupported &&
+            rdsArtist == other.rdsArtist && rdsTitle == other.rdsTitle &&
+            rdsGroups == other.rdsGroups && channelGrid == other.channelGrid &&
+            nearbyStations === other.nearbyStations && tunedStation == other.tunedStation &&
+            listenerPlace == other.listenerPlace && catalogueSize == other.catalogueSize
     }
 
     override fun hashCode(): Int {
@@ -142,6 +163,25 @@ object FmRadioManager {
             launch { eng.band.collect { v -> _state.update { it.copy(band = v) } } }
             launch { eng.spectrum.collect { v -> _state.update { it.copy(spectrum = v) } } }
             launch { eng.audioLevel.collect { v -> _state.update { it.copy(audioLevel = v) } } }
+            launch { eng.captureFraming.collect { v -> _state.update { it.copy(captureFraming = v) } } }
+            launch { eng.spectrumTopHz.collect { v -> _state.update { it.copy(spectrumTopHz = v) } } }
+            launch { eng.signalHistory.collect { v -> _state.update { it.copy(signalHistory = v) } } }
+            launch { eng.bandProfile.collect { v -> _state.update { it.copy(bandProfile = v) } } }
+            launch { eng.bandHistory.collect { v -> _state.update { it.copy(bandHistory = v) } } }
+            launch { eng.rdsSupported.collect { v -> _state.update { it.copy(rdsSupported = v) } } }
+            launch { eng.rdsArtist.collect { v -> _state.update { it.copy(rdsArtist = v) } } }
+            launch { eng.rdsTitle.collect { v -> _state.update { it.copy(rdsTitle = v) } } }
+            launch { eng.rdsGroups.collect { v -> _state.update { it.copy(rdsGroups = v) } } }
+            launch { eng.channelGrid.collect { v -> _state.update { it.copy(channelGrid = v) } } }
+            launch { eng.nearbyStations.collect { v -> _state.update { it.copy(nearbyStations = v) } } }
+            launch { eng.tunedStation.collect { v -> _state.update { it.copy(tunedStation = v) } } }
+            launch { eng.listenerPlace.collect { v -> _state.update { it.copy(listenerPlace = v) } } }
+            launch { eng.catalogueSize.collect { v -> _state.update { it.copy(catalogueSize = v) } } }
+            // The position arrives asynchronously from MikuLocationFusion, so ask again on a
+            // slow tick until it lands, then only when it has moved.
+            launch {
+                while (true) { eng.refreshNearby(); delay(45_000) }
+            }
             launch { eng.currentFrequencyKHz.collect { v -> _state.update { it.copy(frequencyKHz = v) } } }
             launch { eng.isStereo.collect { v -> _state.update { it.copy(isStereo = v) } } }
             launch { eng.stereoRequested.collect { v -> _state.update { it.copy(stereoRequested = v) } } }
@@ -157,8 +197,7 @@ object FmRadioManager {
             launch { eng.isScanning.collect { v -> _state.update { it.copy(isScanning = v) } } }
             launch { eng.scanProgress.collect { v -> _state.update { it.copy(scanProgress = v) } } }
             launch { eng.scanResults.collect { v -> _state.update { it.copy(scanResults = v) } } }
-            launch { eng.volumeIndex.collect { v -> _state.update { it.copy(volumeIndex = v) } } }
-            launch { eng.volumeMax.collect { v -> _state.update { it.copy(volumeMax = v) } } }
+            launch { eng.fmVolumeLevel.collect { v -> _state.update { it.copy(fmVolumeLevel = v) } } }
             launch { eng.afJumpEnabled.collect { v -> _state.update { it.copy(afJump = v) } } }
             launch { eng.softMuteEnabled.collect { v -> _state.update { it.copy(softMute = v) } } }
             launch { eng.seekSensitivity.collect { v -> _state.update { it.copy(seekSensitivity = v) } } }
@@ -208,10 +247,13 @@ object FmRadioManager {
     fun toggleMute() { engine?.toggleMute() }
     fun setStereo(on: Boolean) { engine?.setStereo(on) }
     fun setBand(plan: FmBandPlan) { engine?.setBand(plan) }
-    fun setVolumeIndex(i: Int) { engine?.setVolumeIndex(i) }
+    fun setFmVolumeLevel(l: Int) { engine?.setFmVolumeLevel(l) }
+    fun nudgeFmVolume(up: Boolean) { engine?.nudgeFmVolume(up) }
     fun setAfJump(on: Boolean) { engine?.setAfJump(on) }
     fun setSoftMute(on: Boolean) { engine?.setSoftMute(on) }
     fun setSeekSensitivity(level: Int) { engine?.setSeekSensitivity(level) }
+    fun setChannelGrid(g: FmChannelGrid) { engine?.setChannelGrid(g) }
+    fun refreshNearby() { engine?.refreshNearby(force = true) }
     fun togglePreset(freqKHz: Int) { engine?.togglePreset(freqKHz) }
 
     /**
@@ -280,7 +322,6 @@ class MikuFMRadioActivity : ComponentActivity() {
 
         // Hardware volume keys should move the radio, so route them at STREAM_MUSIC — which is
         // also the stream the engine's fm_volume tracks.
-        volumeControlStream = AudioManager.STREAM_MUSIC
 
         // Build the engine but do not switch the tuner on behind the user's back: the power
         // button in the UI does that, and the service keeps it on afterwards.
@@ -293,6 +334,25 @@ class MikuFMRadioActivity : ComponentActivity() {
         super.onResume()
         hideSystemBars()
         FmRadioManager.setUiVisible(true)
+    }
+
+    /**
+     * The wheel drives the TUNER's volume here, not the media stream.
+     *
+     * The M500's rotary wheel emits ordinary volume keys. While the tuner is in front of you
+     * those belong to the tuner: its gain is its own now, and letting the wheel move
+     * STREAM_MUSIC instead would change the music volume while appearing to do nothing to the
+     * radio. Consumed so the system HUD does not also appear.
+     */
+    override fun onKeyDown(keyCode: Int, event: android.view.KeyEvent?): Boolean = when (keyCode) {
+        android.view.KeyEvent.KEYCODE_VOLUME_UP -> { FmRadioManager.nudgeFmVolume(true); true }
+        android.view.KeyEvent.KEYCODE_VOLUME_DOWN -> { FmRadioManager.nudgeFmVolume(false); true }
+        else -> super.onKeyDown(keyCode, event)
+    }
+
+    override fun onKeyUp(keyCode: Int, event: android.view.KeyEvent?): Boolean = when (keyCode) {
+        android.view.KeyEvent.KEYCODE_VOLUME_UP, android.view.KeyEvent.KEYCODE_VOLUME_DOWN -> true
+        else -> super.onKeyUp(keyCode, event)
     }
 
     override fun onPause() {
