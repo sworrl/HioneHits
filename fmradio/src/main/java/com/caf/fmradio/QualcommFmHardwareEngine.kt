@@ -183,6 +183,19 @@ class QualcommFmHardwareEngine(private val context: Context) {
         /** Si4705 RX volume is a 6-bit field, so full scale is 63. */
         private const val SI4705_MAX_VOLUME = 63
 
+        /**
+         * The HAL gain stock FM2 sends on this hardware, captured from a live stock session
+         * on 2026-10-09: `fm_volume=0.052481`, which is -25.6 dB.
+         *
+         * It is the only gain this device has ever been heard playing music at, so it is the
+         * default rather than a round number off the taper. On the 48 dB taper used by
+         * applyFmVolume(), level 47 gives 10^((47-100)*0.48/20) = 0.0537, within a quarter of
+         * a dB of it; exact enough that the difference is inaudible and the arithmetic stays
+         * legible in one expression.
+         */
+        private const val STOCK_FM_VOLUME = 0.052481f
+        private const val STOCK_EQUIVALENT_LEVEL = 47
+
         /** Seek sensitivity, CAF's FM_RX_SIGNAL_STRENGTH_* scale. */
         val SENSITIVITY_LABELS = listOf("Weakest", "Weak", "Strong", "Strongest")
     }
@@ -342,7 +355,41 @@ class QualcommFmHardwareEngine(private val context: Context) {
      * The tuner's own volume level, 0..100, persisted and deliberately NOT the media stream.
      * Defaults high: a radio you have just switched on should be audible.
      */
-    val fmVolumeLevel = MutableStateFlow(prefs.getInt("fm_volume", 80).coerceIn(0, 100))
+    /**
+     * The tuner's own level, 0..100. Default [STOCK_EQUIVALENT_LEVEL], not something round.
+     *
+     * 80 was the default until 2026-10-09 and it was a guess off the taper curve. It put
+     * fm_volume at 0.331 against the 0.0525 that stock FM2 sends and that this device was
+     * measured audible at: 16 dB hotter, with the tuner chip driven to full scale at the same
+     * time, which clips a marginal signal into something that sounds like louder static. The
+     * default is now the measured number, and the volume keys go up from there.
+     */
+    val fmVolumeLevel = MutableStateFlow(anchoredStartingLevel())
+
+    /**
+     * The starting level, correcting the bad default exactly once.
+     *
+     * A new default is not enough on a device that has already run the old build: 80 is sitting
+     * in prefs and would survive the fix. So the first time this runs after the change it
+     * overwrites the stored level and records that it has done so. A level the user sets
+     * afterwards is theirs and is never touched again.
+     */
+    private fun anchoredStartingLevel(): Int {
+        if (!prefs.getBoolean("fm_volume_anchored", false)) {
+            val had = prefs.getInt("fm_volume", -1)
+            prefs.edit()
+                .putInt("fm_volume", STOCK_EQUIVALENT_LEVEL)
+                .putBoolean("fm_volume_anchored", true)
+                .apply()
+            if (had >= 0) {
+                Log.i(TAG, "tuner level reset $had -> $STOCK_EQUIVALENT_LEVEL " +
+                    "(the old default drove the HAL 16 dB past the gain this device was " +
+                    "measured audible at)")
+            }
+            return STOCK_EQUIVALENT_LEVEL
+        }
+        return prefs.getInt("fm_volume", STOCK_EQUIVALENT_LEVEL).coerceIn(0, 100)
+    }
 
     /**
      * Live audio spectrum of the FM PCM flowing through the bridge: [SPECTRUM_BINS] log-spaced
@@ -504,6 +551,36 @@ class QualcommFmHardwareEngine(private val context: Context) {
         registerRouteWatcher()
         registerDebugReceiver()
         refreshNearby(force = true)
+        watchPosition()
+    }
+
+    /**
+     * Re-read the local station list when the device's position changes.
+     *
+     * This matters more than it sounds. refreshNearby() used to run once, from init, and the
+     * position is published by a separate daemon that needs a Wi-Fi fix - which lands seconds to
+     * minutes AFTER this app has started. So the one call almost always found nothing, set the
+     * list empty, and never looked again: the quick selector stayed blank forever on a device
+     * that had a full catalogue and a known position sitting right there.
+     *
+     * A content observer on the published keys is the cheap fix. It costs nothing while the
+     * device stands still, because the daemon only writes when it has a better fix, and
+     * refreshNearby() itself ignores a change of less than about a kilometre.
+     *
+     * Not unregistered: this engine is a process-lifetime singleton, so there is no later point
+     * at which it would be correct to stop caring where we are.
+     */
+    private fun watchPosition() {
+        val observer = object : android.database.ContentObserver(null) {
+            override fun onChange(selfChange: Boolean) = refreshNearby()
+        }
+        runCatching {
+            for (key in listOf("miku_loc_lat", "miku_loc_lon")) {
+                context.contentResolver.registerContentObserver(
+                    android.provider.Settings.Global.getUriFor(key), false, observer)
+            }
+            Log.i(TAG, "watching the published position for catalogue refreshes")
+        }.onFailure { Log.w(TAG, "could not watch the position: $it") }
     }
 
     /**
@@ -660,7 +737,11 @@ class QualcommFmHardwareEngine(private val context: Context) {
                 runCatching { rx.enableAFjump(afJumpEnabled.value) }
                 runCatching { rx.setSignalThreshold(seekSensitivity.value) }
                 // The part's own output volume, which nothing else sets.
-                FmV4L2.setRadioVolume(SI4705_MAX_VOLUME)
+                // Deliberately NOT setting the tuner part's own volume here. It used to be
+                // slammed to SI4705_MAX_VOLUME, which stock FM2 never does, and that plus a
+                // 16 dB hotter HAL volume is what turned a weak but listenable station into
+                // static. The driver's own default is the known-good state; the sweep knob on
+                // the debug receiver is still there for deliberately testing the range.
                 rx.registerRdsGroupProcessing(
                     FmReceiver.FM_RX_RDS_GRP_RT_EBL or FmReceiver.FM_RX_RDS_GRP_PS_EBL or
                         FmReceiver.FM_RX_RDS_GRP_AF_EBL or FmReceiver.FM_RX_RDS_GRP_PS_SIMPLE_EBL or
@@ -1341,21 +1422,33 @@ class QualcommFmHardwareEngine(private val context: Context) {
         rdsRunning = true
         FmRdsReader.newStation()
         rdsThread = Thread({
-            val input = FmRdsReader.open()
-            if (input == null) {
+            val fd = FmRdsReader.open()
+            if (fd == null) {
                 rdsSupported.value = false
                 rdsRunning = false
                 return@Thread
             }
             val buf = ByteArray(3 * 64)
             var sawAny = false
+            var quietPolls = 0
             try {
                 while (rdsRunning && isPoweredOn.value) {
-                    val n = try { input.read(buf) } catch (t: Throwable) {
-                        Log.w(TAG, "RDS read failed: ${t.javaClass.simpleName}: ${t.message}"); -1
-                    }
+                    val n = FmRdsReader.read(fd, buf)
                     if (n < 0) break
-                    if (n == 0) { Thread.sleep(120); continue }
+                    if (n == 0) {
+                        // The node is non-blocking, so nothing-yet is the common answer. Give a
+                        // driver that never delivers a bounded run rather than spinning on it
+                        // forever: at 120 ms a tuned station's first group arrives well inside
+                        // this, and silence past it means this driver does not do RDS capture.
+                        if (++quietPolls > 250 && !sawAny) {
+                            Log.i(TAG, "no RDS in 30s on a tuned station; this driver does not " +
+                                "appear to support RDS capture")
+                            break
+                        }
+                        Thread.sleep(120)
+                        continue
+                    }
+                    quietPolls = 0
                     var changed = false
                     var i = 0
                     while (i + 2 < n) {
@@ -1371,7 +1464,7 @@ class QualcommFmHardwareEngine(private val context: Context) {
                     }
                 }
             } finally {
-                runCatching { input.close() }
+                FmRdsReader.close(fd)
                 rdsRunning = false
                 if (!sawAny && rdsSupported.value == null) rdsSupported.value = false
                 Log.i(TAG, "RDS reader stopped (decoded ${FmRdsReader.state.groups} group(s))")

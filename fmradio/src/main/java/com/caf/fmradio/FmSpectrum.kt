@@ -10,6 +10,9 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.offset
+import androidx.compose.ui.unit.Dp
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -46,6 +49,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlin.math.roundToInt
 
+/** Labels any closer together than this are dropped rather than drawn overlapping. */
+private const val MIN_LABEL_GAP_DP = 26f
+/** Hard cap: a crowded band here lists hundreds of stations and none of them would be legible. */
+private const val MAX_BAND_LABELS = 14
+
 /**
  * Top 40 %: live audio spectrum of the FM PCM (log-spaced 60 Hz–15 kHz bins from the engine).
  * Bottom 60 %: waterfall = history of that spectrum. The pink marker and the bottom scale are
@@ -69,6 +77,16 @@ fun RadioWaterfallSpectrum(
     bandHistory: List<FloatArray>,
     favorites: List<Int>,
     scanHits: List<Int>,
+    /**
+     * Stations the catalogue says transmit within reach of where the device actually is.
+     *
+     * This is what separates this from a bar chart: an SDR display names its peaks. The ticks
+     * were anonymous before, so a strong signal at 101.9 told you only that something was
+     * there. These come from FCC records plus the fused position, so the band can be read as
+     * "WVAQ at 12.7 km" rather than "a peak". Best-scoring first; the strongest few get a
+     * label drawn, the rest get a tick, because 281 call signs will not fit on 320 pixels.
+     */
+    cataloguedStations: List<FmStationCatalogue.Station> = emptyList(),
     onTuneFreq: (Int) -> Unit,
 ) {
     val binCount = QualcommFmHardwareEngine.SPECTRUM_BINS
@@ -196,6 +214,15 @@ fun RadioWaterfallSpectrum(
                 drawLine(MikuPink.copy(alpha = 0.9f), Offset(xOf(f), scaleTop),
                     Offset(xOf(f), scaleTop + scaleHeight), strokeWidth = 1.5.dp.toPx())
             }
+            // Catalogue ticks sit UNDER the scan/favourite marks and are dimmer, so a station
+            // the device has actually heard still reads louder than one that is merely listed.
+            // Drawn before the MHz grid for the same reason: the grid is the reference, these
+            // are data, and data should not look like the ruler.
+            cataloguedStations.forEach { st ->
+                val sx = xOf(st.khz)
+                drawLine(MikuTeal.copy(alpha = 0.22f), Offset(sx, scaleTop + scaleHeight * 0.2f),
+                    Offset(sx, scaleTop + scaleHeight), strokeWidth = 1f)
+            }
             val tickStepMHz = if (span > 20000f) 4 else 2
             var mhzTick = ((band.lowKHz / 1000) / tickStepMHz + 1) * tickStepMHz
             while (mhzTick * 1000 <= band.highKHz) {
@@ -244,6 +271,46 @@ fun RadioWaterfallSpectrum(
 
             val markerX = xOf(currentFreqKHz)
             drawLine(MikuPink, Offset(markerX, 0f), Offset(markerX, h), strokeWidth = 2.dp.toPx())
+        }
+
+        // Call signs over the band, which is the difference between a spectrum and a dial you
+        // can read. Laid out in Compose rather than drawn in the Canvas above so the text gets
+        // normal font handling, and capped hard: the catalogue returns a few hundred stations
+        // within reach here and only the strongest handful can be legible across a 320 px band.
+        // Collision is handled by refusing a label that lands within MIN_LABEL_GAP_DP of one
+        // already placed, taking the better-scoring station first, so labels thin out in a
+        // crowded part of the band instead of printing on top of each other.
+        if (cataloguedStations.isNotEmpty()) {
+            BoxWithConstraints(Modifier.fillMaxSize()) {
+                val bandWidth = maxWidth
+                val placed = remember(cataloguedStations, band, bandWidth) {
+                    val out = ArrayList<Pair<FmStationCatalogue.Station, Dp>>()
+                    val minGap = MIN_LABEL_GAP_DP.dp
+                    for (st in cataloguedStations) {
+                        if (st.khz < band.lowKHz || st.khz > band.highKHz) continue
+                        val x = bandWidth * ((st.khz - band.lowKHz).toFloat() / span)
+                        if (out.any { (it.second - x).value.let { d -> if (d < 0) -d else d } < minGap.value }) continue
+                        out.add(st to x)
+                        if (out.size >= MAX_BAND_LABELS) break
+                    }
+                    out
+                }
+                for ((st, x) in placed) {
+                    val tuned = kotlin.math.abs(st.khz - currentFreqKHz) <= 60
+                    Text(
+                        st.call,
+                        color = if (tuned) MikuPink else MikuTeal.copy(alpha = 0.55f),
+                        fontSize = 6.5.sp,
+                        fontWeight = if (tuned) FontWeight.Bold else FontWeight.Normal,
+                        maxLines = 1,
+                        modifier = Modifier
+                            .align(Alignment.BottomStart)
+                            // Nudged left by half a label so the text straddles its own tick
+                            // rather than starting at it and appearing to belong to the next one.
+                            .offset(x = x - 13.dp, y = -1.dp)
+                    )
+                }
+            }
         }
 
         Row(

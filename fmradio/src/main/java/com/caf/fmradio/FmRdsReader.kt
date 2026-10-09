@@ -1,8 +1,10 @@
 package com.caf.fmradio
 
+import android.system.ErrnoException
+import android.system.Os
+import android.system.OsConstants
 import android.util.Log
-import java.io.File
-import java.io.FileInputStream
+import java.io.FileDescriptor
 
 /**
  * RDS decoded from the Si4705, by reading /dev/radio0 directly.
@@ -23,6 +25,19 @@ import java.io.FileInputStream
  * So the decoder below is ordinary RDS group parsing on top of a file read. If the driver does
  * not support RDS capture the read fails or returns nothing, and [available] stays false rather
  * than the UI inventing a station name.
+ *
+ * WHY RAW SYSCALLS AND NOT File/FileInputStream. The vendor's sepolicy grants this app
+ *
+ *     allow vendor_fm_app vendor_fm_radio_device:chr_file { ioctl read write open };
+ *
+ * and nothing else. `getattr` is not in that set, so every call that stats the node is denied:
+ * `File.exists()` returned false and `File.canRead()` returned false for a node that is present,
+ * mode 0666 and perfectly openable, and the reader concluded "/dev/radio0 is not present" and
+ * gave up. That is why RDS looked unsupported on hardware that supports it.
+ *
+ * android.system.Os.open() is a bare openat() and Os.read() a bare read(), which are exactly the
+ * three permissions we do hold. Nothing here may stat the node, so there is no pre-flight check
+ * at all: we open it and let the failure be the answer.
  *
  * Groups handled, which is what a now-playing display needs:
  *   0A/0B  PS, the eight-character station name, and the TA/TP/MS flags
@@ -76,17 +91,48 @@ object FmRdsReader {
     @Volatile var available: Boolean? = null
         private set
 
-    /** Open the node for reading. Returns null with one logged reason if that is not possible. */
-    fun open(): FileInputStream? = try {
-        val f = File(NODE)
-        when {
-            !f.exists() -> { fail("$NODE is not present"); null }
-            !f.canRead() -> { fail("$NODE exists but is not readable by this process"); null }
-            else -> FileInputStream(f)
-        }
+    /**
+     * Open the node for reading, with no stat of any kind. Null with one logged reason on failure.
+     *
+     * O_NONBLOCK so a driver with nothing to deliver returns EAGAIN instead of parking the reader
+     * thread in an uninterruptible read until the next retune.
+     */
+    fun open(): FileDescriptor? = try {
+        Os.open(NODE, OsConstants.O_RDONLY or OsConstants.O_NONBLOCK, 0)
+    } catch (e: ErrnoException) {
+        fail("open($NODE): ${OsConstants.errnoName(e.errno)}" +
+            if (e.errno == OsConstants.EACCES)
+                " - sepolicy allows ioctl/read/write/open on this node but not getattr, so check " +
+                "that nothing in this path stats it"
+            else "")
+        null
     } catch (t: Throwable) {
         fail("${t.javaClass.simpleName}: ${t.message}")
         null
+    }
+
+    /**
+     * One read() into [buf]. Returns the byte count, 0 when the driver has nothing yet, or -1
+     * when the node is done and the reader should stop.
+     *
+     * EAGAIN is the normal quiet case on a non-blocking node and must not end the loop: RDS
+     * arrives a few blocks at a time with gaps, so treating "nothing right now" as end-of-stream
+     * would shut the reader down within milliseconds of a successful open.
+     */
+    fun read(fd: FileDescriptor, buf: ByteArray): Int = try {
+        Os.read(fd, buf, 0, buf.size)
+    } catch (e: ErrnoException) {
+        when (e.errno) {
+            OsConstants.EAGAIN, OsConstants.EINTR -> 0
+            else -> {
+                Log.w(TAG, "RDS read failed: ${OsConstants.errnoName(e.errno)}")
+                -1
+            }
+        }
+    }
+
+    fun close(fd: FileDescriptor) {
+        runCatching { Os.close(fd) }
     }
 
     private fun fail(why: String) {
