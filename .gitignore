@@ -1,7 +1,55 @@
-# Proprietary source — this repo tracks distributable build artifacts only, not source.
-# Miku Music Player is fully owned by Justin Earl / Falcon Technix. Source stays local/private;
-# only minified, obfuscated, encrypted release APKs in minified_apks/ are version-controlled here.
-*
-!minified_apks/
-!minified_apks/**
-!.gitignore
+# Shared work tree ignore rules.
+#
+# READ THIS BEFORE ADDING A BLANKET RULE. Two git repositories share this work tree:
+#   .git     distributable build artifacts (minified_apks/) -- see .git/info/exclude
+#   .gitsrc  the source revision history   -- driven by ./src-history.sh
+# A rule here applies to BOTH, and to every tool that honors .gitignore. This file used to be a
+# bare '*', which hid untracked source from `git status` in .gitsrc (so new files were never
+# offered for commit and several went missing for days) and made ripgrep return no matches for
+# anything in the tree. Keep the rules here specific.
+
+# Build output
+build/
+.gradle/
+.cxx/
+.kotlin/
+captures/
+*.hprof
+
+# IDE
+.idea/
+*.iml
+local.properties
+
+# Signing material and secrets -- never commit these
+*.jks
+*.keystore
+*.pk8
+*.pem
+*.p12
+keystore.properties
+arco.properties
+
+# Distributables (the artifact repo un-ignores minified_apks/ in its own exclude file)
+*.apk
+*.aab
+
+# Python bytecode
+__pycache__/
+*.pyc
+
+# Folded in from .gitsrc-ignore, which was never wired to anything. Git does not read a file by
+# that name: those rules needed to be core.excludesFile or .gitsrc/info/exclude, so every one of
+# them had been inert since it was written. They work from here.
+.gitsrc/
+*.log
+.DS_Store
+
+# 30 MB of packed projectM presets, built from app/src/main/assets/miku_presets. Not tracked in
+# any of the three repos; listed so it stops reading as an untracked file someone should add.
+app/src/main/assets/presets_pack.zip
+
+# One-off patch scripts with hardcoded absolute paths, already applied. Not history material.
+/check_img.py
+/fix_manifest.py
+/patch_gestures.py
