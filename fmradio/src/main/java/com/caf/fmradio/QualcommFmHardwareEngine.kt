@@ -740,12 +740,35 @@ class QualcommFmHardwareEngine(private val context: Context) {
                 runCatching { rx.EnableSoftMute(if (softMuteEnabled.value) 1 else 0) }
                 runCatching { rx.enableAFjump(afJumpEnabled.value) }
                 runCatching { rx.setSignalThreshold(seekSensitivity.value) }
-                // The part's own output volume, which nothing else sets.
-                // Deliberately NOT setting the tuner part's own volume here. It used to be
-                // slammed to SI4705_MAX_VOLUME, which stock FM2 never does, and that plus a
-                // 16 dB hotter HAL volume is what turned a weak but listenable station into
-                // static. The driver's own default is the known-good state; the sweep knob on
-                // the debug receiver is still there for deliberately testing the range.
+                // THE DIGITAL OUTPUT FORMAT. This is the one that makes the difference
+                // between music and noise, and it was missing.
+                //
+                // The Si4705 driver's start sequence writes DIGITAL_OUTPUT_FORMAT = 0x0006,
+                // which by AN332 is I2S, OMONO=1, OSIZE=24-bit. Nothing else writes it. The
+                // only thing that changes it is VIDIOC_S_TUNER, which the driver turns into
+                // 0x0000 for stereo or 0x0004 for mono - both 16-bit.
+                //
+                // PAL consumes this backend as 48000 Hz, 16-bit, 2 channel
+                // (resourcemanager_bengal_idp.xml, PAL_DEVICE_IN_FM_TUNER on
+                // MI2S-LPAIF_WSA-TX-PRIMARY). So with the format left at its start value the
+                // chip emits 24-bit mono into something reading 16-bit stereo: every sample
+                // misaligned, which is not quiet audio, it is white noise. The tuner locks,
+                // RSSI moves with the antenna, the HAL reports a healthy loopback, and what
+                // comes out is static - which is exactly the symptom we have been chasing.
+                //
+                // Stock calls setV4L2RadioChannelMode immediately after enable and re-issues
+                // the frequency straight afterwards, so do both.
+                val modeOk = FmV4L2.setChannelMode(if (stereoRequested.value) 1 else 0)
+                Log.i(TAG, "setV4L2RadioChannelMode(${if (stereoRequested.value) 1 else 0}) " +
+                    "accepted=$modeOk readback=${FmV4L2.channelMode()} " +
+                    "(0x0000=16-bit stereo, 0x0004=16-bit mono, 0x0006=24-bit mono = static)")
+
+                // The part's own output volume is deliberately NOT set here. It used to be
+                // written as SI4705_MAX_VOLUME=63, which looked like "turn it up" and is the
+                // opposite: the driver registers V4L2_CID_AUDIO_VOLUME with a range of 0..15
+                // against a chip whose RX_VOLUME default is 63, so the v4l2 core clamps the
+                // write to 15 and ATTENUATES the tuner by roughly 12 dB. Stock never touches
+                // this control at all. The sweep knob on the debug receiver still can.
                 rx.registerRdsGroupProcessing(
                     FmReceiver.FM_RX_RDS_GRP_RT_EBL or FmReceiver.FM_RX_RDS_GRP_PS_EBL or
                         FmReceiver.FM_RX_RDS_GRP_AF_EBL or FmReceiver.FM_RX_RDS_GRP_PS_SIMPLE_EBL or
@@ -1197,7 +1220,21 @@ class QualcommFmHardwareEngine(private val context: Context) {
     fun setStereo(enabled: Boolean) {
         stereoRequested.value = enabled
         prefs.edit().putBoolean("stereo", enabled).apply()
+        // setStereoMode is the WCN core's blend setting and does not touch the part that
+        // carries our audio. The Si4705's own stereo/mono IS its digital output format, so it
+        // has to be set through V4L2 as well or this switch changes nothing audible.
         runCatching { receiver?.setStereoMode(enabled) }
+        if (isPoweredOn.value) {
+            scope.launch(tunerDispatcher) {
+                val ok = FmV4L2.setChannelMode(if (enabled) 1 else 0)
+                // Stock always re-issues the frequency straight after a mode change; the
+                // driver rewrites DIGITAL_OUTPUT_FORMAT inside VIDIOC_S_TUNER and the chip
+                // wants retuning behind it.
+                FmV4L2.setTunedKHz(currentFrequencyKHz.value)
+                Log.i(TAG, "stereo=$enabled -> channel mode accepted=$ok " +
+                    "readback=${FmV4L2.channelMode()}")
+            }
+        }
     }
 
     fun toggleStereo() = setStereo(!stereoRequested.value)
