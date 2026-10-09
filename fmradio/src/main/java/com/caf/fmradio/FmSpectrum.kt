@@ -12,7 +12,9 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.offset
+import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.Dp
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -87,8 +89,14 @@ fun RadioWaterfallSpectrum(
      * label drawn, the rest get a tick, because 281 call signs will not fit on 320 pixels.
      */
     cataloguedStations: List<FmStationCatalogue.Station> = emptyList(),
+    /** Which receiver-panel convention to draw. Colour never varies; geometry does. */
+    skin: SdrSkin = SdrSkin.CLASSIC,
+    /** Sweep times, newest first, parallel to bandHistory. Empty when nothing has swept. */
+    rowTimes: List<Long> = emptyList(),
+    onCycleSkin: () -> Unit = {},
     onTuneFreq: (Int) -> Unit,
 ) {
+    val textMeasurer = rememberTextMeasurer()
     val binCount = QualcommFmHardwareEngine.SPECTRUM_BINS
     val rowCount = 20
     var rows by remember { mutableStateOf(List(rowCount) { FloatArray(binCount) }) }
@@ -140,7 +148,9 @@ fun RadioWaterfallSpectrum(
             val rowHeight = waterfallHeight / rowCount
             val binWidth = w / binCount
 
-            fun xOf(khz: Int) = ((khz - low) / span).coerceIn(0f, 1f) * w
+            val gutter = rssiGutterWidth(skin)
+            val plotW = w - gutter
+            fun xOf(khz: Int) = gutter + ((khz - low) / span).coerceIn(0f, 1f) * plotW
 
             // Horizontal reference lines across the trace area. An SDR panel without a grid is
             // a pretty shape; with one you can compare two peaks at a glance.
@@ -151,12 +161,16 @@ fun RadioWaterfallSpectrum(
 
             // The tuned channel, as a block the width of one channel rather than a bare line,
             // so you can see what the receiver is actually sitting on relative to its neighbours.
-            val halfCh = (step / 2f / span) * w
+            val halfCh = (step / 2f / span) * plotW
             val cx = xOf(currentFreqKHz)
-            drawRect(
-                MikuTeal.copy(alpha = 0.16f),
-                Offset(cx - halfCh, 0f), Size(halfCh * 2f, fftHeight)
-            )
+            if (skin.showsPassband) {
+                drawPassband(cx, halfCh, fftHeight, MikuTeal)
+            } else {
+                drawRect(
+                    MikuTeal.copy(alpha = 0.16f),
+                    Offset(cx - halfCh, 0f), Size(halfCh * 2f, fftHeight)
+                )
+            }
 
             if (hasAudio) {
                 // Audio spectrum history, which only exists on Bluetooth where the capture is
@@ -169,6 +183,8 @@ fun RadioWaterfallSpectrum(
                                  Offset(b * binWidth, y), Size(binWidth + 0.5f, rowHeight + 0.5f))
                     }
                 }
+            } else if (hasBand && skin.showsSurface) {
+                drawSurfaceWaterfall(bandHistory.take(14), fftHeight, waterfallHeight, w)
             } else if (hasBand) {
                 // Band waterfall: each row is one sweep, x is frequency, newest at the top.
                 // Adjacent signals show up as vertical streaks you can tap straight onto.
@@ -179,12 +195,16 @@ fun RadioWaterfallSpectrum(
                 for (r in rows.indices) {
                     val prof = rows[r]
                     if (prof.isEmpty()) continue
-                    val cw = w / prof.size
+                    val cw = plotW / prof.size
                     val y = fftHeight + r * rh
                     for (i in prof.indices) {
                         drawRect(FmWaterfallPalette.lut(prof[i]),
-                                 Offset(i * cw, y), Size(cw + 0.5f, rh + 0.5f))
+                                 Offset(gutter + i * cw, y), Size(cw + 0.5f, rh + 0.5f))
                     }
+                }
+                if (skin.showsTimestamps) {
+                    drawWaterfallTimestamps(textMeasurer, rowTimes.take(rows.size),
+                                            fftHeight, rh, MikuTeal)
                 }
             } else {
                 // Nothing swept yet: one column per poll of the tuned frequency's own RSSI, so
@@ -240,6 +260,8 @@ fun RadioWaterfallSpectrum(
                     val y = fftHeight - (live[i].coerceIn(0f, 1f) * (fftHeight - 6f))
                     if (i == 0) fftPath.moveTo(x, y) else fftPath.lineTo(x, y)
                 }
+            } else if (hasBand && skin.showsSurface) {
+                drawSurfaceWaterfall(bandHistory.take(14), fftHeight, waterfallHeight, w)
             } else if (hasBand) {
                 // Live trace of the newest sweep: RSSI against frequency, so peaks sit directly
                 // above the frequency that produced them and can be tapped.
@@ -247,12 +269,12 @@ fun RadioWaterfallSpectrum(
                 val dx = w / (n - 1).coerceAtLeast(1)
                 for (i in 0 until n) {
                     val y = fftHeight - (bandProfile[i].coerceIn(0f, 1f) * (fftHeight - 6f))
-                    if (i == 0) fftPath.moveTo(0f, y) else fftPath.lineTo(i * dx, y)
+                    if (i == 0) fftPath.moveTo(gutter, y) else fftPath.lineTo(gutter + i * dx, y)
                 }
             } else {
                 val n = signalHistory.size
                 if (n > 1) {
-                    val dx = w / (n - 1)
+                    val dx = plotW / (n - 1)
                     for (i in 0 until n) {
                         val x = w - i * dx
                         val y = fftHeight - (signalHistory[i].coerceIn(0f, 1f) * (fftHeight - 6f))
@@ -261,13 +283,18 @@ fun RadioWaterfallSpectrum(
                 }
             }
             val fillPath = Path().apply {
-                addPath(fftPath); lineTo(w, fftHeight); lineTo(0f, fftHeight); close()
+                addPath(fftPath); lineTo(w, fftHeight); lineTo(gutter, fftHeight); close()
             }
             drawPath(
                 fillPath,
                 Brush.verticalGradient(listOf(Color(0x8800E5FF), Color(0x1100E5FF)), 0f, fftHeight)
             )
             drawPath(fftPath, MikuTeal, style = Stroke(width = 2.dp.toPx()))
+
+            if (skin.showsAxis) {
+                drawRssiAxis(textMeasurer, gutter, fftHeight,
+                             QualcommFmHardwareEngine.SWEEP_RSSI_FULL_SCALE, MikuTeal)
+            }
 
             val markerX = xOf(currentFreqKHz)
             drawLine(MikuPink, Offset(markerX, 0f), Offset(markerX, h), strokeWidth = 2.dp.toPx())
@@ -291,7 +318,7 @@ fun RadioWaterfallSpectrum(
                         val x = bandWidth * ((st.khz - band.lowKHz).toFloat() / span)
                         if (out.any { (it.second - x).value.let { d -> if (d < 0) -d else d } < minGap.value }) continue
                         out.add(st to x)
-                        if (out.size >= MAX_BAND_LABELS) break
+                        if (out.size >= (if (skin.labelsEverything) MAX_BAND_LABELS * 3 else MAX_BAND_LABELS)) break
                     }
                     out
                 }
@@ -319,11 +346,14 @@ fun RadioWaterfallSpectrum(
         ) {
             Text(
                 when {
-                    hasAudio -> "LIVE AUDIO SPECTRUM · FM PCM 60 Hz–15 kHz"
-                    hasBand -> "BAND SCAN · RSSI vs FREQUENCY · TAP A PEAK TO TUNE"
-                    else -> "SIGNAL · ${band.lowKHz / 1000}–${band.highKHz / 1000} MHz · SWEEP TO MAP THE BAND"
+                    hasAudio -> "${skin.label} · AUDIO SPECTRUM · FM PCM 60 Hz–15 kHz"
+                    hasBand -> "${skin.label} · RSSI vs FREQUENCY · TAP A PEAK TO TUNE"
+                    else -> "${skin.label} · ${band.lowKHz / 1000}–${band.highKHz / 1000} MHz · SWEEP TO MAP THE BAND"
                 },
-                color = MikuTeal.copy(alpha = 0.85f), fontSize = 7.5.sp, fontWeight = FontWeight.Bold
+                color = MikuTeal.copy(alpha = 0.85f), fontSize = 7.5.sp, fontWeight = FontWeight.Bold,
+                // The header doubles as the skin control. A dedicated row of buttons would eat
+                // height this panel does not have, and the label already says which one is on.
+                modifier = Modifier.clickable { onCycleSkin() }
             )
             Text(
                 when {

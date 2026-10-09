@@ -435,6 +435,9 @@ class QualcommFmHardwareEngine(private val context: Context) {
     /** Previous sweeps, newest first, for the waterfall underneath the live trace. */
     val bandHistory = MutableStateFlow<List<FloatArray>>(emptyList())
     private val sweepHistory = ArrayDeque<FloatArray>()
+    /** When each sweep in [bandHistory] finished, same order, so the waterfall can be dated. */
+    private val sweepTimes = ArrayDeque<Long>()
+    val bandHistoryTimes = MutableStateFlow<List<Long>>(emptyList())
 
     /** Raw RSSI per channel from the newest sweep, for the station list and tooltips. */
     val bandRssi = MutableStateFlow<IntArray>(IntArray(0))
@@ -946,6 +949,21 @@ class QualcommFmHardwareEngine(private val context: Context) {
 
     fun nudgeFmVolume(up: Boolean) = setFmVolumeLevel(fmVolumeLevel.value + if (up) 5 else -5)
 
+    /** Which receiver-panel style the band display draws in. Persisted; purely cosmetic. */
+    val sdrSkin = MutableStateFlow(
+        runCatching { SdrSkin.valueOf(prefs.getString("sdr_skin", null) ?: "") }
+            .getOrDefault(SdrSkin.CLASSIC))
+
+    fun setSdrSkin(s: SdrSkin) {
+        sdrSkin.value = s
+        prefs.edit().putString("sdr_skin", s.name).apply()
+    }
+
+    fun cycleSdrSkin() {
+        val all = SdrSkin.entries
+        setSdrSkin(all[(all.indexOf(sdrSkin.value) + 1) % all.size])
+    }
+
     private fun applyFmVolume() {
         if (activeRouteCode == null) return
         val l = fmVolumeLevel.value
@@ -1134,8 +1152,11 @@ class QualcommFmHardwareEngine(private val context: Context) {
                 bandRssi.value = raw
                 scanResults.value = hits.toList()
                 sweepHistory.addFirst(profile)
+                sweepTimes.addFirst(System.currentTimeMillis())
                 while (sweepHistory.size > SWEEP_HISTORY) sweepHistory.removeLast()
+                while (sweepTimes.size > SWEEP_HISTORY) sweepTimes.removeLast()
                 bandHistory.value = sweepHistory.toList()
+                bandHistoryTimes.value = sweepTimes.toList()
                 sweeping = false
                 isScanning.value = false
                 scanProgress.value = 0f

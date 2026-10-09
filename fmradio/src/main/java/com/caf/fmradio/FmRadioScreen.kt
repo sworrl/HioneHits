@@ -83,6 +83,9 @@ fun MikuFMRadioScreen(onBack: () -> Unit) {
                     favorites = st.favorites,
                     scanHits = st.scanResults.map { it.freqKHz },
                     cataloguedStations = st.nearbyStations,
+                    skin = st.sdrSkin,
+                    rowTimes = st.bandHistoryTimes,
+                    onCycleSkin = { FmRadioManager.cycleSdrSkin() },
                     onTuneFreq = { FmRadioManager.tune(it) }
                 )
                 if (st.isScanning) {

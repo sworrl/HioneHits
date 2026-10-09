@@ -63,6 +63,8 @@ data class FmState(
     val rdsGroups: Int = 0,
     val channelGrid: FmChannelGrid = FmChannelGrid.AUTO,
     val nearbyStations: List<FmStationCatalogue.Station> = emptyList(),
+    val sdrSkin: SdrSkin = SdrSkin.CLASSIC,
+    val bandHistoryTimes: List<Long> = emptyList(),
     val tunedStation: FmStationCatalogue.Station? = null,
     val listenerPlace: Pair<Double, Double>? = null,
     val catalogueSize: Int = 0,
@@ -97,6 +99,7 @@ data class FmState(
             rdsArtist == other.rdsArtist && rdsTitle == other.rdsTitle &&
             rdsGroups == other.rdsGroups && channelGrid == other.channelGrid &&
             nearbyStations === other.nearbyStations && tunedStation == other.tunedStation &&
+            sdrSkin == other.sdrSkin && bandHistoryTimes === other.bandHistoryTimes &&
             listenerPlace == other.listenerPlace && catalogueSize == other.catalogueSize
     }
 
@@ -174,6 +177,8 @@ object FmRadioManager {
             launch { eng.rdsGroups.collect { v -> _state.update { it.copy(rdsGroups = v) } } }
             launch { eng.channelGrid.collect { v -> _state.update { it.copy(channelGrid = v) } } }
             launch { eng.nearbyStations.collect { v -> _state.update { it.copy(nearbyStations = v) } } }
+            launch { eng.sdrSkin.collect { v -> _state.update { it.copy(sdrSkin = v) } } }
+            launch { eng.bandHistoryTimes.collect { v -> _state.update { it.copy(bandHistoryTimes = v) } } }
             launch { eng.tunedStation.collect { v -> _state.update { it.copy(tunedStation = v) } } }
             launch { eng.listenerPlace.collect { v -> _state.update { it.copy(listenerPlace = v) } } }
             launch { eng.catalogueSize.collect { v -> _state.update { it.copy(catalogueSize = v) } } }
@@ -248,6 +253,8 @@ object FmRadioManager {
     fun setStereo(on: Boolean) { engine?.setStereo(on) }
     fun setBand(plan: FmBandPlan) { engine?.setBand(plan) }
     fun setFmVolumeLevel(l: Int) { engine?.setFmVolumeLevel(l) }
+    fun cycleSdrSkin() { engine?.cycleSdrSkin() }
+
     fun nudgeFmVolume(up: Boolean) { engine?.nudgeFmVolume(up) }
     fun setAfJump(on: Boolean) { engine?.setAfJump(on) }
     fun setSoftMute(on: Boolean) { engine?.setSoftMute(on) }
