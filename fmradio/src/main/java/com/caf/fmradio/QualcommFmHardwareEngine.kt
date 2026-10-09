@@ -864,7 +864,7 @@ class QualcommFmHardwareEngine(private val context: Context) {
 
     private fun startHalAudio() {
         val route = FmAudioRoute.current(audioManager)
-        val written = FmAudioRoute.start(audioManager, route.code)
+        val written = FmAudioRoute.start(audioManager, route.code, currentFmGain())
         activeRouteCode = route.code
         FmAudioRoute.setMuted(audioManager, isMuted.value)
         diagnostics.value = diagnostics.value.copy(
@@ -893,7 +893,11 @@ class QualcommFmHardwareEngine(private val context: Context) {
         if (route.code == activeRouteCode) return
         val written = FmAudioRoute.reroute(audioManager, route.code)
         activeRouteCode = route.code
-        val gain = FmAudioRoute.applyVolume(audioManager, route.code)
+        // Re-assert the tuner's own level on the new backend. This used to re-read
+        // STREAM_MUSIC, so plugging headphones in could silently re-gain the radio from
+        // whatever the music volume happened to be.
+        val gain = currentFmGain()
+        FmAudioRoute.setGain(audioManager, gain)
         diagnostics.value = diagnostics.value.copy(
             routeCode = route.code,
             routeLabel = route.label,
@@ -965,14 +969,18 @@ class QualcommFmHardwareEngine(private val context: Context) {
         setSdrSkin(all[(all.indexOf(sdrSkin.value) + 1) % all.size])
     }
 
+    /** The linear HAL gain for the current level. 48 dB taper: full scale at 100, silent at 0. */
+    private fun currentFmGain(): Float {
+        val l = fmVolumeLevel.value
+        return if (l <= 0) 0f else Math.pow(10.0, ((l - 100) * 48.0 / 100.0) / 20.0).toFloat()
+    }
+
     private fun applyFmVolume() {
         if (activeRouteCode == null) return
-        val l = fmVolumeLevel.value
-        // 48 dB taper: full scale at 100, silent at 0, usable spread in between.
-        val gain = if (l <= 0) 0f else Math.pow(10.0, ((l - 100) * 48.0 / 100.0) / 20.0).toFloat()
-        runCatching { audioManager.setParameters("fm_volume=$gain") }
+        val gain = currentFmGain()
+        FmAudioRoute.setGain(audioManager, gain)
         diagnostics.value = diagnostics.value.copy(fmVolumeLinear = gain)
-        Log.i(TAG, "fm volume level $l -> fm_volume $gain")
+        Log.i(TAG, "fm volume level ${fmVolumeLevel.value} -> fm_volume $gain")
     }
 
     // ------------------------------------------------------------------ tuning
