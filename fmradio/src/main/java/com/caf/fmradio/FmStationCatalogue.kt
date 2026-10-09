@@ -68,15 +68,70 @@ object FmStationCatalogue {
 
     @Volatile private var db: SQLiteDatabase? = null
     @Volatile private var missingReported = false
+    @Volatile private var appContext: Context? = null
+
+    /**
+     * Hand the catalogue a context once, early, so it can fall back to a writable copy.
+     *
+     * Without this it can only try the baked path, and on this image that path is on a
+     * read-only mount, which does not work. See [openAt].
+     */
+    fun prepare(ctx: Context) {
+        if (appContext == null) appContext = ctx.applicationContext
+    }
+
+    private fun openAt(path: String): SQLiteDatabase? = runCatching {
+        val d = SQLiteDatabase.openDatabase(
+            path, null,
+            // NO_LOCALIZED_COLLATORS stops Android creating its android_metadata table on open,
+            // which is a WRITE and cannot succeed on a read-only mount.
+            SQLiteDatabase.OPEN_READONLY or SQLiteDatabase.NO_LOCALIZED_COLLATORS)
+        // openDatabase can return a handle that has not really connected yet, so prove it with
+        // a statement. The failure we are guarding against shows up here, not above: on a
+        // read-only filesystem the first real query blocks for SQLite's five second busy
+        // timeout and then throws SQLiteDatabaseLockedException.
+        d.rawQuery("SELECT COUNT(*) FROM station", null).use { it.moveToFirst() }
+        d
+    }.onFailure { Log.w(TAG, "could not use $path: $it") }.getOrNull()
+
+    /**
+     * A writable copy of the catalogue, made once.
+     *
+     * WHAT WAS MEASURED, on 0.1.14: /system_ext is mounted ro; openDatabase() on the baked
+     * file reported success; the first query then threw SQLITE_BUSY exactly five seconds
+     * later, which is SQLite's default busy timeout; and the band showed "0 stations" while
+     * sitting on a 47,826 row catalogue and a known position. Ruled out: the file is
+     * journal_mode=delete with no stray journal beside it, all 47,826 rows read fine on the
+     * host, and adding an android_metadata table by hand changed nothing.
+     *
+     * WHAT IS NOT ESTABLISHED is the mechanism. The likely story is that Android's
+     * SQLiteDatabase needs to write something when it opens a database even for reading, and
+     * cannot on a read-only mount - but that was not proven, only inferred from the timeout.
+     * The fix does not depend on being right about it: open the baked file, prove it with a
+     * real query, and copy 8 MB into app storage once if that query does not come back.
+     */
+    private fun writableCopy(src: String): SQLiteDatabase? {
+        val ctx = appContext ?: return null
+        val dst = File(ctx.noBackupFilesDir, "stations.sqlite")
+        val srcFile = File(src)
+        if (!dst.exists() || dst.length() != srcFile.length()) {
+            val ok = runCatching {
+                srcFile.inputStream().use { i -> dst.outputStream().use { o -> i.copyTo(o) } }
+            }.onFailure { Log.w(TAG, "could not copy the catalogue to app storage: $it") }.isSuccess
+            if (!ok) return null
+            Log.i(TAG, "copied the catalogue to ${dst.path} (${dst.length()} bytes)")
+        }
+        return openAt(dst.path)
+    }
 
     private fun open(): SQLiteDatabase? {
         db?.let { return it }
         for (p in PATHS) {
             val f = File(p)
             if (!f.exists()) continue
-            val opened = runCatching {
-                SQLiteDatabase.openDatabase(p, null, SQLiteDatabase.OPEN_READONLY)
-            }.onFailure { Log.w(TAG, "could not open $p: $it") }.getOrNull()
+            // Try in place first: on a writable location this is free and avoids the copy.
+            var opened = openAt(p)
+            if (opened == null) opened = writableCopy(p)
             if (opened != null) {
                 db = opened
                 Log.i(TAG, "catalogue open: $p")

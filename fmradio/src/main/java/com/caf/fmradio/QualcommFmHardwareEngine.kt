@@ -551,6 +551,7 @@ class QualcommFmHardwareEngine(private val context: Context) {
 
     init {
         loadJni()
+        FmStationCatalogue.prepare(context)
         registerRouteWatcher()
         registerDebugReceiver()
         refreshNearby(force = true)
