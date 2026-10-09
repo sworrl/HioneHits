@@ -144,7 +144,7 @@ fun MikuSettingsScreen(onBack: () -> Unit) {
 
     val chibiReactions = listOf(
         "🎵 Hi Master!",
-        "💙 Dual CS43131 Active",
+        "💙 Dual CS43198 Active",
         "⚡ 384kHz DSD256 Mode",
         "✨ Soundstage Max",
         "🎧 Lossless Engine Online",
@@ -185,9 +185,9 @@ fun MikuSettingsScreen(onBack: () -> Unit) {
             SettingsCategoryItem(
                 id = "audio",
                 title = "Audio settings",
-                subtitle = "Digital Filter (NOS/Fast), CS43131 Gain (+6dB), DRE Mode & Direct ALSA",
+                subtitle = "Digital Filter (NOS/Fast), CS43198 Gain (+6dB), DRE Mode & Direct ALSA",
                 icon = Icons.Default.Headphones,
-                badge = "CS43131",
+                badge = "CS43198",
                 accentColor = Color(0xFF7C4DFF),
                 onClick = { ctx.startActivity(Intent(ctx, HardwareSettingsActivity::class.java)) }
             ),

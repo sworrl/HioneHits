@@ -177,7 +177,7 @@
                 android:value="M500 Hardware &amp; DAC Settings" />
             <meta-data
                 android:name="com.android.settings.summary"
-                android:value="Cirrus Logic CS43131 DAC, NOS filter mode, Gain stages &amp; UAC2 USB DAC" />
+                android:value="Cirrus Logic CS43198 DAC, NOS filter mode, Gain stages &amp; UAC2 USB DAC" />
         </activity>
 
 
