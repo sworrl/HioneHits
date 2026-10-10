@@ -79,20 +79,20 @@ fun TapeIcon(tint: Color, modifier: Modifier = Modifier) {
  *
  * Every pulse honours Settings.System.HAPTIC_FEEDBACK_ENABLED and Settings.Global "miku_haptics"
  * (default on).
- *   tick   12 ms  scroll detent, list letter, seek detent, step. Rate limited.
- *   click  20 ms  buttons: play/pause, skip, shuffle/repeat
- *   heavy  35 ms  confirm, long press, like
- *   error  25 + 70 gap + 25  refused action
+ *   tick   22 ms  scroll detent, list letter, seek detent, step. Rate limited.
+ *   click  32 ms  buttons: play/pause, skip, shuffle/repeat
+ *   heavy  45 ms  confirm, long press, like
+ *   error  35 + 80 gap + 35  refused action
  */
 object Haptics {
-    const val TICK_MS = 12L
-    const val CLICK_MS = 20L
-    const val HEAVY_MS = 35L
+    const val TICK_MS = 22L   // 10 ms reaches the HAL but cannot be felt
+    const val CLICK_MS = 32L
+    const val HEAVY_MS = 45L
     /** A tick is dropped while the motor is still busy, and never fires closer than this. */
-    const val TICK_GAP_MS = 30L
+    const val TICK_GAP_MS = 45L
     const val GLOBAL_KEY = "miku_haptics"
     /** Two pulses: the gap has to outlast the motor's coast-down to read as two. */
-    private val ERROR_PATTERN = longArrayOf(0, 25, 70, 25)
+    private val ERROR_PATTERN = longArrayOf(0, 35, 80, 35)
 
     @Volatile private var vib: Vibrator? = null
     @Volatile private var busyUntil = 0L
@@ -178,7 +178,7 @@ fun PlayPauseGlyph(isPlaying: Boolean, tint: Color, size: Dp) {
 
 /**
  * IconButton replacement with three channels of feedback on every press:
- *  - haptic: one [Haptics.click] (20 ms). The Compose LongPress cue it used to add was a 50 ms buzz on the M500
+ *  - haptic: one [Haptics.click] (32 ms). The Compose LongPress cue it used to add was a 50 ms buzz on the M500
  *  - visual: a springy scale-down while held
  *  - physical: a 3D-embossed key face — raised (lit top, drop shadow below) at rest, and
  *    inverted to a pressed-in well while held, like a real hardware button

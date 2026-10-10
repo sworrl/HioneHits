@@ -30,17 +30,17 @@ object MikuHaptics {
     private const val KEY = "haptics_enabled"
     const val GLOBAL_KEY = "miku_haptics"
 
-    const val TICK_MS = 12L
-    const val CLICK_MS = 20L
-    const val HEAVY_MS = 35L
+    const val TICK_MS = 22L   // 10 ms reaches the HAL but cannot be felt
+    const val CLICK_MS = 32L
+    const val HEAVY_MS = 45L
     /** A tick is dropped while the motor is still busy, and never fires closer than this. */
-    const val TICK_GAP_MS = 30L
-    /** Two 25 ms pulses 70 ms apart: the gap has to outlast the motor's coast-down to read as two. */
-    private val ERROR_PATTERN = longArrayOf(0, 25, 70, 25)
+    const val TICK_GAP_MS = 45L
+    /** Two 35 ms pulses 80 ms apart: the gap has to outlast the motor's coast-down to read as two. */
+    private val ERROR_PATTERN = longArrayOf(0, 35, 80, 35)
     /** Light then firm: "added". */
-    private val LIKE_PATTERN = longArrayOf(0, 15, 60, 30)
+    private val LIKE_PATTERN = longArrayOf(0, 22, 60, 40)
     /** Three rising pulses for a secret or reward unlock. */
-    private val UNLOCK_PATTERN = longArrayOf(0, 15, 70, 15, 70, 40)
+    private val UNLOCK_PATTERN = longArrayOf(0, 22, 70, 22, 70, 45)
 
     @Volatile private var busyUntil = 0L
 

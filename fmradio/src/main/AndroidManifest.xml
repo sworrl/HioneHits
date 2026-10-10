@@ -36,6 +36,12 @@
     <!-- Network goes through com.miku.sysbridge; see FmNet. -->
     <uses-permission android:name="com.miku.permission.SYSTEM_BRIDGE" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <!-- Hardware transport keys (FmMediaKeys): a haptic tick per press, and the system media
+         key listener that hands the keys to the radio while it is on. SET_MEDIA_KEY_LISTENER
+         is signature-level, granted to this platform-signed app. -->
+    <uses-permission android:name="android.permission.VIBRATE" />
+    <uses-permission android:name="android.permission.SET_MEDIA_KEY_LISTENER"
+        tools:ignore="ProtectedPermissions" />
     <!-- Now-playing keys the widgets, AOD and lockscreen read (FmNowPlaying). Platform-signed. -->
     <uses-permission android:name="android.permission.WRITE_SECURE_SETTINGS"
         tools:ignore="ProtectedPermissions" />

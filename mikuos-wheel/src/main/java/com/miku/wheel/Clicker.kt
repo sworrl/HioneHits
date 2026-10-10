@@ -48,16 +48,33 @@ enum class ClickRoute(val label: String) {
     }
 }
 
+/**
+ * Haptic pulse lengths and spacing, all in one place for tuning. The M500 motor is a plain DC
+ * motor on a GPIO (timed_gpio): no amplitude, no braking, no overdrive. Pulses under about 20 ms
+ * reach the HAL but are not felt, and the motor coasts for a while after it stops. See
+ * mikuos/docs/m500-haptics.md for the measurements.
+ */
+object HapticTuning {
+    /** One wheel step. */
+    const val STEP_MS = 22L
+    /** One of the four switches under the click wheel ring (2004 on). */
+    const val RING_MS = 32L
+    /** The separate buttons around the 2001 wheel. */
+    const val SIDE_MS = 32L
+    /** The center button's dome switch: the firmest click. */
+    const val CENTER_MS = 36L
+    /** Coast-down allowance after a pulse before the next step pulse may start. */
+    const val COAST_MS = 15L
+    /** Never more step pulses than one per this many ms (about 22 a second). */
+    const val STEP_GAP_MS = 45L
+}
+
 /** The physical thing being emulated by a haptic pulse. */
 enum class Feel(val ms: Long) {
-    /** One wheel step. The shortest pulse that still reads as a tick. */
-    STEP(10),
-    /** One of the four switches under the click wheel ring (2004 on). */
-    RING(16),
-    /** The center button's dome switch. */
-    CENTER(20),
-    /** The separate buttons around the 2001 wheel. */
-    SIDE(14),
+    STEP(HapticTuning.STEP_MS),
+    RING(HapticTuning.RING_MS),
+    CENTER(HapticTuning.CENTER_MS),
+    SIDE(HapticTuning.SIDE_MS),
 }
 
 /**
@@ -154,7 +171,10 @@ class Clicker(ctx: Context) {
         if (now - sysCheckedAt > 500_000_000L) {
             sysCheckedAt = now
             sysOn = try {
-                Settings.System.getInt(app.contentResolver, Settings.System.HAPTIC_FEEDBACK_ENABLED, 1) != 0
+                val cr = app.contentResolver
+                // System touch vibration, and the MikuOS haptics switch (unset counts as on).
+                Settings.System.getInt(cr, Settings.System.HAPTIC_FEEDBACK_ENABLED, 1) != 0 &&
+                    Settings.Global.getInt(cr, "miku_haptics", 1) != 0
             } catch (_: Throwable) { true }
         }
         return sysOn
@@ -418,14 +438,16 @@ class Clicker(ctx: Context) {
     private fun buzz(feel: Feel, at: Long) {
         if (!haptics || !canVibrate) return
         if (!systemHapticsOn()) return
-        // An ERM motor needs time to spin down. Steps that land inside the last pulse plus its
-        // spin-down are skipped (the sound still plays), so a fast spin stays a row of ticks.
-        if (feel == Feel.STEP && (at - lastBuzzAt < MIN_STEP_BUZZ_GAP_NS || at < buzzUntil)) {
+        // A new vibration cuts the running one, and the motor coasts after it stops. Steps that
+        // land inside the last pulse plus its coast-down, or sooner than STEP_GAP_MS after the
+        // last step pulse, are skipped (the sound still plays), so a fast spin stays a row of
+        // separate ticks instead of one hum.
+        if (feel == Feel.STEP && (at - lastBuzzAt < HapticTuning.STEP_GAP_MS * 1_000_000L || at < buzzUntil)) {
             if (debug) Log.d(TAG, "pulse STEP skipped (rate)")
             return
         }
         lastBuzzAt = at
-        buzzUntil = at + feel.ms * 1_000_000L
+        buzzUntil = at + (feel.ms + HapticTuning.COAST_MS) * 1_000_000L
         val fx = effects[feel] ?: return
         hh.post {
             try {
@@ -441,8 +463,6 @@ class Clicker(ctx: Context) {
         private const val TAIL_S = 0.008
         /** 8 ms: a tick with its ring-down is about that long. Faster than any real spin. */
         private const val MIN_SOUND_GAP_NS = 8_000_000L
-        /** 45 ms between step pulses, at most about 22 a second. */
-        private const val MIN_STEP_BUZZ_GAP_NS = 45_000_000L
         /**
          * The stream stops this long after the last tick, touch or key. Waking it costs 50 to
          * 150 ms on the M500, so it starts when an era opens or MikuPod comes back, and stays up

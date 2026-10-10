@@ -33,7 +33,11 @@ import kotlinx.coroutines.launch
 class RiotActivity : ComponentActivity() {
 
     companion object {
-        const val TICK_GAP_MS = 35L
+        const val TICK_GAP_MS = 45L
+        // The M500's motor needs about 20 ms to be felt: 10-12 ms pulses run but feel like nothing.
+        const val TICK_PULSE_MS = 22L
+        const val PRESS_PULSE_MS = 35L
+        const val HOLD_PULSE_MS = 60L
     }
 
     private lateinit var shell: RiotShell
@@ -186,13 +190,12 @@ class RiotActivity : ComponentActivity() {
         val now = SystemClock.uptimeMillis()
         if (now - lastTick < TICK_GAP_MS) return
         lastTick = now
-        buzz(primitive(VibrationEffect.Composition.PRIMITIVE_TICK, 1f) ?: VibrationEffect.createOneShot(12, 255))
+        buzz(VibrationEffect.createOneShot(TICK_PULSE_MS, 255))
     }
 
     /** A button press: a firmer pulse than the wheel. [strong] for the hold that leaves Riot mode. */
     fun pressFeedback(strong: Boolean = false) {
-        buzz(primitive(if (strong) VibrationEffect.Composition.PRIMITIVE_THUD else VibrationEffect.Composition.PRIMITIVE_CLICK, 1f)
-            ?: VibrationEffect.createOneShot(if (strong) 50 else 28, 255))
+        buzz(VibrationEffect.createOneShot(if (strong) HOLD_PULSE_MS else PRESS_PULSE_MS, 255))
     }
 
     /**

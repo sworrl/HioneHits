@@ -460,6 +460,15 @@ class MikuFMRadioActivity : ComponentActivity() {
      * STREAM_MUSIC instead would change the music volume while appearing to do nothing to the
      * radio. Consumed so the system HUD does not also appear.
      */
+    /**
+     * The transport keys (play/pause, previous, next) drive the radio while it is in front,
+     * the same as from the background: see [FmMediaKeys].
+     */
+    override fun dispatchKeyEvent(event: android.view.KeyEvent): Boolean {
+        if (FmMediaKeys.isTransportKey(event.keyCode) && FmMediaKeys.handle(this, event)) return true
+        return super.dispatchKeyEvent(event)
+    }
+
     override fun onKeyDown(keyCode: Int, event: android.view.KeyEvent?): Boolean = when (keyCode) {
         android.view.KeyEvent.KEYCODE_VOLUME_UP -> { FmRadioManager.nudgeFmVolume(true); true }
         android.view.KeyEvent.KEYCODE_VOLUME_DOWN -> { FmRadioManager.nudgeFmVolume(false); true }

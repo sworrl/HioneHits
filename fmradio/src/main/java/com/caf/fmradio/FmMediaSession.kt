@@ -99,7 +99,34 @@ object FmMediaSession {
         val on: Boolean, val online: Boolean, val muted: Boolean, val error: String?,
         val khz: Int, val title: String, val subtitle: String, val detail: String,
         val call: String?, val genre: String?,
-    )
+        /** The RDS and signal details below go out as PlaybackState extras (see [EXTRA_PS]). */
+        val ps: String, val radioText: String?, val rtArtist: String?, val rtTitle: String?,
+        val ptyName: String?, val stereo: Boolean?, val rssi: Int?,
+        val songTitle: String?, val songArtist: String?, val songStatus: String,
+    ) {
+        /** What the metadata (and its art tile) is built from; extras-only changes skip it. */
+        val metaKey: List<Any?> get() = listOf(khz, title, subtitle, detail, call, genre)
+    }
+
+    // PlaybackState extras for the retro modes (Riot, MikuPod) and anything else that reads the
+    // session. Strings are omitted when empty; STEREO is omitted until the chip has said.
+    const val EXTRA_PS = "com.caf.fmradio.extra.PS"
+    const val EXTRA_RADIOTEXT = "com.caf.fmradio.extra.RADIOTEXT"
+    const val EXTRA_RTPLUS_ARTIST = "com.caf.fmradio.extra.RTPLUS_ARTIST"
+    const val EXTRA_RTPLUS_TITLE = "com.caf.fmradio.extra.RTPLUS_TITLE"
+    const val EXTRA_PTY_NAME = "com.caf.fmradio.extra.PTY_NAME"
+    const val EXTRA_STEREO = "com.caf.fmradio.extra.STEREO"
+    /** Int, dBuV. At most one change a second reaches the session. */
+    const val EXTRA_RSSI = "com.caf.fmradio.extra.RSSI"
+    const val EXTRA_SONGID_TITLE = "com.caf.fmradio.extra.SONGID_TITLE"
+    const val EXTRA_SONGID_ARTIST = "com.caf.fmradio.extra.SONGID_ARTIST"
+    /** "idle", "listening", "matching", "found", "not found", "unavailable", or the failure in words. */
+    const val EXTRA_SONGID_STATUS = "com.caf.fmradio.extra.SONGID_STATUS"
+    private const val RSSI_MIN_INTERVAL_MS = 1000L
+
+    private var rssiShown: Int? = null
+    private var rssiShownAt = 0L
+    private var lastMetaKey: List<Any?>? = null
 
     // ------------------------------------------------------------------ lifecycle
 
@@ -156,6 +183,8 @@ object FmMediaSession {
         val s = session ?: return
         val want = on || browsers > 0
         if (s.isActive != want) s.isActive = want
+        // The hardware keys follow the tuner, not the session: see FmMediaKeys.
+        app?.let { FmMediaKeys.setTunerOn(it, on) }
     }
 
     // ------------------------------------------------------------------ state -> session
@@ -183,11 +212,27 @@ object FmMediaSession {
             rt != null -> rt
             else -> listOfNotNull(freqLine, genre).joinToString(" · ")
         }
+        // RSSI moves every poll; let at most one change a second through to the session.
+        val now = android.os.SystemClock.elapsedRealtime()
+        if (st.rssi != rssiShown && (now - rssiShownAt >= RSSI_MIN_INTERVAL_MS || rssiShown == null || st.rssi == null)) {
+            rssiShown = st.rssi; rssiShownAt = now
+        }
+        val sid = st.songId
+        val songStatus = when {
+            sid.message != null && (sid.phase == FmSongId.Phase.NOT_FOUND || sid.phase == FmSongId.Phase.UNAVAILABLE) -> sid.message
+            else -> sid.phase.name.lowercase(java.util.Locale.US).replace('_', ' ')
+        }
         return Shown(
             on = st.isPowerOn, online = st.isHardwareOnline, muted = st.isMuted,
             error = st.hardwareError, khz = st.frequencyKHz, title = stationTitle(st),
             subtitle = subtitle, detail = listOfNotNull(freqLine, genre).joinToString(" · "),
             call = st.tunedStation?.call, genre = genre,
+            ps = st.stationName.trim(), radioText = rt,
+            rtArtist = st.rdsArtist?.trim()?.takeIf { it.isNotEmpty() },
+            rtTitle = st.rdsTitle?.trim()?.takeIf { it.isNotEmpty() },
+            ptyName = FmRadioManager.programmeTypeName(st.programmeType, st.band),
+            stereo = st.isStereo, rssi = if (st.isPowerOn) rssiShown else null,
+            songTitle = sid.match?.title, songArtist = sid.match?.artist, songStatus = songStatus,
         )
     }
 
@@ -211,6 +256,18 @@ object FmMediaSession {
             .setState(state, PlaybackState.PLAYBACK_POSITION_UNKNOWN,
                 if (state == PlaybackState.STATE_PLAYING) 1f else 0f)
         if (state == PlaybackState.STATE_ERROR) pb.setErrorMessage(v.error)
+        pb.setExtras(Bundle().apply {
+            if (v.ps.isNotEmpty()) putString(EXTRA_PS, v.ps)
+            v.radioText?.let { putString(EXTRA_RADIOTEXT, it) }
+            v.rtArtist?.let { putString(EXTRA_RTPLUS_ARTIST, it) }
+            v.rtTitle?.let { putString(EXTRA_RTPLUS_TITLE, it) }
+            v.ptyName?.let { putString(EXTRA_PTY_NAME, it) }
+            v.stereo?.let { putBoolean(EXTRA_STEREO, it) }
+            v.rssi?.let { putInt(EXTRA_RSSI, it) }
+            v.songTitle?.let { putString(EXTRA_SONGID_TITLE, it) }
+            v.songArtist?.let { putString(EXTRA_SONGID_ARTIST, it) }
+            putString(EXTRA_SONGID_STATUS, v.songStatus)
+        })
         // Seeking needs the chip up; offering it before then would do nothing.
         if (v.online) {
             pb.addCustomAction(
@@ -222,6 +279,9 @@ object FmMediaSession {
         }
         s.setPlaybackState(pb.build())
 
+        // A signal or RDS-only change needs the new extras, not a new art tile over binder.
+        if (v.metaKey == lastMetaKey) { updateActive(v.on); return }
+        lastMetaKey = v.metaKey
         val art = tile(v.call, v.khz, ART_PX)
         s.setMetadata(
             MediaMetadata.Builder()
@@ -283,20 +343,13 @@ object FmMediaSession {
 
     private fun ctx(): Context? = app
 
+    /** Power on, or unmute if a focus loss or the user muted it: playing means hearing it. */
     private fun play() {
-        val a = ctx() ?: return
-        val st = FmRadioManager.state.value
-        if (st.isPowerOn) {
-            // Muted by a transient focus loss or by the user: playing means hearing it.
-            if (st.isMuted) FmRadioManager.toggleMute()
-            return
-        }
-        MikuFmService.start(a)
+        FmMediaKeys.play(ctx() ?: return)
     }
 
     private fun powerOff() {
-        val a = ctx() ?: return
-        if (FmRadioManager.state.value.isPowerOn) MikuFmService.stop(a)
+        FmMediaKeys.powerOff(ctx() ?: return)
     }
 
     /** Tune, then make sure the tuner is on. Tuning first means power-on lands on the right station. */
@@ -307,20 +360,9 @@ object FmMediaSession {
         play()
     }
 
+    /** Next or previous preset, wrapping; a seek when there are none. Same as the hardware keys. */
     private fun presetStep(up: Boolean) {
-        val a = ctx() ?: return
-        val st = FmRadioManager.state.value
-        val presets = st.favorites.sorted()
-        if (presets.isEmpty()) {
-            // No presets to move between: find the next station instead.
-            if (st.isHardwareOnline) FmRadioManager.seek(up)
-            else { FmRadioManager.ensure(a).step(up); play() }
-            return
-        }
-        val cur = st.frequencyKHz
-        val target = if (up) presets.firstOrNull { it > cur } ?: presets.first()
-            else presets.lastOrNull { it < cur } ?: presets.last()
-        playFrequency(target)
+        FmMediaKeys.presetStep(ctx() ?: return, up)
     }
 
     /** "101.1", "101.1 FM", "101" -> kHz, when it lands in the broadcast band. */

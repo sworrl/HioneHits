@@ -858,14 +858,14 @@ private fun MediaCard(m: MikuMediaHub.Now, onOpen: () -> Unit) {
                 Text(m.artist.ifBlank { m.album }, color = MikuTextSecondary, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
             Spacer(Modifier.width(4.dp))
-            Box(Modifier.size(40.dp).clip(CircleShape).clickable { view.performHapticFeedback(android.view.HapticFeedbackConstants.CONTEXT_CLICK); m.controller.transportControls.skipToPrevious() }, contentAlignment = Alignment.Center) {
+            Box(Modifier.size(40.dp).clip(CircleShape).clickable { MikuHaptics.confirm(view); m.controller.transportControls.skipToPrevious() }, contentAlignment = Alignment.Center) {
                 Icon(Icons.Default.SkipPrevious, "Previous", tint = MikuWhite, modifier = Modifier.size(22.dp))
             }
             PlayPauseButton(m.isPlaying, accent) {
-                view.performHapticFeedback(android.view.HapticFeedbackConstants.CONTEXT_CLICK)
+                MikuHaptics.confirm(view)
                 if (m.isPlaying) m.controller.transportControls.pause() else m.controller.transportControls.play()
             }
-            Box(Modifier.size(40.dp).clip(CircleShape).clickable { view.performHapticFeedback(android.view.HapticFeedbackConstants.CONTEXT_CLICK); m.controller.transportControls.skipToNext() }, contentAlignment = Alignment.Center) {
+            Box(Modifier.size(40.dp).clip(CircleShape).clickable { MikuHaptics.confirm(view); m.controller.transportControls.skipToNext() }, contentAlignment = Alignment.Center) {
                 Icon(Icons.Default.SkipNext, "Next", tint = MikuWhite, modifier = Modifier.size(22.dp))
             }
         }
@@ -931,7 +931,7 @@ private fun NotifRow(n: MikuNotif, onOpen: () -> Unit, onReply: () -> Unit, onDi
     val state = rememberSwipeToDismissBoxState(
         confirmValueChange = { v ->
             if (v != SwipeToDismissBoxValue.Settled) {
-                if (n.isClearable) { view.performHapticFeedback(android.view.HapticFeedbackConstants.CONTEXT_CLICK); onDismiss(); true } else false
+                if (n.isClearable) { MikuHaptics.confirm(view); onDismiss(); true } else false
             } else true
         },
         positionalThreshold = { it * 0.4f }
@@ -973,7 +973,7 @@ private fun NotifRow(n: MikuNotif, onOpen: () -> Unit, onReply: () -> Unit, onDi
                     if (n.isOngoing) NotifGlassQuiet else NotifGlass,
                     accent = accent
                 )
-                .clickable { view.performHapticFeedback(android.view.HapticFeedbackConstants.CONTEXT_CLICK); if (n.contentIntent != null) onOpen() else expanded = !expanded }
+                .clickable { MikuHaptics.confirm(view); if (n.contentIntent != null) onOpen() else expanded = !expanded }
                 .padding(start = 12.dp, end = 4.dp, top = 8.dp, bottom = 8.dp)
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
