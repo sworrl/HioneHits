@@ -47,6 +47,15 @@ val copyMascotPacks = tasks.register<Sync>("copyMascotPacks") {
             exclude { it.isDirectory.not() && it.name.lowercase().let { n -> n.endsWith(".jpg") || n.endsWith(".jpeg") } && it.file.length() > 1_000_000 }
             into(id)
         }
+        // "shared_art" in pack.json: dirs under mikuos/mascot (the season and holiday art that
+        // holidays/calendar.json names) whose 720x1280 JPEGs ship at the same relative path.
+        val meta = groovy.json.JsonSlurper().parse(File(packsDir, "$id/pack.json")) as Map<*, *>
+        (meta["shared_art"] as? List<*>)?.forEach { dir ->
+            from(File(packsDir.parentFile, dir.toString())) {
+                include("**/*_720.jpg")
+                into("$id/$dir")
+            }
+        }
     }
     into(mascotAssetsDir.map { it.dir("mascot") })
 }

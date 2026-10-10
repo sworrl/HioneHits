@@ -28,7 +28,7 @@ class MascotPackTest {
 
     @Test fun hioneNames() {
         val h = MascotPacks.HIONE
-        assertEquals("Hione Deck", h.musicAppName)
+        assertEquals("Hione Hits", h.musicAppName)
         assertEquals("HioneOS", h.osName)
         assertEquals("Oki Hione", h.fullName)
         assertEquals("Hione", h.labelAlias)
@@ -44,7 +44,7 @@ class MascotPackTest {
 
         Mascot.setForTest(MascotPacks.HIONE)
         assertEquals("HioneOS", Mascot.osName)
-        assertEquals("Hione Deck", Mascot.musicAppName)
+        assertEquals("Hione Hits", Mascot.musicAppName)
         assertFalse(Mascot.isMiku)
         assertFalse(Mascot.hasMikuLore)
         // table: teal -> amber, alpha kept
@@ -72,7 +72,7 @@ class MascotPackTest {
 
     @Test fun fillTokens() {
         Mascot.setForTest(MascotPacks.HIONE)
-        assertEquals("Welcome to HioneOS. Hione Deck is ready, Hione.",
+        assertEquals("Welcome to HioneOS. Hione Hits is ready, Hione.",
             Mascot.fill("Welcome to {os_name}. {music_app_name} is ready, {mascot_name}."))
         assertEquals("隠岐氷音 · Oki Hione", Mascot.fill("{full_name_ja} · {full_name}"))
         assertEquals("no tokens", Mascot.fill("no tokens"))

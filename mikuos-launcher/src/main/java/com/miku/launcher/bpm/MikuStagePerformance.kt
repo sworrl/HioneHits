@@ -1,5 +1,6 @@
 package com.miku.launcher.bpm
 
+import com.miku.launcher.Mascot
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -70,11 +71,11 @@ object MikuStagePerformance {
         val endsOnMiss: Boolean = false
     ) {
         NONE("", "", 1f, 1f),
-        NEGI_STORM("NEGI STORM", "Tighter windows. Double leeks. Do not blink.", 0.7f, 2.0f),
+        NEGI_STORM(Mascot.lore("NEGI STORM", "NOTE STORM"), Mascot.lore("Tighter windows. Double leeks. Do not blink.", "Tighter windows. Double notes. Do not blink."), 0.7f, 2.0f),
         SILENT_DISCO("SILENT DISCO", "The beat marker is gone. Go on feel.", 1.15f, 1.8f, hidesBeat = true),
         MIRROR_STAGE("MIRROR STAGE", "Early reads as late. Your brain is the obstacle.", 1f, 1.6f, mirrorsBar = true),
         STAGE_DIVE("STAGE DIVE", "One miss and you hit the floor. Until then, triple.", 1f, 3.0f, endsOnMiss = true),
-        LEEK_RAIN("LEEK RAIN", "It is raining leeks and nobody knows why.", 1.25f, 1.4f),
+        LEEK_RAIN(Mascot.lore("LEEK RAIN", "NOTE RAIN"), Mascot.lore("It is raining leeks and nobody knows why.", "It is raining notes and nobody knows why."), 1.25f, 1.4f),
         DOUBLE_TIME("DOUBLE TIME", "Everything is fine. Everything is faster.", 0.8f, 2.2f)
     }
 
@@ -97,7 +98,7 @@ object MikuStagePerformance {
         "i have been on stage for 6 minutes and aged 9 years",
         "please. one. on the beat. one.",
         "i am going to go stand over there for a bit",
-        "somebody get the leek. i need the leek."
+        Mascot.lore("somebody get the leek. i need the leek.", "somebody get the note. i need the note.")
     )
     private val LINES_WORRIED = listOf(
         "we can fix this",
@@ -123,7 +124,7 @@ object MikuStagePerformance {
     private val LINES_HYPED = listOf(
         "STOP. THAT WAS PERFECT.",
         "I'M NOT EVEN SINGING ANYMORE I'M JUST WATCHING",
-        "THE LEEK IS GLOWING. WHY IS THE LEEK GLOWING.",
+        Mascot.lore("THE LEEK IS GLOWING. WHY IS THE LEEK GLOWING.", "THE NOTE IS GLOWING. WHY IS THE NOTE GLOWING."),
         "SOMEONE IN THE FRONT ROW IS CRYING",
         "I'VE TOLD THE BAND TO STOP. IT'S JUST YOU NOW."
     )
@@ -288,7 +289,7 @@ object MikuStagePerformance {
         "the PERFECT window saw you coming and flinched"
     )
     private val LINES_NEW_BEST = listOf(
-        "new personal best. i'm telling the leeks.",
+        Mascot.lore("new personal best. i'm telling the leeks.", "new personal best. i'm telling the notes."),
         "you just beat yourself. respectfully. on this exact song.",
         "that's a record. somebody frame this tap.",
         "PB! the sound guy is crying again"

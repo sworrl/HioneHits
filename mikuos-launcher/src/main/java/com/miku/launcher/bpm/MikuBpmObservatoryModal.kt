@@ -1719,7 +1719,7 @@ private fun BpmHeroHarvestCard(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column {
-                Text("LEEK HARVEST", color = KawaiiMikuMint, fontSize = 11.5.sp, fontWeight = FontWeight.Black)
+                Text(Mascot.lore("LEEK HARVEST", "NOTE HARVEST"), color = KawaiiMikuMint, fontSize = 11.5.sp, fontWeight = FontWeight.Black)
                 Text(
                     MikuBeatClickerEngine.formatNumber(leekCount),
                     color = if (feverSeconds > 0) KawaiiGoldenHoney else Color.White,
@@ -1764,7 +1764,7 @@ private fun BpmHeroHarvestCard(
                 }
             }
             Text(
-                "Total earned: ${MikuBeatClickerEngine.formatNumber(MikuBeatClickerEngine.totalEarned.collectAsState().value)} leeks",
+                Mascot.lore("Total earned: ${MikuBeatClickerEngine.formatNumber(MikuBeatClickerEngine.totalEarned.collectAsState().value)} leeks", "Total earned: ${MikuBeatClickerEngine.formatNumber(MikuBeatClickerEngine.totalEarned.collectAsState().value)} notes"),
                 color = KawaiiTextMuted,
                 fontSize = 11.sp
             )
@@ -1802,7 +1802,7 @@ private fun BpmHeroSkillsCard(
             Text("${clickerSkills.sumOf { it.level }} Upgrades Active", color = KawaiiGoldenHoney, fontSize = 12.sp, fontWeight = FontWeight.Bold)
         }
         Text(
-            "Upgrades widen the timing window, pull in golden leeks, make fever last longer, and add an auto-tapper.",
+            Mascot.lore("Upgrades widen the timing window, pull in golden leeks, make fever last longer, and add an auto-tapper.", "Upgrades widen the timing window, pull in golden notes, make fever last longer, and add an auto-tapper."),
             color = KawaiiTextMuted,
             fontSize = 11.sp,
             maxLines = 2,
@@ -2488,7 +2488,7 @@ private fun BpmGameDockCards(
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.Bottom) {
                             Text(a.desc, color = KawaiiTextMuted, fontSize = 9.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
                             Spacer(Modifier.width(4.dp))
-                            Text("+${MikuBeatClickerEngine.formatNumber(a.rewardLeeks)} leeks", color = Color(0xFFFFD700), fontSize = 10.5.sp, fontWeight = FontWeight.Bold)
+                            Text(Mascot.lore("+${MikuBeatClickerEngine.formatNumber(a.rewardLeeks)} leeks", "+${MikuBeatClickerEngine.formatNumber(a.rewardLeeks)} notes"), color = Color(0xFFFFD700), fontSize = 10.5.sp, fontWeight = FontWeight.Bold)
                         }
                     }
                 }
@@ -2541,7 +2541,7 @@ private fun BpmCalibrationFooter(
             horizontalArrangement = Arrangement.SpaceEvenly,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            KawaiiStatBadge("LEEK HARVEST", MikuBeatClickerEngine.formatNumber(leekCount), KawaiiGoldenHoney)
+            KawaiiStatBadge(Mascot.lore("LEEK HARVEST", "NOTE HARVEST"), MikuBeatClickerEngine.formatNumber(leekCount), KawaiiGoldenHoney)
             KawaiiStatBadge("COMBO STREAK", "x$clickerCombo", if (clickerCombo >= 10) KawaiiGoldenHoney else KawaiiSakuraPink)
             KawaiiStatBadge("SEASON RANK", currentSeason.rank.badge, Color(currentSeason.rank.colorHex))
             KawaiiStatBadge("TAP TEMPO", if (calculatedTapBpm != null) "${calculatedTapBpm!!.toInt()}" else "--", KawaiiMikuMint)

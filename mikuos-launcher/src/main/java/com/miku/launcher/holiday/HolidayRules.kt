@@ -25,6 +25,14 @@ sealed class DateRule {
         override fun date(year: Int): LocalDate = HolidayRules.easterSunday(year).plusDays(offset.toLong())
     }
 
+    /** A table of known dates per year ("2026" -> "02-03"), with a usual date for other years (Setsubun). */
+    data class Known(val known: Map<Int, Pair<Int, Int>>, val usualMonth: Int, val usualDay: Int) : DateRule() {
+        override fun date(year: Int): LocalDate? {
+            val (m, d) = known[year] ?: (usualMonth to usualDay)
+            return runCatching { LocalDate.of(year, m, d) }.getOrNull()
+        }
+    }
+
     /** Japan's Vernal Equinox Day (Shunbun no Hi). */
     object JpVernalEquinox : DateRule() {
         override fun date(year: Int): LocalDate? = HolidayRules.jpVernalEquinox(year)

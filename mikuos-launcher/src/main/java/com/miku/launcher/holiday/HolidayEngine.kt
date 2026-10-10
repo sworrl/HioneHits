@@ -15,6 +15,8 @@ data class ActiveArt(
     val holiday: Holiday? = null,
     /** The holiday's date this window belongs to. */
     val date: LocalDate? = null,
+    /** Lockscreen art (a pack path or "drawable:<name>"), when there is a separate one. */
+    val lockArt: String? = null,
 )
 
 /** A holiday on a concrete date, after the regional observance rules. */
@@ -88,23 +90,28 @@ object HolidayEngine {
     }
 
     /**
-     * The holiday whose art window covers [today]: the window runs from windowDaysBefore days
-     * before the holiday through the holiday itself. When windows overlap, the nearest holiday
-     * wins, then the one listed first. Observed (substitute) days do not open a window.
+     * The holiday whose art covers [today]. Its art runs from windowDaysBefore days before the
+     * date through the last of its [Holiday.days]. calendar.json's pick rule: a holiday on its own
+     * date(s) beats one that is only in its lead-in window, a region holiday beats an intl one,
+     * otherwise the nearer date wins, then the one listed first. Substitute days do not open a window.
      */
     fun activeHoliday(today: LocalDate, holidays: List<Holiday>, scope: HolidayScope): Occurrence? {
         val list = holidays.filter { scope.includes(it) }
         if (list.isEmpty()) return null
         var best: Occurrence? = null
-        var bestDist = Long.MAX_VALUE
-        for (year in listOf(today.year, today.year + 1)) {
+        var bestKey: Triple<Int, Int, Long>? = null
+        for (year in listOf(today.year - 1, today.year, today.year + 1)) {
             for (h in list) {
                 val d = h.rule.date(year) ?: continue
-                val dist = ChronoUnit.DAYS.between(today, d)
-                if (dist < 0 || dist > h.windowDaysBefore) continue
-                if (dist < bestDist) {
+                val dist = ChronoUnit.DAYS.between(today, d)          // > 0: still ahead
+                val onDay = dist <= 0 && -dist < h.days
+                val leadIn = dist > 0 && dist <= h.windowDaysBefore
+                if (!onDay && !leadIn) continue
+                val key = Triple(if (onDay) 0 else 1, if (h.regions.all { it == "intl" }) 1 else 0, Math.abs(dist))
+                val k0 = bestKey
+                if (k0 == null || compareValuesBy(key, k0, { it.first }, { it.second }, { it.third }) < 0) {
                     best = Occurrence(h, d)
-                    bestDist = dist
+                    bestKey = key
                 }
             }
         }
@@ -112,9 +119,11 @@ object HolidayEngine {
     }
 
     /**
-     * The art for [today]. A holiday window beats the season. [packId] picks the holiday art
-     * entry, [seasonArt] holds the pack's wallpaper slots (spring, summer, autumn, winter,
-     * default). A holiday with no art for this pack falls through to the season.
+     * The art for [today]. A holiday beats the season. [packId] picks the holiday art entry. For
+     * the season, the calendar's own season art ([calendarSeasons], drawn for
+     * HolidayCalendar.CALENDAR_ART_PACK, rotating by day of year) beats the pack's wallpaper
+     * slots [seasonArt] / [seasonLock] (spring, summer, autumn, winter, default). A holiday with
+     * no art for this pack falls through to the season.
      */
     fun activeArt(
         today: LocalDate,
@@ -123,12 +132,35 @@ object HolidayEngine {
         latitude: Double?,
         packId: String,
         seasonArt: Map<String, String?>,
+        seasonLock: Map<String, String?> = emptyMap(),
+        calendarSeasons: List<SeasonArt> = emptyList(),
     ): ActiveArt {
         val occ = activeHoliday(today, holidays, scope)
         val hArt = occ?.holiday?.artFor(packId)
-        if (occ != null && hArt != null) return ActiveArt("holiday", occ.holiday.id, hArt, occ.holiday, occ.date)
+        if (occ != null && hArt != null) {
+            return ActiveArt("holiday", occ.holiday.id, hArt, occ.holiday, occ.date, occ.holiday.lockArtFor(packId))
+        }
+        return seasonArt(today, latitude, packId, seasonArt, seasonLock, calendarSeasons)
+    }
+
+    /** The season part of [activeArt] on its own (also the fallback when holiday art fails to load). */
+    fun seasonArt(
+        today: LocalDate,
+        latitude: Double?,
+        packId: String,
+        seasonArt: Map<String, String?>,
+        seasonLock: Map<String, String?> = emptyMap(),
+        calendarSeasons: List<SeasonArt> = emptyList(),
+    ): ActiveArt {
         val s = season(today, latitude)
-        return ActiveArt("season", s, seasonArt[s] ?: seasonArt["default"])
+        if (packId == HolidayCalendar.CALENDAR_ART_PACK) {
+            val cs = calendarSeasons.firstOrNull { it.id == s && it.homes.isNotEmpty() }
+            if (cs != null) {
+                val i = today.dayOfYear % cs.homes.size
+                return ActiveArt("season", s, cs.homes[i], lockArt = cs.locks.getOrNull(i))
+            }
+        }
+        return ActiveArt("season", s, seasonArt[s] ?: seasonArt["default"], lockArt = seasonLock[s])
     }
 
     /** Respectful days get their reminder the day before, the rest on the day. */

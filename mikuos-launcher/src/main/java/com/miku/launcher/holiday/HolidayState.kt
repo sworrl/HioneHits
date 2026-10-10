@@ -49,7 +49,6 @@ object HolidayState {
     @Volatile private var calendar: List<Holiday>? = null
     private val main = Handler(Looper.getMainLooper())
     private val listeners = java.util.concurrent.CopyOnWriteArrayList<() -> Unit>()
-    private val packArtCache = HashMap<String, Map<String, String?>>()
 
     /** Called after every refresh, on the main thread (for View code such as the live wallpaper). */
     fun addListener(l: () -> Unit) { listeners += l }
@@ -93,12 +92,22 @@ object HolidayState {
     private fun compute(ctx: Context): Triple<ActiveArt?, Bitmap?, Bitmap?> {
         if (!artEnabled(ctx)) return Triple(null, null, null)
         val pack = Mascot.pack
-        val art = HolidayEngine.activeArt(
-            LocalDate.now(), calendar(ctx), scope(ctx), latitude(ctx), pack.id, seasonArt(ctx, pack),
-        )
+        val today = LocalDate.now()
+        val lat = latitude(ctx)
+        val slots = packSlots(ctx, pack)
         val maxDim = ctx.resources.displayMetrics.let { maxOf(it.widthPixels, it.heightPixels) }.coerceAtLeast(1280)
-        val home = art.art?.let { loadArt(ctx, it, pack.id, maxDim) }
-        val lock = if (art.kind == "holiday") home else null
+        var art = HolidayEngine.activeArt(
+            today, calendar(ctx), scope(ctx), lat, pack.id, slots.first, slots.second, seasons(ctx),
+        )
+        var home = art.art?.let { loadArt(ctx, it, pack.id, maxDim) }
+        if (home == null && art.kind == "holiday") {
+            // Planned art that is not shipped yet: show the season instead.
+            art = HolidayEngine.seasonArt(today, lat, pack.id, slots.first, slots.second, seasons(ctx))
+            home = art.art?.let { loadArt(ctx, it, pack.id, maxDim) }
+        }
+        // Lockscreen: its own image when there is one, the holiday's home image in a holiday,
+        // otherwise null (the lockscreen keeps its portrait).
+        val lock = art.lockArt?.let { loadArt(ctx, it, pack.id, maxDim) } ?: if (art.kind == "holiday") home else null
         return Triple(art, home, lock)
     }
 
@@ -106,12 +115,26 @@ object HolidayState {
 
     fun calendar(ctx: Context): List<Holiday> {
         calendar?.let { return it }
-        val list = runCatching {
-            ctx.assets.open(CALENDAR_ASSET).use { HolidayCalendar.parse(it.readBytes().toString(Charsets.UTF_8)) }
-        }.onFailure { Log.i(TAG, "no holiday calendar in assets ($it), seasons only") }.getOrDefault(emptyList())
+        val text = calendarText(ctx)
+        val list = runCatching { HolidayCalendar.parse(text ?: return emptyList<Holiday>().also { calendar = it }) }
+            .onFailure { Log.w(TAG, "holiday calendar unreadable: $it") }.getOrDefault(emptyList())
         calendar = list
         return list
     }
+
+    @Volatile private var seasonList: List<SeasonArt>? = null
+
+    /** calendar.json's season art (drawn for HolidayCalendar.CALENDAR_ART_PACK). */
+    fun seasons(ctx: Context): List<SeasonArt> {
+        seasonList?.let { return it }
+        val list = runCatching { HolidayCalendar.parseSeasons(calendarText(ctx) ?: "") }.getOrDefault(emptyList())
+        seasonList = list
+        return list
+    }
+
+    private fun calendarText(ctx: Context): String? = runCatching {
+        ctx.assets.open(CALENDAR_ASSET).use { it.readBytes().toString(Charsets.UTF_8) }
+    }.onFailure { Log.i(TAG, "no holiday calendar in assets ($it), seasons only") }.getOrNull()
 
     fun artEnabled(ctx: Context): Boolean =
         runCatching { Settings.Global.getInt(ctx.contentResolver, Mascot.HOLIDAY_ART, 1) }.getOrDefault(1) != 0
@@ -165,25 +188,39 @@ object HolidayState {
         "winter" to "drawable:theme_cozy_cafe_wallpaper",
     )
 
-    /** art.wallpaper of the active pack: compiled in for Miku, read through Miku Update's provider otherwise. */
-    fun seasonArt(ctx: Context, pack: MascotPack): Map<String, String?> {
-        if (pack.id == "miku") return MIKU_SEASONS
+    /** Lockscreen slots of packs/miku/pack.json: none, the lockscreen keeps its portrait. */
+    val MIKU_SEASON_LOCKS: Map<String, String?> = emptyMap()
+
+    private val packSlotCache = HashMap<String, Pair<Map<String, String?>, Map<String, String?>>>()
+
+    /** art.wallpaper of the active pack (home), compiled in for Miku, from Miku Update's provider otherwise. */
+    fun seasonArt(ctx: Context, pack: MascotPack): Map<String, String?> = packSlots(ctx, pack).first
+
+    /** art.wallpaper and art.wallpaper_lock of [pack]. */
+    fun packSlots(ctx: Context, pack: MascotPack): Pair<Map<String, String?>, Map<String, String?>> {
+        if (pack.id == "miku") return MIKU_SEASONS to MIKU_SEASON_LOCKS
         val ck = "${pack.id}@${pack.version}"
-        synchronized(packArtCache) { packArtCache[ck]?.let { return it } }
+        synchronized(packSlotCache) { packSlotCache[ck]?.let { return it } }
         val slots = runCatching {
             ctx.contentResolver.openInputStream(Mascot.fileUri("pack.json", pack.id))?.use { s ->
-                parseSeasonSlots(JSONObject(s.readBytes().toString(Charsets.UTF_8)))
+                val o = JSONObject(s.readBytes().toString(Charsets.UTF_8))
+                parseSeasonSlots(o) to parseSlots(o, "wallpaper_lock")
             }
-        }.getOrNull() ?: mapOf("default" to "drawable:miku_wallpaper")
-        synchronized(packArtCache) { packArtCache[ck] = slots }
+        }.getOrNull() ?: (mapOf<String, String?>("default" to "drawable:miku_wallpaper") to emptyMap())
+        synchronized(packSlotCache) { packSlotCache[ck] = slots }
         return slots
     }
 
     fun parseSeasonSlots(o: JSONObject): Map<String, String?> {
-        val w = o.optJSONObject("art")?.optJSONObject("wallpaper") ?: return mapOf("default" to "drawable:miku_wallpaper")
-        val out = LinkedHashMap<String, String?>()
-        for (k in w.keys()) out[k] = if (w.isNull(k)) null else w.optString(k).ifBlank { null }
+        val out = parseSlots(o, "wallpaper").toMutableMap()
         if (out["default"] == null) out["default"] = "drawable:miku_wallpaper"
+        return out
+    }
+
+    private fun parseSlots(o: JSONObject, key: String): Map<String, String?> {
+        val w = o.optJSONObject("art")?.optJSONObject(key) ?: return emptyMap()
+        val out = LinkedHashMap<String, String?>()
+        for (k in w.keys()) out[if (k == "fall") "autumn" else k] = if (w.isNull(k)) null else w.optString(k).ifBlank { null }
         return out
     }
 

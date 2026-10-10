@@ -289,7 +289,7 @@ object MikuBeatClickerEngine {
 
     private val initialBuildings get() = listOf(
         Building("chibi", "Chibi ${Mascot.name}", "🎤", 15.0, 0.3, 0, "Little chibi ${Mascot.name} humming along"),
-        Building("farm", "Leek Farm", "🌱", 100.0, 1.8, 0, "Hydroponic cyber leeks growing under LEDs"),
+        Building("farm", Mascot.lore("Leek Farm", "Note Farm"), "🌱", 100.0, 1.8, 0, Mascot.lore("Hydroponic cyber leeks growing under LEDs", "Hydroponic cyber notes growing under LEDs")),
         Building("synth", "Yamaha DX7", "🎹", 1100.0, 14.0, 0, "Classic 1983 6-operator FM synthesizer"),
         Building("arcade", "DIVA Arcade", "🕹️", 12000.0, 75.0, 0, "Sanwa arcade buttons and coin drops"),
         Building("stage", "Hologram Stage", "🌟", 130000.0, 420.0, 0, "A 3D projection with stadium sound"),
@@ -301,13 +301,13 @@ object MikuBeatClickerEngine {
     // be decorative: you could spend hundreds of thousands of leeks on a skill tree that changed
     // nothing at all, which is the least legible progression a game can have.
     private val initialSkills = listOf(
-        SkillUpgrade("magnet", "Golden Leek Magnet", "🧲", 250.0, 0, 10, "Golden leeks show up 12% sooner per tier"),
+        SkillUpgrade("magnet", Mascot.lore("Golden Leek Magnet", "Golden Note Magnet"), "🧲", 250.0, 0, 10, Mascot.lore("Golden leeks show up 12% sooner per tier", "Golden notes show up 12% sooner per tier")),
         SkillUpgrade("window", "Wider Timing Window", "🎯", 600.0, 0, 8, "+6ms wider hit windows per tier"),
         SkillUpgrade("overdrive", "Longer Fever", "⚡", 2000.0, 0, 5, "+3s fever and +15x fever multiplier per tier"),
         SkillUpgrade("pentatonic", "Combo Bonus", "🎼", 5000.0, 0, 5, "+25% combo multiplier bonus per tier"),
         // NOT an auto-tapper: a machine tap has no player timing in it, so scoring one would be
         // fabricating accuracy. Chibi Miku farms in the background instead.
-        SkillUpgrade("autopilot", "Chibi Miku Farmer", "🤖", 15000.0, 0, 5, "Chibi Miku earns leeks while you rest, +12% leeks/s per tier")
+        SkillUpgrade("autopilot", Mascot.lore("Chibi Miku Farmer", "Chibi Farmer"), "🤖", 15000.0, 0, 5, Mascot.lore("Chibi Miku earns leeks while you rest, +12% leeks/s per tier", "Chibi ${Mascot.name} earns notes while you rest, +12% notes/s per tier"))
     )
 
     private val initialAchievements = listOf(
@@ -315,7 +315,7 @@ object MikuBeatClickerEngine {
         Achievement("fever_queen", "Fever Queen", "Fill the fever meter to 100%", "🔥", 2500.0, false),
         Achievement("diva_50", "Combo 50", "Reach a 50x combo", "👑", 10000.0, false),
         Achievement("audio_arch", "Master Calibrator", "Judge 25 taps against a real beat", "🎧", 5000.0, false),
-        Achievement("leek_tycoon", "Leek Tycoon", "Earn 1,000,000 leeks", "💰", 50000.0, false)
+        Achievement("leek_tycoon", Mascot.lore("Leek Tycoon", "Note Tycoon"), Mascot.lore("Earn 1,000,000 leeks", "Earn 1,000,000 notes"), "💰", 50000.0, false)
     )
 
     private val _leeks = MutableStateFlow(0.0)
@@ -866,7 +866,7 @@ object MikuBeatClickerEngine {
             roll < 45 -> {
                 val bonus = (1.0 + getBaseBps() * 0.03) * 40.0
                 _leeks.value += bonus; _totalEarned.value += bonus
-                "Lucky note: +${formatNumber(bonus)} leeks"
+                Mascot.lore("Lucky note: +${formatNumber(bonus)} leeks", "Lucky note: +${formatNumber(bonus)} notes")
             }
             roll < 65 -> {
                 if (_comboShields.value < MAX_COMBO_SHIELDS) {
@@ -875,7 +875,7 @@ object MikuBeatClickerEngine {
                 } else {
                     val bonus = (1.0 + getBaseBps() * 0.03) * 60.0
                     _leeks.value += bonus; _totalEarned.value += bonus
-                    "Lucky note: shields full, +${formatNumber(bonus)} leeks"
+                    Mascot.lore("Lucky note: shields full, +${formatNumber(bonus)} leeks", "Lucky note: shields full, +${formatNumber(bonus)} notes")
                 }
             }
             roll < 82 -> {
@@ -889,7 +889,7 @@ object MikuBeatClickerEngine {
             }
             else -> {
                 _goldenLeekVisible.value = true
-                "Jackpot: a golden leek showed up"
+                Mascot.lore("Jackpot: a golden leek showed up", "Jackpot: a golden note showed up")
             }
         }
         com.miku.launcher.audio.MikuSeasonalAudioEngine.playGoldenLeekJingle()

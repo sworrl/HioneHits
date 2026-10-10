@@ -177,7 +177,7 @@ private fun SetOverCard() {
         Spacer(Modifier.height(4.dp))
         Text(
             "Peak crowd this set: ${MikuStagePerformance.peakCrowd.toInt()}%. " +
-                "You keep every leek you earned. What you lost was the room.",
+                Mascot.lore("You keep every leek you earned. What you lost was the room.", "You keep every note you earned. What you lost was the room."),
             color = Mascot.color(0xFFE8F4F2), fontSize = 11.sp, lineHeight = 15.sp
         )
         Spacer(Modifier.height(10.dp))

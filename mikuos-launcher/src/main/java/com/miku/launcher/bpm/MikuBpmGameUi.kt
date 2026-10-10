@@ -344,7 +344,7 @@ fun BpmDailyChallengeLine() {
     val c by MikuBeatClickerEngine.dailyChallenge.collectAsState()
     if (c.dateKey.isEmpty()) return
     val text = if (c.claimed) "Daily challenge done. New one tomorrow."
-    else "Daily: ${c.kind.label} · ${c.progress.coerceAtMost(c.kind.target)}/${c.kind.target} · +12K leeks, +1 shield"
+    else Mascot.lore("Daily: ${c.kind.label} · ${c.progress.coerceAtMost(c.kind.target)}/${c.kind.target} · +12K leeks, +1 shield", "Daily: ${c.kind.label} · ${c.progress.coerceAtMost(c.kind.target)}/${c.kind.target} · +12K notes, +1 shield")
     Text(
         text,
         color = if (c.claimed) Gold else Pink.copy(alpha = 0.95f),
