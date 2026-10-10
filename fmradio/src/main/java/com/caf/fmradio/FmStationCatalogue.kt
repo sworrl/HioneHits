@@ -131,10 +131,14 @@ object FmStationCatalogue {
             if (!f.exists()) continue
             // Try in place first: on a writable location this is free and avoids the copy.
             var opened = openAt(p)
-            if (opened == null) opened = writableCopy(p)
+            var via = p
+            if (opened == null) {
+                opened = writableCopy(p)
+                if (opened != null) via = "a writable copy of $p"
+            }
             if (opened != null) {
                 db = opened
-                Log.i(TAG, "catalogue open: $p")
+                Log.i(TAG, "catalogue open: $via")
                 return opened
             }
         }

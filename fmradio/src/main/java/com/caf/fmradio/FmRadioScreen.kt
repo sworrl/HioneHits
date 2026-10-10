@@ -93,6 +93,14 @@ fun MikuFMRadioScreen(onBack: () -> Unit) {
                 }
             }
 
+            // The terrain between here and whatever is tuned. Only shown once a profile has
+            // actually been obtained: this panel exists to answer "is a hill in the way", and
+            // an empty one every time the catalogue has no match would just be furniture.
+            st.tunedProfile?.let { prof ->
+                Spacer(Modifier.height(3.dp))
+                FmFresnelProfileView(prof, Modifier.height(82.dp))
+            }
+
             Spacer(Modifier.height(4.dp))
             FmTransportRow(st, ctx)
             Spacer(Modifier.height(3.dp))

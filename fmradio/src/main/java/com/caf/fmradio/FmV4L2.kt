@@ -51,18 +51,19 @@ object FmV4L2 {
         guard("setV4L2RadioFrequency") { FmReceiverJNI.setV4L2RadioFrequency(khz * 16) } != null
 
     /**
-     * Set the tuner part's own receive volume.
+     * Set the tuner part's own receive volume. The range is 0..[RADIO_VOLUME_MAX], not 0..63.
      *
-     * Worth a look because of what the symptom is: the HAL enables the FM codec port and the
-     * output is constant noise that does not change with frequency, which is what an enabled
-     * port with nothing driving it sounds like. If the Si4705's output is sitting at zero then
-     * everything upstream can be correct and still produce exactly that.
-     *
-     * Range is a guess (the part takes 0..63), so the debug hook sweeps it rather than
-     * trusting the guess.
+     * The driver registers V4L2_CID_AUDIO_VOLUME with a range of 0..15 and passes the value
+     * straight through to the chip's RX_VOLUME (`value & 0x3f`), so a write of 63 is clamped
+     * by the v4l2 core to 15 and every build that "set it to maximum" was really setting 15.
+     * Writing the real control maximum says what is happening instead of relying on a clamp.
      */
+    const val RADIO_VOLUME_MAX = 15
+
     fun setRadioVolume(v: Int): Boolean =
-        guard("setV4L2RadioFmVolume") { FmReceiverJNI.setV4L2RadioFmVolume(v) } != null
+        guard("setV4L2RadioFmVolume") {
+            FmReceiverJNI.setV4L2RadioFmVolume(v.coerceIn(0, RADIO_VOLUME_MAX))
+        } != null
 
     /**
      * The driver's channel-mode control. Stock toggles it between 0 and 1 and re-issues the

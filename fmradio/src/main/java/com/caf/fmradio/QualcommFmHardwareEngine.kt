@@ -302,6 +302,10 @@ class QualcommFmHardwareEngine(private val context: Context) {
     val listenerPlace = MutableStateFlow<Pair<Double, Double>?>(null)
     val catalogueSize = MutableStateFlow(0)
 
+    /** Terrain between here and whatever is tuned. Null until a profile has been obtained. */
+    val tunedProfile = MutableStateFlow<FmFresnel.Profile?>(null)
+    @Volatile private var profileJob: Job? = null
+
     /** The station the catalogue believes we are tuned to, for the big readout. */
     val tunedStation = MutableStateFlow<FmStationCatalogue.Station?>(null)
 
@@ -336,9 +340,32 @@ class QualcommFmHardwareEngine(private val context: Context) {
 
     private fun updateTunedStation() {
         val f = currentFrequencyKHz.value
-        tunedStation.value = nearbyStations.value
+        val st = nearbyStations.value
             .filter { Math.abs(it.khz - f) <= 60 }
             .maxByOrNull { it.score }
+        val changed = st?.call != tunedStation.value?.call
+        tunedStation.value = st
+        if (changed) refreshTerrain(st)
+    }
+
+    /**
+     * Work out whether the ground is in the way, for the station now tuned.
+     *
+     * One job at a time and cancelled on retune, because this can mean a network round trip
+     * and spinning the dial should not queue sixty of them. The profile is cached on disk per
+     * (rounded position, station), so coming back to a station is free.
+     */
+    private fun refreshTerrain(st: FmStationCatalogue.Station?) {
+        profileJob?.cancel()
+        if (st == null) { tunedProfile.value = null; return }
+        val pos = FmStationCatalogue.listenerPosition(context)
+        if (pos == null) { tunedProfile.value = null; return }
+        profileJob = scope.launch {
+            val p = runCatching { FmFresnel.profile(context, pos.first, pos.second, st) }
+                .onFailure { Log.w(TAG, "terrain profile failed: $it") }
+                .getOrNull()
+            if (isActive) tunedProfile.value = p
+        }
     }
 
     /** How the dial snaps. AUTO follows the band plan, which is the right answer almost always. */
@@ -1653,6 +1680,21 @@ class QualcommFmHardwareEngine(private val context: Context) {
                         "seek_up" -> seek(true)
                         "seek_down" -> seek(false)
                         "scan" -> scanBand()
+                        // Power the tuner from adb. The foreground service is not exported, so
+                        // without this the only way to switch the radio on is a finger on the
+                        // screen - which is why every audio question this session has needed the
+                        // user present. The receiver is already reachable; this just uses it.
+                        "power" -> {
+                            val on = intent.getIntExtra("on", 1) == 1
+                            Log.i(TAG, "debug: power ${if (on) "on" else "off"}")
+                            if (on) powerOn() else powerOff()
+                        }
+                        "state" -> Log.i(TAG, "STATE poweredOn=${isPoweredOn.value} " +
+                            "muted=${isMuted.value} driverMuted=${FmV4L2.isMuted()} " +
+                            "freq=${currentFrequencyKHz.value} driverFreq=${FmV4L2.tunedKHz()} " +
+                            "channelMode=${FmV4L2.channelMode()} " +
+                            "level=${fmVolumeLevel.value} route=$activeRouteCode " +
+                            "halLoopback=${FmAudioRoute.loopbackActive(audioManager)}")
                         "mute" -> mute()
                         "unmute" -> unmute()
                         "vol" -> setFmVolumeLevel(intent.getIntExtra("level", fmVolumeLevel.value))
