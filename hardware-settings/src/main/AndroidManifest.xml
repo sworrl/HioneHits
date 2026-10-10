@@ -94,7 +94,7 @@
         <!-- Bespoke Verbose USB DAC Mode Activity -->
         <activity
             android:name=".UsbDacActivity"
-            android:exported="true"
+            android:exported="false"
             android:label="M500 USB DAC"
             android:screenOrientation="portrait"
             android:theme="@style/Theme.M500Hardware">
@@ -109,7 +109,7 @@
         <!-- Fullscreen Cyber Pocket Lock HUD Overlay -->
         <activity
             android:name=".PocketHudActivity"
-            android:exported="true"
+            android:exported="false"
             android:label="Pocket Lock HUD"
             android:screenOrientation="portrait"
             android:theme="@style/Theme.M500Hardware.Translucent">
@@ -143,11 +143,12 @@
         </service>
 
 
-        <!-- Exported so the baked boot-exec (shell) can start it; foreground so
-             A14 does not reap the screen-on receiver it hosts. -->
+        <!-- Started by sysbridge BootSeeds (system uid) and the launcher, both MikuOS-signed.
+             Foreground so A14 does not reap the screen-on receiver it hosts. -->
         <service
             android:name=".AmbientBrightnessService"
             android:exported="true"
+            android:permission="com.miku.permission.SYSTEM_BRIDGE"
             android:foregroundServiceType="camera|specialUse"
             android:description="@string/app_name">
             <property
@@ -157,7 +158,7 @@
 
         <service
             android:name=".PocketLockService"
-            android:exported="true"
+            android:exported="false"
             android:foregroundServiceType="specialUse">
             <property
                 android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
@@ -165,9 +166,12 @@
         </service>
 
 
+        <!-- FN_BUTTON_STATE_CHANGE comes from system_server, which passes any permission check.
+             The permission stops other apps faking the cover switch or pocket lock. -->
         <receiver
             android:name=".PocketLockReceiver"
-            android:exported="true">
+            android:exported="true"
+            android:permission="com.miku.permission.SYSTEM_BRIDGE">
             <intent-filter>
                 <action android:name="FN_BUTTON_STATE_CHANGE" />
             </intent-filter>

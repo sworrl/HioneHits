@@ -23,6 +23,9 @@
          mediaPlayback is declared as a fallback in case the exemption is refused. -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SYSTEM_EXEMPTED" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
+    <!-- Miku Music's PLAY_RANDOM receiver (alarm wake-up music, MikuMusicBridge) needs the
+         MikuOS signature permission from the sender. -->
+    <uses-permission android:name="com.miku.permission.SYSTEM_BRIDGE" />
     <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
     <!-- MikuOS keeps theater_mode_on=1 (charger plug wakes strobed the screen). Theater mode also
          blocks ACQUIRE_CAUSES_WAKEUP, so the ring service lifts it for the length of a ring and

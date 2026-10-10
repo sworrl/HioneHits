@@ -9,7 +9,7 @@ import android.content.Intent
  * Lets the MikuOS lockscreen, launcher, and quick-settings flip player behavior live
  * (pause-on-unplug, toggle/set track like) without binding the player process.
  */
-class MikuPrefsReceiver : BroadcastReceiver() {
+open class MikuPrefsReceiver : BroadcastReceiver() {
     companion object {
         const val ACTION_SET_PAUSE_ON_UNPLUG = "com.miku.player.SET_PAUSE_ON_UNPLUG"
         const val ACTION_TOGGLE_LIKE = "com.miku.player.action.TOGGLE_LIKE"
@@ -103,6 +103,20 @@ class MikuPrefsReceiver : BroadcastReceiver() {
                     }
                 }
             }
+        }
+    }
+}
+
+/**
+ * adb entry for the dev and test actions (manifest: android.permission.DUMP, which the shell
+ * holds and other apps cannot get). [MikuPrefsReceiver] itself needs the MikuOS signature
+ * permission, so `adb shell am broadcast` no longer reaches it.
+ */
+class MikuPrefsShellReceiver : MikuPrefsReceiver() {
+    override fun onReceive(context: Context, intent: Intent) {
+        when (intent.action) {
+            ACTION_PROFILE, ACTION_PRESET_SELFTEST, ACTION_FORCE_LIBRARY_SCAN, ACTION_RESCAN_LIBRARY ->
+                super.onReceive(context, intent)
         }
     }
 }

@@ -55,6 +55,8 @@ class MikuCastClient(private val ctx: Context) {
         private const val TYPE_CONTROL: Byte = 4
         private const val TYPE_PING: Byte = 5
         private const val TYPE_SKIP: Byte = 6
+        private const val TYPE_AUTH: Byte = 7
+        private const val PREFS = "miku_cast_pairing"
     }
 
     data class StreamFormat(
@@ -81,6 +83,9 @@ class MikuCastClient(private val ctx: Context) {
         val artist: String = "",
         val album: String = "",
         val lastError: String = "",
+        /** The M500 doesn't know this TV yet: show the code entry. */
+        val needsCode: Boolean = false,
+        val pairError: String = "",
     )
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -96,6 +101,16 @@ class MikuCastClient(private val ctx: Context) {
     @Volatile var lastPcm: ByteArray? = null
         private set
 
+    /** Code typed on the TV, sent on the next handshake and then forgotten. */
+    @Volatile private var pendingCode: String? = null
+    private val prefs by lazy { ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE) }
+
+    /** Pair with the 6-digit code shown on the M500. The client reconnects and sends it. */
+    fun pairWith(code: String) {
+        pendingCode = code.filter { it.isDigit() }.take(6)
+        _state.value = _state.value.copy(pairError = "", status = "Pairing")
+    }
+
     fun start(explicitHost: String? = null) {
         if (job?.isActive == true) return
         job = scope.launch {
@@ -107,6 +122,11 @@ class MikuCastClient(private val ctx: Context) {
                     continue
                 }
                 runSession(host)
+                _state.value = _state.value.copy(connected = false)
+                // Waiting for a code: don't reconnect until one is typed, or every attempt is a
+                // failed handshake on the M500 and it blocks this TV for a while.
+                while (isActive && _state.value.needsCode && pendingCode == null) delay(300)
+                if (_state.value.needsCode) continue
                 // Reconnect rather than giving up: the player is in a pocket and will come and go.
                 _state.value = _state.value.copy(connected = false, status = "Reconnecting to $host")
                 delay(2000)
@@ -143,7 +163,7 @@ class MikuCastClient(private val ctx: Context) {
             s.keepAlive = true
             socket = s
             out = s.getOutputStream()
-            _state.value = _state.value.copy(connected = true, host = host, status = "Connected", lastError = "")
+            _state.value = _state.value.copy(connected = true, host = host, status = "Checking pairing", lastError = "")
             Log.i(TAG, "connected to $host")
 
             val input = DataInputStream(s.getInputStream())
@@ -177,6 +197,10 @@ class MikuCastClient(private val ctx: Context) {
                         )
                         Log.w(TAG, "stream skipped, flushed")
                     }
+                    TYPE_AUTH -> {
+                        val b = ByteArray(len); if (len > 0) input.readFully(b)
+                        if (!handleAuth(JSONObject(String(b)))) break
+                    }
                     TYPE_PING -> { /* liveness */ }
                     else -> { if (len > 0) input.skipBytes(len) }
                 }
@@ -189,6 +213,60 @@ class MikuCastClient(private val ctx: Context) {
             socket = null; out = null
             releaseTrack()
         }
+    }
+
+    @Volatile private var serverId = ""
+
+    /**
+     * The M500's pairing handshake. Returns false when the session should end. A paired TV
+     * answers the challenge with HMAC(token, challenge) and never sends the token itself.
+     */
+    private fun handleAuth(j: JSONObject): Boolean {
+        val o = out ?: return false
+        if (j.has("challenge")) {
+            serverId = j.optString("server")
+            val id = prefs.getString("id_$serverId", null)
+            val token = prefs.getString("token_$serverId", null)
+            val code = pendingCode
+            val reply = when {
+                id != null && token != null -> JSONObject().put("id", id).put("mac", hmacHex(token, j.optString("challenge")))
+                code != null -> { pendingCode = null; JSONObject().put("code", code).put("name", android.os.Build.MODEL ?: "TV") }
+                else -> {
+                    _state.value = _state.value.copy(needsCode = true, status = "Enter the code shown on the M500")
+                    return false
+                }
+            }
+            val b = reply.toString().toByteArray()
+            synchronized(o) { o.write(header(TYPE_AUTH, b.size)); o.write(b); o.flush() }
+            return true
+        }
+        if (j.optBoolean("ok", false)) {
+            if (j.has("token")) {
+                prefs.edit().putString("id_$serverId", j.optString("id")).putString("token_$serverId", j.optString("token")).apply()
+            }
+            _state.value = _state.value.copy(needsCode = false, pairError = "", status = "Connected")
+            return true
+        }
+        val err = j.optString("error")
+        if (err == "unknown-tv") prefs.edit().remove("id_$serverId").remove("token_$serverId").apply()
+        _state.value = _state.value.copy(
+            needsCode = err != "locked",
+            pairError = when (err) {
+                "bad-code" -> "Wrong code. Check the M500 screen."
+                "locked" -> "Too many wrong codes. Wait a minute and try again."
+                "unknown-tv" -> "The M500 forgot this TV. Enter a new code."
+                "no-code" -> "Turn on Cast to a TV on the M500 to get a code."
+                else -> "Pairing failed."
+            },
+            status = "Not paired"
+        )
+        return false
+    }
+
+    private fun hmacHex(key: String, data: String): String {
+        val mac = javax.crypto.Mac.getInstance("HmacSHA256")
+        mac.init(javax.crypto.spec.SecretKeySpec(key.toByteArray(Charsets.UTF_8), "HmacSHA256"))
+        return mac.doFinal(data.toByteArray(Charsets.UTF_8)).joinToString("") { "%02x".format(it) }
     }
 
     private fun applyFormat(j: JSONObject) {

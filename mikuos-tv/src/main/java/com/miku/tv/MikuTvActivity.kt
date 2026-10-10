@@ -14,6 +14,12 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -91,6 +97,11 @@ private fun CastScreen(client: MikuCastClient) {
 
             Spacer(Modifier.height(28.dp))
 
+            if (s.needsCode) {
+                PairPanel(s.pairError) { client.pairWith(it) }
+                return@Column
+            }
+
             Text(
                 s.title.ifBlank { if (s.connected) "Waiting for audio" else s.status },
                 color = Color.White, fontSize = 44.sp, fontWeight = FontWeight.Bold, maxLines = 2
@@ -162,6 +173,37 @@ private fun CastScreen(client: MikuCastClient) {
                 "projectM on this screen is not wired up yet. See docs/12_tv_companion_design.md.",
                 color = Muted, fontSize = 12.sp
             )
+        }
+    }
+}
+
+/** First connect to an M500: type the code it shows under Settings, Wi-Fi Remote, Cast to a TV. */
+@Composable
+private fun PairPanel(error: String, onPair: (String) -> Unit) {
+    var code by remember { mutableStateOf("") }
+    Column {
+        Text("Pair with the M500", color = Color.White, fontSize = 36.sp, fontWeight = FontWeight.Bold)
+        Spacer(Modifier.height(10.dp))
+        Text(
+            "On the M500, open Miku Music Settings, Wi-Fi Remote, and turn on Cast to a TV. Type the 6-digit TV code it shows.",
+            color = Muted, fontSize = 18.sp
+        )
+        Spacer(Modifier.height(20.dp))
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            OutlinedTextField(
+                value = code,
+                onValueChange = { v -> code = v.filter { it.isDigit() }.take(6) },
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
+                textStyle = androidx.compose.ui.text.TextStyle(color = Color.White, fontSize = 28.sp),
+                modifier = Modifier.width(260.dp)
+            )
+            Spacer(Modifier.width(16.dp))
+            TvButton("Pair") { if (code.length == 6) onPair(code) }
+        }
+        if (error.isNotBlank()) {
+            Spacer(Modifier.height(12.dp))
+            Text(error, color = Warn, fontSize = 16.sp)
         }
     }
 }

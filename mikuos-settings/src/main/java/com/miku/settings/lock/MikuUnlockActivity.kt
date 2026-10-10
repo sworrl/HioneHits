@@ -61,6 +61,9 @@ class MikuUnlockActivity : ComponentActivity() {
     private var lockedUntil by mutableLongStateOf(0L)
     private var resetKey by mutableIntStateOf(0)
     private var shakeKey by mutableIntStateOf(0)
+    /** Scramble PIN layout (Screen lock setting). New digit places each time the pad shows. */
+    private var scramble by mutableStateOf(false)
+    private var layoutKey by mutableIntStateOf(0)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -97,7 +100,9 @@ class MikuUnlockActivity : ComponentActivity() {
                     submitLabel = "Unlock",
                     onSubmit = { submit(it) },
                     onCancel = { finish() },
-                    header = { LockClock() }
+                    header = { LockClock() },
+                    scramble = scramble,
+                    layoutKey = layoutKey
                 )
             }
         }
@@ -112,6 +117,8 @@ class MikuUnlockActivity : ComponentActivity() {
     override fun onResume() {
         super.onResume()
         if (busy) return
+        scramble = MikuLock.scramblePin(this)
+        layoutKey++
         val t = MikuLock.credentialType(this)
         when {
             // Nothing to unlock: the keyguard is gone already.

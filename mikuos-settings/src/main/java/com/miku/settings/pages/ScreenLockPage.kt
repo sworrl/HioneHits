@@ -10,7 +10,7 @@ import com.miku.settings.ui.*
 
 /**
  * Security > Screen lock. Set, change or remove the PIN or password, choose when MikuOS asks for
- * it, and whether notifications show their content while locked.
+ * it, whether notifications show their content while locked, and the scrambled PIN pad.
  */
 @Composable
 fun ScreenLockPage() {
@@ -78,6 +78,15 @@ fun ScreenLockPage() {
                         show
                     ) {
                         if (MikuLock.setShowContent(ctx, it)) show = it else toast(ctx, "That setting was refused")
+                    }
+                    var scramble by remember { mutableStateOf(MikuLock.scramblePin(ctx)) }
+                    ToggleRow(
+                        "Scramble PIN layout",
+                        if (scramble) "The unlock pad puts the digits in new places each time it shows"
+                        else "The digits stay in the usual places",
+                        scramble
+                    ) {
+                        if (MikuLock.setScramblePin(ctx, it)) scramble = it else toast(ctx, "That setting was refused")
                     }
                 }
             }

@@ -105,6 +105,8 @@ fun MikuPowerMenuScreen(
     var pendingActionCommand by remember { mutableStateOf<String?>(null) }
     var pendingActionAccent by remember { mutableStateOf(MikuTealBright) }
     var countdownSeconds by remember { mutableIntStateOf(3) }
+    // Lockdown only means something with a PIN or password set. Without one the pill is a plain lock.
+    val canLockdown = remember { MikuLockdown.available(ctx) }
 
     fun hapticTick() = MikuHaptics.confirm(ctx)
 
@@ -113,15 +115,16 @@ fun MikuPowerMenuScreen(
         scope.launch(Dispatchers.IO) {
             val pm = ctx.getSystemService(Context.POWER_SERVICE) as? android.os.PowerManager
             when (command) {
-                "lockdown" -> {
-                    try {
-                        Runtime.getRuntime().exec(arrayOf("input", "keyevent", "26"))
-                    } catch (_: Throwable) {}
+                // "lockdown" (credential set): PIN required for the next unlock, see MikuLockdown.
+                // "lock": the screen off and the Miku lockscreen, as before.
+                "lockdown", "lock" -> {
+                    if (command == "lockdown") MikuLockdown.engage(ctx)
                     val lockIntent = Intent().apply {
                         setClassName("com.miku.launcher", "com.miku.launcher.lockscreen.MikuLockscreenActivity")
                         flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
                     }
                     try { ctx.startActivity(lockIntent) } catch (_: Throwable) {}
+                    MikuLockdown.screenOff(ctx)
                     (ctx as? Activity)?.finish()
                 }
                 "systemui" -> {
@@ -387,7 +390,11 @@ fun MikuPowerMenuScreen(
                         modifier = Modifier.fillMaxWidth(),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        PowerPill(0, "LOCKDOWN", "Lock the screen now", Icons.Default.Shield, MikuTealBright) { executeAction("lockdown") }
+                        if (canLockdown) {
+                            PowerPill(0, "LOCKDOWN", "Lock now, PIN needed to open", Icons.Default.Shield, MikuTealBright) { executeAction("lockdown") }
+                        } else {
+                            PowerPill(0, "LOCK", "Lock the screen now", Icons.Default.Lock, MikuTealBright) { executeAction("lock") }
+                        }
                         PowerPill(1, "REBOOT", "Restart", Icons.Default.RestartAlt, Color(0xFF00E5FF)) {
                             pendingActionName = "REBOOT"; pendingActionCommand = "reboot"; pendingActionAccent = Color(0xFF00E5FF)
                         }

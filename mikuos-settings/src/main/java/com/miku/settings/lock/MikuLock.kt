@@ -33,6 +33,8 @@ object MikuLock {
     const val KEY_UNTIL_RESTART = "miku_lock_trust_until_restart"
     /** Settings.Secure. 1: the Miku shade shows notification content while locked. Default 0. */
     const val KEY_SHOW_CONTENT = "miku_lock_show_notif_content"
+    /** Settings.Secure. 1: the unlock PIN pad puts the digits in new places each time it shows. Default 0. */
+    const val KEY_SCRAMBLE_PIN = "miku_lock_scramble_pin"
 
     /** The MikuOS trust agent. It lives in MikuSystemUI, which needs no privapp allowlist entry. */
     val TRUST_AGENT = ComponentName("com.miku.systemui", "com.miku.systemui.trust.MikuTrustAgent")
@@ -236,6 +238,12 @@ object MikuLock {
         Settings.Secure.putInt(cr, KEY_SHOW_CONTENT, if (on) 1 else 0) &&
             Settings.Secure.putInt(cr, "lock_screen_allow_private_notifications", if (on) 1 else 0)
     }.getOrDefault(false)
+
+    fun scramblePin(ctx: Context): Boolean =
+        runCatching { Settings.Secure.getInt(ctx.contentResolver, KEY_SCRAMBLE_PIN, 0) == 1 }.getOrDefault(false)
+
+    fun setScramblePin(ctx: Context, on: Boolean): Boolean =
+        runCatching { Settings.Secure.putInt(ctx.contentResolver, KEY_SCRAMBLE_PIN, if (on) 1 else 0) }.getOrDefault(false)
 
     /** Checks a candidate new credential. Returns an error line, or null when it is fine. */
     fun validate(type: Int, value: String): String? = when {

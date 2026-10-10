@@ -7,6 +7,12 @@ import android.util.Log
 
 class BootReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent?) {
+        // Exported for the system's boot broadcasts. Another app can still name this receiver
+        // with some other action, so only the manifest's actions get through.
+        when (intent?.action) {
+            Intent.ACTION_BOOT_COMPLETED, Intent.ACTION_LOCKED_BOOT_COMPLETED, Intent.ACTION_MY_PACKAGE_REPLACED -> Unit
+            else -> return
+        }
         Log.i("MikuOS_Settings", "Boot received, initializing MikuOS hardware & settings")
         // Dev builds only: a release build (ro.miku.release=1) leaves adb and developer options
         // to the user.

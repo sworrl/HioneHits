@@ -20,6 +20,7 @@ import kotlinx.coroutines.flow.StateFlow
  *  - Otherwise each notification shows only its app, unless the user turned on
  *    "Show notification content when locked" (Settings.Secure miku_lock_show_notif_content = 1,
  *    written by MikuSettings > Security > Screen lock). Default is hidden content.
+ *  - In Lockdown (power menu) nothing shows until the PIN is entered.
  */
 object MikuLockPrivacy {
     private const val TAG = "MikuLockPrivacy"
@@ -36,6 +37,8 @@ object MikuLockPrivacy {
     private fun lockedMode(ctx: Context): Mode {
         val cr = ctx.contentResolver
         return when {
+            // Power menu Lockdown hides every notification until the PIN is entered, like stock.
+            MikuLockdown.active(ctx) -> Mode.HIDDEN
             runCatching { Settings.Secure.getInt(cr, "lock_screen_show_notifications", 1) == 0 }.getOrDefault(false) -> Mode.HIDDEN
             runCatching { Settings.Secure.getInt(cr, KEY_SHOW_CONTENT, 0) == 1 }.getOrDefault(false) -> Mode.FULL
             else -> Mode.REDACTED

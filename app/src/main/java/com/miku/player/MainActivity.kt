@@ -5889,6 +5889,8 @@ internal val settingsCategoryRequest = androidx.compose.runtime.mutableStateOf<S
                         }
                         item { SettingsSection("Phone Remote") }
                         item { com.miku.player.remote.MikuRemoteSettingsCard(ctx) }
+                        item { SettingsSection("Wi-Fi Remote") }
+                        item { com.miku.player.api.MikuApiSettingsCard(ctx) }
                         item { SettingsSection("Listening Stats") }
                         item { com.miku.player.stats.ListeningStatsSettingsCard(ctx) }
                         item { SettingsSection("Last.fm") }

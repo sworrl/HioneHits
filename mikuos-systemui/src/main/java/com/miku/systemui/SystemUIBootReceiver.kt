@@ -8,6 +8,10 @@ import android.util.Log
 
 class SystemUIBootReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent?) {
+        // Exported for the system's boot broadcasts only. Another app naming this receiver with
+        // some other action gets nothing.
+        val action = intent?.action
+        if (action != Intent.ACTION_BOOT_COMPLETED && action != Intent.ACTION_LOCKED_BOOT_COMPLETED) return
         Log.i("MikuOS_SystemUI", "MikuOS SystemUI BootReceiver triggered - enabling gesture nav & shade")
         try {
             val cr = context.contentResolver

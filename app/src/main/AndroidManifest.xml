@@ -164,6 +164,7 @@
         <activity
             android:name=".HardwareSettingsActivity"
             android:exported="true"
+            android:permission="com.miku.permission.SYSTEM_BRIDGE"
             android:label="Playback settings"
             android:icon="@mipmap/ic_launcher"
             android:roundIcon="@mipmap/ic_launcher_round"
@@ -176,6 +177,7 @@
         <activity
             android:name=".FnLockSettingsActivity"
             android:exported="true"
+            android:permission="com.miku.permission.SYSTEM_BRIDGE"
             android:label="Miku Fn Key &amp; Pocket Lock"
             android:icon="@mipmap/ic_launcher"
             android:roundIcon="@mipmap/ic_launcher_round"
@@ -206,9 +208,12 @@
         </activity>
 
 
+        <!-- FN_BUTTON_STATE_CHANGE comes from system_server (HiBy InputManagerService), which
+             passes any permission check. The permission stops other apps faking the cover switch. -->
         <receiver
             android:name=".MikuFnLockReceiver"
-            android:exported="true">
+            android:exported="true"
+            android:permission="com.miku.permission.SYSTEM_BRIDGE">
             <intent-filter android:priority="999">
                 <action android:name="FN_BUTTON_STATE_CHANGE" />
             </intent-filter>
@@ -227,6 +232,7 @@
         <activity
             android:name=".radio.MikuFMRadioActivity"
             android:exported="true"
+            android:permission="com.miku.permission.SYSTEM_BRIDGE"
             android:label="Miku FM Radio"
             android:icon="@drawable/ic_fm_miku"
             android:launchMode="singleTask"
@@ -335,7 +341,8 @@
              playback behavior (pause-on-unplug) live via this broadcast. -->
         <receiver
             android:name=".MikuPrefsReceiver"
-            android:exported="true">
+            android:exported="true"
+            android:permission="com.miku.permission.SYSTEM_BRIDGE">
             <intent-filter>
                 <action android:name="com.miku.player.SET_PAUSE_ON_UNPLUG" />
                 <action android:name="com.miku.player.action.TOGGLE_LIKE" />
@@ -346,6 +353,20 @@
                 <action android:name="com.miku.player.action.RESCAN_LIBRARY" />
                 <action android:name="com.miku.player.action.SET_INGEST_ENABLED" />
                 <action android:name="com.miku.player.action.PLAY_RANDOM" />
+            </intent-filter>
+        </receiver>
+
+        <!-- The same receiver for adb (`adb shell am broadcast -a ... -p com.miku.player`): the
+             shell holds DUMP, other apps cannot get it. Dev and test actions only. -->
+        <receiver
+            android:name=".MikuPrefsShellReceiver"
+            android:exported="true"
+            android:permission="android.permission.DUMP">
+            <intent-filter>
+                <action android:name="com.miku.player.action.PROFILE" />
+                <action android:name="com.miku.player.action.PRESET_SELFTEST" />
+                <action android:name="com.miku.player.action.FORCE_LIBRARY_SCAN" />
+                <action android:name="com.miku.player.action.RESCAN_LIBRARY" />
             </intent-filter>
         </receiver>
 
@@ -474,7 +495,7 @@
         <!-- Fullscreen Miku Cyber HUD Modal for Hardware Fn Switch events -->
         <activity
             android:name=".FnLockHudActivity"
-            android:exported="true"
+            android:exported="false"
             android:launchMode="singleTop"
             android:showOnLockScreen="true"
             android:excludeFromRecents="true"

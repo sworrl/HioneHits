@@ -83,6 +83,8 @@ fun LockClock() {
  *
  * [resetKey] clears the typed value whenever it changes (wrong entry, next step).
  * [shakeKey] runs the error shake whenever it changes.
+ * [scramble] puts the PIN digits in random places (SecureRandom), new places whenever
+ * [layoutKey] changes. The grid shape stays the same.
  */
 @Composable
 fun CredentialEntry(
@@ -97,7 +99,9 @@ fun CredentialEntry(
     submitLabel: String = "OK",
     onSubmit: (String) -> Unit,
     onCancel: (() -> Unit)?,
-    header: (@Composable () -> Unit)? = null
+    header: (@Composable () -> Unit)? = null,
+    scramble: Boolean = false,
+    layoutKey: Int = 0
 ) {
     var value by remember(resetKey) { mutableStateOf("") }
     val view = LocalView.current
@@ -161,6 +165,8 @@ fun CredentialEntry(
             PinPad(
                 enabled = canType,
                 okEnabled = canType && value.isNotEmpty(),
+                scramble = scramble,
+                layoutKey = layoutKey,
                 onDigit = { d -> if (value.length < MikuLock.MAX_LENGTH) value += d },
                 onBack = { value = value.dropLast(1) },
                 onClear = { value = "" },
@@ -225,12 +231,19 @@ private fun PasswordBox(value: String, enabled: Boolean, onChange: (String) -> U
 private fun PinPad(
     enabled: Boolean,
     okEnabled: Boolean,
+    scramble: Boolean,
+    layoutKey: Int,
     onDigit: (Char) -> Unit,
     onBack: () -> Unit,
     onClear: () -> Unit,
     onOk: () -> Unit
 ) {
-    val rows = listOf("123", "456", "789")
+    // Ten keys: three rows of three, then the one between Delete and Enter.
+    val order = remember(scramble, layoutKey) {
+        if (scramble) "0123456789".toMutableList().apply { shuffle(java.security.SecureRandom()) }.joinToString("")
+        else "1234567890"
+    }
+    val rows = listOf(order.substring(0, 3), order.substring(3, 6), order.substring(6, 9))
     Column(verticalArrangement = Arrangement.spacedBy(12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
         rows.forEach { r ->
             Row(horizontalArrangement = Arrangement.spacedBy(22.dp)) {
@@ -239,7 +252,7 @@ private fun PinPad(
         }
         Row(horizontalArrangement = Arrangement.spacedBy(22.dp)) {
             PadKey(icon = Icons.AutoMirrored.Filled.Backspace, description = "Delete", enabled = enabled, quiet = true, onLongClick = onClear) { onBack() }
-            PadKey(label = "0", enabled = enabled) { onDigit('0') }
+            PadKey(label = order[9].toString(), enabled = enabled) { onDigit(order[9]) }
             PadKey(icon = Icons.Default.Check, description = "Enter", enabled = okEnabled, accent = true) { onOk() }
         }
     }
