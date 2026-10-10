@@ -7,7 +7,6 @@ import android.location.LocationManager
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import android.util.Log
-import com.miku.launcher.BuildConfig
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -38,7 +37,6 @@ object MikuWeatherTileEngine {
     private const val PREFS = "miku_weather_tile"
     private const val K_SNAPSHOT = "snapshot_json"
     private const val K_UNITS = "units"
-    private const val K_WINDY = "windy_key"
     private const val K_MAN_LAT = "manual_lat"
     private const val K_MAN_LON = "manual_lon"
     private const val K_MAN_NAME = "manual_name"
@@ -99,9 +97,9 @@ object MikuWeatherTileEngine {
     private fun loadPrefs(app: Context) {
         val p = prefs(app)
         val units = runCatching { WxUnits.valueOf(p.getString(K_UNITS, WxUnits.IMPERIAL.name) ?: WxUnits.IMPERIAL.name) }.getOrDefault(WxUnits.IMPERIAL)
-        val storedKey = p.getString(K_WINDY, null)
-        val buildKey = BuildConfig.MIKU_WINDY_KEY
-        val key = if (!storedKey.isNullOrBlank()) storedKey else buildKey
+        // The Windy key lives in the encrypted store now (MikuWindyKeys), which also moves the old
+        // plaintext windy_key value over and deletes it on first load.
+        val keys = MikuWindyKeys.ensureLoaded(app)
         val manual = if (p.contains(K_MAN_LAT) && p.contains(K_MAN_LON)) {
             WxLocation(
                 lat = java.lang.Double.longBitsToDouble(p.getLong(K_MAN_LAT, 0L)),
@@ -114,8 +112,8 @@ object MikuWeatherTileEngine {
         _state.update {
             it.copy(
                 units = units,
-                windyKey = key,
-                windyKeyFromBuild = storedKey.isNullOrBlank() && buildKey.isNotBlank(),
+                windyKey = keys.point,
+                windyKeyFromBuild = keys.pointFromBuild,
                 manualLocation = manual,
                 snapshot = snap,
                 location = it.location ?: manual ?: snap?.let { s -> WxLocation(s.lat, s.lon, s.placeName, "Cached") },
@@ -140,12 +138,22 @@ object MikuWeatherTileEngine {
 
     /** Empty key = Open-Meteo only (and falls back to the build-time key if one was baked in). */
     fun setWindyKey(ctx: Context, key: String) {
-        val trimmed = key.trim()
-        prefs(ctx).edit().putString(K_WINDY, trimmed).apply()
-        val buildKey = BuildConfig.MIKU_WINDY_KEY
-        val effective = if (trimmed.isNotBlank()) trimmed else buildKey
-        _state.update { it.copy(windyKey = effective, windyKeyFromBuild = trimmed.isBlank() && buildKey.isNotBlank()) }
-        refresh(ctx)
+        val app = ctx.applicationContext
+        scope.launch {
+            if (!MikuWindyKeys.set(app, null, key.trim())) {
+                _state.update { it.copy(lastError = "That key was not saved. It needs to be letters, digits, - or _.") }
+                return@launch
+            }
+            MikuWindyKeys.applied(app) // calls reloadWindyKey below, then refreshes the weather screen extras
+        }
+    }
+
+    /** Pick up a key change made elsewhere (weather screen card, adb import) and refetch. */
+    fun reloadWindyKey(ctx: Context) {
+        val k = MikuWindyKeys.state.value
+        if (k.point == _state.value.windyKey && k.pointFromBuild == _state.value.windyKeyFromBuild) return
+        _state.update { it.copy(windyKey = k.point, windyKeyFromBuild = k.pointFromBuild) }
+        if (started) refresh(ctx)
     }
 
     fun setManualLocation(ctx: Context, lat: Double, lon: Double, name: String) {

@@ -355,7 +355,7 @@ object MikuNwsAlerts {
     }
 
     /** The launcher is platform-signed with GRANT_RUNTIME_PERMISSIONS; grant itself POST_NOTIFICATIONS once. */
-    private fun ensureNotificationPermission(ctx: Context) {
+    internal fun ensureNotificationPermission(ctx: Context) {
         if (Build.VERSION.SDK_INT < 33) return
         val perm = "android.permission.POST_NOTIFICATIONS"
         if (ctx.checkSelfPermission(perm) == PackageManager.PERMISSION_GRANTED) return
