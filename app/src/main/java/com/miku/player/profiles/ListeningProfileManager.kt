@@ -281,6 +281,14 @@ object ListeningProfileManager {
      */
     fun onProfileApplied(profile: ListeningProfile) {
         Log.i(TAG, "profile applied: ${profile.id} (${profile.name}) ${summary(profile.effective)}")
+        // Published for the rest of the OS (the launcher's anatomy screen, SystemUI): they cannot
+        // read this app's files, and Miku Music already writes its other miku_* keys here.
+        app?.contentResolver?.let { cr ->
+            runCatching {
+                android.provider.Settings.Global.putString(cr, "miku_listening_profile", profile.name)
+                android.provider.Settings.Global.putString(cr, "miku_listening_profile_summary", summary(profile.effective))
+            }
+        }
     }
 
     fun summary(s: DspSettings): String = buildList {

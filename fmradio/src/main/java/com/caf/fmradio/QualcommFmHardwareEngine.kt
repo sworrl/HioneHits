@@ -700,8 +700,20 @@ class QualcommFmHardwareEngine(private val context: Context) {
         }
     }
 
+    /**
+     * The tuner's state for the rest of the OS (the launcher's anatomy screen): "off", or
+     * "101.9 WVAQ". Written on power changes and retunes only, never per signal poll.
+     */
+    private fun publishFmStatus() {
+        val text = if (!isPoweredOn.value) "off" else
+            "%.1f".format(java.util.Locale.US, currentFrequencyKHz.value / 1000.0) +
+                (stationName.value.ifBlank { tunedStation.value?.call ?: "" }.let { if (it.isBlank()) "" else " $it" })
+        runCatching { android.provider.Settings.Global.putString(context.contentResolver, "miku_fm_status", text) }
+    }
+
     /** Everything that is only true of the station we just left. */
     private fun onNewStation() {
+        publishFmStatus()
         updateTunedStation()
         FmSongId.clear()
         FmRdsReader.newStation()
@@ -829,6 +841,7 @@ class QualcommFmHardwareEngine(private val context: Context) {
     fun powerOn() {
         if (isPoweredOn.value) return
         isPoweredOn.value = true
+        publishFmStatus()
         hardwareError.value = null
         scope.launch(tunerDispatcher) {
             try {
@@ -992,6 +1005,7 @@ class QualcommFmHardwareEngine(private val context: Context) {
                 stopHalAudio()
                 abandonFocus()
                 isPoweredOn.value = false
+                publishFmStatus()
             }
         }
     }
@@ -999,6 +1013,7 @@ class QualcommFmHardwareEngine(private val context: Context) {
     fun powerOff() {
         if (!isPoweredOn.value) return
         isPoweredOn.value = false
+        publishFmStatus()
         sweeping = false
         scanJob?.cancel(); scanJob = null
         isScanning.value = false

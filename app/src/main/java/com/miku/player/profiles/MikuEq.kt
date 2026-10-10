@@ -45,7 +45,7 @@ object MikuEq {
      * also sets [hiResSeen] the first time it is configured with a non-16-bit format, which
      * proves the hook is in without anyone remembering to change this constant.
      */
-    const val HI_RES_HOOK_WIRED = false
+    const val HI_RES_HOOK_WIRED = true
 
     data class State(
         val enabled: Boolean = false,
