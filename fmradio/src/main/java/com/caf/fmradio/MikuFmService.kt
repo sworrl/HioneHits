@@ -183,7 +183,7 @@ class MikuFmService : Service() {
         )
 
         return Notification.Builder(this, CHANNEL_ID)
-            .setSmallIcon(android.R.drawable.ic_lock_silent_mode_off)
+            .setSmallIcon(R.drawable.ic_stat_fm)
             .setContentTitle(freq)
             .setContentText(line)
             .setContentIntent(content)
