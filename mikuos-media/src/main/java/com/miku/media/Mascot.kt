@@ -332,7 +332,7 @@ object MascotPacks {
         fullName = "Oki Hione",
         fullNameJa = "隠岐氷音",
         osName = "HioneOS",
-        musicAppName = "Hione Deck",
+        musicAppName = "Hione Hits",
         launcherName = "HioneOS Launcher",
         settingsName = "HioneOS Settings",
         updateName = "Hione Update",

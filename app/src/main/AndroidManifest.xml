@@ -182,7 +182,7 @@
             android:targetActivity=".MainActivity"
             android:exported="true"
             android:enabled="false"
-            android:label="Hione Deck"
+            android:label="Hione Hits"
             android:icon="@mipmap/ic_launcher_hione"
             android:roundIcon="@mipmap/ic_launcher_hione_round">
             <intent-filter>
