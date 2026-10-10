@@ -129,6 +129,8 @@ class MikuNotificationShadeService : AccessibilityService() {
     private var trackHud: MikuTrackHud? = null
     /** Universal volume HUD overlay for 3rd-party apps (Spotify, etc.). */
     private var volumeHud: MikuVolumeHud? = null
+    /** Brightness HUD: warm horizontal bar under the status bar (see MikuBrightnessHud). */
+    private var brightnessHud: MikuBrightnessHud? = null
 
     /** Album accent bled ≈25% into the nav chrome (pill glow, back capsule), animated 400ms. */
     @Volatile private var navTeal = MikuAccent.TEAL
@@ -168,7 +170,13 @@ class MikuNotificationShadeService : AccessibilityService() {
                 "android.media.VOLUME_CHANGED_ACTION",
                 "android.media.MASTER_VOLUME_CHANGED_ACTION",
                 "android.media.RINGER_MODE_CHANGED" -> {
+                    // One HUD at a time: the centre-capsule volume style sits where this bar does.
+                    brightnessHud?.hide()
                     volumeHud?.onVolumeChanged()
+                }
+                MikuBrightnessHud.ACTION_SHOW -> {
+                    volumeHud?.hide()
+                    brightnessHud?.show()
                 }
                 ACTION_TRIGGER_BACK, ACTION_DEBUG_BACK -> performGlobalAction(GLOBAL_ACTION_BACK)
                 ACTION_DEBUG_HOME -> triggerHome()
@@ -189,6 +197,7 @@ class MikuNotificationShadeService : AccessibilityService() {
         idleDim = MikuIdleDimController(this, windowManager)
         trackHud = MikuTrackHud(this, windowManager) { dragPx -> openShadeActivity(dragPx) }
         volumeHud = MikuVolumeHud(this, windowManager)
+        brightnessHud = MikuBrightnessHud(this, windowManager) { shadeWindow?.isOpen == true }
         MikuPowerProfile.observe(this)
         startAccentObserver()
         try {
@@ -200,6 +209,7 @@ class MikuNotificationShadeService : AccessibilityService() {
                 addAction("android.media.VOLUME_CHANGED_ACTION")
                 addAction("android.media.MASTER_VOLUME_CHANGED_ACTION")
                 addAction("android.media.RINGER_MODE_CHANGED")
+                addAction(MikuBrightnessHud.ACTION_SHOW)
             }
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                 registerReceiver(receiver, filter, Context.RECEIVER_EXPORTED)
@@ -246,6 +256,7 @@ class MikuNotificationShadeService : AccessibilityService() {
         shadeWindow?.detach(); shadeWindow = null
         trackHud?.destroy(); trackHud = null
         volumeHud?.destroy(); volumeHud = null
+        brightnessHud?.destroy(); brightnessHud = null
         accentJob?.cancel(); accentAnim?.cancel()
         removeOverlays()
         try { workThread.quitSafely() } catch (_: Throwable) {}
@@ -616,6 +627,15 @@ class MikuNotificationShadeService : AccessibilityService() {
             event.keyCode == android.view.KeyEvent.KEYCODE_VOLUME_DOWN) {
             if (handleVolumeKnob(event)) return true
         }
+        // Brightness keys (a keyboard or remote that has them): step and show the brightness bar.
+        if (event.keyCode == android.view.KeyEvent.KEYCODE_BRIGHTNESS_UP ||
+            event.keyCode == android.view.KeyEvent.KEYCODE_BRIGHTNESS_DOWN) {
+            if (event.action == android.view.KeyEvent.ACTION_DOWN) {
+                volumeHud?.hide()
+                brightnessHud?.step(if (event.keyCode == android.view.KeyEvent.KEYCODE_BRIGHTNESS_UP) 1 else -1)
+            }
+            return true
+        }
         if (event.keyCode == android.view.KeyEvent.KEYCODE_POWER) {
             if (event.action == android.view.KeyEvent.ACTION_DOWN) {
                 if (event.repeatCount == 0 || powerDownTimestamp == 0L) {
@@ -661,6 +681,14 @@ class MikuNotificationShadeService : AccessibilityService() {
                     sendBroadcast(Intent(Intent.ACTION_CLOSE_SYSTEM_DIALOGS))
                 } catch (_: Throwable) {}
                 openPowerMenuActivity()
+                return
+            }
+            // Stock SystemUI's brightness dialog (ACTION_SHOW_BRIGHTNESS_DIALOG): close it and show
+            // the Miku brightness bar instead, so there is one brightness UI and it is ours.
+            if (cls.contains("BrightnessDialog", ignoreCase = true)) {
+                runCatching { performGlobalAction(GLOBAL_ACTION_BACK) }
+                volumeHud?.hide()
+                brightnessHud?.show()
                 return
             }
             if (cls.contains("NotificationShade", ignoreCase = true) ||

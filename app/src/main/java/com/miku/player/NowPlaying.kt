@@ -921,6 +921,17 @@ fun NowPlayingScreen(
             Text(fmtTime(dur), color = Muted, fontSize = 14.sp, fontWeight = FontWeight.Bold, fontFamily = OrbitronFont, letterSpacing = 0.5.sp)
         }
 
+        // BPM game: a labeled pill right above the transport, never behind an overlay. Pulses on
+        // the beat while music plays; the game opens on top of this screen and comes back here.
+        Spacer(Modifier.height(4.dp))
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
+            com.miku.player.ui.BpmGameButton(
+                from = MikuBpmGameLink.FROM_NOW_PLAYING,
+                accent = accent,
+                label = "Play along"
+            )
+        }
+
         Spacer(Modifier.height(4.dp))
 
         // Transport deck — molded ControlAssembly + 3D keys, palette-tinted hero play key in a

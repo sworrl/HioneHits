@@ -61,6 +61,7 @@ import androidx.compose.material.icons.filled.CloudSync
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.WbSunny
 import androidx.compose.material.icons.filled.HeadsetOff
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.Pause
@@ -384,10 +385,7 @@ fun MikuNotificationShadeView(
                             .padding(horizontal = 10.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        // Negi Battery (a BPM-game secret): re-read on every pull (tick bumps on resume).
-                        val negi = remember(tick) { MikuUnlocksReader.isEnabled(ctx, MikuUnlocksReader.SECRET_NEGI_BATTERY) }
-                        if (negi) MikuNegiBatteryGlyph(pct = batteryPct ?: -1, charging = isCharging)
-                        else Icon(
+                        Icon(
                             if (isCharging) Icons.Default.BatteryChargingFull else Icons.Default.BatteryFull,
                             null, tint = if (isCharging) Color(0xFF69F0AE) else MikuTealBright, modifier = Modifier.size(16.dp)
                         )
@@ -464,7 +462,7 @@ fun MikuNotificationShadeView(
                 Spacer(Modifier.height(8.dp))
 
                 // ---------------------------------------------------- brightness
-                BrightnessRow(Modifier.fillMaxWidth().then(dragModifier).padding(horizontal = 16.dp), osAccent, osAccentBright)
+                BrightnessRow(Modifier.fillMaxWidth().then(dragModifier).padding(horizontal = 16.dp))
 
                 Spacer(Modifier.height(8.dp))
 
@@ -650,7 +648,7 @@ private fun extraTiles(ctx: Context, onRefresh: () -> Unit): List<QsTile> {
  * shade's body, which re-ran the whole shade on every slider step.
  */
 @Composable
-private fun BrightnessRow(modifier: Modifier, accent: Color, accentBright: Color) {
+private fun BrightnessRow(modifier: Modifier) {
     val ctx = LocalContext.current
     val cr = ctx.contentResolver
     var brightness by remember {
@@ -672,10 +670,13 @@ private fun BrightnessRow(modifier: Modifier, accent: Color, accentBright: Color
             }
         },
         valueRange = 8f..255f,
-        icon = Icons.Default.BrightnessMedium,
+        // Warm amber to warm white with a sun, the same identity as the brightness HUD
+        // (MikuBrightnessHud), so brightness never looks like the teal/pink volume controls.
+        icon = Icons.Default.WbSunny,
         contentDescription = "Brightness",
-        accent = accent,
-        accentBright = accentBright,
+        accent = Color(0xFFFF8F00),
+        accentBright = Color(0xFFFFE082),
+        accent2 = Color(0xFFFFF8E1),
         modifier = modifier
     )
 }

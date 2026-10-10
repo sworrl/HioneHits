@@ -75,6 +75,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.GenericShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import com.miku.player.ui.bpmBeatPulse
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.filled.*
@@ -2424,22 +2425,12 @@ private fun MikuAnimatedBootSplash(onFinished: () -> Unit) {
 
             Spacer(Modifier.height(6.dp))
 
-            // BPM / rhythm game entry point. The game lives in the MikuOS launcher's BPM
-            // observatory (it owns the live output-mix beat detector); hand off the same way the
-            // ingress button does, via an `open_bpm` launch extra.
+            // BPM / rhythm game entry point. The game lives in the MikuOS launcher (it owns the
+            // live output-mix beat detector); MikuBpmGameLink opens it on top of this task so
+            // leaving the game comes straight back here.
             Button(
-                onClick = {
-                    val launch = ctx.packageManager.getLaunchIntentForPackage("com.miku.launcher")?.apply {
-                        putExtra("open_bpm", true)
-                        flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK or android.content.Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED
-                    }
-                    if (launch == null) {
-                        android.widget.Toast.makeText(ctx, "MikuOS launcher not installed - BPM game unavailable", android.widget.Toast.LENGTH_SHORT).show()
-                    } else try { ctx.startActivity(launch) } catch (t: Throwable) {
-                        android.widget.Toast.makeText(ctx, "Couldn't open the BPM game: ${t.message}", android.widget.Toast.LENGTH_SHORT).show()
-                    }
-                },
-                modifier = Modifier.fillMaxWidth(),
+                onClick = { MikuBpmGameLink.open(ctx, MikuBpmGameLink.FROM_MONITOR) },
+                modifier = Modifier.bpmBeatPulse(MikuPink, RoundedCornerShape(10.dp)).fillMaxWidth(),
                 colors = ButtonDefaults.buttonColors(containerColor = MikuPink.copy(alpha = 0.16f)),
                 shape = RoundedCornerShape(10.dp)
             ) {
@@ -2742,8 +2733,8 @@ fun expandNotificationShade(ctx: Context) {
             // Standalone Miku Music brand header — the shared mark (ui/MikuTopBar.kt), same glyph +
             // wordmark that signs Now Playing and every settings page.
             //
-            // ROW BUDGET (360dp-wide panel): back 38 + gap, then Random, BPM and Tape keys at 38dp
-            // (the back key's size) plus the scan pill. That leaves roughly 120-165dp for the brand,
+            // ROW BUDGET (360dp-wide panel): back 38 + gap, then Random and Tape keys at 38dp (the
+            // back key's size), the BPM game key at 34dp with wider gaps, plus the scan pill. That leaves roughly 120-165dp for the brand,
             // so the brand takes the flexible weight instead of a Spacer: it is measured LAST, gets
             // whatever is left, and ellipsizes its wordmark if it ever has to. With a Spacer here,
             // an over-full row squeezed the right-most key (Tape) out of existence instead.
@@ -2768,26 +2759,16 @@ fun expandNotificationShade(ctx: Context) {
                 count = count,
                 onScan = onScan
             )
-            Spacer(Modifier.width(2.dp))
-            // BPM rhythm game. Same hand-off as the button in MikuMonitorDialog: the game lives in
-            // the MikuOS launcher's BPM observatory, opened with the `open_bpm` launch extra.
-            HapticIconButton(
-                onClick = {
-                    val launch = ctx.packageManager.getLaunchIntentForPackage("com.miku.launcher")?.apply {
-                        putExtra("open_bpm", true)
-                        flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK or android.content.Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED
-                    }
-                    if (launch == null) {
-                        android.widget.Toast.makeText(ctx, "MikuOS launcher not installed - BPM game unavailable", android.widget.Toast.LENGTH_SHORT).show()
-                    } else try { ctx.startActivity(launch) } catch (t: Throwable) {
-                        android.widget.Toast.makeText(ctx, "Couldn't open the BPM game: ${t.message}", android.widget.Toast.LENGTH_SHORT).show()
-                    }
-                },
-                modifier = Modifier.size(38.dp).semantics { contentDescription = "BPM rhythm game" }
-            ) {
-                Icon(Icons.Default.SportsEsports, null, tint = ac.accent, modifier = Modifier.size(22.dp))
-            }
-            Spacer(Modifier.width(2.dp))
+            // BPM rhythm game: highlighted, and pulsing on the beat while music plays. 34dp plus
+            // 4dp gaps keeps the same row budget as a 38dp key while leaving room for its halo.
+            Spacer(Modifier.width(4.dp))
+            com.miku.player.ui.BpmGameButton(
+                from = MikuBpmGameLink.FROM_HEADER,
+                accent = ac.accent,
+                size = 34.dp,
+                iconSize = 21.dp
+            )
+            Spacer(Modifier.width(4.dp))
             HapticIconButton(
                 onClick = onTape,
                 modifier = Modifier.size(38.dp).semantics { contentDescription = "Tape mode" }
@@ -7299,7 +7280,16 @@ object TransportShapes {
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         RainbowHeart(LikeStore.isLikedEffective(ctx, track), size = 30.dp) { LikeStore.toggleEffective(ctx, track) }
-                        Spacer(Modifier.width(4.dp))
+                        Spacer(Modifier.width(6.dp))
+                        // BPM game, one tap from anywhere a track is playing. Takes its width from
+                        // the badge strip (weighted, clipped), never from the transport keys.
+                        com.miku.player.ui.BpmGameButton(
+                            from = MikuBpmGameLink.FROM_PLAYER_BAR,
+                            accent = palette.color1,
+                            size = 28.dp,
+                            iconSize = 17.dp
+                        )
+                        Spacer(Modifier.width(6.dp))
                         Row(
                             Modifier.weight(1f).height(20.dp).clipToBounds(),
                             verticalAlignment = Alignment.CenterVertically

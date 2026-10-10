@@ -115,7 +115,9 @@ fun DateTimePage() {
                 }
                 ToggleRow("Use 24-hour format", if (is24) "13:00" else "1:00 PM", is24) {
                     if (runCatching { Settings.System.putString(cr, Settings.System.TIME_12_24, if (it) "24" else "12") }.isFailure) toast(ctx, "Setting was refused")
-                    ctx.sendBroadcast(Intent(Intent.ACTION_TIME_CHANGED).putExtra("android.intent.extra.TIME_PREF_24_HOUR_FORMAT", if (it) 1 else 0))
+                    // Stock (uid 1000) also broadcasts TIME_SET so clocks redraw. That broadcast is
+                    // protected and refused for our uid; apps that watch time_12_24 update anyway.
+                    runCatching { ctx.sendBroadcast(Intent(Intent.ACTION_TIME_CHANGED).putExtra("android.intent.extra.TIME_PREF_24_HOUR_FORMAT", if (it) 1 else 0)) }
                     refresh++
                 }
             }

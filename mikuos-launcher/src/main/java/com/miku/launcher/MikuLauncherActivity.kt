@@ -50,6 +50,7 @@ import androidx.core.view.WindowInsetsControllerCompat
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.*
+import com.miku.launcher.ui.mikuBeatPulse
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.draggable
 import androidx.compose.foundation.gestures.rememberDraggableState
@@ -438,7 +439,7 @@ class MikuLauncherActivity : ComponentActivity() {
 }
 
 /** Default quilt patch order (persisted user order is reconciled against this list). */
-val MikuQuiltBadgeIds = listOf("clock", "wxtile", "network", "nowplaying", "dac", "ingest", "library", "brain", "thermal", "volume", "battery", "control")
+val MikuQuiltBadgeIds = listOf("clock", "wxtile", "network", "nowplaying", "bpmgame", "dac", "ingest", "library", "brain", "thermal", "volume", "battery", "control")
 
 @Composable
 fun MikuLauncherScreen() {
@@ -2217,9 +2218,14 @@ fun DesktopAppIconItem(
             .padding(vertical = 4.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
+        // The BPM game's drawer entry is a game, not a utility: highlighted, and pulsing on the
+        // beat while music plays (the drawer covers home, hence insideCover).
+        val isBpmGame = app.packageName == ctx.packageName &&
+            app.activityName == com.miku.launcher.bpm.MikuBpmGameActivity::class.java.name
         Box(
             Modifier
                 .size(MikuDimens.appIconArt)
+                .then(if (isBpmGame) Modifier.mikuBeatPulse(Color(0xFFFF4FA3), corner = 16.dp, insideCover = true) else Modifier)
                 .clip(RoundedCornerShape(16.dp))
                 .background(Color(0x1A00E5FF))
                 .border(0.8.dp, CyberGlassBorder, RoundedCornerShape(16.dp)),
@@ -2381,6 +2387,12 @@ fun launchClockApp(ctx: Context) {
 
 fun launchApp(ctx: Context, app: InstalledApp) {
     try {
+        // The BPM game's drawer entry: open it on top of the launcher (no new task), so closing
+        // the game drops the player back on the drawer/home they opened it from.
+        if (app.packageName == ctx.packageName && app.activityName == com.miku.launcher.bpm.MikuBpmGameActivity::class.java.name) {
+            com.miku.launcher.bpm.MikuBpmGameActivity.open(ctx, "drawer")
+            return
+        }
         if (app.packageName == "com.android.settings") {
             val legacyIntent = ctx.packageManager.getLaunchIntentForPackage("com.android.settings")
                 ?: Intent(android.provider.Settings.ACTION_SETTINGS).apply {
@@ -5534,6 +5546,11 @@ private fun MikuLauncherQuiltSection(
                     onClick = onOpenBpmObservatory
                 )
             }
+        },
+        // The BPM game's own patch: highlighted and pulsing on the beat while music plays. On home
+        // it opens the in-launcher game, so closing it lands right back here.
+        QuiltBadge("bpmgame", "BPM game") {
+            com.miku.launcher.ui.MikuBpmGameEntryPill(onClick = onOpenBpmObservatory)
         },
         QuiltBadge("dac", "CS43198 DAC") {
             CyberBespokeBadge(

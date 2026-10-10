@@ -42,6 +42,18 @@ object MikuBpmEngine {
     @Volatile var dominantColor: Int = 0xFF39C5BB.toInt()
         private set
 
+    /**
+     * The beat grid the pulse broadcasts are fired on, for in-app beat visuals that must flash
+     * together with them: beat n fires at [beatAnchorElapsedNanos] + n * [beatGridIntervalNanos]
+     * (SystemClock.elapsedRealtimeNanos time base). [beatGridIntervalNanos] is 0 whenever no pulse
+     * is running (paused, unknown tempo, screen-off governor), and a consumer must then show no
+     * beat at all. Set when the pulse job starts, cleared when it stops.
+     */
+    @Volatile var beatAnchorElapsedNanos: Long = 0L
+        private set
+    @Volatile var beatGridIntervalNanos: Double = 0.0
+        private set
+
     @Volatile private var npTitle: String = ""
     @Volatile private var npArtist: String = ""
 
@@ -270,6 +282,8 @@ object MikuBpmEngine {
             val intervalNs: Double = if (bpm > 0f) 60_000_000_000.0 / bpm else beatIntervalMs * 1_000_000.0
             if (intervalNs <= 0.0) return@launch
             val anchorNs = android.os.SystemClock.elapsedRealtimeNanos()
+            beatAnchorElapsedNanos = anchorNs
+            beatGridIntervalNanos = intervalNs
             var beat = 0L
             while (isActive && isPlaying) {
                 val intent = Intent(ACTION_BPM_PULSE).apply {
@@ -294,12 +308,16 @@ object MikuBpmEngine {
                 // is per beat and does not accumulate, because the next target is again absolute.
                 if (waitNs > 0) delay((waitNs + 999_999L) / 1_000_000L)
             }
+            // Ran out because playback stopped: retract the grid, unless a newer job already
+            // replaced it with its own anchor.
+            if (beatAnchorElapsedNanos == anchorNs) beatGridIntervalNanos = 0.0
         }
     }
 
     private fun stopBeatPulse(context: Context) {
         beatJob?.cancel()
         beatJob = null
+        beatGridIntervalNanos = 0.0
     }
 
     private fun publishState(context: Context, bpm: Float, playing: Boolean) {
