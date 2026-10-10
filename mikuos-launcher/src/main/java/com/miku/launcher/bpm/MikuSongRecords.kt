@@ -140,7 +140,7 @@ object MikuSongRecords {
     }
 
     fun gradeFor(taps: Int, accuracyPct: Float, fullCombo: Boolean): String = when {
-        taps < MIN_GRADED_TAPS || accuracyPct < 0f -> "—"
+        taps < MIN_GRADED_TAPS || accuracyPct < 0f -> "-"
         accuracyPct >= 95f && fullCombo -> "SS"
         accuracyPct >= 90f -> "S"
         accuracyPct >= 80f -> "A"

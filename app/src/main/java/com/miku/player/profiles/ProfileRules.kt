@@ -73,8 +73,8 @@ object ProfileRules {
         if (!hw.connection.isWired) return "Bluetooth: the M500's DAC is not in this signal path, so only the EQ applies."
         val v = voltsFor110dB(hw)
         val (gain, hp) = driveFor(hw)
-        val why = if (v != null) String.format(java.util.Locale.US, "needs %.2f V for 110 dB SPL peaks", v)
-        else "no sensitivity figure; judged by type/impedance"
-        return "$why → ${gain.replaceFirstChar { it.uppercase() }} gain, High Power ${if (hp) "on" else "off"}"
+        val setting = "$gain gain and High Power ${if (hp) "on" else "off"}."
+        return if (v != null) String.format(java.util.Locale.US, "Needs about %.2f V to reach 110 dB SPL peaks: %s", v, setting)
+        else "No sensitivity spec. Going by type and impedance: $setting"
     }
 }

@@ -153,28 +153,28 @@ object MikuBeatClickerEngine {
     ) {
         SAKURA_DREAM("Sakura Dream", "🌸", 0xFFFF85B3, 0xFF39C5BB, 0xFFFFB5D5, "sakura_lattice",
             NodeShape.ORB, AmbientStyle.PETALS, BurstStyle.PETAL_FALL, HitEffect.RING,
-            false, 0f, "Round notes · petal stream lane · soft ring",
+            false, 0f, "Round notes, petal lane, soft ring",
             LaneStyle.PETAL_STREAM, 0xF22A0E26, 0xFF12050F),
         CYBER_MIRAI("Cyber Mirai", "🌟", 0xFF00E5FF, 0xFF9D4EDD, 0xFF7000FF, "hex_matrix",
             NodeShape.HEX, AmbientStyle.HEX_RAIN, BurstStyle.SPARK_SHOT, HitEffect.SHARD,
-            true, 1.5f, "Hex notes · neon grid lane · sparks shoot out",
+            true, 1.5f, "Hex notes, neon grid lane, sparks",
             LaneStyle.NEON_GRID, 0xF2061826, 0xFF02060E),
         HONEY_SWEET("Honey Sweet", "🍯", 0xFFFFD166, 0xFFFF9F1C, 0xFFFFE49E, "honeycomb",
             NodeShape.DIAMOND, AmbientStyle.HONEY_BUBBLES, BurstStyle.BUBBLE_RISE, HitEffect.SPLASH,
-            false, 0f, "Diamond notes · honeycomb lane · syrup splash",
+            false, 0f, "Diamond notes, honeycomb lane, syrup splash",
             LaneStyle.HONEYCOMB, 0xF2281806, 0xFF120A02),
         GOTHIC_DIVA("Gothic Lolita", "🖤", 0xFFFF2277, 0xFF7B2CBF, 0xFFFF5599, "velvet_damask",
             NodeShape.STAR, AmbientStyle.DAMASK_VEIL, BurstStyle.RIBBON_SWIRL, HitEffect.VELVET_PULSE,
-            true, 2.5f, "Star notes · velvet lace lane · ribbons swirl",
+            true, 2.5f, "Star notes, lace lane, ribbons",
             LaneStyle.VELVET_LACE, 0xF2160410, 0xFF050105),
         SNOW_CRYSTAL("Snow Crystal", "❄️", 0xFF7FE6DE, 0xFF48CAE4, 0xFFE0F7FA, "frost_shimmer",
             NodeShape.SNOWFLAKE, AmbientStyle.SNOW_DRIFT, BurstStyle.CRYSTAL_DRIFT, HitEffect.FROST_CRACK,
-            true, 1.0f, "Snowflake notes · frost lane · cracks out",
+            true, 1.0f, "Snowflake notes, frost lane, ice cracks",
             LaneStyle.FROST_STREAK, 0xF20C2030, 0xFF040C14),
         // Secret skin: not in the selector at all until MikuSecrets.HOLO_SKIN is earned.
-        HOLOGRAM_39("Hologram 39", "💠", 0xFF39C5BB, 0xFFFF4FA3, 0xFFB8FFF9, "holo_scan",
+        HOLOGRAM_39("Hologram 39", "", 0xFF39C5BB, 0xFFFF4FA3, 0xFFB8FFF9, "holo_scan",
             NodeShape.HEART, AmbientStyle.HOLO_GRID, BurstStyle.SPARK_SHOT, HitEffect.GLITCH,
-            true, 3.0f, "Heart notes · interference lane · glitch hits",
+            true, 3.0f, "Heart notes, scanline lane, glitchy hits",
             LaneStyle.HOLO_SCAN, 0xF2031A1C, 0xFF000608);
 
         /** Glyphs a tap burst throws — a different alphabet per skin, not a different tint. */
@@ -185,7 +185,7 @@ object MikuBeatClickerEngine {
                 HONEY_SWEET -> listOf("🍯", "🐝", "🟡", "🍮")
                 GOTHIC_DIVA -> listOf("🖤", "🥀", "🦇", "♠")
                 SNOW_CRYSTAL -> listOf("❄", "💎", "✳", "✨")
-                HOLOGRAM_39 -> listOf("39", "♡", "▚", "⌁")
+                HOLOGRAM_39 -> listOf("39", "<3", "//", "~")
             }
 
         /** Particle tints, taken from the skin's own palette instead of one shared rainbow. */
@@ -262,13 +262,16 @@ object MikuBeatClickerEngine {
      * challenge on the same day and tomorrow is a different game — "come back tomorrow" only
      * works if tomorrow is not a repeat.
      */
-    enum class ChallengeKind(val label: String, val target: Int) {
-        PERFECTS("Land PERFECTs", 39),
-        COMBO("Reach a combo of", 60),
-        FEVERS("Trigger Fever", 2),
-        SONG_SCORE("Score on one song", 6_000),
-        LUCKY("Catch lucky notes", 3),
-        NO_MISS("No-miss run of", 40)
+    enum class ChallengeKind(private val template: String, val target: Int) {
+        PERFECTS("Land %d PERFECTs", 39),
+        COMBO("Reach a %d combo", 60),
+        FEVERS("Start fever %d times", 2),
+        SONG_SCORE("Score %d on one song", 6_000),
+        LUCKY("Hit %d lucky notes", 3),
+        NO_MISS("Go %d notes without a miss", 40);
+
+        /** "Land 39 PERFECTs": the goal as a sentence. */
+        val label: String get() = String.format(Locale.US, template, target)
     }
 
     data class DailyChallenge(
@@ -663,7 +666,7 @@ object MikuBeatClickerEngine {
                 // single most "one more go" moment there is, so name it.
                 val rung = nextComboRung(_combo.value)
                 if (rung != null && rung.first <= 3 && _combo.value >= 6) {
-                    MikuStagePerformance.say("${rung.first} short of ${String.format(Locale.US, "%.1f", rung.second)}×. SO close.")
+                    MikuStagePerformance.say("${rung.first} short of ${String.format(Locale.US, "%.1f", rung.second)}x. so close.")
                 }
                 if (_combo.value >= 16) MikuGameFx.shake(0.6f)
                 _combo.value = 0
@@ -862,30 +865,30 @@ object MikuBeatClickerEngine {
             roll < 45 -> {
                 val bonus = (1.0 + getBaseBps() * 0.03) * 40.0
                 _leeks.value += bonus; _totalEarned.value += bonus
-                "🍀 LUCKY NOTE · +${formatNumber(bonus)} leeks"
+                "Lucky note: +${formatNumber(bonus)} leeks"
             }
             roll < 65 -> {
                 if (_comboShields.value < MAX_COMBO_SHIELDS) {
                     _comboShields.value += 1
-                    "🍀 LUCKY NOTE · free combo shield 🛡️"
+                    "Lucky note: free combo shield"
                 } else {
                     val bonus = (1.0 + getBaseBps() * 0.03) * 60.0
                     _leeks.value += bonus; _totalEarned.value += bonus
-                    "🍀 LUCKY NOTE · shields full, +${formatNumber(bonus)} leeks"
+                    "Lucky note: shields full, +${formatNumber(bonus)} leeks"
                 }
             }
             roll < 82 -> {
                 if (_feverSeconds.value == 0) _feverEnergy.value = (_feverEnergy.value + 40f).coerceAtMost(99f)
-                "🍀 LUCKY NOTE · fever +40%"
+                "Lucky note: fever +40%"
             }
             roll < 96 -> {
                 encoreTapsLeft = 8
-                MikuStagePerformance.say("wait. i know this one. ♪ (next 8 hits pay triple)")
-                "🍀 LUCKY NOTE · Miku sings along: 3× for 8 hits"
+                MikuStagePerformance.say("wait, i know this one. (next 8 hits pay triple)")
+                "Lucky note: Miku sings along, 3x for 8 hits"
             }
             else -> {
                 _goldenLeekVisible.value = true
-                "🍀 JACKPOT · a golden leek appeared!"
+                "Jackpot: a golden leek showed up"
             }
         }
         com.miku.launcher.audio.MikuSeasonalAudioEngine.playGoldenLeekJingle()
@@ -936,9 +939,9 @@ object MikuBeatClickerEngine {
             _leeks.value += DailyChallenge.REWARD_LEEKS
             _totalEarned.value += DailyChallenge.REWARD_LEEKS
             if (_comboShields.value < MAX_COMBO_SHIELDS) _comboShields.value += 1
-            pushFloatingText("🎲 DAILY CHALLENGE CLEARED +${formatNumber(DailyChallenge.REWARD_LEEKS)}", isCrit = true)
-            MikuGameFx.pop("CHALLENGE CLEAR!", 0xFF39C5BB, big = true)
-            MikuStagePerformance.say("daily challenge: done. see you tomorrow? (please come back tomorrow)")
+            pushFloatingText("Daily challenge done +${formatNumber(DailyChallenge.REWARD_LEEKS)}", isCrit = true)
+            MikuGameFx.pop("CHALLENGE DONE", 0xFF39C5BB, big = true)
+            MikuStagePerformance.say("daily challenge done. see you tomorrow? please?")
             com.miku.launcher.audio.MikuSeasonalAudioEngine.playLevelUpFanfare()
             saveState()
         } else {

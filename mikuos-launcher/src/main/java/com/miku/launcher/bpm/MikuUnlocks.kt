@@ -284,7 +284,7 @@ object MikuUnlocks {
                 if (unlock(ctx, r.id)) {
                     granted.add(r)
                     MikuCelebrations.push(
-                        MikuCelebrations.Item(false, r.icon, r.title, r.where, "Earned with ${r.amount} ${r.goal.label}.")
+                        MikuCelebrations.Item(false, r.title, r.where, "Earned with ${r.amount} ${r.goal.label}.")
                     )
                 }
             }

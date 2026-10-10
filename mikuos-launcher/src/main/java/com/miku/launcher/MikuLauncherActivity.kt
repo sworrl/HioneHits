@@ -5488,7 +5488,7 @@ private fun MikuLauncherQuiltSection(
                         com.miku.launcher.haptics.MikuHaptics.confirm(ctx)
                         android.widget.Toast.makeText(
                             ctx,
-                            if (!on) "Concert Mode off" else if (isAudioPlaying) "🎆 Concert Mode" else "🎆 Concert Mode on — start some music",
+                            if (!on) "Concert lights off" else if (isAudioPlaying) "Concert lights on" else "Concert lights on. Start some music.",
                             android.widget.Toast.LENGTH_SHORT
                         ).show()
                     }

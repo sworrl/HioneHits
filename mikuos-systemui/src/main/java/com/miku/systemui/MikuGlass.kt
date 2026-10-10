@@ -58,8 +58,8 @@ import kotlin.math.min
 import kotlin.math.sign
 
 /*
- * MikuGlass — the MikuOS "liquid glass" toolkit. One file on purpose: another MikuOS module can
- * copy it whole (it only needs the Miku colour vals from Theme.kt, MikuMotion and MikuPowerProfile,
+ * MikuGlass: the MikuOS "liquid glass" toolkit. One file on purpose: another MikuOS module can
+ * copy it whole (it only needs the Miku color vals from Theme.kt, MikuMotion and MikuPowerProfile,
  * or local stand-ins for them).
  *
  * WHAT IT IS. The Miku look (dark teal glass, teal/cyan/pink neon, cyber rims) with depth added:
@@ -82,9 +82,9 @@ import kotlin.math.sign
  * strokes, cached per size in drawWithCache and redrawn only when an animated input changes.
  *
  * API
- *   Modifier.mikuGlass(shape, style, accent, accent2, active = { 0..1 }, pressed = { press }, dimmed)
- *       The whole look. `active` and `pressed` are lambdas read in the DRAW phase, so an animating
- *       value never recomposes the caller.
+ *   Modifier.mikuGlass(shape, style, accent, accent2, active = { 0..1 }, pressed = press, dimmed)
+ *       The whole look. `active` (a lambda) and `pressed` (a MikuPressState) are read in the DRAW
+ *       phase, so an animating value never recomposes the caller.
  *   rememberMikuPress(interactionSource) / Modifier.mikuPressScale(press)
  *       Press physics for anything clickable: share the interactionSource with the clickable.
  *   MikuGlassStyle presets: MikuGlass.Panel, Card, Tile, Chip, Groove (recessed slider track).
@@ -150,7 +150,7 @@ object MikuGlass {
 
     /**
      * Sheen + top-edge hairline + refraction rim for Canvas-drawn surfaces. Shaders are rebuilt
-     * only when the rect or colours change, so a HUD that only translates its canvas allocates
+     * only when the rect or colors change, so a HUD that only translates its canvas allocates
      * nothing per frame.
      */
     class CanvasGlass(private val density: Float) {

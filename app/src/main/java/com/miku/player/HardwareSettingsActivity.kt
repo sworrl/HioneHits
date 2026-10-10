@@ -238,7 +238,7 @@ fun HardwareSettingsScreen(onBack: () -> Unit) {
                                 color = MikuTextSecondary, fontSize = 10.5.sp
                             )
                         }
-                        Text("›", color = MikuNeonPink, fontSize = 22.sp)
+                        Text("OPEN", color = MikuNeonPink, fontSize = 10.sp, fontWeight = FontWeight.Bold, fontFamily = AudiowideFont)
                     }
                 }
 

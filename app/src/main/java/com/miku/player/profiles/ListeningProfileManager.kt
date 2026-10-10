@@ -207,7 +207,7 @@ object ListeningProfileManager {
         }
         scope.launch {
             applySettings(a, profile.effective)
-            if (announce) toast(a, "Profile: ${profile.name} — ${summary(profile.effective)}")
+            if (announce) toast(a, "Profile: ${profile.name} (${summary(profile.effective)})")
             onProfileApplied(profile)
         }
     }
@@ -264,7 +264,7 @@ object ListeningProfileManager {
         if (ListeningProfileStore.currentId.value == profileId) {
             scope.launch {
                 applySettings(ctx.applicationContext, p.effective)
-                toast(ctx.applicationContext, "Profile: ${p.name} — reset to recommended")
+                toast(ctx.applicationContext, "Profile: ${p.name} (reset to recommended)")
                 onProfileApplied(p)
             }
         }

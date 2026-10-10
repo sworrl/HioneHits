@@ -59,7 +59,6 @@ object MikuSecrets {
     data class Secret(
         val id: String,
         val title: String,
-        val icon: String,
         /** Where it takes effect, shown only once earned. */
         val where: String,
         /** What it does and how to use it, shown only once earned. */
@@ -77,35 +76,35 @@ object MikuSecrets {
      * finds them all, which is the point of having them.
      */
     val ALL: List<Secret> = listOf(
-        Secret(NEGI_BATTERY, "Negi Battery", "🥬", "MikuOS · top bar & shade battery",
-            "Your battery is a leek now. The fuller the leek, the fuller the battery.",
+        Secret(NEGI_BATTERY, "Leek battery icon", "Top bar and notification shade",
+            "Your battery icon is a leek now. The more green, the more charge.",
             "Some leeks only grow after midnight.", true),
-        Secret(TAPE_MIKU39, "MIKU 39 cassette", "📼", "Miku Music · Tape Mode",
-            "A shell nobody else has. Tape Mode → themes, or keep tapping the shell button.",
+        Secret(TAPE_MIKU39, "MIKU 39 cassette shell", "Miku Music, Tape Mode",
+            "A new cassette shell. Pick it in Tape Mode's theme list or keep tapping the shell button.",
             "Mi-ku. Thirty-nine clean notes in a row, no stumbles.", false),
-        Secret(LEEK_SPIN, "Leek Spin", "🌀", "Miku Music · Now Playing",
+        Secret(LEEK_SPIN, "Spinning leek on Now Playing", "Miku Music, Now Playing",
             "A leek spins in the corner of Now Playing, one turn every two beats.",
             "Catch the fever three times before you leave the stage.", true),
-        Secret(HOLO_LOCK_CLOCK, "Holo Plasma clock", "⏰", "MikuOS · lockscreen",
-            "The lockscreen clock goes full hologram: spectrum digits, heartbeat colon, scanline.",
+        Secret(HOLO_LOCK_CLOCK, "Hologram lock screen clock", "Lock screen",
+            "The lock screen clock switches to the big hologram style.",
             "Once an hour, for one minute, the clock is listening. Be perfect then.", true),
-        Secret(CONCERT_MODE, "Concert Mode", "🎆", "MikuOS · home screen",
-            "Double-tap the hearts clock on the home screen while music plays: penlights and stage beams, on the beat.",
+        Secret(CONCERT_MODE, "Concert lights on the home screen", "Home screen",
+            "Double-tap the clock on the home screen while music plays. Glow sticks and stage lights move to the beat.",
             "Fifty notes without a miss, on something fast.", true),
-        Secret(NEGI_SNOW, "Negi Snow", "❄️", "MikuOS · home wallpaper",
+        Secret(NEGI_SNOW, "Falling leeks on the wallpaper", "Home screen wallpaper",
             "Leeks drift down your wallpaper, and fall faster while music plays.",
             "Seven different voices. Sing along with each of them.", true),
-        Secret(BOOT_CHIME, "Mi-Ku boot chime", "🔔", "MikuOS · every boot",
-            "Miku greets you with her own chime after a reboot (follows the boot-sound switch).",
+        Secret(BOOT_CHIME, "Miku startup chime", "Plays after a restart",
+            "Miku's own chime plays when the device starts. It follows the boot sound switch.",
             "Her name hides in a tempo too: one, three, nine.", true),
-        Secret(GOLDEN_ICON, "Golden Miku Music", "🏆", "MikuOS · home & app drawer",
-            "Miku Music's icon is solid gold. You earned it.",
+        Secret(GOLDEN_ICON, "Gold Miku Music icon", "Home screen and app drawer",
+            "Miku Music's icon is gold now. You earned it.",
             "A grade so high it turns things to gold. Hold it for a hundred notes.", true),
-        Secret(HOLO_SKIN, "Hologram 39 skin", "💠", "BPM game · Skins",
-            "A sixth skin: heart node, scanline grid, glitch hits.",
+        Secret(HOLO_SKIN, "Hologram game skin", "BPM game, Skins",
+            "A new skin: heart notes, scanline lane, glitchy hits.",
             "Gold falls from the sky sometimes. Catch ten pieces.", false),
-        Secret(SEASONAL_TOPBAR, "Seasonal top bar", "🎃", "MikuOS · top bar theme",
-            "A top bar that changes with the month. Long-press the top bar to cycle to it.",
+        Secret(SEASONAL_TOPBAR, "Seasonal top bar", "Top bar themes",
+            "A top bar that changes colors every month. Long-press the top bar to cycle to it.",
             "Climb to gold before the month turns.", false)
     )
 
@@ -271,7 +270,7 @@ object MikuSecrets {
         refreshFound(ctx)
         val s = byId(id) ?: return emptyList()
         MikuCelebrations.push(
-            MikuCelebrations.Item(true, s.icon, s.title, s.where, s.howTo)
+            MikuCelebrations.Item(true, s.title, s.where, s.howTo)
         )
         return listOf(s)
     }
@@ -300,7 +299,6 @@ object MikuSecrets {
 object MikuCelebrations {
     data class Item(
         val secret: Boolean,
-        val icon: String,
         val title: String,
         val where: String,
         val howTo: String

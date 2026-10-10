@@ -1146,7 +1146,7 @@ private fun BpmHeroRhythmMatchCard(
                     text = when {
                         !isPlaying -> "PAUSED"
                         tempoLock.isLocked && tempoSource == MikuBpmEngine.TempoSource.LIVE_LOCK -> "🔒 LOCKED"
-                        hasLiveTempo && tempoSource == MikuBpmEngine.TempoSource.PLAYER_ANALYSIS -> "🔒 ANALYSED"
+                        hasLiveTempo && tempoSource == MikuBpmEngine.TempoSource.PLAYER_ANALYSIS -> "ANALYZED"
                         else -> "LISTENING…"
                     },
                     color = if (isPlaying) activeSkinPrimary else KawaiiTextMuted,
@@ -2219,7 +2219,7 @@ private fun ColumnScope.BpmBeatNodeStage(
                     val nearMs = if (accuracy == HitAccuracy.GREAT) MikuRhythmTiming.nearPerfectMissMs(signedOffset, windows) else null
                     if (nearMs != null) MikuStagePerformance.onNearPerfect()
                     val coach = MikuRhythmTiming.nudgeHint(if (chaosNow.mirrorsBar) -timingOffsetMs else timingOffsetMs, windows)
-                    judgmentTitle = if (nearMs != null) "✨ SO CLOSE · ${nearMs}ms off PERFECT"
+                    judgmentTitle = if (nearMs != null) "SO CLOSE · ${nearMs}ms off PERFECT"
                         else "${accuracy.emoji} ${accuracy.label} · $coach"
                     judgmentColor = when (accuracy) {
                         HitAccuracy.PERFECT -> KawaiiHotPink
@@ -2426,7 +2426,7 @@ private fun BpmGameDockCards(
                         Spacer(Modifier.width(7.dp))
                         Column(Modifier.weight(1f), verticalArrangement = Arrangement.Center) {
                             Text(
-                                "${skin.icon} ${skin.displayName}",
+                                "${skin.icon} ${skin.displayName}".trim(),
                                 color = if (available) Color.White else KawaiiTextMuted,
                                 fontSize = 11.5.sp,
                                 fontWeight = FontWeight.Bold,
@@ -2684,7 +2684,7 @@ private fun BpmCalibrationFooter(
         Spacer(Modifier.height(3.dp))
         // This song's run against its personal best. Paused, the line says why nothing scores.
         if (isPlaying) BpmRunLine() else Text(
-            text = "⏸️ Paused · taps measure tempo only (free taps are not scored)",
+            text = "Paused. Taps only measure tempo and aren't scored.",
             color = KawaiiTextMuted,
             fontSize = 10.5.sp,
             fontWeight = FontWeight.Bold,

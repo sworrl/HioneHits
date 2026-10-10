@@ -383,7 +383,7 @@ private fun ProfileDetail(
         Spacer(Modifier.height(6.dp))
         p.source.rationale?.let { Text("Why: $it", color = MikuTextSecondary, fontSize = 10.sp, lineHeight = 13.sp) }
         Text(
-            "EQ: " + (p.source.eq ?: "no measurement — ships flat"),
+            "EQ: " + (p.source.eq ?: "no measurement, so it starts flat"),
             color = if (p.source.eq != null) MikuTextSecondary else Unverified, fontSize = 10.sp, lineHeight = 13.sp
         )
         p.source.notes?.let { Text(it, color = MikuTextSecondary.copy(alpha = 0.8f), fontSize = 9.5.sp, lineHeight = 12.sp) }
@@ -396,7 +396,7 @@ private fun ProfileDetail(
         }
 
         Spacer(Modifier.height(12.dp))
-        Text("SETTINGS (recommended ⊕ yours)", color = MikuCyan, fontSize = 10.sp, fontWeight = FontWeight.Bold, fontFamily = AudiowideFont)
+        Text("SETTINGS (recommended, plus your changes)", color = MikuCyan, fontSize = 10.sp, fontWeight = FontWeight.Bold, fontFamily = AudiowideFont)
         Spacer(Modifier.height(4.dp))
         val eff = p.effective
         val ov = p.overrides

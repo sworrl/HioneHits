@@ -13,6 +13,10 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.EmojiEvents
+import androidx.compose.material.icons.filled.LockOpen
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -177,26 +181,32 @@ fun MikuCelebrationOverlay(modifier: Modifier = Modifier) {
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
-                if (item.secret) "🔓 SECRET FOUND" else "🏆 REWARD UNLOCKED",
+                if (item.secret) "SECRET FOUND" else "REWARD UNLOCKED",
                 color = if (item.secret) Mint else Gold,
                 fontSize = 13.sp, fontWeight = FontWeight.Black, fontFamily = AudiowideFont,
                 letterSpacing = 1.5.sp
             )
             Spacer(Modifier.height(10.dp))
-            Text(item.icon, fontSize = 44.sp)
+            // A vector icon, not an emoji: an open lock for a secret, a trophy for a reward.
+            Icon(
+                if (item.secret) Icons.Default.LockOpen else Icons.Default.EmojiEvents,
+                contentDescription = null,
+                tint = if (item.secret) Mint else Gold,
+                modifier = Modifier.size(48.dp)
+            )
             Spacer(Modifier.height(6.dp))
             Text(
                 item.title, color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Black,
                 fontFamily = AudiowideFont, textAlign = TextAlign.Center
             )
             Spacer(Modifier.height(4.dp))
-            Text("→ ${item.where}", color = Color(0xFF66E0D8), fontSize = 12.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
+            Text(item.where, color = Color(0xFF66E0D8), fontSize = 12.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
             Spacer(Modifier.height(10.dp))
             Text(item.howTo, color = Color(0xFFE8F4F2), fontSize = 12.sp, lineHeight = 16.sp, textAlign = TextAlign.Center)
             Spacer(Modifier.height(14.dp))
             val remaining = queue.size - 1
             Text(
-                if (remaining > 0) "TAP · $remaining more" else "TAP TO CONTINUE",
+                if (remaining > 0) "Tap for the next one ($remaining more)" else "Tap to continue",
                 color = Muted, fontSize = 10.sp, fontWeight = FontWeight.Black, fontFamily = AudiowideFont
             )
         }
@@ -224,15 +234,15 @@ fun BpmSecretMysteryCard() {
     ) {
         Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.SpaceBetween) {
             Text(
-                if (found >= total) "🔮 ALL $total SECRETS FOUND" else "🔮 ${total - found} SECRETS REMAIN",
+                if (found >= total) "All $total secrets found" else "${total - found} secrets left to find",
                 color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Black, maxLines = 1
             )
             Text(
-                hint?.let { "“$it”" } ?: "You found everything. Miku is impressed and slightly scared.",
+                hint?.let { "Clue: $it" } ?: "You found everything. Miku is impressed and a little scared.",
                 color = Color(0xFFE0F7FA), fontSize = 9.sp, lineHeight = 11.sp,
                 maxLines = 3, overflow = TextOverflow.Ellipsis
             )
-            Text("$found / $total found · new clue daily", color = Gold, fontSize = 8.5.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+            Text("$found of $total found. New clue every day.", color = Gold, fontSize = 8.5.sp, fontWeight = FontWeight.Bold, maxLines = 1)
         }
     }
 }
@@ -253,7 +263,7 @@ fun BpmSecretCard(secret: MikuSecrets.Secret) {
         Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.SpaceBetween) {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 Text(
-                    "${secret.icon} ${secret.title}", color = Color.White, fontSize = 10.5.sp,
+                    secret.title, color = Color.White, fontSize = 10.5.sp,
                     fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.weight(1f)
                 )
@@ -283,7 +293,7 @@ fun BpmSecretCard(secret: MikuSecrets.Secret) {
 }
 
 /**
- * Run and personal best for the track that is playing: "RUN 3,120 · B   PB 9,880 · A ★FC".
+ * Run and personal best for the track that is playing: "RUN 3,120 · B   BEST 9,880 · A FC".
  * The single line that turns a song into a level.
  */
 @Composable
@@ -292,20 +302,20 @@ fun BpmRunLine() {
     val best by MikuSongRecords.best.collectAsState()
     if (run.key == null) {
         Text(
-            "♪ no track identity published · runs are not recorded",
+            "No track info, so this run isn't saved",
             color = Muted, fontSize = 9.5.sp, fontWeight = FontWeight.Bold, maxLines = 1
         )
         return
     }
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
         Text(
-            "♪ RUN ${fmt(run.score)} · ${run.grade}" + if (run.taps in 1 until MikuSongRecords.MIN_GRADED_TAPS) " (${run.taps}/${MikuSongRecords.MIN_GRADED_TAPS})" else "",
+            "RUN ${fmt(run.score)} · ${run.grade}" + if (run.taps in 1 until MikuSongRecords.MIN_GRADED_TAPS) " (${run.taps}/${MikuSongRecords.MIN_GRADED_TAPS})" else "",
             color = if (run.newBest) Gold else Color.White,
             fontSize = 10.5.sp, fontWeight = FontWeight.Black, fontFamily = AudiowideFont, maxLines = 1
         )
         val b = best
         Text(
-            if (b == null) "PB —" else "PB ${fmt(b.score)} · ${b.grade.ifBlank { "—" }}${if (b.fullCombo) " ★FC" else ""}",
+            if (b == null) "BEST -" else "BEST ${fmt(b.score)} · ${b.grade.ifBlank { "-" }}${if (b.fullCombo) " FC" else ""}",
             color = Gold, fontSize = 10.5.sp, fontWeight = FontWeight.Black, fontFamily = AudiowideFont, maxLines = 1
         )
     }
@@ -316,8 +326,8 @@ fun BpmRunLine() {
 fun BpmDailyChallengeLine() {
     val c by MikuBeatClickerEngine.dailyChallenge.collectAsState()
     if (c.dateKey.isEmpty()) return
-    val text = if (c.claimed) "🎲 DAILY CHALLENGE CLEARED · back tomorrow for a new one"
-    else "🎲 DAILY: ${c.kind.label} ${c.kind.target} · ${c.progress.coerceAtMost(c.kind.target)}/${c.kind.target} · +12K 🥬 +🛡️"
+    val text = if (c.claimed) "Daily challenge done. New one tomorrow."
+    else "Daily: ${c.kind.label} · ${c.progress.coerceAtMost(c.kind.target)}/${c.kind.target} · +12K leeks, +1 shield"
     Text(
         text,
         color = if (c.claimed) Gold else Pink.copy(alpha = 0.95f),

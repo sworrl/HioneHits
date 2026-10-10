@@ -288,18 +288,18 @@ object MikuStagePerformance {
         "the PERFECT window saw you coming and flinched"
     )
     private val LINES_NEW_BEST = listOf(
-        "NEW PERSONAL BEST. i'm telling everyone. i'm telling the leeks.",
+        "new personal best. i'm telling the leeks.",
         "you just beat yourself. respectfully. on this exact song.",
         "that's a record. somebody frame this tap.",
-        "PB!! the sound guy is crying again"
+        "PB! the sound guy is crying again"
     )
     private val LINES_SECRET = listOf(
-        "…wait. something just changed. go look around. 👀",
+        "wait. something just changed. go look around.",
         "you found something you weren't supposed to find yet. nice.",
-        "i'm not allowed to say what that was. i'm allowed to wink. 😉"
+        "i'm not allowed to say what that was. i can wink though."
     )
     private val LINES_LUCKY = listOf(
-        "GOLD NOTE. GOLD. NOTE.",
+        "gold note. GOLD. NOTE.",
         "luck is a skill if you hit it on the beat",
         "that note was shiny and you were ready"
     )
