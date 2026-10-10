@@ -21,6 +21,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.lerp
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -99,6 +107,28 @@ fun HardwareSettingsScreen(onBack: () -> Unit) {
         csTurbo = CirrusLogicManager.isHighPowerEnabled(ctx)
         dacApplied = CirrusLogicManager.appliedSummary()
     }
+    // The screen's colors come from the applied combo (dacTheme, same function as the status bar
+    // badge and the SystemUI tiles): filter sets the hue, gain the saturation, DRE the second
+    // accent, high power the glow and a slow pulse. Changes fade over 450 ms.
+    val dacPal = remember(csFilter, csGain, csDre, csTurbo) { dacTheme(csFilter?.id, csGain?.id, csDre, csTurbo) }
+    val dacPrimary by animateColorAsState(Color(dacPal.primary), tween(450), label = "dacPrimary")
+    val dacSecondary by animateColorAsState(Color(dacPal.secondary), tween(450), label = "dacSecondary")
+    val dacBg by animateColorAsState(Color(dacPal.background), tween(450), label = "dacBg")
+    val dacGlowBase by animateFloatAsState(dacPal.glow, tween(450), label = "dacGlow")
+    val dacGlow = if (dacPal.pulse) {
+        val t = rememberInfiniteTransition(label = "dacPulse")
+        dacGlowBase * t.animateFloat(0.7f, 1f, infiniteRepeatable(tween(1400), RepeatMode.Reverse), label = "dacPulseV").value
+    } else dacGlowBase
+
+    // A change made somewhere else (Miku Music, SystemUI tiles) lands in miku_dac_state.
+    DisposableEffect(Unit) {
+        val obs = object : android.database.ContentObserver(android.os.Handler(android.os.Looper.getMainLooper())) {
+            override fun onChange(selfChange: Boolean) { scope.launch { reloadDac() } }
+        }
+        runCatching { ctx.contentResolver.registerContentObserver(Settings.Global.getUriFor("miku_dac_state"), false, obs) }
+        onDispose { runCatching { ctx.contentResolver.unregisterContentObserver(obs) } }
+    }
+
     fun applyDac(block: suspend () -> DacBridge.Result) {
         scope.launch {
             val r = block()
@@ -146,10 +176,10 @@ fun HardwareSettingsScreen(onBack: () -> Unit) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = HwMikuTeal)
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = HwBgDark)
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = dacBg)
             )
         },
-        containerColor = HwBgDark
+        containerColor = dacBg
     ) { padding ->
         LazyColumn(
             modifier = Modifier
@@ -164,10 +194,13 @@ fun HardwareSettingsScreen(onBack: () -> Unit) {
                     Modifier
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(16.dp))
-                        .background(Color(0xFF07272B))
-                        .border(1.dp, HwMikuTeal.copy(alpha = 0.4f), RoundedCornerShape(16.dp))
+                        .background(Brush.linearGradient(listOf(lerp(dacBg, dacPrimary, 0.10f), lerp(dacBg, dacSecondary, 0.22f))))
+                        .border((1f + dacGlow * 1.5f).dp, Brush.linearGradient(listOf(dacPrimary.copy(alpha = 0.3f + 0.6f * dacGlow), dacSecondary.copy(alpha = 0.3f + 0.6f * dacGlow))), RoundedCornerShape(16.dp))
                         .padding(16.dp)
                 ) {
+                    // The combo in plain words, in the combo's own color.
+                    Text(dacPal.label, color = dacPrimary, fontSize = 16.sp, fontWeight = FontWeight.Bold, lineHeight = 20.sp)
+                    Spacer(Modifier.height(10.dp))
                     // Status reflects what was actually probed: whether the bridge is installed,
                     // and the values the DAC was last told (persist.vendor.audio.miku.*).
                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -179,8 +212,8 @@ fun HardwareSettingsScreen(onBack: () -> Unit) {
                                 true -> "DAC settings go through the MikuOS system bridge"
                                 false -> "MikuOS system bridge not found"
                             },
-                            color = if (bridgeOk == true) HwMikuTeal else HwMuted,
-                            fontSize = 14.sp,
+                            color = if (bridgeOk == true) dacSecondary else HwMuted,
+                            fontSize = 13.sp,
                             fontWeight = FontWeight.Bold
                         )
                     }
@@ -210,11 +243,11 @@ fun HardwareSettingsScreen(onBack: () -> Unit) {
                     Modifier
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(14.dp))
-                        .background(HwSurface1)
-                        .border(1.dp, HwMikuTeal.copy(alpha = 0.2f), RoundedCornerShape(14.dp))
+                        .background(lerp(HwSurface1, dacBg, 0.5f))
+                        .border(1.dp, dacPrimary.copy(alpha = 0.2f), RoundedCornerShape(14.dp))
                         .padding(14.dp)
                 ) {
-                    Text("DIGITAL FILTER", color = HwMikuTeal, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    Text("DIGITAL FILTER", color = dacPrimary, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                     Spacer(Modifier.height(8.dp))
 
                     CirrusLogicManager.DigitalFilter.values().forEach { filter ->
@@ -234,7 +267,7 @@ fun HardwareSettingsScreen(onBack: () -> Unit) {
                                     csFilter = filter
                                     applyDac { CirrusLogicManager.setDigitalFilter(ctx, filter) }
                                 },
-                                colors = RadioButtonDefaults.colors(selectedColor = HwMikuTeal, unselectedColor = HwMuted)
+                                colors = RadioButtonDefaults.colors(selectedColor = dacPrimary, unselectedColor = HwMuted)
                             )
                             Spacer(Modifier.width(8.dp))
                             Column {
@@ -245,7 +278,7 @@ fun HardwareSettingsScreen(onBack: () -> Unit) {
                     }
 
                     Spacer(Modifier.height(14.dp))
-                    Text("HEADPHONE GAIN", color = HwMikuTeal, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    Text("HEADPHONE GAIN", color = dacPrimary, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                     Spacer(Modifier.height(8.dp))
 
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -255,7 +288,7 @@ fun HardwareSettingsScreen(onBack: () -> Unit) {
                                     .weight(1f)
                                     .height(42.dp)
                                     .clip(RoundedCornerShape(8.dp))
-                                    .background(if (csGain == gain) HwMikuTeal else HwSurface2)
+                                    .background(if (csGain == gain) dacPrimary else HwSurface2)
                                     .clickable {
                                         csGain = gain
                                         applyDac { CirrusLogicManager.setGainMode(ctx, gain) }
@@ -268,7 +301,7 @@ fun HardwareSettingsScreen(onBack: () -> Unit) {
                     }
 
                     Spacer(Modifier.height(14.dp))
-                    Text("OUTPUT ROUTING (3.5mm SE / 4.4mm BAL)", color = HwMikuTeal, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    Text("OUTPUT ROUTING (3.5mm SE / 4.4mm BAL)", color = dacPrimary, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                     Spacer(Modifier.height(8.dp))
 
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -295,7 +328,8 @@ fun HardwareSettingsScreen(onBack: () -> Unit) {
                     HwSettingsToggleRow(
                         title = "Dynamic Range Enhancement (DRE)",
                         subtitle = if (csDre == null) "Not set yet" else "Lowers the noise floor at low volume",
-                        checked = csDre == true
+                        checked = csDre == true,
+                        accent = dacPrimary
                     ) { enabled ->
                         csDre = enabled
                         applyDac { CirrusLogicManager.setDreEnabled(ctx, enabled) }
@@ -304,14 +338,15 @@ fun HardwareSettingsScreen(onBack: () -> Unit) {
                     HwSettingsToggleRow(
                         title = "High power mode",
                         subtitle = if (csTurbo == null) "Not set yet" else "Switches in the external amp stage. The same volume step gets louder, so music volume is lowered to 30% when you turn it on",
-                        checked = csTurbo == true
+                        checked = csTurbo == true,
+                        accent = dacPrimary
                     ) { enabled ->
                         csTurbo = enabled
                         applyDac { CirrusLogicManager.setHighPowerEnabled(ctx, enabled) }
                     }
 
                     Spacer(Modifier.height(10.dp))
-                    Text(if (csDsdComp == null) "DSD GAIN COMPENSATION (not set)" else "DSD GAIN COMPENSATION", color = HwMikuTeal, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    Text(if (csDsdComp == null) "DSD GAIN COMPENSATION (not set)" else "DSD GAIN COMPENSATION", color = dacPrimary, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                     Spacer(Modifier.height(8.dp))
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         listOf(0 to "0 dB (Direct)", 6 to "+6 dB (SACD level)").forEach { (db, label) ->
@@ -320,7 +355,7 @@ fun HardwareSettingsScreen(onBack: () -> Unit) {
                                     .weight(1f)
                                     .height(36.dp)
                                     .clip(RoundedCornerShape(8.dp))
-                                    .background(if (csDsdComp == db) HwMikuTeal else HwSurface2)
+                                    .background(if (csDsdComp == db) dacPrimary else HwSurface2)
                                     .clickable {
                                         csDsdComp = db
                                         scope.launch { CirrusLogicManager.setDsdGainCompensate(ctx, db) }
@@ -334,7 +369,7 @@ fun HardwareSettingsScreen(onBack: () -> Unit) {
 
                     Spacer(Modifier.height(14.dp))
                     val bal = csBalance
-                    Text("L/R BALANCE (${when { bal == null -> "unknown"; bal.toInt() == 0 -> "Center"; bal > 0 -> "+${bal.toInt()} R"; else -> "${bal.toInt()} L" }})", color = HwMikuTeal, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    Text("L/R BALANCE (${when { bal == null -> "unknown"; bal.toInt() == 0 -> "Center"; bal > 0 -> "+${bal.toInt()} R"; else -> "${bal.toInt()} L" }})", color = dacPrimary, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                     Slider(
                         value = bal ?: 0f,
                         enabled = bal != null,
@@ -344,7 +379,7 @@ fun HardwareSettingsScreen(onBack: () -> Unit) {
                         },
                         valueRange = -10f..10f,
                         steps = 19,
-                        colors = SliderDefaults.colors(thumbColor = HwMikuTeal, activeTrackColor = HwMikuTeal, inactiveTrackColor = HwSurface2)
+                        colors = SliderDefaults.colors(thumbColor = dacPrimary, activeTrackColor = dacPrimary, inactiveTrackColor = HwSurface2)
                     )
                 }
             }
@@ -528,6 +563,7 @@ fun HwSettingsToggleRow(
     title: String,
     subtitle: String,
     checked: Boolean,
+    accent: Color = HwMikuTeal,
     onCheckedChange: (Boolean) -> Unit
 ) {
     Row(
@@ -546,7 +582,7 @@ fun HwSettingsToggleRow(
             checked = checked,
             onCheckedChange = onCheckedChange,
             colors = SwitchDefaults.colors(
-                checkedThumbColor = HwMikuTeal,
+                checkedThumbColor = accent,
                 checkedTrackColor = HwSurface2,
                 uncheckedThumbColor = HwMuted,
                 uncheckedTrackColor = HwSurface1

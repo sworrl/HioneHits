@@ -34,10 +34,36 @@ class AudioReceiver : BroadcastReceiver() {
             }
             Log.i(TAG, "dac $extra=$v -> ${if (ok.isSuccess) "ok" else ok.exceptionOrNull()?.cause ?: ok.exceptionOrNull()}")
         }
+        publishState(context)
     }
 
     companion object {
         const val TAG = "MikuSysBridge"
+
+        /**
+         * Settings.Global row every DAC UI observes (status bar badge, Hardware app, SystemUI tiles,
+         * Miku Music). Built from the persist properties read back, so it holds what was applied,
+         * not what was asked for. Format: "filter=nos;gain=high;dre=dremode_enable;hp=hpower_enable",
+         * a value is empty when that knob was never set.
+         */
+        const val GLOBAL_DAC_STATE = "miku_dac_state"
+
+        private fun prop(key: String): String = runCatching {
+            Class.forName("android.os.SystemProperties").getMethod("get", String::class.java)
+                .invoke(null, key) as String
+        }.getOrDefault("").trim()
+
+        fun publishState(context: Context) {
+            val state = "filter=${prop("persist.vendor.audio.miku.digital_filter")};" +
+                "gain=${prop("persist.vendor.audio.miku.gain")};" +
+                "dre=${prop("persist.vendor.audio.miku.dre_mode")};" +
+                "hp=${prop("persist.vendor.audio.miku.high_power")}"
+            val ok = runCatching {
+                android.provider.Settings.Global.putString(context.contentResolver, GLOBAL_DAC_STATE, state)
+            }
+            Log.i(TAG, "$GLOBAL_DAC_STATE=$state -> ${if (ok.isSuccess) "ok" else ok.exceptionOrNull()}")
+        }
+
         const val ACTION_AUDIO = "com.miku.sysbridge.AUDIO"
         val KNOBS: Map<String, Set<String>> = mapOf(
             "high_power" to setOf("hpower_enable", "hpower_disable"),

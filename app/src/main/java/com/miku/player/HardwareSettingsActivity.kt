@@ -18,6 +18,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.animation.core.animateFloat
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -75,11 +76,62 @@ fun HardwareSettingsScreen(onBack: () -> Unit) {
     var dtaStatus by remember { mutableStateOf<MikuDirectAudio.DirectStatus?>(null) }
     var pauseOnUnplug by remember { mutableStateOf(PlayerPreferences.loadPauseOnUnplug(ctx)) }
 
+    // What the DAC was last told: Settings.Global miku_dac_state (written by com.miku.sysbridge),
+    // or the persist properties when that row is missing. The screen's colors follow it.
+    fun readDacState(): DacState {
+        val raw = runCatching { android.provider.Settings.Global.getString(ctx.contentResolver, "miku_dac_state") }.getOrNull()
+        if (!raw.isNullOrBlank()) return parseDacState(raw)
+        val b = com.miku.player.profiles.HibyDacBridge
+        return DacState(
+            filter = b.get(b.PROP_FILTER), gain = b.get(b.PROP_GAIN),
+            dre = b.get(b.PROP_DRE)?.let { it == "dremode_enable" },
+            hp = b.get(b.PROP_HIGH_POWER)?.let { it == "hpower_enable" },
+        )
+    }
+    var dacState by remember { mutableStateOf(DacState(null, null, null, null)) }
+
     fun refreshAudit() {
         scope.launch(Dispatchers.IO) {
             auditState = CirrusLogicManager.getLiveHardwareAudit(ctx)
             dtaStatus = MikuDirectAudio.status(ctx)
+            dacState = readDacState()
         }
+    }
+
+    // Programmatic theme (DacTheme.kt, the same function the Hardware app, the status bar badge
+    // and the SystemUI tiles use): filter sets the hue, gain the saturation, DRE the second
+    // accent, high power the glow and a slow pulse. Changes fade over 450 ms.
+    val dacPal = remember(dacState) { dacTheme(dacState) }
+    val dacPrimary by androidx.compose.animation.animateColorAsState(Color(dacPal.primary), androidx.compose.animation.core.tween(450), label = "dacPrimary")
+    val dacSecondary by androidx.compose.animation.animateColorAsState(Color(dacPal.secondary), androidx.compose.animation.core.tween(450), label = "dacSecondary")
+    val dacBg by androidx.compose.animation.animateColorAsState(Color(dacPal.background), androidx.compose.animation.core.tween(450), label = "dacBg")
+    val dacGlowBase by androidx.compose.animation.core.animateFloatAsState(dacPal.glow, androidx.compose.animation.core.tween(450), label = "dacGlow")
+    val dacGlow = if (dacPal.pulse) {
+        val t = androidx.compose.animation.core.rememberInfiniteTransition(label = "dacPulse")
+        dacGlowBase * t.animateFloat(
+            0.7f, 1f,
+            androidx.compose.animation.core.infiniteRepeatable(androidx.compose.animation.core.tween(1400), androidx.compose.animation.core.RepeatMode.Reverse),
+            label = "dacPulseV"
+        ).value
+    } else dacGlowBase
+    // Every MikuCyan below this line is the DAC accent, so the whole screen follows the combo.
+    @Suppress("LocalVariableName") val MikuCyan = dacPrimary
+
+    // A change made somewhere else (Hardware app, SystemUI tiles) lands in miku_dac_state.
+    DisposableEffect(Unit) {
+        val obs = object : android.database.ContentObserver(android.os.Handler(android.os.Looper.getMainLooper())) {
+            override fun onChange(selfChange: Boolean) {
+                refreshAudit()
+                scope.launch(Dispatchers.IO) {
+                    csFilter = CirrusLogicManager.getDigitalFilter(ctx)
+                    csGain = CirrusLogicManager.getGainMode(ctx)
+                    csDre = CirrusLogicManager.isDreEnabled(ctx)
+                    csTurbo = CirrusLogicManager.isHighPowerEnabled(ctx)
+                }
+            }
+        }
+        runCatching { ctx.contentResolver.registerContentObserver(android.provider.Settings.Global.getUriFor("miku_dac_state"), false, obs) }
+        onDispose { runCatching { ctx.contentResolver.unregisterContentObserver(obs) } }
     }
     if (showDreOffConfirm) {
         AlertDialog(
@@ -131,6 +183,7 @@ fun HardwareSettingsScreen(onBack: () -> Unit) {
             csDsdComp = CirrusLogicManager.getDsdGainCompensate(ctx)
             csOutput = CirrusLogicManager.getOutputMode(ctx)
             auditState = CirrusLogicManager.getLiveHardwareAudit(ctx)
+            dacState = readDacState()
         }
     }
 
@@ -154,7 +207,7 @@ fun HardwareSettingsScreen(onBack: () -> Unit) {
                 .background(
                     Brush.verticalGradient(
                         listOf(
-                            Color(0xEE040D12),
+                            dacBg.copy(alpha = 0.93f),
                             Color(0x99000000),
                             Color(0xF8040D12)
                         )
@@ -190,7 +243,7 @@ fun HardwareSettingsScreen(onBack: () -> Unit) {
                 Box(
                     Modifier
                         .clip(RoundedCornerShape(12.dp))
-                        .background(Color(0x3300E5FF))
+                        .background(dacBg)
                         .border(1.dp, MikuCyan, RoundedCornerShape(12.dp))
                         .padding(horizontal = 8.dp, vertical = 4.dp)
                 ) {
@@ -203,6 +256,19 @@ fun HardwareSettingsScreen(onBack: () -> Unit) {
                     )
                 }
             }
+
+            // The applied combo in plain words, in its own colors.
+            Text(
+                dacPal.label,
+                color = dacPrimary,
+                fontSize = 12.5.sp,
+                fontWeight = FontWeight.Bold,
+                lineHeight = 16.sp,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 14.dp)
+                    .padding(bottom = 10.dp)
+            )
 
             LazyColumn(
                 modifier = Modifier
@@ -250,8 +316,8 @@ fun HardwareSettingsScreen(onBack: () -> Unit) {
                         Modifier
                             .fillMaxWidth()
                             .clip(RoundedCornerShape(18.dp))
-                            .background(Color(0xDD0A1E26))
-                            .border(1.5.dp, MikuCyan, RoundedCornerShape(18.dp))
+                            .background(Brush.linearGradient(listOf(dacBg.copy(alpha = 0.87f), androidx.compose.ui.graphics.lerp(dacBg, dacSecondary, 0.2f).copy(alpha = 0.87f))))
+                            .border((1f + dacGlow * 1.5f).dp, Brush.linearGradient(listOf(dacPrimary.copy(alpha = 0.35f + 0.65f * dacGlow), dacSecondary.copy(alpha = 0.35f + 0.65f * dacGlow))), RoundedCornerShape(18.dp))
                             .padding(14.dp)
                     ) {
                         Row(
@@ -323,7 +389,7 @@ fun HardwareSettingsScreen(onBack: () -> Unit) {
                                     CirrusLogicManager.HardwareAuditState.Source.SYSFS ->
                                         "LIVE KERNEL SYSFS STATE (/sys/.../sa_sound_setting/)"
                                     CirrusLogicManager.HardwareAuditState.Source.VENDOR_SETTINGS ->
-                                        "LIVE VENDOR HAL STATE (vendor.audio.hiby.*) · SYSFS DENIED TO THIS DOMAIN"
+                                        "APPLIED DAC STATE (persist.vendor.audio.miku.*, then vendor.audio.hiby.*)"
                                     else ->
                                         "NO DAC STATE READABLE BY THIS PROCESS"
                                 },

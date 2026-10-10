@@ -68,6 +68,7 @@ object QsTileOrder {
         QsTileSpec("dre_mode", "DRE", "DRE", Icons.Default.Tune),
         QsTileSpec("pause_unplug", "Pause on unplug", "UNPLUG", Icons.Default.HeadsetOff),
         QsTileSpec("track_hud", "Track HUD", "HUD", Icons.Default.MusicNote),
+        QsTileSpec("dac_badge", "DAC badge", "BADGE", Icons.Default.GraphicEq),
         QsTileSpec("idle_dim", "Idle Dim", "DIM", Icons.Default.BrightnessMedium),
         QsTileSpec("bpm_game", "BPM Game", "BPM", Icons.Default.Favorite)
     )

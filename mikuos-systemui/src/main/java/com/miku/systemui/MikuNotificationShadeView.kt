@@ -62,6 +62,7 @@ import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.drawscope.translate
 import kotlinx.coroutines.flow.drop
@@ -687,6 +688,7 @@ private fun extraTiles(ctx: Context, onRefresh: () -> Unit): List<QsTile> {
     val ingest = Settings.Global.getInt(cr, "miku_ingest_enabled", 0) == 1
     val pause = Settings.Global.getInt(cr, "miku_pause_on_unplug", 1) == 1
     val hud = Settings.Global.getInt(cr, "miku_track_hud_enabled", 1) == 1
+    val dacBadge = MikuDacBadge.isEnabled(ctx)
     // Idle dim ladder (MikuIdleDim.kt): on/off here, timings cycled by long-press. Every value is
     // a Settings.Global key too, so `settings put global miku_idle_dim_active_sec 45` retunes it
     // live without a rebuild - same idiom as the rest of the MikuOS toggles.
@@ -713,6 +715,10 @@ private fun extraTiles(ctx: Context, onRefresh: () -> Unit): List<QsTile> {
             }),
         QsTile("track_hud", "Track HUD", if (hud) "Pops over apps" else "Off", Icons.Default.MusicNote, hud,
             onClick = { putGlobal("miku_track_hud_enabled", if (hud) 0 else 1); onRefresh() }),
+        // The DAC badge in the status bar (MikuDacBadge). It observes the key, so this applies live.
+        QsTile("dac_badge", "DAC badge", if (dacBadge) "Shown in the status bar" else "Off", Icons.Default.GraphicEq, dacBadge,
+            accent = dacTheme(MikuDacBadge.readState(ctx)).primary,
+            onClick = { putGlobal(MikuDacBadge.KEY_ENABLED, if (dacBadge) 0 else 1); onRefresh() }),
         QsTile(
             "idle_dim", "Idle Dim",
             if (idleDimOn) MikuIdleDimSettings.presetName(idleActiveSec, idleDimSec, idleAmbientSec) +

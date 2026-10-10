@@ -85,20 +85,22 @@ fun GlassGridTile(
     val press = rememberMikuPress(interaction)
     val on = t.isActive && t.isAvailable
     val activeAnim = animateFloatAsState(if (on) 1f else 0f, MikuMotion.settle(), label = "tileActive")
+    // A tile with its own accent (the DAC tiles, from dacTheme) fades between palettes.
+    val acc by animateColorAsState(if (t.accent != 0) Color(t.accent) else accentBright, MikuMotion.ease(), label = "tileAccent")
     val ink by animateColorAsState(if (on) MikuDarkBg else MikuWhite, MikuMotion.ease(), label = "tileInk")
     val subInk by animateColorAsState(
         when { on -> MikuDarkBg.copy(alpha = 0.78f); !t.isAvailable -> MikuMuted; else -> MikuTextSecondary },
         MikuMotion.ease(), label = "tileSubInk"
     )
     val iconInk by animateColorAsState(
-        when { on -> MikuDarkBg; !t.isAvailable -> MikuMuted; else -> accentBright },
+        when { on -> MikuDarkBg; !t.isAvailable -> MikuMuted; else -> acc },
         MikuMotion.ease(), label = "tileIconInk"
     )
     Row(
         modifier
             .height(64.dp)
             .mikuPressScale(press)
-            .mikuGlass(GridTileShape, MikuGlass.Tile, accent = accentBright, active = { activeAnim.value }, pressed = press, dimmed = !t.isAvailable)
+            .mikuGlass(GridTileShape, MikuGlass.Tile, accent = acc, active = { activeAnim.value }, pressed = press, dimmed = !t.isAvailable)
             .semantics { stateDescription = stateText(t) }
             .combinedClickable(
                 interactionSource = interaction, indication = null, role = Role.Switch,
@@ -141,19 +143,20 @@ fun GlassCompactTile(
     val press = rememberMikuPress(interaction)
     val on = t.isActive && t.isAvailable
     val activeAnim = animateFloatAsState(if (on) 1f else 0f, MikuMotion.settle(), label = "compactActive")
+    val acc by animateColorAsState(if (t.accent != 0) Color(t.accent) else accentBright, MikuMotion.ease(), label = "compactAccent")
     val ink by animateColorAsState(
         when { on -> MikuDarkBg; !t.isAvailable -> MikuMuted; else -> MikuTextSecondary },
         MikuMotion.ease(), label = "compactInk"
     )
     val iconInk by animateColorAsState(
-        when { on -> MikuDarkBg; !t.isAvailable -> MikuMuted; else -> accentBright },
+        when { on -> MikuDarkBg; !t.isAvailable -> MikuMuted; else -> acc },
         MikuMotion.ease(), label = "compactIconInk"
     )
     Column(
         modifier
             .height(56.dp)
             .mikuPressScale(press)
-            .mikuGlass(CompactTileShape, MikuGlass.Tile, accent = accentBright, active = { activeAnim.value }, pressed = press, dimmed = !t.isAvailable)
+            .mikuGlass(CompactTileShape, MikuGlass.Tile, accent = acc, active = { activeAnim.value }, pressed = press, dimmed = !t.isAvailable)
             .semantics { stateDescription = stateText(t) }
             .combinedClickable(
                 interactionSource = interaction, indication = null, role = Role.Switch,

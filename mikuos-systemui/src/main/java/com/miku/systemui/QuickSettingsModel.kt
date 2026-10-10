@@ -33,7 +33,9 @@ data class QsTile(
     /** Tap opens another app's screen: the shade collapses first, then [onClick] runs. */
     val clickOpensUi: Boolean = false,
     /** Beat period in ms to pulse the icon at while music plays; 0 = no pulse. */
-    val beatMs: Int = 0
+    val beatMs: Int = 0,
+    /** ARGB accent for this tile, 0 = the shade's own. The DAC tiles use dacTheme's primary. */
+    val accent: Int = 0
 )
 
 object QuickSettingsModel {
@@ -206,6 +208,9 @@ object QuickSettingsModel {
         //    values Miku Music and the Hardware app show). Writes go through com.miku.sysbridge.
         //    A tile is dimmed when the bridge is missing, and a failed set says so in a toast.
         val dacBridgeOk = DacBridge.available(ctx)
+        // All four DAC tiles take their accent from the applied combo (dacTheme), the same colors
+        // as the status bar badge and the Hardware app.
+        val dacAccent = dacTheme(MikuDacBadge.readState(ctx)).primary
         fun dacResult(r: DacBridge.Result) {
             if (r == DacBridge.Result.CONFIRMED) return
             val msg = DacBridge.lastProblem ?: return
@@ -217,6 +222,7 @@ object QuickSettingsModel {
         list.add(
             QsTile(
                 id = "cs43198_filter",
+                accent = dacAccent,
                 label = "DAC Filter",
                 subtitle = when (currentFilter) {
                     CirrusLogicManager.DigitalFilter.FAST_LINEAR -> "Fast Linear"
@@ -248,6 +254,7 @@ object QuickSettingsModel {
         list.add(
             QsTile(
                 id = "cs43198_gain",
+                accent = dacAccent,
                 label = "PO Gain",
                 subtitle = when (currentGain) {
                     CirrusLogicManager.GainMode.HIGH -> "High (0 dB)"
@@ -273,6 +280,7 @@ object QuickSettingsModel {
         list.add(
             QsTile(
                 id = "audio_turbo",
+                accent = dacAccent,
                 label = "High power",
                 subtitle = if (isTurbo) "On" else "Off",
                 icon = Icons.Default.FlashOn,
@@ -293,6 +301,7 @@ object QuickSettingsModel {
         list.add(
             QsTile(
                 id = "dre_mode",
+                accent = dacAccent,
                 label = "DRE",
                 subtitle = if (isDre) "On" else "Off",
                 icon = Icons.Default.Tune,

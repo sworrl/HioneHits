@@ -11,5 +11,7 @@ class BridgeApp : Application() {
         super.onCreate()
         ChargeLimiter.start(this)
         PowerProfiles.start(this)
+        // So miku_dac_state is there after boot, before anything changes a DAC setting.
+        AudioReceiver.publishState(this)
     }
 }

@@ -133,6 +133,8 @@ class MikuNotificationShadeService : AccessibilityService() {
     private var volumeHud: MikuVolumeHud? = null
     /** Brightness HUD: warm horizontal bar under the status bar (see MikuBrightnessHud). */
     private var brightnessHud: MikuBrightnessHud? = null
+    /** DAC badge in the middle of the status bar (see MikuDacBadge). */
+    private var dacBadge: MikuDacBadge? = null
 
     /** Album accent bled ≈25% into the nav chrome (pill glow, back capsule), animated 400ms. */
     @Volatile private var navTeal = MikuAccent.TEAL
@@ -228,6 +230,11 @@ class MikuNotificationShadeService : AccessibilityService() {
         // ladder first puts its 1px touch sentinel UNDERNEATH the nav strips rather than stealing
         // the top-left pixel of the shade pull strip.
         idleDim?.start()
+        // The DAC badge goes in before the shade window, so the open shade covers it.
+        if (dacBadge == null) {
+            dacBadge = MikuDacBadge(this, windowManager, systemDimenPx("status_bar_height", TOP_STRIP_FALLBACK_DP))
+        }
+        dacBadge?.attach()
         // Attach BEFORE the nav overlays so the shade sits underneath the top strip and the home
         // pill in z-order: the strip must keep receiving the pull that opens it.
         if (shadeWindow == null) {
@@ -260,6 +267,7 @@ class MikuNotificationShadeService : AccessibilityService() {
         trackHud?.destroy(); trackHud = null
         volumeHud?.destroy(); volumeHud = null
         brightnessHud?.destroy(); brightnessHud = null
+        dacBadge?.detach(); dacBadge = null
         accentJob?.cancel(); accentAnim?.cancel()
         removeOverlays()
         try { workThread.quitSafely() } catch (_: Throwable) {}
@@ -281,7 +289,9 @@ class MikuNotificationShadeService : AccessibilityService() {
     private var ownBarInFront = false
 
     private val checkOwnBar = Runnable {
-        val pkg = MikuTaskStack.topTask(this)?.second?.packageName
+        val top = MikuTaskStack.topTask(this)?.second
+        val pkg = top?.packageName
+        dacBadge?.setForeground(pkg, top?.className)
         val own = pkg == LAUNCHER_PKG
         if (own != ownBarInFront) {
             ownBarInFront = own
