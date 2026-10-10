@@ -64,6 +64,16 @@ class MikuUsbAudioHostService : Service() {
                 val ctx = context ?: return
                 val connected = intent.getBooleanExtra("connected", false)
                 val configured = intent.getBooleanExtra("configured", false)
+                // Android Auto (and any other USB accessory host) puts the gadget into
+                // accessory mode. Prompting here, or applying a saved mode like USB DAC, would
+                // switch the USB functions out from under the car and end the session, so stay
+                // out of the way entirely while an accessory is attached.
+                if (intent.getBooleanExtra("accessory", false) ||
+                    intent.getBooleanExtra("audio_source", false)) {
+                    pendingPrompt?.cancel(); pendingPrompt = null
+                    lastConnected = connected
+                    return
+                }
                 val was = lastConnected
                 lastConnected = connected
                 if (isInitialStickyBroadcast) return

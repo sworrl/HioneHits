@@ -28,6 +28,10 @@ class Skin(
     val stack = ArrayList<Screen>()
     val top: Screen get() = stack.last()
 
+    /** Bumped whenever the stack or a setting changes, so the shell recomposes only then. */
+    val stackVersion = androidx.compose.runtime.mutableIntStateOf(0)
+    private fun changed() { stackVersion.intValue++ }
+
     // Now Playing wheel mode: volume (default) or scrubbing after a center press.
     var npMode = NpMode.NORMAL
     var npModeUntil = 0L
@@ -167,16 +171,23 @@ class Skin(
             }
             Btn.SELECT -> select(s)
         }
+        changed()
         invalidate()
     }
 
-    /** Held buttons: fast forward / rewind, and the About screen's hidden game. */
-    fun onHold(b: Btn, view: View?) {
+    /**
+     * Held buttons: fast forward / rewind, the light, and the About screen's hidden game.
+     * Returns false when a hold means nothing here, so the release still counts as a press.
+     */
+    fun onHold(b: Btn, view: View?): Boolean {
         wake()
+        val s = top
+        if (s is BootScreen || s is BrickScreen || s is CoverFlowScreen) return false
         when (b) {
-            Btn.NEXT -> if (top !is BrickScreen) link.seekBy(5000)
-            Btn.PREV -> if (top !is BrickScreen) link.seekBy(-5000)
-            Btn.SELECT -> if (top is AboutScreen) {
+            Btn.NEXT -> link.seekBy(5000)
+            Btn.PREV -> link.seekBy(-5000)
+            Btn.SELECT -> {
+                if (s !is AboutScreen) return false
                 clicker.press(view)
                 push(BrickScreen(newBrick()))
             }
@@ -193,7 +204,9 @@ class Skin(
                 litUntil = 0L
             }
         }
+        changed()
         invalidate()
+        return true
     }
 
     private fun select(s: Screen) {
@@ -231,6 +244,7 @@ class Skin(
         if (s is BrickScreen && s.game.score > prefs.brickBest) prefs.brickBest = s.game.score
         if (stack.size <= 1) return false
         stack.removeAt(stack.size - 1)
+        changed()
         (top as? MenuScreen)?.let { m ->
             (m.rows as? StaticRows)?.refresh()
             m.sel = m.sel.coerceIn(0, maxOf(0, m.rows.size - 1))
@@ -241,11 +255,12 @@ class Skin(
     fun toRoot() {
         while (stack.size > 1) stack.removeAt(stack.size - 1)
         ((top as? MenuScreen)?.rows as? StaticRows)?.refresh()
+        changed()
         invalidate()
     }
 
     fun skipBoot() {
-        if (top is BootScreen) stack.removeAt(stack.size - 1)
+        if (top is BootScreen) { stack.removeAt(stack.size - 1); changed() }
     }
 
     /** Called by the panel's clock. Times out the volume bar and scrub mode. */
@@ -255,7 +270,7 @@ class Skin(
         if (s is BootScreen && t - s.startedAt > BOOT_MS) skipBoot()
     }
 
-    fun push(s: Screen) { stack.add(s); invalidate() }
+    fun push(s: Screen) { stack.add(s); changed(); invalidate() }
 
     // ---- playback ----------------------------------------------------------------------------
 
@@ -429,6 +444,7 @@ class Skin(
             val idx = stack.indexOf(screen)
             if (idx >= 0) {
                 stack[idx] = MenuScreen("Playlists", StaticRows { rows }, split = false)
+                changed()
                 invalidate()
             }
         }
@@ -543,6 +559,7 @@ class Skin(
             "All art on these screens was redrawn for MikuOS. No original images or fonts are included.",
         "Pixel Operator by Jayvee Enaguas. CC0 1.0, public domain.",
         "PT Sans by ParaType. SIL Open Font License 1.1.",
+        "Liberation Sans by Red Hat. SIL Open Font License 1.1.",
         "Full license texts ship inside the app, in assets/licenses.",
         "Music plays through Miku Music.",
     ))

@@ -94,8 +94,10 @@ fun SkinShell(
     onEras: () -> Unit,
     onExit: () -> Unit,
 ) {
+    skin.stackVersion.intValue
     val st = skin.style
-    val renderer = remember(st) { Renderer(skinContext(), st) }
+    val ctx = androidx.compose.ui.platform.LocalContext.current
+    val renderer = remember(st) { Renderer(ctx, st) }
     val view = LocalView.current
     val density = LocalDensity.current
     Box(
@@ -123,8 +125,8 @@ fun SkinShell(
                                 Rect(0, 0, size.width.toInt(), size.height.toInt()), noFilter)
                         }
                     }
+                    skin.stackVersion.intValue
                     val top = skin.top
-                    frame.intValue
                     if (top is CoverFlowScreen) CoverFlowLayer(skin, top, renderer, st, frame)
                 }
             }
@@ -134,7 +136,7 @@ fun SkinShell(
                     st, d, view,
                     onScroll = { n -> skin.onScroll(n, view); frame.intValue++ },
                     onButton = { b -> skin.onButton(b, view); frame.intValue++ },
-                    onHold = { b -> skin.onHold(b, view); frame.intValue++ },
+                    onHold = { b -> skin.onHold(b, view).also { frame.intValue++ } },
                 )
             }
             Row(
@@ -176,9 +178,6 @@ fun SkinShell(
 }
 
 @Composable
-private fun skinContext() = androidx.compose.ui.platform.LocalContext.current
-
-@Composable
 private fun QuietLink(label: String, color: Color, onClick: () -> Unit) {
     BasicText(
         label,
@@ -205,7 +204,7 @@ fun ClickWheel(
     view: View,
     onScroll: (Int) -> Unit,
     onButton: (Btn) -> Unit,
-    onHold: (Btn) -> Unit,
+    onHold: (Btn) -> Boolean,
 ) {
     val scope = rememberCoroutineScope()
     val label = remember(st) {
@@ -236,10 +235,9 @@ fun ClickWheel(
                     var held = false
                     val detent = (2 * PI / DETENTS).toFloat()
                     val holdJob: Job = scope.launch {
-                        delay(HOLD_MS)
-                        held = true
-                        onHold(btn)
-                        if (btn == Btn.NEXT || btn == Btn.PREV) while (true) { delay(260); onHold(btn) }
+                        delay(holdMs(btn))
+                        held = onHold(btn)
+                        if (held && (btn == Btn.NEXT || btn == Btn.PREV)) while (true) { delay(260); onHold(btn) }
                     }
                     while (true) {
                         val ev = awaitPointerEvent()
@@ -299,7 +297,12 @@ fun ClickWheel(
 
 private const val DETENTS = 24
 private const val CENTER_RATIO = 0.36f
-private const val HOLD_MS = 650L
+/** Seeking starts quickly; the light and the hidden game want a deliberate hold. */
+private fun holdMs(b: Btn) = when (b) {
+    Btn.NEXT, Btn.PREV -> 600L
+    Btn.SELECT -> 1500L
+    else -> 1200L
+}
 
 private fun buttonAt(dx: Float, dy: Float): Btn =
     if (abs(dx) > abs(dy)) { if (dx > 0) Btn.NEXT else Btn.PREV } else { if (dy < 0) Btn.MENU else Btn.PLAY }
@@ -342,6 +345,8 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.playPauseGlyph(x: F
  */
 @Composable
 private fun CoverFlowLayer(skin: Skin, s: CoverFlowScreen, renderer: Renderer, st: Style, frame: MutableIntState) {
+    // Recompose as the selection moves so the window of covers follows it.
+    frame.intValue
     val pos = remember(s) { Animatable(s.sel.toFloat()) }
     LaunchedEffect(s, s.sel) {
         pos.animateTo(s.sel.toFloat(), spring(dampingRatio = 0.92f, stiffness = Spring.StiffnessMediumLow))

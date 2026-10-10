@@ -326,7 +326,7 @@ class Renderer(ctx: Context, val st: Style) {
         val sbW = if (!sb) 0f else if (st.pixelFont) 6f else 7f
         val right = x0 + width - sbW
         val pad = if (st.pixelFont) 4f else 7f
-        val base = (rh + capH(st.listPx)) / 2
+        val base = ((rh + capH(st.listPx)) / 2).toInt().toFloat()
         for (i in 0 until min(vis, n - m.top)) {
             val idx = m.top + i
             val y = th + i * rh

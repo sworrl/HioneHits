@@ -50,9 +50,8 @@
         </activity>
 
         <!--
-          The unlock contract. The launcher (or adb) starts this action:
-            am start -a com.miku.riot.action.ENTER
-            am start -a com.miku.riot.action.ENTER --ez force true   (skip the unlock check)
+          The unlock contract. The launcher (or adb) starts this action, com.miku.riot.action.ENTER.
+          A boolean extra "force" set to true skips the unlock check (debug only).
         -->
         <activity-alias
             android:name=".Enter"

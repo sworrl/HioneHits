@@ -18,8 +18,8 @@ android {
         applicationId = "com.caf.fmradio"
         minSdk = 26
         targetSdk = 34
-        versionCode = 1014
-        versionName = "1.0.14-mikuos"
+        versionCode = 1015
+        versionName = "1.1.0-mikuos"
 
         // projectM background (FmProjectMBackground.kt). arm64 only, like the vendor JNI.
         ndk { abiFilters += "arm64-v8a" }

@@ -59,6 +59,12 @@ object RiotSystem {
         (total - free) to total
     }.getOrDefault(0L to 0L)
 
+    /** True while plugged into a computer in file transfer (MTP or PTP) mode. */
+    fun usbTransfer(ctx: Context): Boolean = runCatching {
+        val i = ctx.registerReceiver(null, IntentFilter("android.hardware.usb.action.USB_STATE")) ?: return false
+        i.getBooleanExtra("connected", false) && (i.getBooleanExtra("mtp", false) || i.getBooleanExtra("ptp", false))
+    }.getOrDefault(false)
+
     fun global(ctx: Context, key: String): String? =
         runCatching { Settings.Global.getString(ctx.contentResolver, key) }.getOrNull()
 

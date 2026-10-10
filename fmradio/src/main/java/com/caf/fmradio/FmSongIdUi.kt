@@ -369,7 +369,7 @@ fun LikeButton(m: FmSongId.Match, compact: Boolean = false) {
             val now = withContext(Dispatchers.IO) { runCatching { FmRadioManager.toggleLikeSong(ctx, m) }.getOrNull() }
             if (now != null) {
                 liked = now
-                Toast.makeText(ctx, if (now) "Liked. Added to Miku Music's to-get list" else "Removed from Miku Music likes",
+                Toast.makeText(ctx, if (now) "Liked. Added to Wanted in Miku Music" else "Removed from Miku Music likes",
                     Toast.LENGTH_SHORT).show()
             } else {
                 Toast.makeText(ctx, "Could not save the like", Toast.LENGTH_SHORT).show()
