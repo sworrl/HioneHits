@@ -42,6 +42,7 @@ class WheelActivity : ComponentActivity() {
     private lateinit var link: PlayerLink
     private lateinit var art: ArtCache
     private lateinit var clicker: Clicker
+    private lateinit var radio: RadioLink
 
     private val frame = mutableIntStateOf(0)
     private val era = mutableStateOf<Era?>(null)
@@ -82,6 +83,10 @@ class WheelActivity : ComponentActivity() {
         }
         art = ArtCache(this) { frame.intValue++ }
         clicker = Clicker(this).apply { haptics = prefs.haptics }
+        radio = RadioLink(this, prefs) {
+            ((skin?.top as? MenuScreen)?.rows as? StaticRows)?.refresh()
+            frame.intValue++
+        }
         volumeControlStream = android.media.AudioManager.STREAM_MUSIC
 
         WindowCompat.setDecorFitsSystemWindows(window, false)
@@ -141,12 +146,14 @@ class WheelActivity : ComponentActivity() {
 
     override fun onPause() {
         super.onPause()
+        clicker.sleep()
         try { unregisterReceiver(battery) } catch (_: Throwable) { }
     }
 
     override fun onDestroy() {
         super.onDestroy()
         link.release()
+        radio.release()
         clicker.release()
     }
 
@@ -210,7 +217,7 @@ class WheelActivity : ComponentActivity() {
         prefs.lastEra = e.id
         clicker.era = e
         clicker.route = prefs.clickerRoute(e)
-        skin = Skin(e, this, prefs, link, art, clicker, library, libraryLoaded, hasPermission) { frame.intValue++ }
+        skin = Skin(e, this, prefs, link, art, clicker, radio, library, libraryLoaded, hasPermission) { frame.intValue++ }
         era.value = e
         frame.intValue++
     }

@@ -1031,7 +1031,13 @@ fun MikuLauncherScreen() {
                 clock = currentTime, isPlaying = isAudioPlaying, thermalC = cpuTempC
             )
             Box(Modifier.fillMaxWidth().graphicsLayer()) {
-                com.miku.launcher.ui.MikuStatusBar(state = statusBarState, onClockClick = { launchClockApp(ctx) })
+                val trayApps = com.miku.launcher.ui.rememberNotificationTray()
+                com.miku.launcher.ui.MikuStatusBar(
+                    state = statusBarState,
+                    onClockClick = { launchClockApp(ctx) },
+                    notificationApps = trayApps,
+                    onOpenShade = { expandNotificationShade(ctx) }
+                )
             }
             MikuLauncherQuiltSection(
                 currentTime = currentTime,
@@ -2670,6 +2676,19 @@ fun clearAllTasks(ctx: Context, tasks: List<RecentTaskItem>) {
 }
 
 fun expandNotificationShade(ctx: Context) {
+    // The Miku shade is a window owned by MikuSystemUI's navigation service: ask it to show.
+    // Needs android.permission.STATUS_BAR (we hold it, platform-signed). If that service is not
+    // running (accessibility service off) there is no receiver, so fall back to the shade activity.
+    val a11yOn = runCatching {
+        (android.provider.Settings.Secure.getString(ctx.contentResolver, android.provider.Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES) ?: "")
+            .contains("com.miku.systemui")
+    }.getOrDefault(false)
+    if (a11yOn) {
+        runCatching {
+            ctx.sendBroadcast(Intent("com.miku.systemui.action.OPEN_SHADE_WINDOW").setPackage("com.miku.systemui"))
+            return
+        }
+    }
     try {
         val intent = Intent().setClassName("com.miku.systemui", "com.miku.systemui.MikuShadeActivity").apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP

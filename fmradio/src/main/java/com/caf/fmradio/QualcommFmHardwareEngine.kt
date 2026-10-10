@@ -188,6 +188,10 @@ class QualcommFmHardwareEngine(private val context: Context) {
 
         /** Nearby full-power stations to fetch terrain for, beyond the presets. */
         private const val TERRAIN_PREFETCH = 12
+        /** Signal polls on one station that make a live reading (SIGNAL_POLL_MS apart). */
+        private const val LIVE_WINDOW = 5
+        private const val REACH_OFFSET_KEY = "reach_offset_v2"
+        private const val REACH_FROM_KEY = "reach_offset_from_v2"
 
         /** Sweeps kept for the waterfall underneath the live trace. */
         const val SWEEP_HISTORY = 24
@@ -371,6 +375,7 @@ class QualcommFmHardwareEngine(private val context: Context) {
                 // Somewhere else now: a sweep from the old spot says nothing about this one.
                 sweepPlace = null
                 terrainByCall.clear()
+                liveRssi.clear()
             }
             weatherRadios.value = FmWeatherRadio.nearest(context, pos.first, pos.second)
             refreshWeatherAlerts(pos)
@@ -388,6 +393,16 @@ class QualcommFmHardwareEngine(private val context: Context) {
     @Volatile private var sweepPlace: Pair<Double, Double>? = null
     /** Terrain profiles from here, by call sign, as they arrive. */
     private val terrainByCall = java.util.concurrent.ConcurrentHashMap<String, FmFresnel.Profile>()
+    /**
+     * RSSI read while tuned to a station here, by call sign: the median of a few steady polls.
+     * This is the best measurement there is (seconds on the channel, not one sweep sample), so
+     * it beats both the sweep and the prediction. Cleared when the device moves.
+     */
+    private val liveRssi = java.util.concurrent.ConcurrentHashMap<String, Int>()
+    private val liveWindow = ArrayDeque<Int>()
+    @Volatile private var liveWindowCall: String? = null
+    /** Validated hits of the last band sweep, kept so terrain arriving later can refine the fit. */
+    @Volatile private var lastSweepHits: List<FmScanHit> = emptyList()
     @Volatile private var terrainListJob: Job? = null
 
     /**
@@ -403,7 +418,7 @@ class QualcommFmHardwareEngine(private val context: Context) {
         if (terrainByCall.put(st.call, p) == null && rawNearby.any { it.call == st.call }) reannotate()
         val plan = band.value
         val sweep = bandRssi.value.takeIf { it.isNotEmpty() && sweepPlace != null }
-        return FmReach.annotate(listOf(st), sweep, plan.lowKHz, plan.stepKHz, mapOf(st.call to p)).firstOrNull()
+        return FmReach.annotate(listOf(st), sweep, plan.lowKHz, plan.stepKHz, mapOf(st.call to p), HashMap(liveRssi)).firstOrNull()
     }
 
     /** Active NWS alerts here; null until fetched or when the service could not be reached. */
@@ -432,8 +447,54 @@ class QualcommFmHardwareEngine(private val context: Context) {
     private fun reannotate() {
         val plan = band.value
         val sweep = bandRssi.value.takeIf { it.isNotEmpty() && sweepPlace != null }
-        nearbyStations.value = FmReach.annotate(rawNearby, sweep, plan.lowKHz, plan.stepKHz, HashMap(terrainByCall))
+        nearbyStations.value = FmReach.annotate(rawNearby, sweep, plan.lowKHz, plan.stepKHz, HashMap(terrainByCall), HashMap(liveRssi))
         tunedStation.value?.let { t -> tunedStation.value = nearbyStations.value.firstOrNull { it.call == t.call } ?: t }
+    }
+
+    /**
+     * Refit the reach offset from every measurement that applies here: the last sweep (if it was
+     * made at this spot) and the live readings, each against its terrain-aware prediction.
+     * The result describes this device's antenna, so it is saved and restored on the next run.
+     */
+    private fun recalibrate(): Boolean {
+        val hits = if (sweepPlace != null) lastSweepHits else emptyList()
+        val changed = FmReach.calibrate(rawNearby, hits, HashMap(terrainByCall), HashMap(liveRssi))
+        if (changed) {
+            prefs.edit()
+                .putFloat(REACH_OFFSET_KEY, FmReach.offsetDb.toFloat())
+                .putInt(REACH_FROM_KEY, FmReach.calibratedFrom)
+                .apply()
+            Log.i(TAG, "reach: offset %.1f dB from %d measured station(s)".format(FmReach.offsetDb, FmReach.calibratedFrom))
+        }
+        return changed
+    }
+
+    /**
+     * One signal poll, filed against the station the catalogue says is tuned. Five steady
+     * polls on the same station make a reading; a change of 3 dB or more updates it.
+     */
+    private fun noteLiveReading(s: FmV4L2.Reading) {
+        val rssi = s.rssi ?: return
+        if (sweeping || isScanning.value) return
+        val st = tunedStation.value ?: return
+        val f = s.freqKHz ?: currentFrequencyKHz.value
+        if (Math.abs(st.khz - f) > 60 || Math.abs(currentFrequencyKHz.value - f) > 60) return
+        synchronized(liveWindow) {
+            if (liveWindowCall != st.call) { liveWindow.clear(); liveWindowCall = st.call }
+            liveWindow.addLast(rssi)
+            while (liveWindow.size > LIVE_WINDOW) liveWindow.removeFirst()
+            if (liveWindow.size < LIVE_WINDOW) return
+        }
+        val med = synchronized(liveWindow) { liveWindow.sorted()[liveWindow.size / 2] }
+        val old = liveRssi[st.call]
+        if (old != null && Math.abs(old - med) < 3) return
+        liveRssi[st.call] = med
+        Log.i(TAG, "reach: ${st.call} read $med dBuV while tuned (predicted %s)".format(
+            st.predictedDbuv?.let { "%.0f".format(it) } ?: "?"))
+        scope.launch {
+            recalibrate()
+            reannotate()
+        }
     }
 
     /**
@@ -460,7 +521,7 @@ class QualcommFmHardwareEngine(private val context: Context) {
                 terrainByCall[st.call] = p
                 if (++got % 3 == 0) reannotate()
             }
-            if (got > 0) reannotate()
+            if (got > 0) { recalibrate(); reannotate() }
         }
     }
 
@@ -492,7 +553,7 @@ class QualcommFmHardwareEngine(private val context: Context) {
                 .getOrNull()
             if (isActive) {
                 tunedProfile.value = p
-                if (p != null && !terrainByCall.containsKey(st.call)) { terrainByCall[st.call] = p; reannotate() }
+                if (p != null && !terrainByCall.containsKey(st.call)) { terrainByCall[st.call] = p; recalibrate(); reannotate() }
             }
         }
     }
@@ -733,6 +794,8 @@ class QualcommFmHardwareEngine(private val context: Context) {
     init { FmNet.init(context) }
 
     init {
+        // v2 keys: offsets saved before 2026-10-10 were fitted without terrain and do not apply.
+        FmReach.restore(prefs.getFloat(REACH_OFFSET_KEY, Float.NaN).toDouble(), prefs.getInt(REACH_FROM_KEY, 0))
         loadJni()
         FmStationCatalogue.prepare(context)
         registerRouteWatcher()
@@ -1391,9 +1454,10 @@ class QualcommFmHardwareEngine(private val context: Context) {
                 if (!wasMuted) FmV4L2.setMute(false)
                 Log.i(TAG, "band sweep: $channels channels, ${hits.size} validated station(s)")
                 FmStationCatalogue.listenerPosition(context)?.let { sweepPlace = it }
-                FmReach.calibrate(rawNearby, hits.map { FmScanHit(it.freqKHz, it.rssi ?: 0, it.snr) }
-                    .filter { (it.rssi ?: 0) >= FmReach.LISTENABLE_DBUV })
-                Log.i(TAG, "reach: offset %.1f dB from %d heard station(s)".format(FmReach.offsetDb, FmReach.calibratedFrom))
+                lastSweepHits = hits.map { FmScanHit(it.freqKHz, it.rssi ?: 0, it.snr) }
+                    .filter { (it.rssi ?: 0) >= FmReach.LISTENABLE_DBUV }
+                recalibrate()
+                Log.i(TAG, "reach: offset %.1f dB from %d measured station(s)".format(FmReach.offsetDb, FmReach.calibratedFrom))
                 reannotate()
             }
         }
@@ -1498,6 +1562,7 @@ class QualcommFmHardwareEngine(private val context: Context) {
         signal.value = s
         s.rssi?.let { rssi.value = it }
         s.stereo?.let { isStereo.value = it }
+        noteLiveReading(s)
         diagnostics.value = diagnostics.value.copy(rssiSi4705 = s.rssi)
         val now = (s.rssi ?: 0).let { (it / SWEEP_RSSI_FULL_SCALE).coerceIn(0f, 1f) }
         histBuf.addFirst(now)

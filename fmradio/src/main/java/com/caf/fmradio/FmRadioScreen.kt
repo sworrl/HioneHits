@@ -119,7 +119,9 @@ fun MikuFMRadioScreen(onBack: () -> Unit) {
             // the full cross-section is 80 dp the analyser can use when you are not aiming.
             st.tunedProfile?.let { prof ->
                 Spacer(Modifier.height(GAP))
-                FmPathStrip(prof, pathExpanded) { pathExpanded = !pathExpanded }
+                // The engine's annotated copy carries the measurement; the profile's own is raw.
+                val tunedRated = st.tunedStation?.takeIf { it.call == prof.station.call }
+                FmPathStrip(prof, tunedRated, pathExpanded) { pathExpanded = !pathExpanded }
             }
 
             Spacer(Modifier.height(GAP + 1.dp))
@@ -378,36 +380,59 @@ private fun FmFrequencyCard(st: FmState, onKeypad: () -> Unit, onStation: (FmSta
 // ---------------------------------------------------------------------------- path strip
 
 @Composable
-private fun FmPathStrip(prof: FmFresnel.Profile, expanded: Boolean, onToggle: () -> Unit) {
+private fun FmPathStrip(
+    prof: FmFresnel.Profile,
+    rated: FmStationCatalogue.Station?,
+    expanded: Boolean,
+    onToggle: () -> Unit,
+) {
     if (expanded) {
         Box(Modifier.pressable(pressedScale = 0.99f, onClick = onToggle)) {
-            FmFresnelProfileView(prof, Modifier.height(82.dp))
+            FmFresnelProfileView(prof, Modifier.height(82.dp), rated = rated)
         }
         return
     }
     val los = Los.of(prof.worst?.fresnelFraction)
+    val s = rated ?: prof.station
     Row(
         Modifier.fillMaxWidth().height(32.dp)
-            .glass(RoundedCornerShape(12.dp), accent = los.color, rimAlpha = 0.45f, shine = 0.6f)
+            .glass(RoundedCornerShape(12.dp), accent = s.reach.takeIf { it != FmReach.Verdict.UNKNOWN }?.color ?: los.color,
+                   rimAlpha = 0.45f, shine = 0.6f)
             .pressable(pressedScale = 0.98f, onClick = onToggle)
             .padding(horizontal = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        ReceptionGauge(prof.station.receptionScore, prof.station.reach, prof.worst?.fresnelFraction, Modifier.size(24.dp), strokeDp = 2f)
+        ReceptionGauge(s.receptionScore, s.reach, prof.worst?.fresnelFraction, Modifier.size(24.dp), strokeDp = 2f)
         Spacer(Modifier.width(8.dp))
-        Text(
-            "PATH TO ${prof.station.call} · ${"%.1f".format(Locale.US, prof.distanceKm)} km",
-            color = MikuTeal.copy(alpha = 0.9f), fontSize = 8.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f),
-            maxLines = 1, overflow = TextOverflow.Ellipsis,
-        )
-        Text(
-            prof.verdict.uppercase(Locale.US) +
-                if (prof.diffractionLossDb > 0.5) " · ~${"%.0f".format(Locale.US, prof.diffractionLossDb)} dB" else "",
-            color = los.color, fontSize = 8.sp, fontWeight = FontWeight.Bold,
-        )
+        Column(Modifier.weight(1f)) {
+            Text(
+                "PATH TO ${prof.station.call} · ${"%.1f".format(Locale.US, prof.distanceKm)} km · ${prof.verdict}",
+                color = MikuTeal.copy(alpha = 0.9f), fontSize = 8.sp, fontWeight = FontWeight.Bold,
+                maxLines = 1, overflow = TextOverflow.Ellipsis,
+            )
+            Text(
+                pathLevels(s, prof), color = MikuTextSecondary, fontSize = 7.sp,
+                maxLines = 1, overflow = TextOverflow.Ellipsis,
+            )
+        }
+        if (s.reach != FmReach.Verdict.UNKNOWN) {
+            Text(s.reach.shortLabel, color = s.reach.color, fontSize = 8.sp, fontWeight = FontWeight.Bold)
+        }
         Icon(Icons.Default.ExpandMore, "Show the terrain profile", tint = MikuTextSecondary, modifier = Modifier.size(18.dp))
     }
 }
+
+/** "measured 45 dBµV · predicted 41 (terrain -23 dB)": the reading first, the model second. */
+internal fun pathLevels(s: FmStationCatalogue.Station, prof: FmFresnel.Profile): String = buildList {
+    s.measuredDbuv?.let { add("measured $it dBµV") }
+    val terrain = if (prof.diffractionLossDb > 0.5) String.format(Locale.US, " (terrain -%.0f dB)", prof.diffractionLossDb) else ""
+    val predicted = s.predictedDbuv
+    when {
+        predicted != null -> add(String.format(Locale.US, "predicted %.0f dBµV", predicted) + terrain)
+        terrain.isNotEmpty() -> add("predicted$terrain")
+    }
+    if (s.measuredDbuv == null) add("not measured yet")
+}.joinToString(" · ")
 
 // ---------------------------------------------------------------------------- transport
 

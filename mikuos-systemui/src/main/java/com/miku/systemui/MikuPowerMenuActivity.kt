@@ -106,7 +106,7 @@ fun MikuPowerMenuScreen(
     var pendingActionAccent by remember { mutableStateOf(MikuTealBright) }
     var countdownSeconds by remember { mutableIntStateOf(3) }
 
-    fun hapticTick() = MikuHaptics.buzz(ctx, 25L)
+    fun hapticTick() = MikuHaptics.confirm(ctx)
 
     fun executeAction(command: String) {
         hapticTick()
@@ -481,10 +481,7 @@ fun PowerActionTile(
                 RoundedCornerShape(14.dp)
             )
             .clickable {
-                try {
-                    val vib = ctx.getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator
-                    vib?.vibrate(VibrationEffect.createOneShot(20, VibrationEffect.DEFAULT_AMPLITUDE))
-                } catch (_: Throwable) {}
+                MikuHaptics.confirm(ctx)
                 onClick()
             }
             .padding(horizontal = 10.dp, vertical = 8.dp),

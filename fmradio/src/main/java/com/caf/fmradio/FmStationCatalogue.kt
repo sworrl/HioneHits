@@ -73,9 +73,19 @@ object FmStationCatalogue {
         val fresnelFraction: Double? = null,
         /** FmFresnel's words for the path: "clear path", "grazing the ridge", ... */
         val terrainVerdict: String? = null,
-        /** Knife-edge loss from that worst point, dB; already included in [predictedDbuv]. */
+        /** Diffraction loss over the terrain, dB (one equivalent edge); already in [predictedDbuv]. */
         val terrainLossDb: Double? = null,
+        /** Antenna height above mean sea level from the licence (RCAMSL), for the terrain path. */
+        val rcamslM: Double? = null,
+        /** Where [measuredDbuv] came from: [MEASURED_TUNED] or [MEASURED_SWEEP]. */
+        val measuredSource: String? = null,
     ) {
+        /** Words for [measuredSource], for the UI. */
+        val measuredWhere: String get() = when (measuredSource) {
+            MEASURED_TUNED -> "read while tuned here"
+            MEASURED_SWEEP -> "last band sweep here"
+            else -> "not measured here yet"
+        }
         /**
          * 0..1 odds-style score for a gauge: where [predictedDbuv] (or the measurement, which
          * wins) sits between nothing (THRESHOLD - 10) and comfortable (LISTENABLE + 15).
@@ -96,6 +106,9 @@ object FmStationCatalogue {
             else -> "full power"
         }
     }
+
+    const val MEASURED_TUNED = "tuned"
+    const val MEASURED_SWEEP = "sweep"
 
     @Volatile private var db: SQLiteDatabase? = null
     @Volatile private var missingReported = false
@@ -186,19 +199,22 @@ object FmStationCatalogue {
      * Whether this catalogue has the format columns (tools/radiodb/add_formats.py). Older
      * images ship without them, and the queries below must work on both.
      */
-    @Volatile private var hasFormats: Boolean? = null
+    @Volatile private var columns: Set<String>? = null
 
-    private fun formatsPresent(d: SQLiteDatabase): Boolean = hasFormats ?: runCatching {
+    private fun columnsOf(d: SQLiteDatabase): Set<String> = columns ?: runCatching {
         d.rawQuery("PRAGMA table_info(station)", null).use { c ->
-            var f = false
-            while (c.moveToNext()) if (c.getString(1) == "genre") f = true
-            f
+            val out = HashSet<String>()
+            while (c.moveToNext()) out += c.getString(1)
+            out as Set<String>
         }
-    }.getOrDefault(false).also { hasFormats = it }
+    }.getOrDefault(emptySet()).also { columns = it }
+
+    private fun formatsPresent(d: SQLiteDatabase): Boolean = "genre" in columnsOf(d)
 
     private fun selectColumns(d: SQLiteDatabase): String =
         "call,service,khz,city,state,licensee,lat,lon,erp_kw,haat_m,callsign_since," +
-            if (formatsPresent(d)) "format,genre" else "NULL,NULL"
+            (if (formatsPresent(d)) "format,genre" else "NULL,NULL") +
+            (if ("rcamsl_m" in columnsOf(d)) ",rcamsl_m" else ",NULL")
 
     private fun stationFrom(c: android.database.Cursor, lat: Double, lon: Double): Station {
         val sLat = c.getDouble(6); val sLon = c.getDouble(7)
@@ -214,6 +230,7 @@ object FmStationCatalogue {
                 10 * log10((haat ?: 30.0).coerceAtLeast(1.0)) -
                 20 * log10(km.coerceAtLeast(1.0)),
             format = c.getString(11), genre = c.getString(12),
+            rcamslM = if (c.isNull(13)) null else c.getDouble(13),
         )
     }
 

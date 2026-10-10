@@ -408,16 +408,19 @@ fun ColumnScope.FmStationDetail(st: FmState, target: PresetTarget, onClose: () -
         val los = Los.of(s.fresnelFraction)
         DetailRow("Reach here", s.reach.label, s.reach.color)
         DetailRow("Reception odds", s.receptionScore?.let { "${(it * 100).toInt()} / 100" } ?: "—")
-        DetailRow("Measured", s.measuredDbuv?.let { "$it dBµV (last band sweep here)" } ?: "not swept here yet")
-        DetailRow("Predicted", s.predictedDbuv?.let { String.format(Locale.US, "%.0f dBµV after calibration", it) } ?: "—")
+        DetailRow("Measured", s.measuredDbuv?.let { "$it dBµV (${s.measuredWhere})" } ?: s.measuredWhere)
+        DetailRow("Predicted", s.predictedDbuv?.let { String.format(Locale.US, "%.0f dBµV, a model estimate", it) } ?: "—")
         DetailRow("Line of sight", buildString {
             append(s.terrainVerdict ?: los.label)
             s.fresnelFraction?.let { append(String.format(Locale.US, " · %.0f%% of first Fresnel zone", it * 100)) }
         }, los.color)
-        s.terrainLossDb?.takeIf { it > 0.5 }?.let { DetailRow("Terrain loss", String.format(Locale.US, "~%.0f dB knife-edge", it)) }
+        s.terrainLossDb?.takeIf { it > 0.5 }?.let { DetailRow("Terrain loss", String.format(Locale.US, "~%.0f dB predicted, diffraction over the ridge", it)) }
         DetailRow("Distance", String.format(Locale.US, "%.1f km", s.distanceKm))
         DetailRow("Power", s.erpKw?.let { String.format(Locale.US, "%.2f kW ERP", it) } ?: "—")
-        DetailRow("Antenna height", s.haatM?.let { "${it.toInt()} m above average terrain" } ?: "—")
+        DetailRow("Antenna height", listOfNotNull(
+            s.haatM?.takeIf { it > 0 }?.let { "${it.toInt()} m above average terrain" },
+            s.rcamslM?.let { "${it.toInt()} m above sea level" },
+        ).joinToString(" · ").ifEmpty { "—" })
         DetailRow("Format", s.format ?: "—")
         DetailRow("Genre", s.genre ?: "—", genreColor(s.genre))
         DetailRow("Licensee", s.licensee ?: "—")
@@ -425,7 +428,7 @@ fun ColumnScope.FmStationDetail(st: FmState, target: PresetTarget, onClose: () -
         Spacer(Modifier.height(4.dp))
         Text(
             "Reach is a calibrated prediction from power, height, distance and (when fetched) the " +
-                "terrain profile. A sweep that actually hears it here overrides it.",
+                "terrain profile. A reading from the tuner here, while tuned or in a band sweep, overrides it.",
             color = MikuTextSecondary, fontSize = 7.5.sp, lineHeight = 10.sp,
         )
     }

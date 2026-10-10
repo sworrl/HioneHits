@@ -69,9 +69,9 @@ enum class Feel(val ms: Long) {
  * stands in for the piezo disc.
  *
  * Playback: one low-latency streaming AudioTrack per route, kept running while the wheel is in
- * use and mixed on our own audio thread. Starting a track per tick costs an audio policy round
- * trip (measured 50 to 80 ms on the M500), so the stream starts when a finger lands on the wheel
- * and stops after a few idle seconds. A tick then waits at most one small buffer.
+ * use and mixed on our own audio thread. Starting a track costs 50 to 150 ms on the M500 (an
+ * audio policy round trip and the output waking up), so the stream starts when an era opens
+ * and on any input, and stops after 20 idle seconds. A tick then waits at most one small buffer.
  *
  * Haptics: short on/off pulses. The M500 motor has no amplitude control and no effects, so the
  * feel comes from pulse length only. Pulses use the touch usage, so the system's touch feedback
@@ -127,6 +127,9 @@ class Clicker(ctx: Context) {
 
     /** A finger is on the wheel: get the stream going so the first tick is on time. */
     fun wake() = engine.wake()
+
+    /** MikuPod left the screen: let the stream stop now instead of after the idle time. */
+    fun sleep() = engine.sleep()
 
     /** One wheel step moved something: a tick and, if not too soon after the last, a pulse. */
     fun step() {
@@ -196,6 +199,8 @@ class Clicker(ctx: Context) {
             ensure()
         }
 
+        fun sleep() { lastUse = 0L }
+
         fun trigger(at: Long, r: ClickRoute) {
             queue.add(Hit(at, r))
             lastUse = at
@@ -233,6 +238,12 @@ class Clicker(ctx: Context) {
                     // New ticks start at the top of the next chunk.
                     while (true) {
                         val hit = queue.poll() ?: break
+                        // A tick that could not start within LATE_NS (the stream was still
+                        // waking up) is dropped: a late click feels worse than a missing one.
+                        if (System.nanoTime() - hit.at > LATE_NS) {
+                            if (debug) Log.d(TAG, "tick dropped, ${(System.nanoTime() - hit.at) / 1_000_000} ms late")
+                            continue
+                        }
                         val toSp = hit.route == ClickRoute.SPEAKER || hit.route == ClickRoute.BOTH
                         val toMd = hit.route == ClickRoute.HEADPHONES || hit.route == ClickRoute.BOTH
                         if (toSp) { if (!spOn) { spOn = start(true) }; add(spPos) }
@@ -432,8 +443,13 @@ class Clicker(ctx: Context) {
         private const val MIN_SOUND_GAP_NS = 8_000_000L
         /** 45 ms between step pulses, at most about 22 a second. */
         private const val MIN_STEP_BUZZ_GAP_NS = 45_000_000L
-        /** The stream stops this long after the last tick or touch. */
-        private const val IDLE_NS = 3_000_000_000L
+        /**
+         * The stream stops this long after the last tick, touch or key. Waking it costs 50 to
+         * 150 ms on the M500, so it starts when an era opens or MikuPod comes back, and stays up
+         * while the wheel is in use.
+         */
+        private const val IDLE_NS = 20_000_000_000L
+        private const val LATE_NS = 60_000_000L
         private const val SPEAKER_GAIN = 0.55f
         private const val HEADPHONE_GAIN = 0.30f
     }

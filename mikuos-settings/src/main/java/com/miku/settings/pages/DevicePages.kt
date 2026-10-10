@@ -122,6 +122,12 @@ fun SoundPage() {
                         runCatching { if (it) am.loadSoundEffects() else am.unloadSoundEffects() }
                     }
                     ToggleRow("Touch vibration", "Short vibration on taps", p.sys(Settings.System.HAPTIC_FEEDBACK_ENABLED)?.let { it == 1 }) { p.putSys(Settings.System.HAPTIC_FEEDBACK_ENABLED, if (it) 1 else 0) }
+                    // MikuOS haptics: checked by the haptics helper in SystemUI, the launcher and
+                    // Miku Music. Turning it on also turns on Touch vibration, which HiBy ships off.
+                    ToggleRow("MikuOS haptics", "Clicks and ticks in MikuOS, the launcher and Miku Music", (p.glob("miku_haptics") ?: 1) == 1) {
+                        p.putGlob("miku_haptics", if (it) 1 else 0)
+                        if (it) p.putSys(Settings.System.HAPTIC_FEEDBACK_ENABLED, 1)
+                    }
                     ToggleRow("Screen lock sound", null, p.sys("lockscreen_sounds_enabled")?.let { it == 1 }) { p.putSys("lockscreen_sounds_enabled", if (it) 1 else 0) }
                     ToggleRow("Charging sounds and vibration", null, p.glob("charging_sounds_enabled")?.let { it == 1 }) { p.putGlob("charging_sounds_enabled", if (it) 1 else 0) }
                     ToggleRow("Mono audio", "Plays the same sound in both channels", p.sys("master_mono")?.let { it == 1 }) { p.putSys("master_mono", if (it) 1 else 0) }

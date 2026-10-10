@@ -14,6 +14,8 @@
     <queries>
         <package android:name="com.miku.player" />
         <package android:name="com.miku.launcher" />
+        <!-- The FM tuner, driven through its media session (FmMediaBrowserService). -->
+        <package android:name="com.caf.fmradio" />
         <intent>
             <action android:name="androidx.media3.session.MediaLibraryService" />
         </intent>

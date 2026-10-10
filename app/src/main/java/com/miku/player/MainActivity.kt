@@ -219,14 +219,12 @@ fun Modifier.pressableGlassCard(
             indication = LocalIndication.current,
             onLongClick = onLongClick?.let {
                 {
-                    haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
-                    Haptics.tick(ctx)
+                    Haptics.heavy(ctx)
                     it()
                 }
             },
             onClick = {
-                haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
-                Haptics.tick(ctx)
+                Haptics.click(ctx)
                 onClick()
             }
         )
@@ -2102,8 +2100,7 @@ private fun MikuAnimatedBootSplash(onFinished: () -> Unit) {
                 )
             }
             .clickable(interactionSource = interaction, indication = null) {
-                haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
-                Haptics.tick(hapticCtx)
+                Haptics.click(hapticCtx)
                 onScan()
             }
             .padding(horizontal = 7.dp, vertical = 3.5.dp),
@@ -4218,7 +4215,7 @@ private fun ArtistSortSettingsModal(
                                 onClick = { onAlbum(al) },
                                 onLongClick = {
                                     if (albumRepr != null) {
-                                        haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
+                                        Haptics.heavy(ctx)
                                         PlayerPreferences.saveArtistCoverTrack(ctx, a.name, albumRepr.id)
                                         coverOverride = albumRepr.id
                                         android.widget.Toast.makeText(ctx, "Set as ${a.name}'s cover", android.widget.Toast.LENGTH_SHORT).show()
@@ -5716,8 +5713,7 @@ private fun MikuVibePromptCard(
                 )
             }
             .clickable(interactionSource = interaction, indication = null) {
-                haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
-                Haptics.tick(ctx)
+                Haptics.click(ctx)
                 onClick()
             }
             .padding(horizontal = 15.dp, vertical = 8.dp),

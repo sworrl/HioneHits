@@ -1896,7 +1896,7 @@ fun MikuAboutDeviceModal(
                                     .background(MikuCyan.copy(alpha = 0.08f))
                                     .clickable {
                                         devTapCount++
-                                        haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
+                                        Haptics.tick(ctx)
                                         if (devTapCount >= 7) {
                                             Toast.makeText(ctx, "Developer options are on", Toast.LENGTH_LONG).show()
                                             onOpenDevOptions()

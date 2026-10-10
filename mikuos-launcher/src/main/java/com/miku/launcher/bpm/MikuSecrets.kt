@@ -388,6 +388,7 @@ object MikuSecrets {
         MikuCelebrations.push(
             MikuCelebrations.Item(true, s.title, s.where, s.howTo)
         )
+        com.miku.launcher.haptics.MikuHaptics.unlock(ctx)
         return listOf(s)
     }
 

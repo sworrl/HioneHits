@@ -19,6 +19,7 @@ class Skin(
     val link: PlayerLink,
     val art: ArtCache,
     val clicker: Clicker,
+    val radio: RadioLink,
     var lib: Library,
     var libLoaded: Boolean,
     var hasPermission: Boolean,
@@ -57,6 +58,7 @@ class Skin(
 
     /** Any input relights the screen per the Backlight Timer setting. */
     fun wake() {
+        clicker.wake()
         val secs = prefs.backlightSecs
         litUntil = when {
             secs < 0 -> Long.MAX_VALUE
@@ -116,6 +118,7 @@ class Skin(
                 }
             }
             is BrickScreen -> { s.game.move(steps); false }
+            is RadioScreen -> radio.step(steps)
             is TextScreen -> {
                 val old = s.top
                 s.top = (s.top + steps).coerceIn(0, maxOf(0, s.lineCount - style.textLines))
@@ -124,6 +127,8 @@ class Skin(
             else -> false
         }
         if (moved) clicker.step()
+        if (android.util.Log.isLoggable("MikuPodClick", android.util.Log.DEBUG))
+            android.util.Log.d("MikuPodClick", "wheel ${era.id} steps=$steps moved=$moved on ${top.javaClass.simpleName}")
         invalidate()
         return moved
     }
@@ -145,6 +150,8 @@ class Skin(
     }
 
     fun onButton(b: Btn, view: View?) {
+        if (android.util.Log.isLoggable("MikuPodClick", android.util.Log.DEBUG))
+            android.util.Log.d("MikuPodClick", "button ${era.id} $b on ${top.javaClass.simpleName}")
         val wasLit = isLit(now())
         wake()
         // The click itself (sound and pulse) came from the wheel when the switch closed.
@@ -153,6 +160,16 @@ class Skin(
         if (!wasLit && b != Btn.PLAY) { invalidate(); return }
         val s = top
         if (s is BootScreen) { skipBoot(); invalidate(); return }
+        if (s is RadioScreen && b != Btn.MENU) {
+            when (b) {
+                Btn.SELECT -> s.dial = !s.dial
+                Btn.PLAY -> radio.powerToggle()
+                Btn.NEXT -> radio.skip(true)
+                Btn.PREV -> radio.skip(false)
+                else -> {}
+            }
+            changed(); invalidate(); return
+        }
         when (b) {
             Btn.MENU -> back()
             Btn.PLAY -> when (s) {
@@ -183,6 +200,7 @@ class Skin(
         wake()
         val s = top
         if (s is BootScreen || s is BrickScreen || s is CoverFlowScreen) return false
+        if (s is RadioScreen) return radioHold(s, b)
         when (b) {
             Btn.NEXT -> link.seekBy(5000)
             Btn.PREV -> link.seekBy(-5000)
@@ -207,6 +225,69 @@ class Skin(
         invalidate()
         return true
     }
+
+    /**
+     * Radio holds, as on the Radio Remote and the 2009 nano: hold Center to add or remove a
+     * favorite, hold Next or Previous to scan (a seek every 5 seconds while held, the nano's
+     * five-second preview).
+     */
+    private fun radioHold(s: RadioScreen, b: Btn): Boolean {
+        val t = now()
+        when (b) {
+            Btn.SELECT -> {
+                val k = radio.dialKhz
+                val added = radio.toggleFavorite(k)
+                s.note = if (added) "Added to Favorites" else "Removed from Favorites"
+                s.noteUntil = t + 1600
+            }
+            Btn.NEXT, Btn.PREV -> {
+                if (t - s.lastSeekAt < 5000) return true
+                s.lastSeekAt = t
+                radio.seek(b == Btn.NEXT)
+            }
+            else -> return false
+        }
+        changed(); invalidate()
+        return true
+    }
+
+    // ---- radio -------------------------------------------------------------------------------
+
+    /** Main menu > Radio: the Radio menu with the tuner screen on top, and the radio on. */
+    private fun openRadio() {
+        radio.connect()
+        push(radioMenu())
+        push(RadioScreen())
+        if (radio.antenna && !radio.on) radio.play()
+    }
+
+    private fun radioRow() = if (radio.installed) Row("Radio") { openRadio() } else null
+
+    private fun radioMenu() = MenuScreen("Radio", StaticRows {
+        listOf(
+            if (radio.on) Row("Stop Radio", arrow = false) { radio.stop() }
+            else Row("Play Radio", arrow = false) { radio.play(); push(RadioScreen()) },
+            Row("Favorites") { push(radioFavorites()) },
+            Row("Radio Regions") { push(regionsMenu()) },
+        )
+    }, split = split())
+
+    private fun radioFavorites(): Screen {
+        val favs = radio.favorites
+        if (favs.isEmpty()) return MessageScreen("Favorites",
+            "No favorites yet. Tune to a station and hold the Center button to add it.")
+        return MenuScreen("Favorites", ListRows(favs, { "${fmtMhz(it)} FM" }, false) { i ->
+            radio.tune(favs[i])
+            if (!radio.on) radio.play()
+            push(RadioScreen())
+        })
+    }
+
+    private fun regionsMenu() = MenuScreen("Radio Regions", StaticRows {
+        RadioRegion.entries.map { r ->
+            Row(r.label, arrow = false, checked = { radio.region == r }) { prefs.radioRegion = r.name }
+        }
+    })
 
     private fun select(s: Screen) {
         when (s) {
@@ -307,9 +388,10 @@ class Skin(
     fun rootMenu(): MenuScreen {
         val rows = StaticRows {
             val base = when (era) {
-                Era.MONO_2001 -> listOf(
+                Era.MONO_2001 -> listOfNotNull(
                     Row("Playlists") { push(playlistsMenu()) },
                     Row("Browse") { push(browseMenu()) },
+                    radioRow(),
                     Row("Extras") { push(extrasMenu()) },
                     Row("Settings") { push(settingsMenu()) },
                     Row("Backlight", arrow = false) { onHold(Btn.MENU, null) },
@@ -318,24 +400,27 @@ class Skin(
                     Row("Music") { push(musicMenu()) },
                     // The gray 2004 models had no Photos menu.
                     if (prefs.color2004) Row("Photos") { push(photosMenu()) } else null,
+                    radioRow(),
                     Row("Extras") { push(extrasMenu()) },
                     Row("Settings") { push(settingsMenu()) },
                     Row("Shuffle Songs", arrow = false) { shuffleSongs() },
                     Row("Backlight", arrow = false) { onHold(Btn.MENU, null) },
                 )
-                Era.VIDEO_2005 -> listOf(
+                Era.VIDEO_2005 -> listOfNotNull(
                     Row("Music") { push(musicMenu()) },
                     Row("Photos") { push(photosMenu()) },
                     Row("Videos") { push(videosMessage()) },
+                    radioRow(),
                     Row("Extras") { push(extrasMenu()) },
                     Row("Settings") { push(settingsMenu()) },
                     Row("Shuffle Songs", arrow = false) { shuffleSongs() },
                 )
-                Era.CLASSIC_2007 -> listOf(
+                Era.CLASSIC_2007 -> listOfNotNull(
                     Row("Music") { push(musicMenu()) },
                     Row("Videos") { push(videosMessage()) },
                     Row("Photos") { push(photosMenu()) },
                     Row("Podcasts") { open { podcasts() } },
+                    radioRow(),
                     Row("Extras") { push(extrasMenu()) },
                     Row("Settings") { push(settingsMenu()) },
                     Row("Shuffle Songs", arrow = false) { shuffleSongs() },
@@ -367,6 +452,8 @@ class Skin(
             add(Row("Songs") { open { songsMenu("Songs", lib.songs) } })
             add(Row("Genres") { open { genresMenu() } })
             add(Row("Composers") { open { composersMenu() } })
+            // With the Radio Remote attached, Radio also showed up under Music.
+            if (era == Era.VIDEO_2005 || era == Era.CLASSIC_2007) radioRow()?.let { add(it) }
         }
     }, split = split())
 
@@ -558,6 +645,7 @@ class Skin(
                 })
             })
             add(Row("Backlight Timer") { push(backlightMenu()) })
+            if (radio.installed) add(Row("Radio Regions") { push(regionsMenu()) })
             if (era == Era.MONO_2001) add(Row("Contrast", arrow = false, value = {
                 when (prefs.contrast) { 1 -> "Low"; 3 -> "High"; else -> "Normal" }
             }) { prefs.contrast = prefs.contrast % 3 + 1 })

@@ -766,68 +766,44 @@ fun WirelessScreen(ctx: Context) {
             }
         }
 
-        // Google Fi carrier workaround: without the Fi app (Tycho) the SIM's multi-IMSI never gets
-        // provisioned, so when the modem camps on Fi's Verizon leg (311/480) the active T-Mobile
-        // IMSI (310240) is rejected with cause 7 and data never attaches. Manually pinning the
-        // network to T-Mobile (310260) makes the identity match - but only works where T-Mobile
-        // has coverage, so this is a user-facing toggle, honest about the trade-off.
+        // Google Fi status. Fi data needs the Google Fi app: it provisions the SIM, holds the
+        // carrier privileges and writes Fi's APNs. When the line isn't fully activated, the
+        // networks refuse data with cause 7 (EPS services not allowed) whatever the phone does,
+        // so this card only shows the state and opens the Fi app. (Forcing T-Mobile isn't
+        // supported by this modem, and the old "Radio saver" switch had nothing behind it.)
         item {
             Column(Modifier.mikuCard().padding(14.dp)) {
-                Text("GOOGLE FI DATA (NO FI APP)", color = MikuTealBright, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                Text("GOOGLE FI", color = MikuTealBright, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                 Spacer(Modifier.height(6.dp))
                 val tm = remember { ctx.getSystemService(Context.TELEPHONY_SERVICE) as? android.telephony.TelephonyManager }
-                var manual by remember {
-                    mutableStateOf(try { tm?.networkSelectionMode == android.telephony.TelephonyManager.NETWORK_SELECTION_MODE_MANUAL } catch (_: Throwable) { false })
-                }
                 var opInfo by remember { mutableStateOf("") }
-                LaunchedEffect(manual) {
+                LaunchedEffect(Unit) {
                     while (true) {
                         opInfo = try {
                             val op = tm?.networkOperatorName ?: ""
                             val reg = tm?.dataState
-                            "Camped: ${op.ifBlank { "searching…" }} · data ${if (reg == android.telephony.TelephonyManager.DATA_CONNECTED) "CONNECTED" else "not attached"}"
+                            "Network: ${op.ifBlank { "searching…" }}. Data ${if (reg == android.telephony.TelephonyManager.DATA_CONNECTED) "connected" else "not connected"}."
                         } catch (_: Throwable) { "" }
                         kotlinx.coroutines.delay(5000)
                     }
                 }
                 Text(
-                    "Fi switches carriers through its app. Without it, data only attaches on T-Mobile towers. " +
-                    "Force T-Mobile so the SIM identity matches. Turn it OFF if you lose signal where T-Mobile has no coverage.",
+                    "Fi data needs the Google Fi app. If data won't connect, open it and finish activation.",
                     color = Color(0xB3FFFFFF), fontSize = 11.sp, lineHeight = 14.sp
                 )
                 if (opInfo.isNotBlank()) { Spacer(Modifier.height(4.dp)); Text(opInfo, color = Color(0xFF7BE8DF), fontSize = 11.sp) }
                 Spacer(Modifier.height(8.dp))
-                var radioSaver by remember {
-                    mutableStateOf(try { Settings.Global.getInt(ctx.contentResolver, "m500_cell_radio_saver", 1) == 1 } catch (_: Throwable) { true })
-                }
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                    Column(Modifier.weight(1f)) {
-                        Text("Radio saver", color = Color.White, fontSize = 13.sp)
-                        Text("Turns the cell radio off after 10 min with no signal on Wi-Fi. Back on when Wi-Fi drops", color = Color(0x80FFFFFF), fontSize = 10.sp, lineHeight = 12.sp)
-                    }
-                    Switch(checked = radioSaver, onCheckedChange = { on ->
-                        radioSaver = on
-                        try { Settings.Global.putInt(ctx.contentResolver, "m500_cell_radio_saver", if (on) 1 else 0) } catch (_: Throwable) {}
-                    })
-                }
-                Spacer(Modifier.height(6.dp))
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                    Text("Force T-Mobile network", color = Color.White, fontSize = 13.sp)
-                    // Was: "manual = on" straight off the tap, with the failure only logged - a
-                    // refused setNetworkSelectionModeManual left the switch showing the network as
-                    // pinned. Re-read networkSelectionMode and show what the modem actually is on.
-                    Switch(checked = manual, onCheckedChange = { on ->
-                        Thread {
-                            try {
-                                if (on) tm?.setNetworkSelectionModeManual("310260", true)
-                                else tm?.setNetworkSelectionModeAutomatic()
-                            } catch (t: Throwable) { android.util.Log.w("MikuSettings", "network selection failed", t) }
-                            val actual = try {
-                                tm?.networkSelectionMode == android.telephony.TelephonyManager.NETWORK_SELECTION_MODE_MANUAL
-                            } catch (_: Throwable) { false }
-                            android.os.Handler(android.os.Looper.getMainLooper()).post { manual = actual }
-                        }.start()
-                    })
+                val fiIntent = remember { ctx.packageManager.getLaunchIntentForPackage("com.google.android.apps.tycho") }
+                if (fiIntent != null) {
+                    Text(
+                        "Open Google Fi",
+                        color = MikuTealBright, fontSize = 13.sp, fontWeight = FontWeight.Bold,
+                        modifier = Modifier.clickable {
+                            runCatching { ctx.startActivity(fiIntent.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)) }
+                        }.padding(vertical = 6.dp)
+                    )
+                } else {
+                    Text("The Google Fi app isn't installed.", color = Color(0x80FFFFFF), fontSize = 11.sp)
                 }
             }
         }

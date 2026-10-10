@@ -223,6 +223,7 @@ class MikuNotificationShadeService : AccessibilityService() {
         volumeHud = MikuVolumeHud(this, windowManager)
         brightnessHud = MikuBrightnessHud(this, windowManager) { shadeWindow?.isOpen == true }
         MikuPowerProfile.observe(this)
+        MikuHaptics.ensureDefaults(this)
         startAccentObserver()
         try {
             val filter = IntentFilter().apply {
@@ -707,6 +708,7 @@ class MikuNotificationShadeService : AccessibilityService() {
             .onFailure { Log.w(TAG, "knob: setStreamVolume($target/$max) failed", it) }
             .getOrDefault(false)
         if (ok) {
+            if (target != cur) MikuHaptics.tick(this)   // one detent per knob step, none at the end stops
             volumeHud?.onVolumeChanged(step)
         }
         return ok

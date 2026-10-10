@@ -275,9 +275,11 @@ class MikuShadeWindow(
                         val dm = ctx.resources.displayMetrics
                         val openAt = minOf(dm.heightPixels * 0.25f, 120f * dm.density, panelH * 0.45f)
                         if (vel < -900f || (shownPx < openAt && vel < 600f)) {
+                            MikuHaptics.tick(ctx)                     // released: shade goes away
                             ty.animateTo(-panelH - 40f, tween(MikuMotion.ms(150), easing = FastOutSlowInEasing))
                             close()
                         } else {
+                            MikuHaptics.confirm(ctx)                  // released: shade stays open
                             ty.animateTo(0f, MikuMotion.settle(), initialVelocity = vel.coerceIn(-4000f, 4000f))
                         }
                     }

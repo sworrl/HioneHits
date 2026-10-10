@@ -186,17 +186,25 @@ class RiotActivity : ComponentActivity() {
         val now = SystemClock.uptimeMillis()
         if (now - lastTick < TICK_GAP_MS) return
         lastTick = now
-        buzz(if (Build.VERSION.SDK_INT >= 29) VibrationEffect.createPredefined(VibrationEffect.EFFECT_TICK)
-             else VibrationEffect.createOneShot(8, 120))
+        buzz(primitive(VibrationEffect.Composition.PRIMITIVE_TICK, 1f) ?: VibrationEffect.createOneShot(12, 255))
     }
 
     /** A button press: a firmer pulse than the wheel. [strong] for the hold that leaves Riot mode. */
     fun pressFeedback(strong: Boolean = false) {
-        buzz(when {
-            strong && Build.VERSION.SDK_INT >= 29 -> VibrationEffect.createPredefined(VibrationEffect.EFFECT_HEAVY_CLICK)
-            Build.VERSION.SDK_INT >= 29 -> VibrationEffect.createPredefined(VibrationEffect.EFFECT_CLICK)
-            else -> VibrationEffect.createOneShot(if (strong) 40 else 20, 255)
-        })
+        buzz(primitive(if (strong) VibrationEffect.Composition.PRIMITIVE_THUD else VibrationEffect.Composition.PRIMITIVE_CLICK, 1f)
+            ?: VibrationEffect.createOneShot(if (strong) 50 else 28, 255))
+    }
+
+    /**
+     * The M500's haptics HAL has no prebaked effects (EFFECT_TICK falls back to a soft 50 ms
+     * buzz) but does play composition primitives, which are short and crisp. Null when the
+     * primitive is not supported, so the caller falls back to a one-shot pulse.
+     */
+    private fun primitive(id: Int, scale: Float): VibrationEffect? {
+        if (Build.VERSION.SDK_INT < 30) return null
+        val v = vibrator ?: return null
+        if (!v.areAllPrimitivesSupported(id)) return null
+        return VibrationEffect.startComposition().addPrimitive(id, scale).compose()
     }
 
     fun exitRiot() = RiotSystem.exitToMiku(this)

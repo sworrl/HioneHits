@@ -1363,6 +1363,7 @@ fun EmbossedScrubber(
     onSeekPreview: (Long) -> Unit, onSeekCommit: (Long) -> Unit
 ) {
     val d = dur.coerceAtLeast(1L)
+    val hapticCtx = androidx.compose.ui.platform.LocalContext.current   // seek detents
     val prog = (pos.toFloat() / d).coerceIn(0f, 1f)   // raw (works with device animations off)
     // Manual shimmer loop (ignores animator_duration_scale = 0).
     var shimmer by remember { mutableStateOf(0f) }
@@ -1389,10 +1390,10 @@ fun EmbossedScrubber(
                 var frac = 0f
                 detectHorizontalDragGesturesEdgeSafe(
                     guard,
-                    onDragStart = { o -> frac = (o.x / size.width).coerceIn(0f, 1f); onSeekPreview((frac * d).toLong()) },
+                    onDragStart = { o -> frac = (o.x / size.width).coerceIn(0f, 1f); com.miku.player.Haptics.seekDetent(hapticCtx, (frac * d).toLong(), d, start = true); onSeekPreview((frac * d).toLong()) },
                     onDragEnd = { onSeekCommit((frac * d).toLong()) },
                     onDragCancel = { onSeekCommit((frac * d).toLong()) }
-                ) { change, _ -> frac = (change.position.x / size.width).coerceIn(0f, 1f); onSeekPreview((frac * d).toLong()) }
+                ) { change, _ -> frac = (change.position.x / size.width).coerceIn(0f, 1f); com.miku.player.Haptics.seekDetent(hapticCtx, (frac * d).toLong(), d); onSeekPreview((frac * d).toLong()) }
             }
             .pointerInput(d) {
                 detectTapGestures { o -> onSeekCommit(((o.x / size.width).coerceIn(0f, 1f) * d).toLong()) }
@@ -1563,8 +1564,8 @@ fun TieredRainbowHeart(
             .combinedClickable(
                 interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
                 indication = null,
-                onLongClick = onLongPress?.let { { Haptics.tick(ctx); it() } },
-                onClick = { Haptics.tick(ctx); onToggle() }
+                onLongClick = onLongPress?.let { { Haptics.heavy(ctx); it() } },
+                onClick = { if (liked) Haptics.tick(ctx) else Haptics.heavy(ctx); onToggle() }   // like = firm, unlike = light
             ),
         contentAlignment = Alignment.Center
     ) {

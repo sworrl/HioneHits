@@ -91,3 +91,12 @@ class SlideshowScreen(val albumIds: List<Long>) : Screen("Slideshow") {
 class BootScreen(val startedAt: Long) : Screen("")
 
 class MessageScreen(title: String, val text: String) : Screen(title)
+
+/** The tuner. [dial] = the radio dial below the frequency, else the station's RDS text. */
+class RadioScreen : Screen("Radio") {
+    var dial = true
+    /** A short note over the screen ("Added to Favorites"), shown until [noteUntil]. */
+    var note = ""
+    var noteUntil = 0L
+    var lastSeekAt = 0L
+}

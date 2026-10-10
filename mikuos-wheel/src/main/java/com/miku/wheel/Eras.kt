@@ -95,6 +95,15 @@ class WheelPrefs(ctx: Context) {
 
     fun setClickerRoute(e: Era, r: ClickRoute) { p.edit().putString("clicker_${e.id}", r.name).apply() }
 
+    var radioRegion: String?
+        get() = p.getString("radio_region", null)
+        set(v) { p.edit().putString("radio_region", v).apply() }
+
+    /** Favorites kept here while the FM app has no way to take them (kHz). */
+    var radioFavorites: Set<Int>
+        get() = p.getStringSet("radio_favs", emptySet())!!.mapNotNull { it.toIntOrNull() }.toSet()
+        set(v) { p.edit().putStringSet("radio_favs", v.map { it.toString() }.toSet()).apply() }
+
     var haptics: Boolean
         get() = p.getBoolean("haptics", true)
         set(v) { p.edit().putBoolean("haptics", v).apply() }

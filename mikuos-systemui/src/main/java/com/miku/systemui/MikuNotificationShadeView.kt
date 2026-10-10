@@ -950,8 +950,12 @@ private fun NotifRow(n: MikuNotif, onOpen: () -> Unit, onReply: () -> Unit, onDi
         enableDismissFromStartToEnd = n.isClearable,
         enableDismissFromEndToStart = n.isClearable,
         backgroundContent = {
-            Box(Modifier.fillMaxSize().clip(RoundedCornerShape(20.dp)).background(MikuPink.copy(alpha = 0.25f)), contentAlignment = Alignment.Center) {
-                Text("Dismiss", color = MikuPinkBright, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+            // Only while a swipe is under way: the glass card is see-through, so a background that
+            // is always there shows "Dismiss" through every card at rest.
+            if (state.dismissDirection != SwipeToDismissBoxValue.Settled) {
+                Box(Modifier.fillMaxSize().clip(RoundedCornerShape(20.dp)).background(MikuPink.copy(alpha = 0.25f)), contentAlignment = Alignment.Center) {
+                    Text("Dismiss", color = MikuPinkBright, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                }
             }
         }
     ) {

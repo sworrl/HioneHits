@@ -109,6 +109,7 @@ class Renderer(ctx: Context, val st: Style) {
             is TextScreen -> textScreen(s)
             is SlideshowScreen -> slideshow(skin, s, now)
             is MessageScreen -> message(s)
+            is RadioScreen -> radio(skin, s, now)
         }
         if (now < skin.volumeShownUntil && skin.top !is NowPlayingScreen && skin.top !is BootScreen) volumeStrip(skin)
         if (!lit && !st.mono) c.drawColor(0xD0000000.toInt())
@@ -810,6 +811,137 @@ class Renderer(ctx: Context, val st: Style) {
             val thumbH = span * n / wrapped.size
             val thumbT = th + (span - thumbH) * s.top / (wrapped.size - n).coerceAtLeast(1)
             rect(l + 1, thumbT, w - 1f, thumbT + thumbH, if (st.mono) fg else 0xFF8A929B.toInt())
+        }
+    }
+
+    /**
+     * The tuner. 2005 and 2007 follow the Radio Remote screen: the frequency large, the station
+     * under it, and below that either the radio dial (wheel tunes, favorites marked with small
+     * triangles) or the RDS text, switched with Center. 2001 and 2004 never had a radio; theirs
+     * is the same screen drawn in their own type and bars.
+     */
+    private fun radio(skin: Skin, s: RadioScreen, now: Long) {
+        val r = skin.radio
+        titleBar(skin, "Radio")
+        val th = st.titleH.toFloat()
+        val px = st.pixelFont
+        if (!r.installed || !r.antenna) {
+            font(st.bodyFace, st.bodyPx, fg)
+            val msg = if (!r.installed) "There is no radio on this player."
+                else "Connect headphones. The cord is the radio antenna."
+            val lines = ArrayList<String>(4)
+            wrap(msg, w - 16f, lines)
+            val lh = st.lineH.toFloat()
+            var y = th + (h - th - lines.size * lh) / 2 + lh - (lh - capH(st.bodyPx)) / 2
+            for (l in lines) { drawCentered(l, w / 2f, y); y += lh }
+            return
+        }
+        val k = r.dialKhz
+        val fav = r.isFavorite(k)
+        // Frequency, large, with "FM" after it.
+        val bigPx = if (px) 32f else if (st.era == Era.VIDEO_2005) 40f else 38f
+        val fy = th + (h - th) * 0.30f + capH(bigPx) / 2
+        font(st.listFace, bigPx, fg)
+        val f = fmtMhz(k)
+        val fw = text.measureText(f)
+        font(st.smallFace, if (px) 16f else st.bodyPx, dim)
+        val unit = "FM"
+        val uw = text.measureText(unit)
+        val x0 = (w - fw - uw - 4f) / 2
+        font(st.listFace, bigPx, fg)
+        draw(f, x0, fy)
+        font(st.smallFace, if (px) 16f else st.bodyPx, dim)
+        draw(unit, x0 + fw + 4f, fy)
+        // Favorite marker left of the number, signal icon right of the panel.
+        val accent = if (st.mono) fg else st.barBot
+        if (fav) favTri(x0 - (if (px) 9f else 12f), fy - capH(bigPx) / 2, if (px) 4f else 5f, accent)
+        if (r.online) signal(w - (if (px) 18f else 24f), th + (if (px) 6f else 8f), if (px) 3f else 4f, fg)
+        // Station line.
+        font(st.bodyFace, st.bodyPx, fg)
+        val stationLine = when {
+            !r.connected -> "Waiting for the radio"
+            r.error != null -> r.error ?: ""
+            !r.on -> "Radio off. Press play."
+            !r.online -> "Starting the radio"
+            else -> r.station
+        }
+        val sy = fy + (if (px) 18f else 24f)
+        drawCentered(stationLine, w / 2f, sy)
+        val lowerT = sy + (if (px) 8f else 12f)
+        if (s.dial) dial(r, k, lowerT, h - (if (px) 4f else 8f))
+        else {
+            // RDS: the station's own text, up to two lines.
+            font(st.bodyFace, st.bodyPx, dim)
+            val rds = r.text.takeIf { r.online && it.isNotBlank() && it != r.station } ?: "No station info"
+            val lines = ArrayList<String>(4)
+            wrap(rds, w - 16f, lines)
+            var y = lowerT + st.lineH
+            for (l in lines.take(2)) { drawCentered(l, w / 2f, y); y += st.lineH }
+        }
+        if (now < s.noteUntil) {
+            font(st.bodyFace, st.bodyPx, fg)
+            val nw = text.measureText(s.note) + 12f
+            val nh = st.lineH + 6f
+            val nt = (h + th) / 2 - nh / 2
+            rect((w - nw) / 2, nt, (w + nw) / 2, nt + nh, bg)
+            frame((w - nw) / 2, nt, (w + nw) / 2, nt + nh, fg)
+            drawCentered(s.note, w / 2f, nt + nh / 2 + capH(st.bodyPx) / 2)
+        }
+    }
+
+    /** The radio dial: a scale around the tuned frequency, a needle, favorites as triangles. */
+    private fun dial(r: RadioLink, k: Int, top: Float, bottom: Float) {
+        val px = st.pixelFont
+        val reg = r.region
+        val l = 8f
+        val rr = w - 8f
+        val span = if (w <= 160) 6_000 else if (w <= 220) 8_000 else 10_000
+        val lo = (k - span / 2).coerceIn(reg.lowKhz - 500, reg.highKhz + 500 - span)
+        val hi = lo + span
+        fun xOf(f: Int) = l + (rr - l) * (f - lo).toFloat() / span
+        val base = top + (bottom - top) * 0.45f
+        val tickC = if (st.mono) fg else 0xFF5C636B.toInt()
+        // Base line, then ticks: every 0.2 MHz short, every 1 MHz taller, labels every 2 MHz.
+        rect(l, base, rr, base + 1, tickC)
+        var f = (lo / 200) * 200
+        font(st.smallFace, if (px) 8f else st.smallPx, dim)
+        while (f <= hi) {
+            if (f >= lo) {
+                val x = xOf(f)
+                val major = f % 1000 == 0
+                val tall = if (major) (if (px) 6f else 9f) else (if (px) 3f else 4f)
+                rect(x, base - tall, x + 1, base, tickC)
+                if (f % 2000 == 0) {
+                    val lab = (f / 1000).toString()
+                    draw(lab, x - text.measureText(lab) / 2, base + (if (px) 10f else 15f))
+                }
+            }
+            f += 200
+        }
+        // Favorites under the scale.
+        val accent = if (st.mono) fg else st.barBot
+        for (fv in r.favorites) if (fv in lo..hi) favTri(xOf(fv), base + 2f, if (px) 2.5f else 3.5f, accent, up = true)
+        // Needle.
+        val needle = if (st.mono) fg else 0xFFE0392B.toInt()
+        val x = xOf(k)
+        val nt = top + 1f
+        rect(x - (if (px) 0f else 0.5f), nt, x + 1f + (if (px) 0f else 0.5f), base + 1f, needle)
+    }
+
+    private fun favTri(x: Float, y: Float, s: Float, color: Int, up: Boolean = false) {
+        fill.shader = null; fill.color = color
+        path.reset()
+        if (up) { path.moveTo(x, y); path.lineTo(x + s, y + s * 1.6f); path.lineTo(x - s, y + s * 1.6f) }
+        else { path.moveTo(x - s, y - s); path.lineTo(x + s, y - s); path.lineTo(x, y + s * 0.8f) }
+        path.close()
+        c.drawPath(path, fill)
+    }
+
+    /** Signal icon: four rising bars, shown while the tuner is up. */
+    private fun signal(x: Float, y: Float, u: Float, color: Int) {
+        for (i in 0 until 4) {
+            val bh = u * (i + 1)
+            rect(x + i * (u + 1), y + u * 4 - bh, x + i * (u + 1) + u, y + u * 4, color)
         }
     }
 

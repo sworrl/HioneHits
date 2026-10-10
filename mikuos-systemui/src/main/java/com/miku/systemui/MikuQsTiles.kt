@@ -104,7 +104,7 @@ fun GlassGridTile(
             .semantics { stateDescription = stateText(t) }
             .combinedClickable(
                 interactionSource = interaction, indication = null, role = Role.Switch,
-                onClick = { MikuHaptics.tick(view); tap(t, onOpensUi) },
+                onClick = { MikuHaptics.confirm(view); tap(t, onOpensUi) },
                 onLongClick = t.onLongClick?.let { lc -> { MikuHaptics.pop(view); lc(); if (t.longPressOpensUi) onOpensUi() } }
             )
             .padding(start = 10.dp, end = 10.dp),
@@ -161,7 +161,7 @@ fun GlassCompactTile(
             .combinedClickable(
                 interactionSource = interaction, indication = null, role = Role.Switch,
                 onClickLabel = t.label,
-                onClick = { MikuHaptics.tick(view); tap(t, onOpensUi) },
+                onClick = { MikuHaptics.confirm(view); tap(t, onOpensUi) },
                 onLongClick = t.onLongClick?.let { lc -> { MikuHaptics.pop(view); lc(); if (t.longPressOpensUi) onOpensUi() } }
             ),
         horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center

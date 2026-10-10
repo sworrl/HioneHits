@@ -286,6 +286,7 @@ object MikuUnlocks {
                     MikuCelebrations.push(
                         MikuCelebrations.Item(false, r.title, r.where, "Earned with ${r.amount} ${r.goal.label}.")
                     )
+                    com.miku.launcher.haptics.MikuHaptics.unlock(ctx)
                 }
             }
         }

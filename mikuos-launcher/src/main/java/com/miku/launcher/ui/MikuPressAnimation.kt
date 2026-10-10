@@ -109,7 +109,7 @@ fun Modifier.mikuAppIconClickable(
         label = "mikuAppIconScale"
     )
 
-    LaunchedEffect(isPressed) { if (isPressed) MikuHaptics.tick(ctx) }
+    LaunchedEffect(isPressed) { if (isPressed) MikuHaptics.confirm(ctx) }   // dock and grid taps: a click, not a tick
 
     // Return-home settle: the icon we launched from bounces once when the launcher resumes.
     val returnTick by MikuLaunchSource.homeReturnTick.collectAsState()
