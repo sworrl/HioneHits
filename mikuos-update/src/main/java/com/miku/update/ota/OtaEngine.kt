@@ -175,6 +175,7 @@ object OtaEngine {
             _state.update {
                 it.copy(manifest = m, signedBy = signedBy, items = items, blockedByMinBuild = blocked, systemUpdate = su, error = null)
             }
+            pruneCache(ctx, items)
             prefs.lastCheckMillis = System.currentTimeMillis()
             prefs.lastResult = when {
                 items.isEmpty() && su == null -> "Up to date"
@@ -193,6 +194,14 @@ object OtaEngine {
             prefs.lastCheckMillis = System.currentTimeMillis()
             prefs.lastResult = "Check failed"
             false
+        }
+    }
+
+    /** Drops downloads (and partial ones) that no longer match anything on offer. */
+    private fun pruneCache(ctx: Context, items: List<Item>) {
+        val keep = items.map { "${it.entry.packageName}-${it.entry.versionCode}.apk" }.toSet()
+        File(ctx.cacheDir, "ota").listFiles()?.forEach { f ->
+            if (f.name.removeSuffix(".part") !in keep) f.delete()
         }
     }
 

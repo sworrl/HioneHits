@@ -79,19 +79,25 @@ object ApkVerifier {
     fun longVersion(info: PackageInfo): Long =
         if (Build.VERSION.SDK_INT >= 28) info.longVersionCode else @Suppress("DEPRECATION") info.versionCode.toLong()
 
+    /**
+     * Both flags: some releases only collect an archive's certificates when GET_SIGNATURES is set,
+     * so asking for both gets signingInfo where it exists and signatures everywhere.
+     */
     @Suppress("DEPRECATION")
     private fun signingFlags(): Int =
-        if (Build.VERSION.SDK_INT >= 28) PackageManager.GET_SIGNING_CERTIFICATES else PackageManager.GET_SIGNATURES
+        if (Build.VERSION.SDK_INT >= 28) PackageManager.GET_SIGNING_CERTIFICATES or PackageManager.GET_SIGNATURES
+        else PackageManager.GET_SIGNATURES
 
     /** SHA-256 of each current signer certificate. A rotated lineage is not accepted as "equal". */
     @Suppress("DEPRECATION")
     fun signerDigests(info: PackageInfo): Set<String> {
-        val sigs = if (Build.VERSION.SDK_INT >= 28) {
-            val si = info.signingInfo ?: return emptySet()
-            if (si.hasMultipleSigners()) si.apkContentsSigners else si.signingCertificateHistory?.takeLast(1)?.toTypedArray()
-        } else {
-            info.signatures
-        } ?: return emptySet()
+        val si = if (Build.VERSION.SDK_INT >= 28) info.signingInfo else null
+        val sigs = when {
+            si == null -> info.signatures
+            si.hasMultipleSigners() -> si.apkContentsSigners
+            else -> si.signingCertificateHistory?.takeLast(1)?.toTypedArray()
+        }
+        if (sigs.isNullOrEmpty()) return emptySet()
         return sigs.map { sig ->
             MessageDigest.getInstance("SHA-256").digest(sig.toByteArray()).joinToString("") { "%02x".format(it) }
         }.toSet()
