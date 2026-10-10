@@ -29,7 +29,11 @@ data class QsTile(
     /** False when the state cannot be read (radio missing, codec not answering). Drawn dimmed; a tap still tries. */
     val isAvailable: Boolean = true,
     /** Long-press opens another app's screen, so the shade should get out of the way. */
-    val longPressOpensUi: Boolean = true
+    val longPressOpensUi: Boolean = true,
+    /** Tap opens another app's screen: the shade collapses first, then [onClick] runs. */
+    val clickOpensUi: Boolean = false,
+    /** Beat period in ms to pulse the icon at while music plays; 0 = no pulse. */
+    val beatMs: Int = 0
 )
 
 object QuickSettingsModel {

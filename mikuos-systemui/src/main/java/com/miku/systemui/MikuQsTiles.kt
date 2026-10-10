@@ -2,7 +2,17 @@ package com.miku.systemui
 
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.AnimationVector1D
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.compose.currentStateAsState
+import kotlinx.coroutines.isActive
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
@@ -68,7 +78,7 @@ fun GlassGridTile(
     t: QsTile,
     modifier: Modifier,
     accentBright: Color = MikuTealBright,
-    onLongPressOpened: () -> Unit = {}
+    onOpensUi: () -> Unit = {}
 ) {
     val view = LocalView.current
     val interaction = remember { MutableInteractionSource() }
@@ -92,13 +102,14 @@ fun GlassGridTile(
             .semantics { stateDescription = stateText(t) }
             .combinedClickable(
                 interactionSource = interaction, indication = null, role = Role.Switch,
-                onClick = { MikuHaptics.tick(view); t.onClick() },
-                onLongClick = t.onLongClick?.let { lc -> { MikuHaptics.pop(view); lc(); if (t.longPressOpensUi) onLongPressOpened() } }
+                onClick = { MikuHaptics.tick(view); tap(t, onOpensUi) },
+                onLongClick = t.onLongClick?.let { lc -> { MikuHaptics.pop(view); lc(); if (t.longPressOpensUi) onOpensUi() } }
             )
             .padding(start = 10.dp, end = 10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        IconWell(t.icon, t.label, iconInk, on, 34.dp)
+        val pulse = rememberBeatPulse(t.beatMs)
+        IconWell(t.icon, t.label, iconInk, on, 34.dp, pulse = { pulse.value })
         Spacer(Modifier.width(10.dp))
         Column(Modifier.weight(1f)) {
             Text(t.label, color = ink, fontSize = 12.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -123,7 +134,7 @@ fun GlassCompactTile(
     t: QsTile,
     modifier: Modifier,
     accentBright: Color = MikuTealBright,
-    onLongPressOpened: () -> Unit = {}
+    onOpensUi: () -> Unit = {}
 ) {
     val view = LocalView.current
     val interaction = remember { MutableInteractionSource() }
@@ -147,12 +158,13 @@ fun GlassCompactTile(
             .combinedClickable(
                 interactionSource = interaction, indication = null, role = Role.Switch,
                 onClickLabel = t.label,
-                onClick = { MikuHaptics.tick(view); t.onClick() },
-                onLongClick = t.onLongClick?.let { lc -> { MikuHaptics.pop(view); lc(); if (t.longPressOpensUi) onLongPressOpened() } }
+                onClick = { MikuHaptics.tick(view); tap(t, onOpensUi) },
+                onLongClick = t.onLongClick?.let { lc -> { MikuHaptics.pop(view); lc(); if (t.longPressOpensUi) onOpensUi() } }
             ),
         horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center
     ) {
-        Icon(t.icon, t.label, tint = iconInk, modifier = Modifier.size(20.dp))
+        val pulse = rememberBeatPulse(t.beatMs)
+        Icon(t.icon, t.label, tint = iconInk, modifier = Modifier.size(20.dp).beatScale { pulse.value })
         Spacer(Modifier.height(3.dp))
         val short = QsTileOrder.spec(t.id)?.short ?: t.label.uppercase().take(10)
         Text(
@@ -163,9 +175,41 @@ fun GlassCompactTile(
     }
 }
 
+/** Tap: a tile that opens another app's screen collapses the shade first, then acts. */
+private fun tap(t: QsTile, onOpensUi: () -> Unit) {
+    if (t.clickOpensUi) { onOpensUi(); t.onClick() } else t.onClick()
+}
+
+/**
+ * Icon pulse at [beatMs] (0 = none): a quick 70ms swell, then an ease back over the rest of the
+ * beat. Runs only while the shade is actually showing (lifecycle RESUMED: the shade window drops
+ * to STARTED when hidden, and its composition stays alive, so without this the loop would keep
+ * the frame clock busy behind a closed shade) and never in the quiet power profiles. The value is
+ * read in graphicsLayer, so a beat redraws the icon and recomposes nothing.
+ */
+@Composable
+private fun rememberBeatPulse(beatMs: Int): Animatable<Float, AnimationVector1D> {
+    val pulse = remember { Animatable(0f) }
+    val lifecycleState by LocalLifecycleOwner.current.lifecycle.currentStateAsState()
+    val running = beatMs > 0 && lifecycleState.isAtLeast(Lifecycle.State.RESUMED) && !MikuMotion.quiet
+    LaunchedEffect(running, beatMs) {
+        if (!running) { pulse.snapTo(0f); return@LaunchedEffect }
+        while (isActive) {
+            pulse.animateTo(1f, tween(70))
+            pulse.animateTo(0f, tween((beatMs - 70).coerceAtLeast(60), easing = FastOutSlowInEasing))
+        }
+    }
+    return pulse
+}
+
+private fun Modifier.beatScale(pulse: () -> Float): Modifier = graphicsLayer {
+    val s = 1f + 0.22f * pulse()
+    scaleX = s; scaleY = s
+}
+
 /** Round well the tile icon sits in: a darker dimple on lit glass, a faint teal one on dark glass. */
 @Composable
-private fun IconWell(icon: ImageVector, desc: String, tint: Color, on: Boolean, size: Dp) {
+private fun IconWell(icon: ImageVector, desc: String, tint: Color, on: Boolean, size: Dp, pulse: () -> Float = { 0f }) {
     Box(
         Modifier
             .size(size)
@@ -175,7 +219,7 @@ private fun IconWell(icon: ImageVector, desc: String, tint: Color, on: Boolean, 
                 else MikuGlass.Groove.copy(opacity = 0.75f, rim = 0.5f)
             ),
         contentAlignment = Alignment.Center
-    ) { Icon(icon, desc, tint = tint, modifier = Modifier.size(18.dp)) }
+    ) { Icon(icon, desc, tint = tint, modifier = Modifier.size(18.dp).beatScale(pulse)) }
 }
 
 /** Round glass icon button (header chevron, footer actions). 40dp target minimum. */

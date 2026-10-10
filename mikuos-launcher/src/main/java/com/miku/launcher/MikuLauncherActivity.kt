@@ -2358,10 +2358,22 @@ fun launchMikuFm(ctx: Context) {
     try { ctx.startActivity(Intent("com.caf.fmradio.FMRADIO_ACTIVITY").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK), opts) } catch (_: Throwable) {}
 }
 
-// Standard-launcher behavior: tapping the homescreen clock opens the system clock app.
-// Try Google Clock, then AOSP Deskclock, then the generic SHOW_ALARMS intent, else a Toast.
+// Standard-launcher behavior: tapping the homescreen clock opens the clock app.
+// Try Miku Clock (com.miku.tools), then Google Clock, then AOSP Deskclock, then the generic
+// SHOW_ALARMS intent, else a Toast.
 fun launchClockApp(ctx: Context) {
     val pm = ctx.packageManager
+    try {
+        val miku = Intent(Intent.ACTION_MAIN).apply {
+            component = android.content.ComponentName("com.miku.tools", "com.miku.tools.clock.ClockActivity")
+            addCategory(Intent.CATEGORY_LAUNCHER)
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        if (miku.resolveActivity(pm) != null) {
+            ctx.startActivity(miku, MikuCompositing.optionsFor(ctx, MikuTransitionEvent.APP_OPEN))
+            return
+        }
+    } catch (_: Throwable) {}
     for (pkg in listOf("com.google.android.deskclock", "com.android.deskclock")) {
         val intent = pm.getLaunchIntentForPackage(pkg)?.apply {
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)

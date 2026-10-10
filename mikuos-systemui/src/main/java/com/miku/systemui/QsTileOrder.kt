@@ -11,6 +11,7 @@ import androidx.compose.material.icons.filled.Bluetooth
 import androidx.compose.material.icons.filled.BrightnessMedium
 import androidx.compose.material.icons.filled.Cable
 import androidx.compose.material.icons.filled.CloudSync
+import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FlashOn
 import androidx.compose.material.icons.filled.Flight
 import androidx.compose.material.icons.filled.GraphicEq
@@ -67,13 +68,20 @@ object QsTileOrder {
         QsTileSpec("dre_mode", "DRE 130dB+", "DRE", Icons.Default.Tune),
         QsTileSpec("pause_unplug", "Unplug Pause", "UNPLUG", Icons.Default.HeadsetOff),
         QsTileSpec("track_hud", "Track HUD", "HUD", Icons.Default.MusicNote),
-        QsTileSpec("idle_dim", "Idle Dim", "DIM", Icons.Default.BrightnessMedium)
+        QsTileSpec("idle_dim", "Idle Dim", "DIM", Icons.Default.BrightnessMedium),
+        QsTileSpec("bpm_game", "BPM Game", "BPM", Icons.Default.Favorite)
     )
     private val byId = CATALOG.associateBy { it.id }
     fun spec(id: String): QsTileSpec? = byId[id]
 
-    /** Default: everything on, and the quick row the shade had before the editor existed. */
-    val DEFAULT: List<String> = CATALOG.map { it.id }
+    /** In the catalog but not on by default: the user adds these from the editor. */
+    private val OPT_IN = setOf("bpm_game")
+
+    /** Every tile id, active or not. The editor's "available" section is this minus the active list. */
+    val ALL_IDS: List<String> = CATALOG.map { it.id }
+
+    /** Default: everything except [OPT_IN], and the quick row the shade had before the editor existed. */
+    val DEFAULT: List<String> = ALL_IDS.filter { it !in OPT_IN }
 
     private val _active = MutableStateFlow(DEFAULT)
     /** Active tile ids, in display order. */
@@ -87,7 +95,8 @@ object QsTileOrder {
         val known = runCatching { Settings.Secure.getString(cr, KEY_KNOWN) }.getOrNull()
             ?.split(',')?.map { it.trim() }?.toSet().orEmpty()
         val parsed = parse(raw)
-        // New in this build and never seen in the editor: show it rather than hide it.
+        // New in this build and never seen in the editor: show it rather than hide it (opt-in
+        // tiles excepted, they wait in "available").
         val fresh = DEFAULT.filter { it !in known && it !in parsed }
         _active.value = (parsed + fresh).ifEmpty { DEFAULT }
     }
@@ -123,7 +132,7 @@ object QsTileOrder {
 
     private fun writeAsync(ctx: Context, value: String) {
         val app = ctx.applicationContext
-        val known = DEFAULT.joinToString(",")
+        val known = ALL_IDS.joinToString(",")
         // Settings writes are binder calls into system_server; keep them off the UI thread.
         Thread {
             val ok = runCatching {

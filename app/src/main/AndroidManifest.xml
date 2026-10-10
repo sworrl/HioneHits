@@ -259,10 +259,8 @@
             android:theme="@style/Theme.MikuLauncher"
             android:screenOrientation="portrait"
             android:configChanges="orientation|screenSize|keyboardHidden">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
+            <!-- No LAUNCHER entry: the real tuner (com.caf.fmradio) is the one "FM Radio" in the
+                 app drawer. This old in-app radio stays reachable by explicit intent only. -->
         </activity>
 
         <service

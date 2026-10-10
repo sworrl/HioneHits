@@ -7,6 +7,13 @@ import android.media.AudioManager
 import android.os.Build
 import android.provider.Settings
 import android.util.Log
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Autorenew
+import androidx.compose.material.icons.filled.Bluetooth
+import androidx.compose.material.icons.filled.Cable
+import androidx.compose.material.icons.filled.Headphones
+import androidx.compose.material.icons.filled.Usb
+import androidx.compose.ui.graphics.vector.ImageVector
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -16,32 +23,32 @@ object CirrusLogicManager {
     private const val SYSFS_BASE = "/sys/devices/platform/sa_sound_setting"
 
     enum class DigitalFilter(val id: String, val label: String, val description: String) {
-        FAST_LINEAR("fast_rolloff_phase_compensated", "Fast Roll-off, Phase Compensated", "Reference linear phase, wide soundstage and precise imaging"),
-        FAST_MINIMUM("fast_rolloff_low_latency", "Fast Roll-off, Low Latency", "Minimum phase with ultra-low group delay and punchy dynamics"),
-        SLOW_LINEAR("slow_rolloff_phase_compensated", "Slow Roll-off, Phase Compensated", "Smooth linear decay with zero phase distortion"),
-        SLOW_MINIMUM("slow_rolloff_low_latency", "Slow Roll-off, Low Latency", "Warm acoustic roll-off with minimal pre-ringing"),
-        NOS("nos", "Non-Oversampling (NOS)", "Bypasses internal digital oversampling for raw, analog-like fidelity")
+        FAST_LINEAR("fast_rolloff_phase_compensated", "Fast Roll-off, Phase Compensated", "Linear phase. The standard reference filter"),
+        FAST_MINIMUM("fast_rolloff_low_latency", "Fast Roll-off, Low Latency", "Minimum phase with low group delay"),
+        SLOW_LINEAR("slow_rolloff_phase_compensated", "Slow Roll-off, Phase Compensated", "Linear phase with a gentler roll-off"),
+        SLOW_MINIMUM("slow_rolloff_low_latency", "Slow Roll-off, Low Latency", "Minimum phase, gentle roll-off, little pre-ringing"),
+        NOS("nos", "Non-Oversampling (NOS)", "Skips the DAC's digital oversampling filter")
     }
 
     enum class GainMode(val id: String, val label: String, val sysfsValue: String, val description: String) {
-        LOW("low", "Low Gain (0 dB)", "low", "Optimized for high-sensitivity IEMs and low-impedance earphones"),
-        HIGH("high", "High Gain (+6 dB)", "high", "High-voltage rail swing for demanding planar magnetic and high-impedance headphones")
+        LOW("low", "Low Gain (0 dB)", "low", "For sensitive IEMs and low-impedance earphones"),
+        HIGH("high", "High Gain (+6 dB)", "high", "More voltage swing for planars and high-impedance headphones")
     }
 
-    enum class OutputMode(val id: String, val label: String, val sysfsValue: String, val icon: String, val description: String) {
-        AUTO("auto", "Auto-Detect Physical / BT", "auto", "⚡", "Intelligently routes audio to whatever physical port or Bluetooth gear is connected"),
-        BAL_HEADPHONE_OUT("bal_po", "4.4mm Balanced (BAL PO)", "bal_po", "🎧", "Force dual differential 4.4mm balanced output stage"),
-        HEADPHONE_OUT("po", "3.5mm Single-Ended (PO)", "po", "🎧", "Force dedicated 3.5mm unbalanced headphone amplifier stage"),
-        BLUETOOTH("bt", "Bluetooth Audio (A2DP / Speaker)", "bt", "🔊", "Force wireless stream to connected Bluetooth speaker or headphones"),
-        LINE_OUT("lo", "Line Out (LO / BAL LO)", "lo", "📻", "Fixed reference voltage line output for external desktop amplifiers"),
-        USB_DAC("usb", "USB-C Audio / UAC2 DAC", "usb", "💻", "Route audio stream to external Type-C audio hardware")
+    enum class OutputMode(val id: String, val label: String, val sysfsValue: String, val icon: ImageVector, val description: String) {
+        AUTO("auto", "Auto (wired or Bluetooth)", "auto", Icons.Default.Autorenew, "Plays to whichever wired port or Bluetooth device is connected"),
+        BAL_HEADPHONE_OUT("bal_po", "4.4mm Balanced (BAL PO)", "bal_po", Icons.Default.Headphones, "Always use the 4.4mm balanced output"),
+        HEADPHONE_OUT("po", "3.5mm Single-Ended (PO)", "po", Icons.Default.Headphones, "Always use the 3.5mm headphone output"),
+        BLUETOOTH("bt", "Bluetooth Audio (A2DP / Speaker)", "bt", Icons.Default.Bluetooth, "Always send audio to the connected Bluetooth device"),
+        LINE_OUT("lo", "Line Out (LO / BAL LO)", "lo", Icons.Default.Cable, "Fixed-level line output for an external amp"),
+        USB_DAC("usb", "USB-C Audio / UAC2 DAC", "usb", Icons.Default.Usb, "Send audio to an external USB-C DAC")
     }
 
     enum class AudioShareTarget(val id: String, val label: String, val description: String) {
-        DUAL_44_AND_BT("dual_44_bt", "4.4mm Balanced DAC + Bluetooth Speaker", "Simultaneously powers 4.4mm balanced IEMs while streaming to Bluetooth speaker/gear"),
-        DUAL_35_AND_BT("dual_35_bt", "3.5mm Single-Ended DAC + Bluetooth Speaker", "Simultaneously powers 3.5mm IEMs while streaming to Bluetooth speaker/gear"),
-        DUAL_PHYSICAL("dual_phy", "Both Physical Ports (3.5mm + 4.4mm Balanced)", "Simultaneously powers both 3.5mm and 4.4mm ports for dual wired IEMs"),
-        WIRED_AND_USB("wired_usb", "Wired DAC + USB-C External DAC", "Mirrors real-time audio across internal CS43198 DAC and external Type-C DAC")
+        DUAL_44_AND_BT("dual_44_bt", "4.4mm Balanced + Bluetooth", "Plays to 4.4mm balanced and Bluetooth at the same time"),
+        DUAL_35_AND_BT("dual_35_bt", "3.5mm Single-Ended + Bluetooth", "Plays to 3.5mm and Bluetooth at the same time"),
+        DUAL_PHYSICAL("dual_phy", "Both Wired Ports (3.5mm + 4.4mm)", "Plays to the 3.5mm and 4.4mm ports at the same time"),
+        WIRED_AND_USB("wired_usb", "Wired + USB-C DAC", "Plays to the internal CS43198 and an external USB-C DAC at the same time")
     }
 
     /**

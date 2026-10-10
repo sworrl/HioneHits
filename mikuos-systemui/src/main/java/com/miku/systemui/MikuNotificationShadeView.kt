@@ -61,6 +61,11 @@ import androidx.compose.material.icons.filled.CloudSync
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.ui.graphics.drawscope.rotate
+import androidx.compose.ui.graphics.drawscope.translate
+import kotlinx.coroutines.flow.drop
+import kotlin.math.roundToInt
 import androidx.compose.material.icons.filled.WbSunny
 import androidx.compose.material.icons.filled.HeadsetOff
 import androidx.compose.material.icons.filled.MusicNote
@@ -184,7 +189,13 @@ fun MikuNotificationShadeView(
     val notifs by MikuNotificationStore.items.collectAsState()
     val listenerOk by MikuNotificationStore.connected.collectAsState()
     // Album accent (Miku Music → Settings.Global miku_np_accent), ≈30% into teal, animated 400ms.
-    LaunchedEffect(Unit) { MikuAccent.observe(ctx); MikuPowerProfile.observe(ctx); QsTileOrder.observe(ctx) }
+    LaunchedEffect(Unit) {
+        MikuAccent.observe(ctx); MikuPowerProfile.observe(ctx); QsTileOrder.observe(ctx)
+        MikuUnlocksWatch.observe(ctx); MikuBeatWatch.observe(ctx)
+    }
+    val negiBattery by MikuUnlocksWatch.negiBattery.collectAsState()
+    // A new tempo or play/pause rebuilds the tiles once (the BPM tile's subtitle and pulse rate).
+    LaunchedEffect(Unit) { MikuBeatWatch.intervalMs.drop(1).collect { tick++ } }
     // The window host keeps this composition alive between pulls, so tile state read on the last
     // pull would otherwise still be showing. Every open resumes the lifecycle: re-read then.
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { tick++ }
@@ -385,10 +396,14 @@ fun MikuNotificationShadeView(
                             .padding(horizontal = 10.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Icon(
-                            if (isCharging) Icons.Default.BatteryChargingFull else Icons.Default.BatteryFull,
-                            null, tint = if (isCharging) Color(0xFF69F0AE) else MikuTealBright, modifier = Modifier.size(16.dp)
-                        )
+                        if (negiBattery) {
+                            NegiBattery(batteryPct ?: 0, isCharging, Modifier.size(18.dp))
+                        } else {
+                            Icon(
+                                if (isCharging) Icons.Default.BatteryChargingFull else Icons.Default.BatteryFull,
+                                null, tint = if (isCharging) Color(0xFF69F0AE) else MikuTealBright, modifier = Modifier.size(16.dp)
+                            )
+                        }
                         Spacer(Modifier.width(4.dp))
                         Text(batteryPct?.let { "$it%" } ?: "—%", color = MikuWhite, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                     }
@@ -435,7 +450,7 @@ fun MikuNotificationShadeView(
                                 .graphicsLayer { alpha = 1f - expand.value.coerceIn(0f, 1f) },
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            compact.forEach { t -> key(t.id) { GlassCompactTile(t, Modifier.weight(1f), osAccentBright, onLongPressOpened = onDismiss) } }
+                            compact.forEach { t -> key(t.id) { GlassCompactTile(t, Modifier.weight(1f), osAccentBright, onOpensUi = onDismiss) } }
                             // keep tile widths stable when the user has fewer than four active
                             repeat(QsTileOrder.QUICK_COUNT - compact.size) { Spacer(Modifier.weight(1f)) }
                         }
@@ -451,7 +466,7 @@ fun MikuNotificationShadeView(
                         ) {
                             ordered.chunked(2).forEach { pair ->
                                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                    pair.forEach { t -> key(t.id) { GlassGridTile(t, Modifier.weight(1f), osAccentBright, onLongPressOpened = onDismiss) } }
+                                    pair.forEach { t -> key(t.id) { GlassGridTile(t, Modifier.weight(1f), osAccentBright, onOpensUi = onDismiss) } }
                                     if (pair.size == 1) Spacer(Modifier.weight(1f))
                                 }
                             }
@@ -582,6 +597,84 @@ fun MikuNotificationShadeView(
     }
 }
 
+/**
+ * The launcher's BPM game, by the contract in MikuBpmGameActivity: action OPEN_BPM_GAME, extra
+ * "from". An older launcher without that activity gets its main screen with `open_bpm`, the same
+ * fallback Miku Music uses.
+ */
+private fun openBpmGame(ctx: Context) {
+    val game = Intent("com.miku.action.OPEN_BPM_GAME")
+        .setPackage("com.miku.launcher")
+        .putExtra("from", "qs")
+        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+    if (runCatching { ctx.startActivity(game) }.isSuccess) return
+    runCatching {
+        ctx.packageManager.getLaunchIntentForPackage("com.miku.launcher")?.apply {
+            putExtra("open_bpm", true)
+            putExtra("from", "qs")
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED
+        }?.let { ctx.startActivity(it) }
+    }
+}
+
+/**
+ * Battery as a leek, held at the leek-spin angle: the white stalk fills with the level (green
+ * while charging, pink when low), green leaves on top, teal outline. Same slot as the battery
+ * icon in the header chip.
+ */
+@Composable
+private fun NegiBattery(pct: Int, charging: Boolean, modifier: Modifier) {
+    androidx.compose.foundation.Canvas(modifier) {
+        val u = size.minDimension / 18f
+        val len = size.minDimension * 1.3f
+        val leafLen = len * 0.36f
+        val x0 = -len / 2f
+        val xs = len / 2f - leafLen
+        val th = 4.6f * u
+        val c = Offset(size.width / 2f, size.height / 2f)
+        val frac = (pct / 100f).coerceIn(0f, 1f)
+        val fillColor = when {
+            charging -> Color(0xFF69F0AE)
+            pct <= 15 -> MikuPinkBright
+            else -> MikuWhite
+        }
+        rotate(-40f, pivot = c) {
+            translate(c.x, c.y) {
+                val cr = androidx.compose.ui.geometry.CornerRadius(th / 2f)
+                // roots
+                for (dy in floatArrayOf(-1.2f, 0f, 1.2f)) {
+                    drawLine(MikuTeal.copy(alpha = 0.85f), Offset(x0, dy * u), Offset(x0 - 2.2f * u, dy * 1.8f * u), strokeWidth = 0.9f * u)
+                }
+                // stalk: empty, then filled to the level
+                drawRoundRect(Color.White.copy(alpha = 0.20f), Offset(x0, -th / 2f), androidx.compose.ui.geometry.Size(xs - x0, th), cr)
+                val fw = ((xs - x0) * frac).coerceAtLeast(if (pct > 0) th * 0.6f else 0f)
+                if (fw > 0f) drawRoundRect(fillColor, Offset(x0, -th / 2f), androidx.compose.ui.geometry.Size(fw, th), cr)
+                drawRoundRect(MikuTealBright, Offset(x0, -th / 2f), androidx.compose.ui.geometry.Size(xs - x0, th), cr,
+                    style = androidx.compose.ui.graphics.drawscope.Stroke(0.9f * u))
+                // pale collar where white turns green
+                drawRect(Color(0xFFC5E1A5), Offset(xs - 1.2f * u, -th / 2f + 0.5f * u), androidx.compose.ui.geometry.Size(1.6f * u, th - u))
+                // leaves
+                val leaves = Brush.linearGradient(listOf(Color(0xFF7CB342), Color(0xFF2E7D32)), start = Offset(xs, 0f), end = Offset(len / 2f, 0f))
+                val up = androidx.compose.ui.graphics.Path().apply {
+                    moveTo(xs, -th / 2f)
+                    quadraticTo(xs + leafLen * 0.55f, -th * 0.9f, len / 2f, -th * 1.25f)
+                    quadraticTo(xs + leafLen * 0.5f, -th * 0.15f, xs, th * 0.1f)
+                    close()
+                }
+                val down = androidx.compose.ui.graphics.Path().apply {
+                    moveTo(xs, -th * 0.1f)
+                    quadraticTo(xs + leafLen * 0.45f, th * 0.25f, len / 2f - u, th * 1.15f)
+                    quadraticTo(xs + leafLen * 0.4f, th * 0.95f, xs, th / 2f)
+                    close()
+                }
+                drawPath(down, leaves)
+                drawPath(up, leaves)
+                drawPath(up, MikuTeal.copy(alpha = 0.7f), style = androidx.compose.ui.graphics.drawscope.Stroke(0.6f * u))
+            }
+        }
+    }
+}
+
 private fun openApp(ctx: Context, pkg: String) {
     runCatching {
         ctx.packageManager.getLaunchIntentForPackage(pkg)?.apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) }?.let { ctx.startActivity(it) }
@@ -637,7 +730,19 @@ private fun extraTiles(ctx: Context, onRefresh: () -> Unit): List<QsTile> {
                 val idx = MikuIdleDimSettings.PRESETS.indexOf(cur)
                 MikuIdleDimSettings.applyPreset(ctx, MikuIdleDimSettings.PRESETS[(idx + 1) % MikuIdleDimSettings.PRESETS.size])
                 onRefresh()
-            })
+            }),
+        // Opt-in tile (not in the default set; added from the editor). Opens the launcher's BPM
+        // game; the icon pulses at the playing track's tempo.
+        MikuBeatWatch.intervalMs.value.let { beat ->
+            QsTile(
+                "bpm_game", "BPM Game",
+                if (beat > 0) "${(60000f / beat).roundToInt()} BPM \u00b7 tap to play" else "Tap along to the beat",
+                Icons.Default.Favorite, false,
+                clickOpensUi = true,
+                beatMs = beat,
+                onClick = { openBpmGame(ctx) }
+            )
+        }
     )
 }
 

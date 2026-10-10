@@ -58,24 +58,24 @@ import kotlin.math.roundToInt
  * Settings); a tile without one opens its original in-activity screen.
  */
 enum class SettingsSection(val title: String, val icon: ImageVector, val desc: String, val route: String? = null) {
-    AUDIO_DAC("DAC & Audio", Icons.Default.Headphones, "Cirrus Dual CS43198 MasterHIFI, Gain, Filters & USB DAC"),
+    AUDIO_DAC("DAC & Audio", Icons.Default.Headphones, "Dual CS43198 DAC, gain, filters and USB DAC"),
     // Was "dynamic modes & BPM pulse": this screen stores a mode, it does not animate anything,
     // and the indicator is non-functional on this unit.
-    FN_SWITCH("FN Switch & Keys", Icons.Default.ToggleOn, "Hardware Fn lock switch (Screen & Keys Lock default)"),
+    FN_SWITCH("FN Switch & Keys", Icons.Default.ToggleOn, "Hardware Fn lock switch and what it locks"),
     NETWORK("Network & internet", Icons.Default.Language, "Wi-Fi, mobile data, hotspot, VPN and data usage", "internet"),
     WIRELESS("Network & ADB", Icons.Default.Wifi, "Wireless ADB, Google Fi network tools"),
-    BLUETOOTH("Bluetooth", Icons.Default.Bluetooth, "Audio streaming codecs, LDAC, aptX & paired gear"),
+    BLUETOOTH("Bluetooth", Icons.Default.Bluetooth, "Codecs, LDAC, aptX and paired devices"),
     CONNECTED("Connected devices", Icons.Default.Usb, "USB mode, NFC, Bluetooth device name", "connected"),
     STORAGE_APPS("Apps & Storage", Icons.Default.Storage, "App info, default apps, special access, internal storage and SD card"),
     NOTIFICATIONS("Notifications", Icons.Default.Notifications, "App notifications and Do Not Disturb", "notifications"),
     SOUND("Sound & vibration", Icons.Default.VolumeUp, "Volume, ring mode, ringtones and system sounds", "sound"),
-    DISPLAY("Display & Light", Icons.Default.BrightnessMedium, "Brightness, ambient light sensor, screen timeout & theme"),
-    BATTERY("Battery & Power", Icons.Default.BatteryChargingFull, "Live telemetry, battery saver and app battery use"),
+    DISPLAY("Display & Light", Icons.Default.BrightnessMedium, "Brightness, light sensor, screen timeout and theme"),
+    BATTERY("Battery & Power", Icons.Default.BatteryChargingFull, "Live readings, battery saver and app battery use"),
     SECURITY("Security & privacy", Icons.Default.Lock, "Screen lock, permissions, device admins", "security"),
     LOCATION("Location", Icons.Default.LocationOn, "Location on or off, app access and scanning", "location"),
     ACCESSIBILITY("Accessibility", Icons.Default.Accessibility, "Services, color, text and interaction", "a11y"),
     SYSTEM("System", Icons.Default.SettingsApplications, "Languages, keyboard, date and time, accounts, users, reset", "system"),
-    SYSTEM_ABOUT("About MikuOS", Icons.Default.Info, "Build, kernel, SoC & privilege as reported by the running system")
+    SYSTEM_ABOUT("About MikuOS", Icons.Default.Info, "Build, kernel, SoC and permissions as the system reports them")
 }
 
 class MikuSettingsActivity : ComponentActivity() {
@@ -392,7 +392,7 @@ fun AudioDacScreen(ctx: Context) {
         item {
             Column(Modifier.mikuHeroCard().padding(16.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(if (sysfsReachable) "🟢" else if (hasPersisted) "🟡" else "⚪", fontSize = 16.sp)
+                    StatusDot(if (sysfsReachable) Color(0xFF1ABC9C) else if (hasPersisted) Color(0xFFF1C40F) else MikuMuted, 10.dp)
                     Spacer(Modifier.width(8.dp))
                     Text(
                         when {
@@ -409,7 +409,7 @@ fun AudioDacScreen(ctx: Context) {
                 Text(
                     when {
                         sysfsReachable -> "Filter, gain, DRE, power rails and balance are read from /sys/devices/platform/sa_sound_setting/. Selections below are what the kernel reports; nothing is pre-selected from a default."
-                        hasPersisted -> "/sys/devices/platform/sa_sound_setting/ is not readable by this process. Selections below are the last values persisted in Settings.Global (vendor.audio.hiby.*); writes go through the shell path. Unselected = never set."
+                        hasPersisted -> "/sys/devices/platform/sa_sound_setting/ is not readable by this process. Selections below are the last values persisted in Settings.Global (vendor.audio.hiby.*); writes go through the shell path. Nothing selected means it was never set."
                         else -> "Neither the kernel DAC nodes nor the HiBy audio settings report a value yet. Pick a setting to write one; until then nothing is selected."
                     },
                     color = MikuMuted,
@@ -439,17 +439,17 @@ fun AudioDacScreen(ctx: Context) {
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text("🎧", fontSize = 18.sp)
+                        Icon(Icons.Default.Headphones, contentDescription = null, tint = MikuTealBright, modifier = Modifier.size(20.dp))
                         Spacer(Modifier.width(8.dp))
                         Column {
                             Text(
-                                "SeeAudio Yume · M500 Reference Pair",
+                                "SeeAudio Yume",
                                 color = MikuTealBright,
                                 fontSize = 13.5.sp,
                                 fontWeight = FontWeight.Bold
                             )
                             Text(
-                                "Official Bundled 1DD + 2BA Hybrid IEMs",
+                                "Bundled 1DD + 2BA hybrid IEMs",
                                 color = MikuPinkBright,
                                 fontSize = 10.5.sp,
                                 fontWeight = FontWeight.SemiBold
@@ -469,7 +469,7 @@ fun AudioDacScreen(ctx: Context) {
 
                 Spacer(Modifier.height(10.dp))
                 Text(
-                    "The SeeAudio Yume is matched specifically to the M500's CS43198 DAC output impedance (<0.3Ω). Delivers reference Harman vocal curve with sub-bass extension and zero background hiss floor.",
+                    "The Yume ships with the M500. At 32Ω and 106dB it's easy to drive, so low gain is plenty. The button below sets low gain, the fast linear filter, DRE on and center balance.",
                     color = Color.White.copy(alpha = 0.85f),
                     fontSize = 11.5.sp,
                     lineHeight = 15.sp
@@ -486,7 +486,7 @@ fun AudioDacScreen(ctx: Context) {
                             .padding(6.dp),
                         contentAlignment = Alignment.Center
                     ) {
-                        Text("Rec: Low Gain (0dB)", color = MikuTealBright, fontSize = 10.5.sp, fontWeight = FontWeight.SemiBold)
+                        Text("Rec: Low gain (0 dB)", color = MikuTealBright, fontSize = 10.5.sp, fontWeight = FontWeight.SemiBold)
                     }
                     Box(
                         Modifier
@@ -496,7 +496,7 @@ fun AudioDacScreen(ctx: Context) {
                             .padding(6.dp),
                         contentAlignment = Alignment.Center
                     ) {
-                        Text("Rec: Fast Linear Filter", color = MikuTealBright, fontSize = 10.5.sp, fontWeight = FontWeight.SemiBold)
+                        Text("Rec: Fast linear filter", color = MikuTealBright, fontSize = 10.5.sp, fontWeight = FontWeight.SemiBold)
                     }
                 }
 
@@ -520,7 +520,7 @@ fun AudioDacScreen(ctx: Context) {
                     shape = RoundedCornerShape(10.dp)
                 ) {
                     Text(
-                        "⚡ Apply Yume Reference Audio Profile",
+                        "Apply Yume settings",
                         color = Color(0xFF041215),
                         fontSize = 11.5.sp,
                         fontWeight = FontWeight.Bold
@@ -533,7 +533,7 @@ fun AudioDacScreen(ctx: Context) {
         item {
             Column(Modifier.mikuCard().padding(14.dp)) {
                 Text(
-                    "DIGITAL RECONSTRUCTION FILTER",
+                    "DIGITAL FILTER",
                     color = MikuTealBright,
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Bold,
@@ -577,7 +577,7 @@ fun AudioDacScreen(ctx: Context) {
         item {
             Column(Modifier.mikuCard().padding(14.dp)) {
                 Text(
-                    "ANALOG HEADPHONE GAIN (PO GAIN)",
+                    "HEADPHONE GAIN (PO)",
                     color = MikuTealBright,
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Bold,
@@ -623,14 +623,14 @@ fun AudioDacScreen(ctx: Context) {
                 ) {
                     Column(Modifier.weight(1f)) {
                         Text(
-                            "AUDIO OUTPUT ROUTING MATRIX",
+                            "AUDIO OUTPUT",
                             color = MikuTealBright,
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Bold,
                             letterSpacing = 1.sp
                         )
                         Text(
-                            "Select primary active DAC output or Bluetooth audio stream",
+                            "Pick a wired output or Bluetooth",
                             color = MikuMuted,
                             fontSize = 11.sp
                         )
@@ -650,7 +650,7 @@ fun AudioDacScreen(ctx: Context) {
                         modifier = Modifier.height(30.dp)
                     ) {
                         Text(
-                            "⇄ Swap 4.4mm / BT",
+                            "Swap 4.4mm / BT",
                             color = MikuTealBright,
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Bold
@@ -675,7 +675,7 @@ fun AudioDacScreen(ctx: Context) {
                             .padding(10.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(out.icon, fontSize = 16.sp)
+                        Icon(out.icon, contentDescription = null, tint = if (isSel) MikuTealBright else MikuMuted, modifier = Modifier.size(18.dp))
                         Spacer(Modifier.width(10.dp))
                         Column(Modifier.weight(1f)) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -727,8 +727,8 @@ fun AudioDacScreen(ctx: Context) {
                             letterSpacing = 1.sp
                         )
                         Text(
-                            "Wired, USB and Bluetooth outputs all play at once (never the built-in " +
-                                "speaker). The wired jack stays bit-perfect; the others get a synced copy.",
+                            "Wired, USB and Bluetooth all play at once (never the built-in " +
+                                "speaker). The wired jack stays bit-perfect and the others get a synced copy.",
                             color = MikuMuted,
                             fontSize = 11.sp
                         )
@@ -751,7 +751,7 @@ fun AudioDacScreen(ctx: Context) {
         item {
             Column(Modifier.mikuCard().padding(14.dp)) {
                 Text(
-                    "DYNAMICS & POWER RAILS",
+                    "DRE & POWER",
                     color = MikuTealBright,
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Bold,
@@ -762,7 +762,7 @@ fun AudioDacScreen(ctx: Context) {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
                         Text("Dynamic Range Enhancement (DRE)", color = Color.White, fontSize = 13.5.sp, fontWeight = FontWeight.SemiBold)
-                        Text("Boosts signal-to-noise ratio to 130dB+ for inaudible noise floor", color = MikuMuted, fontSize = 11.5.sp)
+                        Text("Lowers the noise floor at low volume", color = MikuMuted, fontSize = 11.5.sp)
                     }
                     Switch(
                         checked = dre,
@@ -778,8 +778,8 @@ fun AudioDacScreen(ctx: Context) {
 
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
-                        Text("Audio Turbo High Power Mode", color = Color.White, fontSize = 13.5.sp, fontWeight = FontWeight.SemiBold)
-                        Text("Increases operational current rails for demanding dynamic peaks", color = MikuMuted, fontSize = 11.5.sp)
+                        Text("High power mode", color = Color.White, fontSize = 13.5.sp, fontWeight = FontWeight.SemiBold)
+                        Text("More current for hard-to-drive headphones", color = MikuMuted, fontSize = 11.5.sp)
                     }
                     Switch(
                         checked = turbo,
@@ -797,7 +797,7 @@ fun AudioDacScreen(ctx: Context) {
                     Column(Modifier.weight(1f)) {
                         Text("DSD Gain Compensation (+6 dB)", color = Color.White, fontSize = 13.5.sp, fontWeight = FontWeight.SemiBold)
                         Text(
-                            if (dsdComp == null) "Not set on this device yet — toggle to write a value" else "Matches SACD reference levels with standard PCM playback",
+                            if (dsdComp == null) "Not set on this device yet. Toggle to write a value" else "Brings DSD up to the same level as PCM",
                             color = MikuMuted, fontSize = 11.5.sp
                         )
                     }
@@ -818,9 +818,9 @@ fun AudioDacScreen(ctx: Context) {
             val view = androidx.compose.ui.platform.LocalView.current
             Column(Modifier.mikuCard().padding(14.dp)) {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    Text("HARDWARE L/R CHANNEL BALANCE", color = MikuTealBright, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    Text("L/R BALANCE", color = MikuTealBright, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                     Text(
-                        if (balance == 0) "Center (0) ✓" else if (balance < 0) "Left ($balance)" else "Right (+$balance)",
+                        if (balance == 0) "Center (0)" else if (balance < 0) "Left ($balance)" else "Right (+$balance)",
                         color = if (balance == 0) MikuTealBright else Color.White,
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Bold
@@ -868,7 +868,7 @@ fun AudioDacScreen(ctx: Context) {
         item {
             Column(Modifier.mikuCard().padding(14.dp)) {
                 Text(
-                    "AUDIOPHILE HEADPHONE & IEM DRIVE MATRIX",
+                    "HEADPHONE PAIRING GUIDE",
                     color = MikuTealBright,
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Bold,
@@ -876,7 +876,7 @@ fun AudioDacScreen(ctx: Context) {
                 )
                 Spacer(Modifier.height(6.dp))
                 Text(
-                    "M500 Hardware Output capability: 140mW @ 32Ω (3.5mm PO) · 440mW @ 32Ω (4.4mm BAL PO). Dual CS43198 + SGM Op-Amp differential rails.",
+                    "Output power: 140mW @ 32Ω (3.5mm PO), 440mW @ 32Ω (4.4mm BAL PO). Dual CS43198 with SGM op-amps.",
                     color = MikuMuted,
                     fontSize = 11.5.sp,
                     lineHeight = 15.sp
@@ -884,7 +884,7 @@ fun AudioDacScreen(ctx: Context) {
 
                 Spacer(Modifier.height(12.dp))
 
-                // Tier 1: 🟢 Direct Synergy
+                // Tier 1: easy to drive
                 Column(
                     Modifier
                         .fillMaxWidth()
@@ -894,12 +894,12 @@ fun AudioDacScreen(ctx: Context) {
                         .padding(10.dp)
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text("🟢", fontSize = 12.sp)
+                        StatusDot(Color(0xFF1ABC9C))
                         Spacer(Modifier.width(6.dp))
-                        Text("100% DIRECT DRIVE · HIGH SYNERGY (< 80Ω)", color = Color(0xFF1ABC9C), fontSize = 11.5.sp, fontWeight = FontWeight.Bold)
+                        Text("EASY TO DRIVE (UNDER 80Ω)", color = Color(0xFF1ABC9C), fontSize = 11.5.sp, fontWeight = FontWeight.Bold)
                     }
                     Spacer(Modifier.height(6.dp))
-                    Text("• SeeAudio Yume / Yume II (32Ω / 106dB) · Bundled Reference", color = Color.White, fontSize = 11.5.sp)
+                    Text("• SeeAudio Yume / Yume II (32Ω / 106dB) · bundled", color = Color.White, fontSize = 11.5.sp)
                     Text("• Moondrop Blessing 2 / Blessing 3 / Kato (22Ω–32Ω)", color = Color.White, fontSize = 11.5.sp)
                     Text("• Sennheiser IE 200 / IE 600 / IE 900 (18Ω / 123dB)", color = Color.White, fontSize = 11.5.sp)
                     Text("• 7Hz Timeless / Dioko Planar IEMs (14.8Ω)", color = Color.White, fontSize = 11.5.sp)
@@ -918,9 +918,9 @@ fun AudioDacScreen(ctx: Context) {
                         .padding(10.dp)
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text("🟡", fontSize = 12.sp)
+                        StatusDot(Color(0xFFF1C40F))
                         Spacer(Modifier.width(6.dp))
-                        Text("4.4mm BALANCED + HIGH GAIN RECOMMENDED (80–150Ω / Planar)", color = Color(0xFFF1C40F), fontSize = 11.5.sp, fontWeight = FontWeight.Bold)
+                        Text("USE 4.4mm BALANCED + HIGH GAIN (80–150Ω, PLANARS)", color = Color(0xFFF1C40F), fontSize = 11.5.sp, fontWeight = FontWeight.Bold)
                     }
                     Spacer(Modifier.height(6.dp))
                     Text("• Hifiman Sundara / Edition XS (37Ω / 94dB Planar - needs 4.4mm BAL)", color = Color.White, fontSize = 11.5.sp)
@@ -940,16 +940,16 @@ fun AudioDacScreen(ctx: Context) {
                         .padding(10.dp)
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text("🔴", fontSize = 12.sp)
+                        StatusDot(Color(0xFFE74C3C))
                         Spacer(Modifier.width(6.dp))
-                        Text("EXTERNAL AMP REQUIRED (HIGH IMPEDANCE > 250Ω)", color = Color(0xFFE74C3C), fontSize = 11.5.sp, fontWeight = FontWeight.Bold)
+                        Text("NEEDS AN EXTERNAL AMP (OVER 250Ω)", color = Color(0xFFE74C3C), fontSize = 11.5.sp, fontWeight = FontWeight.Bold)
                     }
                     Spacer(Modifier.height(6.dp))
-                    Text("• Sennheiser HD 600 / HD 650 / HD 660S2 (300Ω / 97dB) · Voltage rail limited; requires 6Vrms+ external desktop amp for dynamic headroom", color = Color(0xFFF9B8B1), fontSize = 11.sp, lineHeight = 14.sp)
+                    Text("• Sennheiser HD 600 / HD 650 / HD 660S2 (300Ω / 97dB) · Not enough voltage swing here. Use a desktop amp with 6Vrms or more", color = Color(0xFFF9B8B1), fontSize = 11.sp, lineHeight = 14.sp)
                     Spacer(Modifier.height(3.dp))
-                    Text("• Beyerdynamic DT 880 / DT 990 Pro 250Ω & 600Ω · Needs dedicated high-voltage OTL/solid state amplifier", color = Color(0xFFF9B8B1), fontSize = 11.sp, lineHeight = 14.sp)
+                    Text("• Beyerdynamic DT 880 / DT 990 Pro 250Ω & 600Ω · Needs a high-voltage OTL or solid state amp", color = Color(0xFFF9B8B1), fontSize = 11.sp, lineHeight = 14.sp)
                     Spacer(Modifier.height(3.dp))
-                    Text("• Hifiman HE6se / Susvara (83dB) · Severe current starvation without speaker-tap amp", color = Color(0xFFF9B8B1), fontSize = 11.sp, lineHeight = 14.sp)
+                    Text("• Hifiman HE6se / Susvara (83dB) · Needs a speaker amp with a headphone tap", color = Color(0xFFF9B8B1), fontSize = 11.sp, lineHeight = 14.sp)
                 }
             }
         }
@@ -973,9 +973,9 @@ fun FnSwitchScreen(ctx: Context) {
     // three modes - speaker mute / display flip / recorder - that nothing implemented, so the
     // real value "touch_and_key_lock" matched nothing and the screen mislabelled the mode.)
     val fnOptions = listOf(
-        "touch_and_key_lock" to ("🔒 Screen & Keys Lock (Default)" to "Locks the touchscreen, side transport buttons and power button together to prevent pocket presses. Volume wheel stays live unless disabled below in Miku Music."),
-        "touch_lock" to ("📱 Touch Screen Lock Only" to "Disables the touchscreen while keeping physical side transport buttons and volume knob active"),
-        "key_lock" to ("⌨️ Physical Keys Lock Only" to "Disables the physical side buttons while the touchscreen stays unlocked")
+        "touch_and_key_lock" to ("Screen and keys (default)" to "Locks the touchscreen, side buttons and power button so nothing gets pressed in a pocket. The volume wheel still works unless you turn that off in Miku Music."),
+        "touch_lock" to ("Touchscreen only" to "Locks the touchscreen. The side buttons and volume wheel still work"),
+        "key_lock" to ("Keys only" to "Locks the side buttons. The touchscreen still works")
     )
 
     var currentMode by remember {
@@ -1024,17 +1024,17 @@ fun FnSwitchScreen(ctx: Context) {
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(if (fnStatus) "🔒" else "🔓", fontSize = 18.sp)
+                        Icon(if (fnStatus) Icons.Default.Lock else Icons.Default.LockOpen, contentDescription = null, tint = if (fnStatus) MikuPinkBright else MikuTealBright, modifier = Modifier.size(20.dp))
                         Spacer(Modifier.width(10.dp))
                         Column {
                             Text(
-                                "Physical FN Switch Status",
+                                "Fn switch",
                                 color = Color.White,
                                 fontSize = 15.sp,
                                 fontWeight = FontWeight.Bold
                             )
                             Text(
-                                if (fnStatus) "SWITCH ACTIVE (Lock Engaged)" else "SWITCH INACTIVE (Normal Mode)",
+                                if (fnStatus) "ON (locked)" else "OFF (normal)",
                                 color = if (fnStatus) MikuPinkBright else MikuTealBright,
                                 fontSize = 11.5.sp,
                                 fontWeight = FontWeight.SemiBold
@@ -1064,7 +1064,7 @@ fun FnSwitchScreen(ctx: Context) {
         item {
             Column(Modifier.mikuCard().padding(14.dp)) {
                 Text(
-                    "FN SWITCH FUNCTION ASSIGNMENT",
+                    "WHAT THE FN SWITCH LOCKS",
                     color = MikuTealBright,
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Bold,
@@ -1141,7 +1141,7 @@ fun FnSwitchScreen(ctx: Context) {
 
             Column(Modifier.mikuCard().padding(14.dp)) {
                 Text(
-                    "SCREEN-OFF PHYSICAL KEY CONTROLS",
+                    "BUTTONS WITH THE SCREEN OFF",
                     color = MikuTealBright,
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Bold,
@@ -1149,7 +1149,7 @@ fun FnSwitchScreen(ctx: Context) {
                 )
                 Spacer(Modifier.height(6.dp))
                 Text(
-                    "Allow physical transport buttons (Play/Pause, Next, Prev) and rotary knob to operate even when screen is locked or powered off.",
+                    "Let the play/pause, next and previous buttons and the volume knob work while the screen is off or locked.",
                     color = MikuMuted,
                     fontSize = 11.sp,
                     lineHeight = 14.sp
@@ -1167,8 +1167,8 @@ fun FnSwitchScreen(ctx: Context) {
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Column(Modifier.weight(1f)) {
-                        Text("Media Transport Keys", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
-                        Text(if (mediaLockOff) "Active during screen off (0)" else "Locked during screen off (1)", color = if (mediaLockOff) MikuTealBright else MikuMuted, fontSize = 11.sp)
+                        Text("Media buttons", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                        Text(if (mediaLockOff) "Work with the screen off (0)" else "Locked with the screen off (1)", color = if (mediaLockOff) MikuTealBright else MikuMuted, fontSize = 11.sp)
                     }
                     Switch(
                         checked = mediaLockOff,
@@ -1202,8 +1202,8 @@ fun FnSwitchScreen(ctx: Context) {
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Column(Modifier.weight(1f)) {
-                        Text("Rotary Volume Knob", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
-                        Text(if (volumeLockOff) "Active during screen off (0)" else "Locked during screen off (1)", color = if (volumeLockOff) MikuTealBright else MikuMuted, fontSize = 11.sp)
+                        Text("Volume knob", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                        Text(if (volumeLockOff) "Work with the screen off (0)" else "Locked with the screen off (1)", color = if (volumeLockOff) MikuTealBright else MikuMuted, fontSize = 11.sp)
                     }
                     Switch(
                         checked = volumeLockOff,
@@ -1251,11 +1251,11 @@ fun WirelessScreen(ctx: Context) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Default.DeveloperMode, contentDescription = null, tint = MikuTealBright)
                     Spacer(Modifier.width(8.dp))
-                    Text("Wireless ADB Debugging", color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                    Text("Wireless ADB", color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Bold)
                 }
                 Spacer(Modifier.height(8.dp))
                 Text(
-                    "Run ADB commands wirelessly over your local network without USB cable.",
+                    "Run adb over your local network, no USB cable needed.",
                     color = MikuMuted,
                     fontSize = 12.sp
                 )
@@ -1275,7 +1275,7 @@ fun WirelessScreen(ctx: Context) {
                         Text(
                             when {
                                 adbPort != null && wifiIp != null -> "Connect: adb connect $wifiIp:$adbPort"
-                                adbPort != null -> "Connect device to Wi-Fi"
+                                adbPort != null -> "Connect to Wi-Fi first"
                                 else -> "adbd is not listening on TCP"
                             },
                             color = if (adbPort != null && wifiIp != null) MikuTealBright else MikuPink,
@@ -1355,8 +1355,8 @@ fun WirelessScreen(ctx: Context) {
                     }
                 }
                 Text(
-                    "Fi switches carriers via its app; without it, data only attaches on T-Mobile towers. " +
-                    "Force T-Mobile so the SIM identity matches - turn OFF if you lose signal (no T-Mobile coverage).",
+                    "Fi switches carriers through its app. Without it, data only attaches on T-Mobile towers. " +
+                    "Force T-Mobile so the SIM identity matches. Turn it OFF if you lose signal where T-Mobile has no coverage.",
                     color = Color(0xB3FFFFFF), fontSize = 11.sp, lineHeight = 14.sp
                 )
                 if (opInfo.isNotBlank()) { Spacer(Modifier.height(4.dp)); Text(opInfo, color = Color(0xFF7BE8DF), fontSize = 11.sp) }
@@ -1367,7 +1367,7 @@ fun WirelessScreen(ctx: Context) {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
                         Text("Radio saver", color = Color.White, fontSize = 13.sp)
-                        Text("Cell radio off after 10 min with no signal while on Wi-Fi; back on the moment Wi-Fi drops", color = Color(0x80FFFFFF), fontSize = 10.sp, lineHeight = 12.sp)
+                        Text("Turns the cell radio off after 10 min with no signal on Wi-Fi. Back on when Wi-Fi drops", color = Color(0x80FFFFFF), fontSize = 10.sp, lineHeight = 12.sp)
                     }
                     Switch(checked = radioSaver, onCheckedChange = { on ->
                         radioSaver = on
@@ -1498,7 +1498,7 @@ fun BluetoothScreen(ctx: Context) {
                         Spacer(Modifier.width(12.dp))
                         Column {
                             Text(
-                                text = "Bluetooth Radio",
+                                text = "Bluetooth",
                                 color = Color.White,
                                 fontSize = 15.sp,
                                 fontWeight = FontWeight.Bold
@@ -1549,7 +1549,7 @@ fun BluetoothScreen(ctx: Context) {
                         )
 
                         Text(
-                            text = if (isScanning) "Searching..." else "+ Scan Nearby Gear",
+                            text = if (isScanning) "Searching..." else "+ Scan",
                             color = if (isScanning) Color(0xFFFF4081) else MikuTealBright,
                             fontSize = 11.5.sp,
                             fontWeight = FontWeight.Bold,
@@ -1579,7 +1579,7 @@ fun BluetoothScreen(ctx: Context) {
                             contentAlignment = Alignment.Center
                         ) {
                             Text(
-                                text = "No paired Bluetooth audio gear found.\nTap '+ Scan Nearby Gear' below to find and connect.",
+                                text = "No paired Bluetooth audio devices.\nTap '+ Scan' to find one.",
                                 color = MikuMuted,
                                 fontSize = 12.sp,
                                 textAlign = androidx.compose.ui.text.style.TextAlign.Center
@@ -1636,8 +1636,8 @@ fun BluetoothScreen(ctx: Context) {
                                         )
                                         Text(
                                             text = when {
-                                                devItem.isConnected -> "🟢 Active Audio Connection"
-                                                devItem.isConnecting -> "🟡 Connecting..."
+                                                devItem.isConnected -> "Connected"
+                                                devItem.isConnecting -> "Connecting..."
                                                 else -> devItem.address
                                             },
                                             color = if (devItem.isConnected) MikuTealBright else if (devItem.isConnecting) Color(0xFFFFD54F) else MikuMuted,
@@ -1700,7 +1700,7 @@ fun BluetoothScreen(ctx: Context) {
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(
-                                text = "AVAILABLE NEARBY GEAR",
+                                text = "NEARBY DEVICES",
                                 color = MikuTealBright,
                                 fontSize = 12.sp,
                                 fontWeight = FontWeight.Bold
@@ -1749,7 +1749,7 @@ fun BluetoothScreen(ctx: Context) {
                             contentAlignment = Alignment.Center
                         ) {
                             Text(
-                                text = if (isScanning) "Scanning for headphones, DACs, and wireless gear..." else "Tap 'Scan' to search for nearby Bluetooth devices.",
+                                text = if (isScanning) "Scanning for headphones, speakers and DACs..." else "Tap '+ Scan' to look for nearby Bluetooth devices.",
                                 color = MikuMuted,
                                 fontSize = 11.5.sp
                             )
@@ -1805,7 +1805,7 @@ fun BluetoothScreen(ctx: Context) {
             item {
                 Column(Modifier.mikuCard().padding(14.dp)) {
                     Text(
-                        text = "HI-RES AUDIO TRANSMISSION CODEC",
+                        text = "BLUETOOTH CODECS",
                         color = MikuTealBright,
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Bold
@@ -1813,24 +1813,24 @@ fun BluetoothScreen(ctx: Context) {
                     Spacer(Modifier.height(10.dp))
 
                     Text(
-                        text = "LDAC Audio Quality Bitrate",
+                        text = "LDAC bitrate",
                         color = Color.White,
                         fontSize = 13.sp,
                         fontWeight = FontWeight.SemiBold
                     )
                     Text(
-                        if (aptxEnabled && aacEnabled && ldacQuality.contains("990")) "Locked to maximum — re-applied on every connection"
-                        else "Lowered by you — MikuOS applies this instead of the maximum",
+                        if (aptxEnabled && aacEnabled && ldacQuality.contains("990")) "Locked to maximum. Set again on every connection"
+                        else "Lowered by you. MikuOS uses this instead of the maximum",
                         color = if (aptxEnabled && aacEnabled && ldacQuality.contains("990")) MikuTealBright else MikuGold,
                         fontSize = 11.sp
                     )
                     Spacer(Modifier.height(6.dp))
 
                     val ldacOptions = listOf(
-                        "Sound Quality (990 kbps)" to "Master Hi-Res 96kHz/24-bit Lossless",
-                        "Balanced (660 kbps)" to "Standard Hi-Res Studio Transmission",
-                        "Connection (330 kbps)" to "Maximum Anti-Interference Stability",
-                        "Adaptive Bitrate" to "Dynamically scaled to RF packet quality"
+                        "Sound Quality (990 kbps)" to "Best quality, up to 96kHz/24-bit",
+                        "Balanced (660 kbps)" to "Middle ground",
+                        "Connection (330 kbps)" to "Most stable connection",
+                        "Adaptive Bitrate" to "Adjusts to signal quality"
                     )
 
                     ldacOptions.forEach { (opt, desc) ->
@@ -1840,13 +1840,13 @@ fun BluetoothScreen(ctx: Context) {
                                 .fillMaxWidth()
                                 .clip(RoundedCornerShape(10.dp))
                                 .background(if (isSel) MikuTealBright.copy(alpha = 0.15f) else Color.Transparent)
-                                .clickable { requestCodecChange(opt, aptxEnabled, aacEnabled, "LDAC bitrate → $opt") }
+                                .clickable { requestCodecChange(opt, aptxEnabled, aacEnabled, "Set LDAC bitrate to $opt") }
                                 .padding(8.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             RadioButton(
                                 selected = isSel,
-                                onClick = { requestCodecChange(opt, aptxEnabled, aacEnabled, "LDAC bitrate → $opt") },
+                                onClick = { requestCodecChange(opt, aptxEnabled, aacEnabled, "Set LDAC bitrate to $opt") },
                                 colors = RadioButtonDefaults.colors(
                                     selectedColor = MikuTealBright,
                                     unselectedColor = MikuMuted
@@ -1872,7 +1872,7 @@ fun BluetoothScreen(ctx: Context) {
                     ) {
                         Column(Modifier.weight(1f)) {
                             Text("Qualcomm aptX / aptX HD", color = Color.White, fontSize = 13.5.sp, fontWeight = FontWeight.SemiBold)
-                            Text(if (aptxEnabled) "24-bit aptX HD / aptX on supported gear (off = falls back to AAC/SBC)" else "Disabled by you — aptX-only gear falls back to AAC/SBC", color = if (aptxEnabled) MikuMuted else MikuGold, fontSize = 11.5.sp)
+                            Text(if (aptxEnabled) "aptX HD or aptX on headphones that support it (off = AAC/SBC)" else "Turned off by you. aptX-only headphones fall back to AAC/SBC", color = if (aptxEnabled) MikuMuted else MikuGold, fontSize = 11.5.sp)
                         }
                         Switch(
                             checked = aptxEnabled,
@@ -1890,8 +1890,8 @@ fun BluetoothScreen(ctx: Context) {
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Column(Modifier.weight(1f)) {
-                            Text("AAC High Definition Audio", color = Color.White, fontSize = 13.5.sp, fontWeight = FontWeight.SemiBold)
-                            Text(if (aacEnabled) "Advanced Audio Coding for Apple AirPods & similar gear (off = SBC on AAC-only gear)" else "Disabled by you — AAC-only gear falls back to SBC", color = if (aacEnabled) MikuMuted else MikuGold, fontSize = 11.5.sp)
+                            Text("AAC", color = Color.White, fontSize = 13.5.sp, fontWeight = FontWeight.SemiBold)
+                            Text(if (aacEnabled) "For AirPods and similar headphones (off = SBC on AAC-only gear)" else "Turned off by you. AAC-only headphones fall back to SBC", color = if (aacEnabled) MikuMuted else MikuGold, fontSize = 11.5.sp)
                         }
                         Switch(
                             checked = aacEnabled,
@@ -1906,7 +1906,7 @@ fun BluetoothScreen(ctx: Context) {
             item {
                 Column(Modifier.mikuCard().padding(14.dp)) {
                     Text(
-                        text = "BLUETOOTH RF & CODEC ARCHITECTURE",
+                        text = "BLUETOOTH DETAILS",
                         color = MikuTealBright,
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Bold
@@ -1914,7 +1914,7 @@ fun BluetoothScreen(ctx: Context) {
                     Spacer(Modifier.height(10.dp))
 
                     // Live rows come from the stack; hardware spec rows are static datasheet facts.
-                    AboutSpecRow("Active A2DP Codec", activeCodec ?: (if (connectedCount > 0) "connected · codec not reported" else "— (nothing streaming)"))
+                    AboutSpecRow("Active A2DP Codec", activeCodec ?: (if (connectedCount > 0) "connected · codec not reported" else "nothing streaming"))
                     AboutSpecRow("Connected Devices", if (connectedCount > 0) "$connectedCount" else "none")
                     // Static datasheet claims, not probed - say so; the two rows above them ARE live.
                     AboutSpecRow("RF Transceiver (spec)", "Qualcomm WCN3988 (SM6225 companion)")
@@ -2046,8 +2046,8 @@ fun DisplayScreen(ctx: Context) {
                             Toast.makeText(
                                 ctx,
                                 when {
-                                    !wrote || !readBack -> "Could not change screen protector mode \u2014 the setting was refused"
-                                    enabled -> "touch_sensitivity_enabled = 1 (applied if the touch firmware honours it)"
+                                    !wrote || !readBack -> "Could not change screen protector mode. The setting was refused"
+                                    enabled -> "touch_sensitivity_enabled = 1 (works if the touch firmware honors it)"
                                     else -> "touch_sensitivity_enabled = 0"
                                 },
                                 Toast.LENGTH_SHORT
@@ -2066,8 +2066,8 @@ fun DisplayScreen(ctx: Context) {
 
         item {
             Column(Modifier.mikuCard().padding(14.dp)) {
-                Text("UI SCALE & DISPLAY DENSITY", color = MikuTealBright, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                Text("Scale up UI elements, touch targets & buttons across MikuOS", color = MikuMuted, fontSize = 10.sp)
+                Text("DISPLAY SIZE", color = MikuTealBright, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                Text("Makes buttons, touch targets and the rest of the UI bigger", color = MikuMuted, fontSize = 10.sp)
                 Spacer(Modifier.height(10.dp))
 
                 val currentDpi = ctx.resources.displayMetrics.densityDpi
@@ -2101,7 +2101,7 @@ fun DisplayScreen(ctx: Context) {
                                 .clickable {
                                     selectedDpi = dpi
                                     applyDisplayDensity(cr, dpi)
-                                    Toast.makeText(ctx, "UI Scale updated to $dpi DPI", Toast.LENGTH_SHORT).show()
+                                    Toast.makeText(ctx, "Display size set to $dpi DPI", Toast.LENGTH_SHORT).show()
                                 },
                             contentAlignment = Alignment.Center
                         ) {
@@ -2121,8 +2121,8 @@ fun DisplayScreen(ctx: Context) {
 
         item {
             Column(Modifier.mikuCard().padding(14.dp)) {
-                Text("SYSTEM FONT SCALE", color = MikuTealBright, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                Text("Enlarge text across system apps and launchers", color = MikuMuted, fontSize = 10.sp)
+                Text("FONT SIZE", color = MikuTealBright, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                Text("Makes text bigger across apps and the launcher", color = MikuMuted, fontSize = 10.sp)
                 Spacer(Modifier.height(10.dp))
 
                 var currentFontScale by remember {
@@ -2160,7 +2160,7 @@ fun DisplayScreen(ctx: Context) {
                                 .clickable {
                                     currentFontScale = scale
                                     applyFontScale(cr, scale)
-                                    Toast.makeText(ctx, "Font Scale updated to ${scale}x", Toast.LENGTH_SHORT).show()
+                                    Toast.makeText(ctx, "Font size set to ${scale}x", Toast.LENGTH_SHORT).show()
                                 },
                             contentAlignment = Alignment.Center
                         ) {
@@ -2222,7 +2222,7 @@ fun DisplayScreen(ctx: Context) {
                                 Toast.makeText(
                                     ctx,
                                     if (ok) "navigation_mode set to gesture (2)"
-                                    else "Could not change navigation mode \u2014 the write was refused",
+                                    else "Could not change navigation mode. The write was refused",
                                     Toast.LENGTH_SHORT
                                 ).show()
                             }
@@ -2232,7 +2232,7 @@ fun DisplayScreen(ctx: Context) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Text("GESTURE NAV", color = if (isGestureNav == true) MikuTealBright else Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                             Spacer(Modifier.height(2.dp))
-                            Text("Pixel Edge Swipe Back", color = MikuMuted, fontSize = 9.sp, textAlign = TextAlign.Center)
+                            Text("Swipe from the edge", color = MikuMuted, fontSize = 9.sp, textAlign = TextAlign.Center)
                         }
                     }
 
@@ -2255,7 +2255,7 @@ fun DisplayScreen(ctx: Context) {
                                 Toast.makeText(
                                     ctx,
                                     if (ok) "navigation_mode set to 3-button (0)"
-                                    else "Could not change navigation mode \u2014 the write was refused",
+                                    else "Could not change navigation mode. The write was refused",
                                     Toast.LENGTH_SHORT
                                 ).show()
                             }
@@ -2265,7 +2265,7 @@ fun DisplayScreen(ctx: Context) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Text("3-BUTTON BAR", color = if (isGestureNav == false) MikuTealBright else Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                             Spacer(Modifier.height(2.dp))
-                            Text("Classic Buttons", color = MikuMuted, fontSize = 9.sp, textAlign = TextAlign.Center)
+                            Text("Back, home, recents", color = MikuMuted, fontSize = 9.sp, textAlign = TextAlign.Center)
                         }
                     }
                 }
@@ -2274,7 +2274,7 @@ fun DisplayScreen(ctx: Context) {
 
         item {
             Column(Modifier.mikuCard().padding(14.dp)) {
-                Text("ADVANCED SYSTEM DISPLAY", color = MikuTealBright, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                Text("OTHER DISPLAY SETTINGS", color = MikuTealBright, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                 Spacer(Modifier.height(10.dp))
 
                 SettingsLinkRow(
@@ -2372,7 +2372,7 @@ fun BatteryScreen(ctx: Context) {
     Column(Modifier.mikuHeroCard().padding(16.dp)) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
             Column {
-                Text("BATTERY TELEMETRY", color = MikuTealBright, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                Text("BATTERY", color = MikuTealBright, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                 Spacer(Modifier.height(4.dp))
                 Text(pct?.let { "$it%" } ?: "—%", color = Color.White, fontSize = 32.sp, fontWeight = FontWeight.Black)
             }
@@ -2399,7 +2399,7 @@ fun BatteryScreen(ctx: Context) {
             MetricPill(label = "SOURCE", value = plugged)
         }
         Spacer(Modifier.height(8.dp))
-        Text("Chemistry: $technology · values not reported by the battery HAL show as —", color = MikuMuted, fontSize = 10.5.sp)
+        Text("Chemistry: $technology · a dash means the battery HAL did not report it", color = MikuMuted, fontSize = 10.5.sp)
     }
     BatteryControls(ctx, tick)
     }
@@ -2430,7 +2430,7 @@ private fun BatteryControls(ctx: Context, tick: Int) {
 @Composable
 fun StorageAppsScreen(ctx: Context) {
     Column(Modifier.mikuCard().padding(14.dp)) {
-        Text("STORAGE & APPLICATION MANAGER", color = MikuTealBright, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+        Text("APPS & STORAGE", color = MikuTealBright, fontSize = 12.sp, fontWeight = FontWeight.Bold)
         Spacer(Modifier.height(10.dp))
 
         SettingsLinkRow(
@@ -2548,7 +2548,7 @@ fun AboutScreen(ctx: Context) {
         SettingsLinkRow(
             icon = Icons.Default.Home,
             title = "Open MikuOS Home",
-            subtitle = "Re-running the first-boot setup wizard is done from the launcher itself",
+            subtitle = "Run the first-boot setup again from the launcher",
             onClick = {
                 try {
                     val homeIntent = Intent(Intent.ACTION_MAIN).apply {
@@ -2734,3 +2734,9 @@ fun applyFontScale(cr: android.content.ContentResolver, scale: Float) {
 }
 
 
+
+/** Small colored status dot, used in place of the old emoji circles. */
+@Composable
+fun StatusDot(color: Color, size: androidx.compose.ui.unit.Dp = 8.dp) {
+    Box(Modifier.size(size).clip(CircleShape).background(color))
+}

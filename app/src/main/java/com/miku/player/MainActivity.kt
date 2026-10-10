@@ -360,6 +360,24 @@ class MainActivity : ComponentActivity() {
     // Dev workflow today, future in-app OTA installer tomorrow: whoever is about to trigger an
     companion object {
         var globalBackHandler: (() -> Unit)? = null
+        /** Set when an intent asks for the alarms screen (Miku Music's alarm notifications and
+         *  Miku Clock put [AlarmScheduler.EXTRA_OPEN_ALARMS] on it). The root composable watches
+         *  this, opens Settings on the Alarms tab, then clears it. */
+        val openAlarmsRequest = androidx.compose.runtime.mutableStateOf(false)
+    }
+
+    /** Honors the open_alarms extra once, then strips it so a recreate doesn't reopen alarms. */
+    private fun consumeOpenAlarms(i: android.content.Intent?) {
+        if (i?.getBooleanExtra(AlarmScheduler.EXTRA_OPEN_ALARMS, false) == true) {
+            i.removeExtra(AlarmScheduler.EXTRA_OPEN_ALARMS)
+            openAlarmsRequest.value = true
+        }
+    }
+
+    override fun onNewIntent(intent: android.content.Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        consumeOpenAlarms(intent)
     }
 
     private val gestureBackReceiver = object : android.content.BroadcastReceiver() {
@@ -430,6 +448,7 @@ class MainActivity : ComponentActivity() {
         if (intent?.getBooleanExtra(UpdateManager.EXTRA_JUST_UPDATED, false) == true) {
             UpdateOverlay.mode.value = UpdateOverlayMode.RESUMING
         }
+        consumeOpenAlarms(intent)
         player = PlayerHolder.ensure(this)
         PlayerHolder.ensureSession(this)                                  // branded lockscreen/notification control
         PlayerHolder.ensureControllerConnected(this)                      // keep service foreground & active for screen-off hardware keys
@@ -1044,6 +1063,18 @@ private fun App(tracks: List<Track>, player: ExoPlayer, loading: Boolean = false
     var showFullNowPlaying by remember { mutableStateOf(false) }
     var showTape by remember { mutableStateOf(initialTape) }
     var showSettings by remember { mutableStateOf(false) }
+    // "Open" on an alarm notification (or Miku Clock's alarms link): jump straight to Settings,
+    // Alarms tab, over whatever full-screen view was up.
+    val openAlarms = MainActivity.openAlarmsRequest.value
+    LaunchedEffect(openAlarms) {
+        if (openAlarms) {
+            showTape = false
+            showFullNowPlaying = false
+            settingsCategoryRequest.value = SettingsCategory.ALARMS
+            showSettings = true
+            MainActivity.openAlarmsRequest.value = false
+        }
+    }
     // Tape mode is a full-bleed deck skin — the Android status bar (clock, icons, etc.) sitting on
     // top of it reads as a stray overlay rather than part of the "device". Go immersive for as
     // long as tape mode is up, restore the system bars the moment it closes.
@@ -5711,9 +5742,19 @@ enum class SettingsCategory(val title: String, val icon: String) {
     ABOUT("About", "ℹ️")
 }
 
+/** A one-shot request to land Settings on a given tab (consumed by [SettingsScreen]). */
+internal val settingsCategoryRequest = androidx.compose.runtime.mutableStateOf<SettingsCategory?>(null)
+
 @Composable private fun SettingsScreen(ctx: android.content.Context, tracks: List<Track>, onClose: () -> Unit) {
     androidx.activity.compose.BackHandler(onBack = onClose)
-    var selectedCategory by remember { mutableStateOf(SettingsCategory.GENERAL) }
+    var selectedCategory by remember { mutableStateOf(settingsCategoryRequest.value ?: SettingsCategory.GENERAL) }
+    val categoryRequest = settingsCategoryRequest.value
+    LaunchedEffect(categoryRequest) {
+        if (categoryRequest != null) {
+            selectedCategory = categoryRequest
+            settingsCategoryRequest.value = null
+        }
+    }
     var sortIgnoreThe by remember { mutableStateOf(PlayerPreferences.loadSortIgnoreThe(ctx)) }
     var autoViz by remember { mutableStateOf(PlayerPreferences.loadAutoViz(ctx)) }
     var idleDim by remember { mutableStateOf(IdleController.enabled) }

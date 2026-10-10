@@ -147,7 +147,7 @@ fun MikuQsEditor(
     val order by QsTileOrder.active.collectAsState()
 
     val active = remember { mutableStateListOf<String>().apply { addAll(order) } }
-    val avail = remember { mutableStateListOf<String>().apply { addAll(QsTileOrder.DEFAULT.filter { it !in order }) } }
+    val avail = remember { mutableStateListOf<String>().apply { addAll(QsTileOrder.ALL_IDS.filter { it !in order }) } }
     var dragId by remember { mutableStateOf<String?>(null) }
     var finger by remember { mutableStateOf(Offset.Zero) }      // content coords
     var grab by remember { mutableStateOf(Offset.Zero) }        // finger minus tile top-left at pickup
@@ -162,7 +162,7 @@ fun MikuQsEditor(
     LaunchedEffect(order) {
         if (dragId == null && order != active.toList()) {
             active.clear(); active.addAll(order)
-            avail.clear(); avail.addAll(QsTileOrder.DEFAULT.filter { it !in order })
+            avail.clear(); avail.addAll(QsTileOrder.ALL_IDS.filter { it !in order })
         }
     }
     LaunchedEffect(resetArmed) { if (resetArmed) { delay(3000); resetArmed = false } }
