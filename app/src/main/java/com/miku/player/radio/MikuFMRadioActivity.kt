@@ -1,5 +1,7 @@
 package com.miku.player.radio
 
+import com.miku.player.Mascot
+import com.miku.player.mascotPainter
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
@@ -229,7 +231,7 @@ fun FmTunerUnavailableScreen(onBack: () -> Unit) {
     val ctx = LocalContext.current
     Box(Modifier.fillMaxSize().background(CyberDarkBg)) {
         Image(
-            painter = painterResource(id = R.drawable.miku_bg_fm),
+            painter = mascotPainter(id = R.drawable.miku_bg_fm),
             contentDescription = null,
             modifier = Modifier.fillMaxSize(),
             contentScale = ContentScale.Crop,
@@ -249,14 +251,14 @@ fun FmTunerUnavailableScreen(onBack: () -> Unit) {
             )
             Spacer(Modifier.height(10.dp))
             Text(
-                "Miku Music can't open the FM hardware itself (the tuner is reserved for the Miku FM app, com.caf.fmradio). Install the Miku FM app from the MikuOS system image to listen to radio.",
-                color = Color(0xFFD4ECE9), fontSize = 13.sp, lineHeight = 18.sp, textAlign = TextAlign.Center
+                "${Mascot.musicAppName} can't open the FM hardware itself (the tuner is reserved for the ${Mascot.name} FM app, com.caf.fmradio). Install the ${Mascot.name} FM app from the ${Mascot.osName} system image to listen to radio.",
+                color = Mascot.color(0xFFD4ECE9), fontSize = 13.sp, lineHeight = 18.sp, textAlign = TextAlign.Center
             )
             Spacer(Modifier.height(24.dp))
             Button(
                 onClick = onBack,
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0x3339C5BB)),
-                border = BorderStroke(1.dp, Color(0xFF39C5BB)),
+                colors = ButtonDefaults.buttonColors(containerColor = Mascot.color(0x3339C5BB)),
+                border = BorderStroke(1.dp, Mascot.color(0xFF39C5BB)),
                 shape = RoundedCornerShape(12.dp)
             ) { Text("BACK", color = Color.White, fontWeight = FontWeight.Bold) }
         }
@@ -279,8 +281,8 @@ fun MikuFMRadioScreen(onBack: () -> Unit) {
             .background(CyberDarkBg)
     ) {
         Image(
-            painter = painterResource(id = R.drawable.miku_bg_fm),
-            contentDescription = "Miku artwork",
+            painter = mascotPainter(id = R.drawable.miku_bg_fm),
+            contentDescription = "${Mascot.name} artwork",
             modifier = Modifier.fillMaxSize(),
             contentScale = ContentScale.Crop
         )
@@ -291,9 +293,9 @@ fun MikuFMRadioScreen(onBack: () -> Unit) {
                 .background(
                     Brush.verticalGradient(
                         listOf(
-                            Color(0xCC040D12),
+                            Mascot.color(0xCC040D12),
                             Color(0x77000000),
-                            Color(0xF5040D12)
+                            Mascot.color(0xF5040D12)
                         )
                     )
                 )
@@ -315,7 +317,7 @@ fun MikuFMRadioScreen(onBack: () -> Unit) {
                 com.miku.player.ui.MikuBackButton(onClick = onBack)
 
                 Text(
-                    "MIKU FM",
+                    "${Mascot.nameUpper} FM",
                     color = MikuCyan,
                     fontSize = 12.5.sp,
                     fontWeight = FontWeight.Bold,
@@ -326,7 +328,7 @@ fun MikuFMRadioScreen(onBack: () -> Unit) {
                 Box(
                     Modifier
                         .clip(RoundedCornerShape(10.dp))
-                        .background(if (fmState.isHeadsetPlugged) Color(0x3300E5FF) else Color(0x33FF4081))
+                        .background(if (fmState.isHeadsetPlugged) Mascot.color(0x3300E5FF) else Mascot.color(0x33FF4081))
                         .border(1.dp, if (fmState.isHeadsetPlugged) MikuCyan else MikuNeonPink, RoundedCornerShape(10.dp))
                         .padding(horizontal = 7.dp, vertical = 3.dp)
                 ) {
@@ -347,7 +349,7 @@ fun MikuFMRadioScreen(onBack: () -> Unit) {
                 Modifier
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(16.dp))
-                    .background(Color(0xDD0A1E26))
+                    .background(Mascot.color(0xDD0A1E26))
                     .border(1.2.dp, if (fmState.isPowerOn) MikuCyan else Color.White.copy(alpha = 0.15f), RoundedCornerShape(16.dp))
                     .padding(horizontal = 14.dp, vertical = 6.dp)
             ) {
@@ -433,7 +435,7 @@ fun MikuFMRadioScreen(onBack: () -> Unit) {
                         .align(Alignment.TopEnd)
                         .size(34.dp)
                         .clip(CircleShape)
-                        .background(Color(0x3300E5FF))
+                        .background(Mascot.color(0x3300E5FF))
                         .border(1.dp, MikuCyan, CircleShape)
                         .clickable {
                             val reactions = listOf("📻", "🎶", "💙", "⚡", "✨", "🎤", "🎧")
@@ -442,7 +444,7 @@ fun MikuFMRadioScreen(onBack: () -> Unit) {
                     contentAlignment = Alignment.Center
                 ) {
                     Image(
-                        painter = painterResource(id = R.drawable.ic_search_head_miku),
+                        painter = mascotPainter(id = R.drawable.ic_search_head_miku),
                         contentDescription = "Chibi DJ",
                         modifier = Modifier.size(26.dp)
                     )
@@ -486,7 +488,7 @@ fun MikuFMRadioScreen(onBack: () -> Unit) {
                         .clip(CircleShape)
                         .background(
                             Brush.radialGradient(
-                                listOf(Color(0x3300E5FF), Color(0x0004141E))
+                                listOf(Mascot.color(0x3300E5FF), Mascot.color(0x0004141E))
                             )
                         )
                         .combinedClickable(
@@ -518,7 +520,7 @@ fun MikuFMRadioScreen(onBack: () -> Unit) {
                         .clip(CircleShape)
                         .background(
                             Brush.radialGradient(
-                                listOf(Color(0x3300E5FF), Color(0x0004141E))
+                                listOf(Mascot.color(0x3300E5FF), Mascot.color(0x0004141E))
                             )
                         )
                         .combinedClickable(
@@ -551,7 +553,7 @@ fun MikuFMRadioScreen(onBack: () -> Unit) {
                     Box(
                         Modifier
                             .clip(RoundedCornerShape(10.dp))
-                            .background(if (isCurrent) MikuCyan else Color(0xDD0A1E26))
+                            .background(if (isCurrent) MikuCyan else Mascot.color(0xDD0A1E26))
                             .border(1.dp, if (isCurrent) MikuCyan else CyberGlassBorder, RoundedCornerShape(10.dp))
                             .clickable { FmRadioManager.tune(ctx, freq) }
                             .padding(horizontal = 8.dp, vertical = 3.dp)
@@ -608,7 +610,7 @@ fun RadioWaterfallSpectrum(
         Modifier
             .fillMaxSize()
             .clip(RoundedCornerShape(14.dp))
-            .background(Color(0xFF040D12))
+            .background(Mascot.color(0xFF040D12))
             .border(1.2.dp, CyberGlassBorder, RoundedCornerShape(14.dp))
             .pointerInput(Unit) {
                 detectTapGestures { offset ->
@@ -637,7 +639,7 @@ fun RadioWaterfallSpectrum(
 
             // 1. Band scale: a tick every 0.5 MHz, taller every 1 MHz, tallest every 5 MHz.
             val baseY = h * 0.62f
-            drawLine(Color(0xFF004D5A), Offset(0f, baseY), Offset(w, baseY), strokeWidth = 1.dp.toPx())
+            drawLine(Mascot.color(0xFF004D5A), Offset(0f, baseY), Offset(w, baseY), strokeWidth = 1.dp.toPx())
             var khz = 87500
             while (khz <= 108000) {
                 val x = ((khz - 87500f) / (108000f - 87500f)) * w
@@ -647,7 +649,7 @@ fun RadioWaterfallSpectrum(
                     else -> h * 0.07f
                 }
                 drawLine(
-                    color = if (isPowerOn) Color(0xFF00B4D8) else Color(0xFF335560),
+                    color = if (isPowerOn) Mascot.color(0xFF00B4D8) else Color(0xFF335560),
                     start = Offset(x, baseY - tick),
                     end = Offset(x, baseY),
                     strokeWidth = (if (khz % 5000 == 0) 1.5f else 1f).dp.toPx()
@@ -725,7 +727,7 @@ fun FmRecordButton(
                 .clip(CircleShape)
                 .background(
                     if (isRecording) Brush.verticalGradient(listOf(Color(0xFFFF1744), Color(0xFFB71C1C)))
-                    else Brush.verticalGradient(listOf(Color(0xEE0A1E26), Color(0xFF040D12)))
+                    else Brush.verticalGradient(listOf(Mascot.color(0xEE0A1E26), Mascot.color(0xFF040D12)))
                 )
                 .border(1.5.dp, if (isRecording) Color(0xFFFF5252) else CyberGlassBorder, CircleShape)
         ) {

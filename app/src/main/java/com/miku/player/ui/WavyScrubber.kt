@@ -1,5 +1,6 @@
 package com.miku.player.ui
 
+import com.miku.player.Mascot
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -135,7 +136,7 @@ fun WavyScrubber(
 
         // Recessed groove for the whole track length (what the ribbon "fills").
         val gh = 5.dp.toPx()
-        drawRoundRect(Color(0xFF06201F), topLeft = Offset(0f, cy - gh / 2f), size = Size(w, gh), cornerRadius = CornerRadius(gh / 2f, gh / 2f))
+        drawRoundRect(Mascot.color(0xFF06201F), topLeft = Offset(0f, cy - gh / 2f), size = Size(w, gh), cornerRadius = CornerRadius(gh / 2f, gh / 2f))
         drawRoundRect(
             Brush.verticalGradient(listOf(Color(0x66000000), Color(0x00000000)), startY = cy - gh / 2f, endY = cy + gh / 4f),
             topLeft = Offset(0f, cy - gh / 2f), size = Size(w, gh), cornerRadius = CornerRadius(gh / 2f, gh / 2f)

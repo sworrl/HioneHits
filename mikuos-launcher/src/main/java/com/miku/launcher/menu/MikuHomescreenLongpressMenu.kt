@@ -1,5 +1,6 @@
 package com.miku.launcher.menu
 
+import com.miku.launcher.Mascot
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.*
@@ -71,8 +72,8 @@ fun MikuHomescreenLongpressMenu(
                     .background(
                         Brush.verticalGradient(
                             listOf(
-                                Color(0xF2071F2B),
-                                Color(0xF5030F15)
+                                Mascot.color(0xF2071F2B),
+                                Mascot.color(0xF5030F15)
                             )
                         )
                     )

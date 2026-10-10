@@ -1,5 +1,6 @@
 package com.miku.launcher.ingest
 
+import com.miku.launcher.Mascot
 import android.content.Context
 import android.content.Intent
 import android.provider.Settings
@@ -34,7 +35,7 @@ import com.miku.launcher.*
 import com.miku.launcher.ui.swipeUpFromBottomToDismiss
 import kotlinx.coroutines.launch
 
-private val MikuMuted = Color(0xFF9EC4C7)
+private val MikuMuted get() = Mascot.color(0xFF9EC4C7)
 
 /**
  * Hatsune Miku File System & Audio Ingestion Observatory Modal.
@@ -65,7 +66,7 @@ fun MikuFsIngestObservatoryModal(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xDD030A0E))
+            .background(Mascot.color(0xDD030A0E))
             .clickable { onClose() }
             .swipeUpFromBottomToDismiss { onClose() }
             .padding(top = 18.dp, bottom = 6.dp, start = 8.dp, end = 8.dp),
@@ -78,8 +79,8 @@ fun MikuFsIngestObservatoryModal(
                 .background(
                     Brush.verticalGradient(
                         listOf(
-                            Color(0xF207171C),
-                            Color(0xFA030C10)
+                            Mascot.color(0xF207171C),
+                            Mascot.color(0xFA030C10)
                         )
                     )
                 )
@@ -168,7 +169,7 @@ fun MikuFsIngestObservatoryModal(
                             Modifier
                                 .fillMaxWidth()
                                 .clip(RoundedCornerShape(14.dp))
-                                .background(Color(0xFF071B20))
+                                .background(Mascot.color(0xFF071B20))
                                 .border(1.2.dp, Color(0xFF00FF88).copy(alpha = 0.55f), RoundedCornerShape(14.dp))
                                 .padding(14.dp)
                         ) {
@@ -398,10 +399,10 @@ fun MikuFsIngestObservatoryModal(
                                     checked = ingestState.engineEnabled,
                                     onCheckedChange = { MikuIngestEngine.setEngineEnabled(ctx, it) },
                                     colors = SwitchDefaults.colors(
-                                        checkedThumbColor = Color(0xFF031410),
+                                        checkedThumbColor = Mascot.color(0xFF031410),
                                         checkedTrackColor = Color(0xFF00FF88),
                                         uncheckedThumbColor = MikuMuted,
-                                        uncheckedTrackColor = Color(0xFF0B2228)
+                                        uncheckedTrackColor = Mascot.color(0xFF0B2228)
                                     )
                                 )
                             }
@@ -416,7 +417,7 @@ fun MikuFsIngestObservatoryModal(
                                 Button(
                                     onClick = { MikuIngestEngine.triggerForceScan(ctx) },
                                     enabled = !ingestState.isScanning,
-                                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF00E5FF)),
+                                    colors = ButtonDefaults.buttonColors(containerColor = Mascot.color(0xFF00E5FF)),
                                     shape = RoundedCornerShape(12.dp),
                                     modifier = Modifier
                                         .weight(1f)
@@ -424,9 +425,9 @@ fun MikuFsIngestObservatoryModal(
                                     contentPadding = PaddingValues(horizontal = 8.dp, vertical = 6.dp)
                                 ) {
                                     Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Icon(Icons.Default.Refresh, contentDescription = null, tint = Color(0xFF030D10), modifier = Modifier.size(18.dp))
+                                        Icon(Icons.Default.Refresh, contentDescription = null, tint = Mascot.color(0xFF030D10), modifier = Modifier.size(18.dp))
                                         Spacer(Modifier.width(6.dp))
-                                        Text("FORCE SCAN", color = Color(0xFF030D10), fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                                        Text("FORCE SCAN", color = Mascot.color(0xFF030D10), fontSize = 13.sp, fontWeight = FontWeight.Bold)
                                     }
                                 }
 
@@ -456,7 +457,7 @@ fun MikuFsIngestObservatoryModal(
                             Modifier
                                 .fillMaxWidth()
                                 .clip(RoundedCornerShape(14.dp))
-                                .background(Color(0xFF07141A))
+                                .background(Mascot.color(0xFF07141A))
                                 .border(1.2.dp, MikuCyan.copy(alpha = 0.45f), RoundedCornerShape(14.dp))
                                 .padding(14.dp)
                         ) {
@@ -498,14 +499,14 @@ fun MikuFsIngestObservatoryModal(
                                     usedStr = MikuIngestEngine.formatBytes(sdUsed),
                                     totalStr = MikuIngestEngine.formatBytes(sdTotal),
                                     pct = sdPct,
-                                    barColor = Color(0xFFFF4081)
+                                    barColor = Mascot.color(0xFFFF4081)
                                 )
                             } else {
                                 Row(
                                     Modifier
                                         .fillMaxWidth()
                                         .clip(RoundedCornerShape(10.dp))
-                                        .background(Color(0xFF0E1A20))
+                                        .background(Mascot.color(0xFF0E1A20))
                                         .padding(12.dp),
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
@@ -527,8 +528,8 @@ fun MikuFsIngestObservatoryModal(
                             Modifier
                                 .fillMaxWidth()
                                 .clip(RoundedCornerShape(14.dp))
-                                .background(Color(0xFF07141A))
-                                .border(1.2.dp, Color(0xFFB388FF).copy(alpha = 0.45f), RoundedCornerShape(14.dp))
+                                .background(Mascot.color(0xFF07141A))
+                                .border(1.2.dp, Mascot.color(0xFFB388FF).copy(alpha = 0.45f), RoundedCornerShape(14.dp))
                                 .padding(14.dp)
                         ) {
                             Row(
@@ -538,7 +539,7 @@ fun MikuFsIngestObservatoryModal(
                             ) {
                                 Text(
                                     "AUDIO FORMATS",
-                                    color = Color(0xFFB388FF),
+                                    color = Mascot.color(0xFFB388FF),
                                     fontSize = 13.5.sp,
                                     fontWeight = FontWeight.Bold,
                                     fontFamily = AudiowideFont,
@@ -568,7 +569,7 @@ fun MikuFsIngestObservatoryModal(
                                     badge = "FLAC",
                                     count = ingestState.flacCount,
                                     desc = "Free Lossless Audio Codec",
-                                    color = Color(0xFF00E5FF)
+                                    color = Mascot.color(0xFF00E5FF)
                                 )
                             }
 
@@ -580,14 +581,14 @@ fun MikuFsIngestObservatoryModal(
                                     badge = "WAV / ALAC",
                                     count = ingestState.wavCount + ingestState.alacCount,
                                     desc = "Lossless PCM",
-                                    color = Color(0xFFB388FF)
+                                    color = Mascot.color(0xFFB388FF)
                                 )
                                 CodecMetricPill(
                                     modifier = Modifier.weight(1f),
                                     badge = "MP3 / AAC",
                                     count = ingestState.mp3Count + ingestState.aacCount,
                                     desc = "Lossy",
-                                    color = Color(0xFFFF80AB)
+                                    color = Mascot.color(0xFFFF80AB)
                                 )
                             }
 
@@ -609,7 +610,7 @@ fun MikuFsIngestObservatoryModal(
                             Modifier
                                 .fillMaxWidth()
                                 .clip(RoundedCornerShape(14.dp))
-                                .background(Color(0xFF07141A))
+                                .background(Mascot.color(0xFF07141A))
                                 .border(1.2.dp, Color(0xFFFFD54F).copy(alpha = 0.45f), RoundedCornerShape(14.dp))
                                 .padding(14.dp)
                         ) {
@@ -668,7 +669,7 @@ fun MikuFsIngestObservatoryModal(
                             Modifier
                                 .fillMaxWidth()
                                 .clip(RoundedCornerShape(14.dp))
-                                .background(Color(0xFF03090D))
+                                .background(Mascot.color(0xFF03090D))
                                 .border(1.2.dp, Color(0x4400FF88), RoundedCornerShape(14.dp))
                                 .padding(14.dp)
                         ) {

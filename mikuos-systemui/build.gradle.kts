@@ -7,6 +7,10 @@ plugins {
 }
 
 android {
+    // Launcher icons for the mascot label aliases (ic_launcher_hione*), one shared copy for every
+    // app that has an alias. See Mascot.kt and mikuos/mascot/runtime.
+    sourceSets["main"].res.srcDir(rootProject.file("../mikuos/mascot/runtime/res"))
+
     namespace = "com.miku.systemui"
     compileSdk = 34
 

@@ -1,5 +1,6 @@
 package com.miku.launcher.onboarding
 
+import com.miku.launcher.Mascot
 import android.app.Activity
 import android.app.AlarmManager
 import android.content.Context
@@ -45,15 +46,15 @@ import java.text.SimpleDateFormat
 import java.util.*
 
 // Cyberpunk Palette
-val MikuOnboardingTeal = Color(0xFF00E5FF)
-val MikuOnboardingPink = Color(0xFFFF4081)
+val MikuOnboardingTeal get() = Mascot.color(0xFF00E5FF)
+val MikuOnboardingPink get() = Mascot.color(0xFFFF4081)
 val MikuOnboardingGreen = com.miku.launcher.ui.MikuIdentity.Leek
 val MikuOnboardingGold = com.miku.launcher.ui.MikuIdentity.Gold
-val MikuOnboardingPurple = Color(0xFFB388FF)
+val MikuOnboardingPurple get() = Mascot.color(0xFFB388FF)
 val MikuOnboardingBg = Color(0xFF040D14)
 val MikuOnboardingCard = Color(0xDD0A1926)
-val MikuOnboardingCardSelected = Color(0x3300E5FF)
-val MikuOnboardingBorder = Color(0x5500E5FF)
+val MikuOnboardingCardSelected get() = Mascot.color(0x3300E5FF)
+val MikuOnboardingBorder get() = Mascot.color(0x5500E5FF)
 
 data class SupportedLanguage(
     val code: String,
@@ -206,7 +207,7 @@ val GoogleCoreApps = listOf(
     )
 )
 
-val OptionalApps = listOf(
+val OptionalApps get() = listOf(
     ProvisionableApp(
         id = "spotify",
         name = "Spotify",
@@ -224,7 +225,7 @@ val OptionalApps = listOf(
         description = "Lossless FLAC streaming",
         packageName = "com.aspiro.tidal",
         icon = Icons.Default.Equalizer,
-        accentColor = Color(0xFF00FFFF),
+        accentColor = Mascot.color(0xFF00FFFF),
         isDefaultSelected = true
     ),
     ProvisionableApp(
@@ -603,7 +604,7 @@ fun LanguageSelectionScreen(
                 lang.code.contains(searchQuery, ignoreCase = true)
 
             val matchesFilter = when (selectedFilter) {
-                "MikuOS Ready" -> lang.isMikuUiComplete
+                "${Mascot.osName} Ready" -> lang.isMikuUiComplete
                 "Americas" -> lang.region.contains("Americas", ignoreCase = true)
                 "Europe" -> lang.region.contains("Europe", ignoreCase = true)
                 "Asia" -> lang.region.contains("Asia", ignoreCase = true)
@@ -669,7 +670,7 @@ fun LanguageSelectionScreen(
                 .horizontalScroll(rememberScrollState()),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            listOf("All", "MikuOS Ready", "Americas", "Europe", "Asia", "Middle East").forEach { filter ->
+            listOf("All", "${Mascot.osName} Ready", "Americas", "Europe", "Asia", "Middle East").forEach { filter ->
                 val isSelected = selectedFilter == filter
                 Box(
                     Modifier

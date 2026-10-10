@@ -1,5 +1,6 @@
 package com.miku.player.discsplit
 
+import com.miku.player.Mascot
 import android.content.Context
 import android.widget.Toast
 import androidx.compose.foundation.background
@@ -71,7 +72,7 @@ fun DiscSplitSettingsCard(ctx: Context) {
         Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(18.dp))
-            .background(Brush.verticalGradient(listOf(Surface1, Color(0xFF0A2A33))))
+            .background(Brush.verticalGradient(listOf(Surface1, Mascot.color(0xFF0A2A33))))
             .border(1.dp, MikuTeal.copy(alpha = 0.35f), RoundedCornerShape(18.dp))
             .padding(18.dp)
     ) {
@@ -108,7 +109,7 @@ fun DiscSplitSettingsCard(ctx: Context) {
         Text(
             "${report.split} of ${report.images} disc image${if (report.images == 1) "" else "s"} split · " +
                 "$pendingShown pending · ${stats.unmatched} unmatched",
-            color = Color(0xFFE8F4F2), fontSize = 12.5.sp, fontWeight = FontWeight.SemiBold
+            color = Mascot.color(0xFFE8F4F2), fontSize = 12.5.sp, fontWeight = FontWeight.SemiBold
         )
         val detail = buildString {
             append("${report.withCue} with cue · ${stats.matched} via MusicBrainz · ${report.virtualTracks} virtual tracks")
@@ -127,14 +128,14 @@ fun DiscSplitSettingsCard(ctx: Context) {
         Spacer(Modifier.height(10.dp))
         Row(verticalAlignment = Alignment.CenterVertically) {
             DiscActionChip(
-                label = "Re-check unmatched", icon = Icons.Default.Refresh, tint = MikuTealBright, fill = Color(0x2239C5BB),
+                label = "Re-check unmatched", icon = Icons.Default.Refresh, tint = MikuTealBright, fill = Mascot.color(0x2239C5BB),
                 enabled = online
             ) {
                 val n = MusicBrainzSplitter.recheckUnmatched(ctx)
                 Toast.makeText(ctx, if (n == 0) "Nothing to re-check" else "Re-checking $n disc image${if (n == 1) "" else "s"}", Toast.LENGTH_SHORT).show()
             }
             Spacer(Modifier.width(8.dp))
-            DiscActionChip(label = "Reset all lookups", icon = Icons.Default.Delete, tint = MikuPink, fill = Color(0x22FF5FA2), enabled = true) {
+            DiscActionChip(label = "Reset all lookups", icon = Icons.Default.Delete, tint = MikuPink, fill = Mascot.color(0x22FF5FA2), enabled = true) {
                 val n = MusicBrainzSplitter.resetAll(ctx)
                 Toast.makeText(ctx, "Forgot $n lookup${if (n == 1) "" else "s"}. Images re-split on the next refresh", Toast.LENGTH_SHORT).show()
             }
@@ -153,7 +154,7 @@ private fun DiscToggleRow(title: String, subtitle: String, checked: Boolean, onC
         verticalAlignment = Alignment.CenterVertically
     ) {
         Column(Modifier.weight(1f)) {
-            Text(title, color = Color(0xFFE8F4F2), fontSize = 13.5.sp, fontWeight = FontWeight.SemiBold)
+            Text(title, color = Mascot.color(0xFFE8F4F2), fontSize = 13.5.sp, fontWeight = FontWeight.SemiBold)
             Text(subtitle, color = Muted, fontSize = 11.5.sp)
         }
         Spacer(Modifier.width(8.dp))
@@ -161,7 +162,7 @@ private fun DiscToggleRow(title: String, subtitle: String, checked: Boolean, onC
             checked = checked, onCheckedChange = onCheckedChange,
             colors = SwitchDefaults.colors(
                 checkedThumbColor = MikuPink, checkedTrackColor = MikuTeal.copy(alpha = 0.6f),
-                uncheckedThumbColor = Muted, uncheckedTrackColor = Color(0xFF0A2022)
+                uncheckedThumbColor = Muted, uncheckedTrackColor = Mascot.color(0xFF0A2022)
             )
         )
     }

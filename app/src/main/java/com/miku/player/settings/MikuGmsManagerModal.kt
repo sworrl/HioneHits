@@ -1,5 +1,6 @@
 package com.miku.player.settings
 
+import com.miku.player.Mascot
 import android.content.Context
 import android.content.pm.PackageManager
 import androidx.compose.animation.*
@@ -200,7 +201,7 @@ fun MikuGmsManagerModal(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Color(0xEE030D12))
+                .background(Mascot.color(0xEE030D12))
                 .clickable { onDismissRequest() }
                 .swipeUpFromBottomToDismiss(onDismiss = onDismissRequest),
             contentAlignment = Alignment.Center
@@ -231,7 +232,7 @@ fun MikuGmsManagerModal(
                                 listOf(
                                     Color(0xF8081622),
                                     Color(0xF8040F18),
-                                    Color(0xFF02090D)
+                                    Mascot.color(0xFF02090D)
                                 )
                             )
                         )
@@ -309,7 +310,7 @@ fun MikuGmsManagerModal(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .clip(CutCornerShape(6.dp))
-                                .background(Color(0xFF041824))
+                                .background(Mascot.color(0xFF041824))
                                 .border(0.8.dp, CyberGlassBorder.copy(alpha = 0.4f), CutCornerShape(6.dp))
                                 .padding(horizontal = 8.dp, vertical = 4.dp),
                             horizontalArrangement = Arrangement.SpaceBetween,
@@ -368,7 +369,7 @@ fun MikuGmsManagerModal(
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .clip(CutCornerShape(8.dp))
-                                        .background(if (isEnabled) Color(0xFF041926) else Color(0xFF10080C))
+                                        .background(if (isEnabled) Mascot.color(0xFF041926) else Mascot.color(0xFF10080C))
                                         .border(
                                             0.8.dp,
                                             if (isEnabled) Color(0xFF4285F4).copy(alpha = 0.6f) else Color(0x44FF1744),

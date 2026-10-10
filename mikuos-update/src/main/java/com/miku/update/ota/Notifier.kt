@@ -1,5 +1,6 @@
 package com.miku.update.ota
 
+import com.miku.update.Mascot
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
@@ -52,7 +53,7 @@ object Notifier {
     private fun base(ctx: Context, channel: String, title: String, text: String) =
         NotificationCompat.Builder(ctx, channel)
             .setSmallIcon(R.drawable.ic_stat_update)
-            .setColor(0xFF39C5BB.toInt())
+            .setColor(Mascot.argb(0xFF39C5BB.toInt()))
             .setContentTitle(title)
             .setContentText(text)
             .setStyle(NotificationCompat.BigTextStyle().bigText(text))
@@ -68,32 +69,32 @@ object Notifier {
     fun available(ctx: Context, lines: List<String>) {
         if (lines.isEmpty()) return
         val title = if (lines.size == 1) "1 app update ready" else "${lines.size} app updates ready"
-        post(ctx, ID_AVAILABLE, base(ctx, CH_UPDATES, title, lines.joinToString("\n") + "\nOpen Miku Update to install."))
+        post(ctx, ID_AVAILABLE, base(ctx, CH_UPDATES, title, lines.joinToString("\n") + "\nOpen ${Mascot.updateName} to install."))
     }
 
     fun revoked(ctx: Context, lines: List<String>) {
         if (lines.isEmpty()) return
         val title = if (lines.size == 1) "An update was pulled" else "${lines.size} updates were pulled"
-        post(ctx, ID_REVOKED, base(ctx, CH_UPDATES, title, lines.joinToString("\n") + "\nBack on the version that came with MikuOS."))
+        post(ctx, ID_REVOKED, base(ctx, CH_UPDATES, title, lines.joinToString("\n") + "\nBack on the version that came with ${Mascot.osName}."))
     }
 
     fun systemUpdate(ctx: Context, build: String, required: Boolean, onDevice: Boolean = false) {
-        val how = if (onDevice) "Open Miku Update to install it." else "It goes on from a PC with the web installer."
+        val how = if (onDevice) "Open ${Mascot.updateName} to install it." else "It goes on from a PC with the web installer."
         val text = if (required) {
-            "MikuOS $build is needed before more app updates can install. $how"
+            "${Mascot.osName} $build is needed before more app updates can install. $how"
         } else {
-            "MikuOS $build is out. $how"
+            "${Mascot.osName} $build is out. $how"
         }
         post(ctx, ID_SYSTEM, base(ctx, CH_UPDATES, "System update available", text))
     }
 
     /** update_engine wrote the other slot. A restart finishes it. */
     fun systemReady(ctx: Context, build: String) =
-        post(ctx, ID_SYSTEM, base(ctx, CH_UPDATES, "Restart to finish the update", "MikuOS $build is ready. Restart the M500 to switch to it.").setOngoing(true).setAutoCancel(false))
+        post(ctx, ID_SYSTEM, base(ctx, CH_UPDATES, "Restart to finish the update", "${Mascot.osName} $build is ready. Restart the M500 to switch to it.").setOngoing(true).setAutoCancel(false))
 
     fun systemInstalled(ctx: Context, build: String) {
         NotificationManagerCompat.from(ctx).cancel(ID_SYSTEM)
-        post(ctx, ID_SYSTEM, base(ctx, CH_UPDATES, "System updated", "The M500 is on MikuOS $build now."))
+        post(ctx, ID_SYSTEM, base(ctx, CH_UPDATES, "System updated", "The M500 is on ${Mascot.osName} $build now."))
     }
 
     fun systemFailed(ctx: Context, text: String) {

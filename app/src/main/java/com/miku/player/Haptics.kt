@@ -207,8 +207,8 @@ fun HapticIconButton(
     val pressed by interaction.collectIsPressedAsState()
     val scale by animateFloatAsState(if (pressed) 0.86f else 1f, spring(), label = "btnScale")
     // Key-face lighting: lit from the top at rest, inverted (sunk) while pressed.
-    val faceTop = if (face != null) lerp(face, Color.White, 0.28f) else Color(0xFF17403F)
-    val faceBot = if (face != null) lerp(face, Color.Black, 0.30f) else Color(0xFF082022)
+    val faceTop = if (face != null) lerp(face, Color.White, 0.28f) else Mascot.color(0xFF17403F)
+    val faceBot = if (face != null) lerp(face, Color.Black, 0.30f) else Mascot.color(0xFF082022)
     IconButton(
         onClick = {
             Haptics.click(ctx)

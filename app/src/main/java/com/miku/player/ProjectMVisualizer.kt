@@ -374,7 +374,7 @@ fun ProjectMVisualizerView(
     // minimal ambient screen — either way, this is the single most expensive continuous piece of
     // UI in the app (a 60fps GL render loop), so it's the first thing to stop.
     if (VisualizerMemoryGuard.suppressed || !IdleController.screenActive) {
-        Box(modifier.background(androidx.compose.ui.graphics.Color(0xFF0A2528)))
+        Box(modifier.background(Mascot.color(0xFF0A2528)))
         return
     }
 

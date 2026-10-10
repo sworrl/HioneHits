@@ -161,7 +161,7 @@ fun AlarmsSettingsContent(ctx: Context, tracks: List<Track>) {
                 Icon(Icons.Default.Warning, null, tint = AlarmWarn, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(10.dp))
                 Text(
-                    "Expected ${AlarmScheduler.formatWhen(soonest.second, now)} but the system has NO alarm armed for Miku Music. Tap to re-arm.",
+                    "Expected ${AlarmScheduler.formatWhen(soonest.second, now)} but the system has NO alarm armed for ${Mascot.musicAppName}. Tap to re-arm.",
                     color = AlarmWarn, fontSize = 11.5.sp, lineHeight = 15.sp
                 )
             }
@@ -197,7 +197,7 @@ fun AlarmsSettingsContent(ctx: Context, tracks: List<Track>) {
         Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(Surface1).padding(16.dp)
     ) {
         if (alarms.isEmpty()) {
-            Text("No alarms yet. Wake up to any track, album, playlist, your Liked Songs, a Daily Mix, or the built-in Miku Chime. Alarms can fade in, snooze, and follow sunrise or sunset.", color = Muted, fontSize = 12.sp, lineHeight = 16.sp)
+            Text("No alarms yet. Wake up to any track, album, playlist, your Liked Songs, a Daily Mix, or the built-in ${Mascot.name} Chime. Alarms can fade in, snooze, and follow sunrise or sunset.", color = Muted, fontSize = 12.sp, lineHeight = 16.sp)
             Spacer(Modifier.height(12.dp))
         } else {
             alarms.sortedWith(compareBy({ it.mode != AlarmTriggerMode.CLOCK_TIME }, { it.hour * 60 + it.minute })).forEachIndexed { idx, a ->
@@ -619,7 +619,7 @@ private fun AlarmEditorDialog(
             AlarmSectionLabel("Sound")
             FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 fun pick(s: AlarmSource) { if (source != s) { source = s; sourceRef = null; error = null } }
-                AlarmPill("Miku Chime", source == AlarmSource.MIKU_CHIME, MikuPink) { pick(AlarmSource.MIKU_CHIME) }
+                AlarmPill("${Mascot.name} Chime", source == AlarmSource.MIKU_CHIME, MikuPink) { pick(AlarmSource.MIKU_CHIME) }
                 AlarmPill("Shuffle library", source == AlarmSource.SHUFFLE_ALL) { pick(AlarmSource.SHUFFLE_ALL) }
                 AlarmPill("Liked Songs", source == AlarmSource.LIKED_SONGS) { pick(AlarmSource.LIKED_SONGS) }
                 AlarmPill("Daily Mix", source == AlarmSource.DAILY_MIX) { pick(AlarmSource.DAILY_MIX) }

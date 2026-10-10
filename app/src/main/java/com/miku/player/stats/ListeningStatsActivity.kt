@@ -1,5 +1,6 @@
 package com.miku.player.stats
 
+import com.miku.player.Mascot
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
@@ -88,7 +89,7 @@ fun ListeningStatsSettingsCard(ctx: Context) {
         Modifier
             .fillMaxWidth()
             .clip(CardShape)
-            .background(Brush.verticalGradient(listOf(Surface1, Color(0xFF071B20))))
+            .background(Brush.verticalGradient(listOf(Surface1, Mascot.color(0xFF071B20))))
             .border(1.dp, MikuTealBright.copy(alpha = 0.35f), CardShape)
             .padding(16.dp)
     ) {
@@ -117,10 +118,10 @@ fun ListeningStatsSettingsCard(ctx: Context) {
                 .padding(vertical = 4.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Icon(Icons.Default.AutoAwesome, "Miku Rewind", tint = MikuNeonPink, modifier = Modifier.size(20.dp))
+            Icon(Icons.Default.AutoAwesome, "${Mascot.name} Rewind", tint = MikuNeonPink, modifier = Modifier.size(20.dp))
             Spacer(Modifier.width(10.dp))
             Column(Modifier.weight(1f)) {
-                Text("Miku Rewind", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                Text("${Mascot.name} Rewind", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
                 Text("Your week, month, year and all-time recap as story cards you can share", color = Muted, fontSize = 11.5.sp, lineHeight = 15.sp)
             }
             Icon(Icons.AutoMirrored.Filled.ArrowBack, null, tint = MikuNeonPink, modifier = Modifier.size(18.dp).rotate(180f))
@@ -149,7 +150,7 @@ private fun StatsToggleRow(title: String, subtitle: String, checked: Boolean, en
         verticalAlignment = Alignment.CenterVertically
     ) {
         Column(Modifier.weight(1f)) {
-            Text(title, color = if (enabled) Color(0xFFE8F4F2) else Muted, fontSize = 13.5.sp, fontWeight = FontWeight.SemiBold)
+            Text(title, color = if (enabled) Mascot.color(0xFFE8F4F2) else Muted, fontSize = 13.5.sp, fontWeight = FontWeight.SemiBold)
             Text(subtitle, color = Muted, fontSize = 11.sp, lineHeight = 14.sp)
         }
         Spacer(Modifier.width(10.dp))
@@ -158,15 +159,15 @@ private fun StatsToggleRow(title: String, subtitle: String, checked: Boolean, en
             Modifier
                 .width(44.dp).height(24.dp)
                 .clip(RoundedCornerShape(12.dp))
-                .background(if (checked && enabled) MikuTealBright.copy(alpha = 0.28f) else Color(0xFF123438))
-                .border(1.dp, if (checked && enabled) MikuTealBright.copy(alpha = 0.7f) else Color(0xFF1E4A50), RoundedCornerShape(12.dp))
+                .background(if (checked && enabled) MikuTealBright.copy(alpha = 0.28f) else Mascot.color(0xFF123438))
+                .border(1.dp, if (checked && enabled) MikuTealBright.copy(alpha = 0.7f) else Mascot.color(0xFF1E4A50), RoundedCornerShape(12.dp))
         ) {
             Box(
                 Modifier
                     .padding(start = if (checked) 22.dp else 3.dp, top = 3.dp)
                     .size(18.dp)
                     .clip(CircleShape)
-                    .background(if (checked && enabled) MikuTealBright else Color(0xFF3A6B70))
+                    .background(if (checked && enabled) MikuTealBright else Mascot.color(0xFF3A6B70))
             )
         }
     }
@@ -217,7 +218,7 @@ fun ListeningStatsScreen(onBack: () -> Unit) {
     Box(Modifier.fillMaxSize().background(CyberDarkBg)) {
         Box(
             Modifier.fillMaxSize().background(
-                Brush.verticalGradient(listOf(Color(0xFF0A2A30), CyberDarkBg, Color(0xFF07161A)))
+                Brush.verticalGradient(listOf(Mascot.color(0xFF0A2A30), CyberDarkBg, Mascot.color(0xFF07161A)))
             )
         )
         LazyColumn(Modifier.fillMaxSize().statusBarsPadding().padding(horizontal = 16.dp)) {
@@ -304,7 +305,7 @@ fun ListeningStatsScreen(onBack: () -> Unit) {
                         val total = outputs.sumOf { it.playedMs }.coerceAtLeast(1L)
                         outputs.forEach { o ->
                             Row(Modifier.fillMaxWidth().padding(vertical = 3.dp), verticalAlignment = Alignment.CenterVertically) {
-                                Text(outputLabel(o.output), color = Color(0xFFE8F4F2), fontSize = 12.5.sp, modifier = Modifier.width(78.dp))
+                                Text(outputLabel(o.output), color = Mascot.color(0xFFE8F4F2), fontSize = 12.5.sp, modifier = Modifier.width(78.dp))
                                 Box(Modifier.weight(1f).height(8.dp).clip(RoundedCornerShape(4.dp)).background(Color.White.copy(alpha = 0.06f))) {
                                     Box(Modifier.fillMaxWidth(o.playedMs.toFloat() / total).height(8.dp).background(MikuTeal))
                                 }
@@ -353,7 +354,7 @@ private fun StatsCard(title: String, content: @Composable () -> Unit) {
         Modifier
             .fillMaxWidth()
             .clip(CardShape)
-            .background(Brush.verticalGradient(listOf(Surface1, Color(0xFF071B20))))
+            .background(Brush.verticalGradient(listOf(Surface1, Mascot.color(0xFF071B20))))
             .border(1.dp, MikuTealBright.copy(alpha = 0.3f), CardShape)
             .padding(16.dp)
     ) {
@@ -405,7 +406,7 @@ private fun BigStat(modifier: Modifier, value: String, label: String) {
 @Composable
 private fun SmallStat(modifier: Modifier, value: String, label: String) {
     Column(modifier, horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(value, color = Color(0xFFE8F4F2), fontSize = 15.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
+        Text(value, color = Mascot.color(0xFFE8F4F2), fontSize = 15.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
         Text(label, color = Muted, fontSize = 10.sp)
     }
 }

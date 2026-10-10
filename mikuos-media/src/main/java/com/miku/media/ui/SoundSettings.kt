@@ -1,5 +1,6 @@
 package com.miku.media.ui
 
+import com.miku.media.Mascot
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -125,7 +126,7 @@ private fun SwitchRow(title: String, subtitle: String?, checked: Boolean, onChan
         Switch(
             checked = checked,
             onCheckedChange = onChange,
-            colors = SwitchDefaults.colors(checkedThumbColor = Color(0xFF00201D), checkedTrackColor = MikuTeal)
+            colors = SwitchDefaults.colors(checkedThumbColor = Mascot.color(0xFF00201D), checkedTrackColor = MikuTeal)
         )
     }
 }

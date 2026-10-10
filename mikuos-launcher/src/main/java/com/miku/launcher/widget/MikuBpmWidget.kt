@@ -1,5 +1,6 @@
 package com.miku.launcher.widget
 
+import com.miku.launcher.Mascot
 import android.appwidget.AppWidgetManager
 import android.appwidget.AppWidgetProvider
 import android.content.ComponentName
@@ -51,7 +52,7 @@ class MikuBpmWidget : AppWidgetProvider() {
             val line1 = when {
                 title.isNotEmpty() && artist.isNotEmpty() -> "$title · $artist"
                 title.isNotEmpty() -> title
-                else -> "MIKU MUSIC"
+                else -> "${Mascot.musicAppName.uppercase()}"
             }
             v.setTextViewText(R.id.widget_bpm_title, line1)
             v.setTextViewText(
@@ -60,7 +61,7 @@ class MikuBpmWidget : AppWidgetProvider() {
             )
             v.setTextColor(
                 R.id.widget_bpm_value,
-                if (playing) 0xFFFF4FA3.toInt() else 0xFF9FF3EC.toInt()
+                if (playing) Mascot.argb(0xFFFF4FA3.toInt()) else Mascot.argb(0xFF9FF3EC.toInt())
             )
 
             // Tapping a BPM widget opens the game itself, not just the home screen.

@@ -1,5 +1,6 @@
 package com.miku.settings.lock
 
+import com.miku.settings.Mascot
 import android.view.HapticFeedbackConstants
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
@@ -55,7 +56,7 @@ import java.util.Locale
 fun MikuLockBackdrop(content: @Composable BoxScope.() -> Unit) {
     Box(
         Modifier.fillMaxSize().background(
-            Brush.verticalGradient(listOf(Color(0xFF0B2A2E), MikuDarkBg, Color(0xFF05080A)))
+            Brush.verticalGradient(listOf(Mascot.color(0xFF0B2A2E), MikuDarkBg, Mascot.color(0xFF05080A)))
         ),
         content = content
     )

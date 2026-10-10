@@ -358,7 +358,7 @@ class Skin(
     private fun play(ids: List<Long>, start: Int) {
         if (!link.connected) {
             link.connect()
-            push(MessageScreen("Miku Music", "Miku Music isn't answering yet. Give it a second and try again."))
+            push(MessageScreen("${Mascot.musicAppName}", "${Mascot.musicAppName} isn't answering yet. Give it a second and try again."))
             return
         }
         if (link.playIds(ids, start)) push(NowPlayingScreen())
@@ -367,7 +367,7 @@ class Skin(
     private fun shuffleSongs() {
         if (!link.connected) {
             link.connect()
-            push(MessageScreen("Miku Music", "Miku Music isn't answering yet. Give it a second and try again."))
+            push(MessageScreen("${Mascot.musicAppName}", "${Mascot.musicAppName} isn't answering yet. Give it a second and try again."))
             return
         }
         if (link.shuffleAll()) push(NowPlayingScreen())
@@ -376,7 +376,7 @@ class Skin(
     // ---- menus -------------------------------------------------------------------------------
 
     private fun needLibrary(): Screen? = when {
-        !hasPermission -> MessageScreen("Music", "Allow music access to browse your library. Exit and open MikuPod again to be asked.")
+        !hasPermission -> MessageScreen("Music", "Allow music access to browse your library. Exit and open ${Mascot.name}Pod again to be asked.")
         !libLoaded -> MessageScreen("Music", "Reading your library...")
         lib.songs.isEmpty() -> MessageScreen("Music", "No music found.")
         else -> null
@@ -513,7 +513,7 @@ class Skin(
         val screen = MenuScreen("Playlists", StaticRows { emptyList() })
         if (!link.connected) {
             link.connect()
-            return MessageScreen("Playlists", "Miku Music isn't answering yet. Give it a second and try again.")
+            return MessageScreen("Playlists", "${Mascot.musicAppName} isn't answering yet. Give it a second and try again.")
         }
         link.children("[playlists]") { items ->
             val rows = items.map { item ->
@@ -683,12 +683,12 @@ class Skin(
     private fun legalScreen() = TextScreen("Legal", listOf(
         Brand.TRIBUTE,
         "${Brand.NAME} recreates the look of four click-wheel music players from 2001 to 2007 as a homage. " +
-            "All art on these screens was redrawn for MikuOS. No original images or fonts are included.",
+            "All art on these screens was redrawn for ${Mascot.osName}. No original images or fonts are included.",
         "Pixel Operator by Jayvee Enaguas. CC0 1.0, public domain.",
         "PT Sans by ParaType. SIL Open Font License 1.1.",
         "Liberation Sans by Red Hat. SIL Open Font License 1.1.",
         "Full license texts ship inside the app, in assets/licenses.",
-        "Music plays through Miku Music.",
+        "Music plays through ${Mascot.musicAppName}.",
     ))
 
     companion object {

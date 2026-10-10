@@ -1,5 +1,6 @@
 package com.miku.launcher.ui
 
+import com.miku.launcher.Mascot
 import android.accessibilityservice.AccessibilityServiceInfo
 import android.app.Activity
 import android.content.Context
@@ -54,7 +55,7 @@ object MikuSemanticsGate {
             android.util.Log.i(
                 "MikuSemanticsGate",
                 if (mode == View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS)
-                    "only the MikuOS nav service is enabled; Compose semantics switched off for this window"
+                    "only the ${Mascot.osName} nav service is enabled; Compose semantics switched off for this window"
                 else "a content-reading accessibility service is enabled; semantics left on"
             )
         }

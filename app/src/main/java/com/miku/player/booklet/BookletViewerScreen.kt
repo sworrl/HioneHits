@@ -1,5 +1,6 @@
 package com.miku.player.booklet
 
+import com.miku.player.Mascot
 import android.app.Activity
 import android.content.pm.ActivityInfo
 import android.content.res.Configuration
@@ -367,7 +368,7 @@ private fun InsideCoverFace() {
     Box(
         Modifier.fillMaxSize()
             .clip(RoundedCornerShape(3.dp))
-            .background(Brush.linearGradient(listOf(Color(0xFF0B2226), Surface1, Color(0xFF07191C))))
+            .background(Brush.linearGradient(listOf(Mascot.color(0xFF0B2226), Surface1, Mascot.color(0xFF07191C))))
             .border(1.dp, MikuTeal.copy(alpha = 0.25f), RoundedCornerShape(3.dp)),
         contentAlignment = Alignment.Center
     ) {
@@ -467,7 +468,7 @@ private fun PaperFrame(kind: ArtKind, modifier: Modifier, content: @Composable (
         modifier
             .shadow(10.dp, shape, clip = false, ambientColor = Color.Black, spotColor = Color.Black)
             .clip(shape)
-            .background(Color(0xFF07171A))
+            .background(Mascot.color(0xFF07171A))
             .drawWithContent {
                 drawContent()
                 val w = size.width; val h = size.height

@@ -407,7 +407,7 @@ class RiotShell(private val activity: RiotActivity, unlocked: Boolean) {
         val tiny = RiotAssets.tiny
         // Title, clipped at the edge like the real screen.
         val title = when {
-            !media.connected -> "Miku Music is off"
+            !media.connected -> "${Mascot.musicAppName} is off"
             now.loaded -> now.title.ifBlank { "Untitled" }
             else -> "No music loaded"
         }
@@ -435,7 +435,7 @@ class RiotShell(private val activity: RiotActivity, unlocked: Boolean) {
         if (showInfo) { drawTrackInfo(c); return }
         val q = now.queue
         if (q.isEmpty()) {
-            c.text(RiotAssets.small, 8, 74, if (media.connected) "Press MENU and pick some music." else "Start Miku Music, then come back.")
+            c.text(RiotAssets.small, 8, 74, if (media.connected) "Press MENU and pick some music." else "Start ${Mascot.musicAppName}, then come back.")
             return
         }
         val cur = now.index.coerceIn(0, q.size - 1)
@@ -667,7 +667,7 @@ class RiotShell(private val activity: RiotActivity, unlocked: Boolean) {
         if (songs.isEmpty()) { flash("No songs match."); return }
         if (prefs.radioMode) enterPlayer()
         if (!media.load(songs.map { it.id }, start)) {
-            flash("Miku Music isn't answering. Open it once, then try again.")
+            flash("${Mascot.musicAppName} isn't answering. Open it once, then try again.")
             return
         }
         played.clear()
@@ -892,7 +892,7 @@ class RiotShell(private val activity: RiotActivity, unlocked: Boolean) {
         if (v != null) {
             prefs.bass = v[0]; prefs.treble = v[1]
             pop()
-            flash("Saved. Miku Music's own EQ shapes the sound. This one is only for the look.", ms = 2600)
+            flash("Saved. ${Mascot.musicAppName}'s own EQ shapes the sound. This one is only for the look.", ms = 2600)
         } else pop()
     }
 
@@ -1049,7 +1049,7 @@ class RiotShell(private val activity: RiotActivity, unlocked: Boolean) {
     private fun confirmDelete(name: String) {
         push(DialogPage("Delete...", name, "Delete File", listOf(DRow.Text("Delete $name from the player?")), listOf("Delete File", "Cancel")) { _, b ->
             pop()
-            if (b == 0) flash("Riot mode leaves your files alone. Delete them in Miku Music if you mean it.", ms = 3200)
+            if (b == 0) flash("Riot mode leaves your files alone. Delete them in ${Mascot.musicAppName} if you mean it.", ms = 3200)
         })
     }
 
@@ -1123,7 +1123,7 @@ class RiotShell(private val activity: RiotActivity, unlocked: Boolean) {
         val ap = Choice(listOf(if (cal.get(Calendar.AM_PM) == Calendar.AM) "AM" else "PM"), 0, editable = false)
         return DialogPage("Preferences", "Time / Date", "Set Time / Date:",
             listOf(DRow.Boxes("Date:", listOf(month, day, yr)), DRow.Boxes("Time:", listOf(hh, mm, ap)),
-                DRow.Text("MikuOS keeps the clock set for you."))) { _, _ -> pop() }
+                DRow.Text("${Mascot.osName} keeps the clock set for you."))) { _, _ -> pop() }
     }
 
     private fun infoLines(): Pair<String, List<String>> {
@@ -1148,7 +1148,7 @@ class RiotShell(private val activity: RiotActivity, unlocked: Boolean) {
 
     fun openExit() {
         val home = RiotSystem.isDefaultHome(activity)
-        val text = (if (home) "Go back to the Miku home screen. Riot mode stops being your launcher." else "Go back to the Miku home screen.") +
+        val text = (if (home) "Go back to the ${Mascot.name} home screen. Riot mode stops being your launcher." else "Go back to the ${Mascot.name} home screen.") +
             "\n\n" + TRIBUTE
         push(DialogPage("Preferences", "Exit Riot Mode", "Exit Riot Mode", listOf(DRow.Text(text)), listOf("Exit", "Cancel")) { _, b ->
             if (b == 0) { if (prefs.radioMode) fm.powerOff(); activity.exitRiot() } else pop()

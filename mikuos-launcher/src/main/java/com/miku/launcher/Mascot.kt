@@ -483,7 +483,11 @@ object Mascot {
             ?.trim()?.lowercase()?.ifEmpty { null } ?: DEFAULT_ID
         val p = resolve(ctx, id) ?: MascotPacks.MIKU
         if (Looper.myLooper() == Looper.getMainLooper()) apply(p) else Handler(Looper.getMainLooper()).post { apply(p) }
-        syncAliases(ctx, p, onlyOwn = true)
+        // The launcher and MikuSettings hold CHANGE_COMPONENT_ENABLED_STATE and put every app's
+        // labels in line, so a pack set from adb switches the home screen too. Others do their own.
+        val all = ctx.checkSelfPermission("android.permission.CHANGE_COMPONENT_ENABLED_STATE") ==
+            PackageManager.PERMISSION_GRANTED
+        Thread { syncAliases(ctx, p, onlyOwn = !all) }.apply { isDaemon = true }.start()
     }
 
     private fun apply(p: MascotPack) {

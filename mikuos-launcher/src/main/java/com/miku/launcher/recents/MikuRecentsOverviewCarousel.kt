@@ -1,5 +1,7 @@
 package com.miku.launcher.recents
 
+import com.miku.launcher.Mascot
+import com.miku.launcher.mascotPainter
 import android.content.Context
 import android.graphics.drawable.Drawable
 import androidx.compose.animation.*
@@ -65,7 +67,7 @@ fun MikuRecentsOverviewCarousel(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xEE030D14))
+            .background(Mascot.color(0xEE030D14))
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null,
@@ -143,7 +145,7 @@ fun MikuRecentsOverviewCarousel(
                     Box(
                         modifier = Modifier
                             .clip(RoundedCornerShape(12.dp))
-                            .background(Brush.horizontalGradient(listOf(Color(0x33FF1744), Color(0x3300E5FF))))
+                            .background(Brush.horizontalGradient(listOf(Color(0x33FF1744), Mascot.color(0x3300E5FF))))
                             .border(1.dp, MikuCyan.copy(alpha = 0.7f), RoundedCornerShape(12.dp))
                             .clickable {
                                 currentTasks.clear()
@@ -258,13 +260,13 @@ fun LiveAppSnapshotCard(task: RecentTaskItem) {
     val brandColor = remember(task.packageName) {
         val p = task.packageName.lowercase()
         when {
-            p.contains("player") || p.contains("music") -> Color(0xFF00E5FF)
+            p.contains("player") || p.contains("music") -> Mascot.color(0xFF00E5FF)
             p.contains("settings") -> Color(0xFF7C4DFF)
-            p.contains("camera") -> Color(0xFFFF4081)
+            p.contains("camera") -> Mascot.color(0xFFFF4081)
             p.contains("gallery") || p.contains("photo") -> com.miku.launcher.ui.MikuIdentity.Gold
             p.contains("firefox") || p.contains("chrome") || p.contains("browser") -> Color(0xFFFF6D00)
             p.contains("radio") -> com.miku.launcher.ui.MikuIdentity.Leek
-            else -> Color(0xFF00E5FF)
+            else -> Mascot.color(0xFF00E5FF)
         }
     }
 
@@ -273,7 +275,7 @@ fun LiveAppSnapshotCard(task: RecentTaskItem) {
             .fillMaxWidth()
             .fillMaxHeight()
             .clip(RoundedCornerShape(20.dp))
-            .background(Color(0xFF071924))
+            .background(Mascot.color(0xFF071924))
             .border(
                 BorderStroke(
                     1.5.dp,
@@ -293,13 +295,13 @@ fun LiveAppSnapshotCard(task: RecentTaskItem) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(Color(0xFF0B2433))
+                    .background(Mascot.color(0xFF0B2433))
                     .padding(horizontal = 14.dp, vertical = 10.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 if (task.iconRes != null) {
                     Image(
-                        painter = painterResource(id = task.iconRes),
+                        painter = mascotPainter(id = task.iconRes),
                         contentDescription = task.label,
                         modifier = Modifier.size(24.dp)
                     )
@@ -342,8 +344,8 @@ fun LiveAppSnapshotCard(task: RecentTaskItem) {
                     .background(
                         Brush.verticalGradient(
                             listOf(
-                                Color(0xFF041017),
-                                Color(0xFF02090D)
+                                Mascot.color(0xFF041017),
+                                Mascot.color(0xFF02090D)
                             )
                         )
                     )
@@ -381,7 +383,7 @@ fun LiveAppSnapshotCard(task: RecentTaskItem) {
                         // Generic App View Mockup
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             if (task.iconRes != null) {
-                                Image(painter = painterResource(id = task.iconRes), contentDescription = null, modifier = Modifier.size(64.dp))
+                                Image(painter = mascotPainter(id = task.iconRes), contentDescription = null, modifier = Modifier.size(64.dp))
                             }
                             Spacer(Modifier.height(12.dp))
                             Text(task.label, color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold, fontFamily = AudiowideFont)

@@ -27,7 +27,7 @@ object RootShell {
         suAbsent = true
         if (loggedAbsence.compareAndSet(false, true)) {
             Log.i(TAG, "no root available ($reason) - optional root-backed extras are off. " +
-                "This is the normal supported state on MikuOS; every feature has a root-free path.")
+                "This is the normal supported state on ${Mascot.osName}; every feature has a root-free path.")
         }
     }
 

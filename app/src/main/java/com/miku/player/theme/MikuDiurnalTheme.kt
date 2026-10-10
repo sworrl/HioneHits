@@ -1,5 +1,6 @@
 package com.miku.player.theme
 
+import com.miku.player.Mascot
 import android.graphics.Color as AndroidColor
 import androidx.compose.runtime.*
 import androidx.compose.ui.graphics.Color
@@ -71,7 +72,7 @@ object MikuDiurnalTheme {
                     accent = getColor(120f),
                     glow = getColor(0f, alpha = 0.65f),
                     border = getColor(0f, saturation = 0.55f, brightness = 0.85f, alpha = 0.65f),
-                    backgroundGradient = listOf(Color(0xFF041018), Color(0xFF02080D)),
+                    backgroundGradient = listOf(Mascot.color(0xFF041018), Color(0xFF02080D)),
                     currentHue = getDiurnalHue()
                 )
             )

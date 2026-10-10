@@ -1,5 +1,6 @@
 package com.miku.launcher.bpm
 
+import com.miku.launcher.Mascot
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
@@ -61,8 +62,8 @@ fun MikuStageStrip(modifier: Modifier = Modifier) {
 private fun CrowdMeter(crowd: Float, mood: MikuStagePerformance.Mood) {
     val animated by animateFloatAsState(crowd, tween(260), label = "crowd")
     val tone = when {
-        animated > 78f -> Color(0xFF39C5BB)
-        animated > 45f -> Color(0xFF7FE6DE)
+        animated > 78f -> Mascot.color(0xFF39C5BB)
+        animated > 45f -> Mascot.color(0xFF7FE6DE)
         animated > 22f -> Color(0xFFFFCF6B)
         else -> Color(0xFFFF4D5E)
     }
@@ -102,15 +103,15 @@ private fun ChaosBanner(chaos: MikuStagePerformance.Chaos) {
             .fillMaxWidth()
             .padding(top = 6.dp)
             .clip(RoundedCornerShape(8.dp))
-            .background(Color(0x33FF2277))
+            .background(Mascot.color(0x33FF2277))
             .padding(horizontal = 10.dp, vertical = 5.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(chaos.title, color = Color(0xFFFF6FA6), fontSize = 10.sp, fontWeight = FontWeight.Black, maxLines = 1)
+        Text(chaos.title, color = Mascot.color(0xFFFF6FA6), fontSize = 10.sp, fontWeight = FontWeight.Black, maxLines = 1)
         Spacer(Modifier.width(8.dp))
         Text(
             chaos.blurb,
-            color = Color(0xFFE8F4F2),
+            color = Mascot.color(0xFFE8F4F2),
             fontSize = 9.5.sp,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
@@ -122,19 +123,19 @@ private fun ChaosBanner(chaos: MikuStagePerformance.Chaos) {
 @Composable
 private fun MikuSays(mood: MikuStagePerformance.Mood, line: String) {
     val tone = when (mood) {
-        MikuStagePerformance.Mood.UNHINGED, MikuStagePerformance.Mood.HYPED -> Color(0xFF7FE6DE)
+        MikuStagePerformance.Mood.UNHINGED, MikuStagePerformance.Mood.HYPED -> Mascot.color(0xFF7FE6DE)
         MikuStagePerformance.Mood.DEVASTATED, MikuStagePerformance.Mood.WORRIED -> Color(0xFFFFCF6B)
-        else -> Color(0xFFE0F7FA)
+        else -> Mascot.color(0xFFE0F7FA)
     }
     Row(
         Modifier
             .fillMaxWidth()
             .padding(top = 6.dp)
             .clip(RoundedCornerShape(10.dp))
-            .background(Color(0x2239C5BB))
+            .background(Mascot.color(0x2239C5BB))
             .padding(horizontal = 10.dp, vertical = 6.dp)
     ) {
-        Text("MIKU", color = Color(0xFF39C5BB), fontSize = 9.sp, fontWeight = FontWeight.Black)
+        Text("${Mascot.nameUpper}", color = Mascot.color(0xFF39C5BB), fontSize = 9.sp, fontWeight = FontWeight.Black)
         Spacer(Modifier.width(8.dp))
         Text(line, color = tone, fontSize = 11.sp, lineHeight = 14.sp, modifier = Modifier.weight(1f))
     }
@@ -169,7 +170,7 @@ private fun SetOverCard() {
             .fillMaxWidth()
             .padding(top = 8.dp)
             .clip(RoundedCornerShape(12.dp))
-            .background(Color(0xCC1A0410))
+            .background(Mascot.color(0xCC1A0410))
             .padding(14.dp)
     ) {
         Text("THE ROOM EMPTIED", color = Color(0xFFFF4D5E), fontSize = 14.sp, fontWeight = FontWeight.Black)
@@ -177,17 +178,17 @@ private fun SetOverCard() {
         Text(
             "Peak crowd this set: ${MikuStagePerformance.peakCrowd.toInt()}%. " +
                 "You keep every leek you earned. What you lost was the room.",
-            color = Color(0xFFE8F4F2), fontSize = 11.sp, lineHeight = 15.sp
+            color = Mascot.color(0xFFE8F4F2), fontSize = 11.sp, lineHeight = 15.sp
         )
         Spacer(Modifier.height(10.dp))
         Text(
             "GO BACK ON",
-            color = Color(0xFF04161A),
+            color = Mascot.color(0xFF04161A),
             fontSize = 12.sp,
             fontWeight = FontWeight.Black,
             modifier = Modifier
                 .clip(RoundedCornerShape(8.dp))
-                .background(Color(0xFF39C5BB))
+                .background(Mascot.color(0xFF39C5BB))
                 .clickable { MikuStagePerformance.encore() }
                 .padding(horizontal = 14.dp, vertical = 7.dp)
         )

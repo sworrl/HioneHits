@@ -70,12 +70,13 @@ enum class SettingsSection(val title: String, val icon: ImageVector, val desc: S
     NOTIFICATIONS("Notifications", Icons.Default.Notifications, "App notifications and Do Not Disturb", "notifications"),
     SOUND("Sound & vibration", Icons.Default.VolumeUp, "Volume, ring mode, ringtones and system sounds", "sound"),
     DISPLAY("Display & Light", Icons.Default.BrightnessMedium, "Brightness, light sensor, screen timeout and theme"),
+    MASCOT("Theme & mascot", Icons.Default.Palette, "Mascot, colors and names, holiday art and reminders", "mascot"),
     BATTERY("Battery & Power", Icons.Default.BatteryChargingFull, "Live readings, battery saver and app battery use"),
     SECURITY("Security & privacy", Icons.Default.Lock, "Screen lock, permissions, device admins", "security"),
     LOCATION("Location", Icons.Default.LocationOn, "Location on or off, app access and scanning", "location"),
     ACCESSIBILITY("Accessibility", Icons.Default.Accessibility, "Services, color, text and interaction", "a11y"),
     SYSTEM("System", Icons.Default.SettingsApplications, "Languages, keyboard, date and time, accounts, users, reset", "system"),
-    SYSTEM_ABOUT("About MikuOS", Icons.Default.Info, "Build, kernel, SoC and permissions as the system reports them")
+    SYSTEM_ABOUT("About ${Mascot.osName}", Icons.Default.Info, "Build, kernel, SoC and permissions as the system reports them")
 }
 
 class MikuSettingsActivity : ComponentActivity() {
@@ -153,7 +154,7 @@ fun MikuOSSettingsApp(initialSection: SettingsSection?, onExit: () -> Unit) {
                 title = {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(
-                            if (currentSection == null) "MIKU" else currentSection!!.title,
+                            if (currentSection == null) "${Mascot.nameUpper}" else currentSection!!.title,
                             color = MikuTealBright,
                             fontSize = 17.sp,
                             fontWeight = FontWeight.Black
@@ -232,7 +233,7 @@ fun MikuOSSettingsApp(initialSection: SettingsSection?, onExit: () -> Unit) {
                                     decorationBox = { innerTextField ->
                                         if (searchQuery.isEmpty()) {
                                             Text(
-                                                "Search MikuOS settings...",
+                                                "Search ${Mascot.osName} settings...",
                                                 color = MikuMuted,
                                                 fontSize = 13.sp
                                             )
@@ -377,7 +378,7 @@ fun AudioDacScreen(ctx: Context) {
             Modifier
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(14.dp))
-                .background(Color(0xFF0B242A))
+                .background(Mascot.color(0xFF0B242A))
                 .border(1.dp, MikuTealBright.copy(alpha = 0.4f), RoundedCornerShape(14.dp))
                 .clickable { DacSettingsLink.open(ctx) }
                 .padding(16.dp),
@@ -409,7 +410,7 @@ fun FnSwitchScreen(ctx: Context) {
     // three modes - speaker mute / display flip / recorder - that nothing implemented, so the
     // real value "touch_and_key_lock" matched nothing and the screen mislabelled the mode.)
     val fnOptions = listOf(
-        "touch_and_key_lock" to ("Screen and keys (default)" to "Locks the touchscreen, side buttons and power button so nothing gets pressed in a pocket. The volume wheel still works unless you turn that off in Miku Music."),
+        "touch_and_key_lock" to ("Screen and keys (default)" to "Locks the touchscreen, side buttons and power button so nothing gets pressed in a pocket. The volume wheel still works unless you turn that off in ${Mascot.musicAppName}."),
         "touch_lock" to ("Touchscreen only" to "Locks the touchscreen. The side buttons and volume wheel still work"),
         "key_lock" to ("Keys only" to "Locks the side buttons. The touchscreen still works")
     )
@@ -727,7 +728,7 @@ fun WirelessScreen(ctx: Context) {
                                 adbPort = WirelessAdbManager.currentPort()
                             }
                         },
-                        colors = SwitchDefaults.colors(checkedThumbColor = MikuTealBright, checkedTrackColor = Color(0xFF0F3238))
+                        colors = SwitchDefaults.colors(checkedThumbColor = MikuTealBright, checkedTrackColor = Mascot.color(0xFF0F3238))
                     )
                 }
             }
@@ -791,7 +792,7 @@ fun WirelessScreen(ctx: Context) {
                     "Fi data needs the Google Fi app. If data won't connect, open it and finish activation.",
                     color = Color(0xB3FFFFFF), fontSize = 11.sp, lineHeight = 14.sp
                 )
-                if (opInfo.isNotBlank()) { Spacer(Modifier.height(4.dp)); Text(opInfo, color = Color(0xFF7BE8DF), fontSize = 11.sp) }
+                if (opInfo.isNotBlank()) { Spacer(Modifier.height(4.dp)); Text(opInfo, color = Mascot.color(0xFF7BE8DF), fontSize = 11.sp) }
                 Spacer(Modifier.height(8.dp))
                 val fiIntent = remember { ctx.packageManager.getLaunchIntentForPackage("com.google.android.apps.tycho") }
                 if (fiIntent != null) {
@@ -856,7 +857,7 @@ fun BluetoothScreen(ctx: Context) {
             textContentColor = MikuMuted,
             title = { Text("Lower Bluetooth audio quality?", fontWeight = FontWeight.Bold) },
             text = {
-                Text("$what\n\nMikuOS keeps Bluetooth on the highest quality your headphones support. " +
+                Text("$what\n\n${Mascot.osName} keeps Bluetooth on the highest quality your headphones support. " +
                     "This change lets the link use a lower-quality codec or bitrate until you raise it again.")
             },
             confirmButton = {
@@ -937,7 +938,7 @@ fun BluetoothScreen(ctx: Context) {
                         },
                         colors = SwitchDefaults.colors(
                             checkedThumbColor = MikuTealBright,
-                            checkedTrackColor = Color(0xFF0F3238)
+                            checkedTrackColor = Mascot.color(0xFF0F3238)
                         )
                     )
                 }
@@ -962,12 +963,12 @@ fun BluetoothScreen(ctx: Context) {
 
                         Text(
                             text = if (isScanning) "Searching..." else "+ Scan",
-                            color = if (isScanning) Color(0xFFFF4081) else MikuTealBright,
+                            color = if (isScanning) Mascot.color(0xFFFF4081) else MikuTealBright,
                             fontSize = 11.5.sp,
                             fontWeight = FontWeight.Bold,
                             modifier = Modifier
                                 .clip(RoundedCornerShape(6.dp))
-                                .background(if (isScanning) Color(0x22FF4081) else Color(0x2200E5FF))
+                                .background(if (isScanning) Mascot.color(0x22FF4081) else Mascot.color(0x2200E5FF))
                                 .clickable {
                                     if (isScanning) {
                                         com.miku.settings.bluetooth.MikuBluetoothController.stopScan()
@@ -1004,7 +1005,7 @@ fun BluetoothScreen(ctx: Context) {
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .clip(RoundedCornerShape(12.dp))
-                                        .background(if (devItem.isConnected) Color(0x2200E5FF) else MikuSurface2)
+                                        .background(if (devItem.isConnected) Mascot.color(0x2200E5FF) else MikuSurface2)
                                         .border(1.dp, if (devItem.isConnected) MikuTealBright else Color.Transparent, RoundedCornerShape(12.dp))
                                         .clickable {
                                             if (!devItem.isConnected && !devItem.isConnecting) {
@@ -1135,14 +1136,14 @@ fun BluetoothScreen(ctx: Context) {
                                     com.miku.settings.bluetooth.MikuBluetoothController.startScan()
                                 }
                             },
-                            colors = ButtonDefaults.buttonColors(containerColor = if (isScanning) Color(0x33FF4081) else Color(0x3300E5FF)),
+                            colors = ButtonDefaults.buttonColors(containerColor = if (isScanning) Mascot.color(0x33FF4081) else Mascot.color(0x3300E5FF)),
                             contentPadding = PaddingValues(horizontal = 10.dp, vertical = 3.dp),
                             shape = RoundedCornerShape(8.dp),
                             modifier = Modifier.height(28.dp)
                         ) {
                             Text(
                                 text = if (isScanning) "Stop" else "Scan",
-                                color = if (isScanning) Color(0xFFFF80AB) else MikuTealBright,
+                                color = if (isScanning) Mascot.color(0xFFFF80AB) else MikuTealBright,
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.Bold
                             )
@@ -1199,7 +1200,7 @@ fun BluetoothScreen(ctx: Context) {
                                     }
                                     Button(
                                         onClick = { com.miku.settings.bluetooth.MikuBluetoothController.pairDevice(devItem.device) },
-                                        colors = ButtonDefaults.buttonColors(containerColor = Color(0x3300E5FF)),
+                                        colors = ButtonDefaults.buttonColors(containerColor = Mascot.color(0x3300E5FF)),
                                         contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
                                         shape = RoundedCornerShape(8.dp),
                                         modifier = Modifier.height(26.dp)
@@ -1232,7 +1233,7 @@ fun BluetoothScreen(ctx: Context) {
                     )
                     Text(
                         if (aptxEnabled && aacEnabled && ldacQuality.contains("990")) "Locked to maximum. Set again on every connection"
-                        else "Lowered by you. MikuOS uses this instead of the maximum",
+                        else "Lowered by you. ${Mascot.osName} uses this instead of the maximum",
                         color = if (aptxEnabled && aacEnabled && ldacQuality.contains("990")) MikuTealBright else MikuGold,
                         fontSize = 11.sp
                     )
@@ -1289,7 +1290,7 @@ fun BluetoothScreen(ctx: Context) {
                         Switch(
                             checked = aptxEnabled,
                             onCheckedChange = { requestCodecChange(ldacQuality, it, aacEnabled, "Disable Qualcomm aptX / aptX HD") },
-                            colors = SwitchDefaults.colors(checkedThumbColor = MikuTealBright, checkedTrackColor = Color(0xFF0F3238))
+                            colors = SwitchDefaults.colors(checkedThumbColor = MikuTealBright, checkedTrackColor = Mascot.color(0xFF0F3238))
                         )
                     }
 
@@ -1308,7 +1309,7 @@ fun BluetoothScreen(ctx: Context) {
                         Switch(
                             checked = aacEnabled,
                             onCheckedChange = { requestCodecChange(ldacQuality, aptxEnabled, it, "Disable AAC") },
-                            colors = SwitchDefaults.colors(checkedThumbColor = MikuTealBright, checkedTrackColor = Color(0xFF0F3238))
+                            colors = SwitchDefaults.colors(checkedThumbColor = MikuTealBright, checkedTrackColor = Mascot.color(0xFF0F3238))
                         )
                     }
                 }
@@ -2005,7 +2006,7 @@ fun AboutScreen(ctx: Context) {
     val gkiTag = prop("ro.kernel.version")?.let { " (GKI $it)" } ?: ""
 
     Column(Modifier.mikuCard().padding(16.dp)) {
-        Text("ABOUT MIKUOS", color = MikuTealBright, fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+        Text("ABOUT ${Mascot.osNameUpper}", color = MikuTealBright, fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
         Spacer(Modifier.height(12.dp))
 
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -2022,14 +2023,14 @@ fun AboutScreen(ctx: Context) {
             Spacer(Modifier.width(14.dp))
             Column {
                 Text(model ?: android.os.Build.DEVICE ?: "unknown device", color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Bold)
-                Text("MikuOS ${mikuosVersion?.let { "v$it" } ?: "(version prop not set)"} · Android $androidRelease", color = MikuTeal, fontSize = 12.sp)
+                Text("${Mascot.osName} ${mikuosVersion?.let { "v$it" } ?: "(version prop not set)"} · Android $androidRelease", color = MikuTeal, fontSize = 12.sp)
             }
         }
 
         Spacer(Modifier.height(16.dp))
 
         AboutSpecRow("Device Identity", "${android.os.Build.MANUFACTURER} ${android.os.Build.MODEL} (${android.os.Build.DEVICE} / ${android.os.Build.PRODUCT})")
-        AboutSpecRow("MikuOS Version", mikuosVersion ?: "unknown (ro.mikuos.version not set)")
+        AboutSpecRow("${Mascot.osName} Version", mikuosVersion ?: "unknown (ro.mikuos.version not set)")
         AboutSpecRow("Android Release", "$androidRelease (API ${android.os.Build.VERSION.SDK_INT})$gkiTag")
         AboutSpecRow("Build", buildDisplay)
         AboutSpecRow("SoC", "$socModel · $cores cores")
@@ -2051,7 +2052,7 @@ fun AboutScreen(ctx: Context) {
         // exactly what it does (the launcher has no re-run entry point to call).
         SettingsLinkRow(
             icon = Icons.Default.Home,
-            title = "Open MikuOS Home",
+            title = "Open ${Mascot.osName} Home",
             subtitle = "Run the first-boot setup again from the launcher",
             onClick = {
                 try {

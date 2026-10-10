@@ -1,5 +1,6 @@
 package com.miku.launcher.observatory
 
+import com.miku.launcher.Mascot
 import android.content.Context
 import android.os.SystemClock
 import android.provider.Settings
@@ -107,9 +108,9 @@ fun MikuAnatomicalObservatoryModal(
     androidx.activity.compose.BackHandler(enabled = true) { onDismissRequest() }
 
     val green = Color(0xFF00FF7F)
-    val violet = Color(0xFFB388FF)
+    val violet = Mascot.color(0xFFB388FF)
     val gold = com.miku.launcher.ui.MikuIdentity.Gold
-    val nerveBlue = Color(0xFF00E5FF)
+    val nerveBlue = Mascot.color(0xFF00E5FF)
 
     Dialog(
         onDismissRequest = onDismissRequest,
@@ -122,7 +123,7 @@ fun MikuAnatomicalObservatoryModal(
                 // System-gesture-style dismiss: swipe up starting at the bottom edge of the card.
                 .swipeUpFromBottomToDismiss(onDismiss = onDismissRequest)
                 .clip(CutCornerShape(16.dp))
-                .background(Color(0xFF030D12))
+                .background(Mascot.color(0xFF030D12))
                 .border(
                     BorderStroke(
                         1.2.dp,
@@ -211,7 +212,7 @@ fun MikuAnatomicalObservatoryModal(
                                 .clip(RoundedCornerShape(8.dp))
                                 .background(
                                     if (isSelected) organ.accent.copy(alpha = 0.25f)
-                                    else Color(0xFF071822)
+                                    else Mascot.color(0xFF071822)
                                 )
                                 .border(
                                     1.dp,
@@ -273,13 +274,13 @@ fun MikuAnatomicalObservatoryModal(
                         }
                         item {
                             AnatomicalOrganCard(
-                                title = "BRAIN · MIKUOS",
+                                title = "BRAIN · ${Mascot.osNameUpper}",
                                 icon = Icons.Default.Memory,
-                                subtitle = "The build and every Miku app's version",
+                                subtitle = "The build and every ${Mascot.name} app's version",
                                 accentColor = green
                             ) {
                                 Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                                    Readout("MikuOS", facts.mikuosVersion, green)
+                                    Readout("${Mascot.osName}", facts.mikuosVersion, green)
                                     Readout("Build", facts.buildIncremental, green)
                                     Readout("Android", facts.androidVersion, green)
                                     Readout("Quick settings tiles", live.qsTiles, MikuCyan)
@@ -325,7 +326,7 @@ fun MikuAnatomicalObservatoryModal(
                                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                                         MetricPill("GAIN", facts.dacGain, green)
                                         MetricPill("FILTER", facts.dacFilter, MikuCyan)
-                                        MetricPill("DRE", facts.dacDre, Color(0xFFFF4081))
+                                        MetricPill("DRE", facts.dacDre, Mascot.color(0xFFFF4081))
                                     }
                                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                                         MetricPill("MAIN OUTPUT", facts.audioOutput, violet)
@@ -360,7 +361,7 @@ fun MikuAnatomicalObservatoryModal(
                             AnatomicalOrganCard(
                                 title = "EARS · NOW PLAYING",
                                 icon = Icons.Default.MusicNote,
-                                subtitle = "What Miku Music says is on",
+                                subtitle = "What ${Mascot.musicAppName} says is on",
                                 accentColor = violet
                             ) {
                                 Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
@@ -456,7 +457,7 @@ fun MikuAnatomicalObservatoryModal(
                                                         .clip(RoundedCornerShape(2.dp))
                                                         .background(
                                                             Brush.verticalGradient(
-                                                                listOf(MikuNeonPink, Color(0xFF880E4F))
+                                                                listOf(MikuNeonPink, Mascot.color(0xFF880E4F))
                                                             )
                                                         )
                                                 )
@@ -541,7 +542,7 @@ fun MikuAnatomicalObservatoryModal(
                             AnatomicalOrganCard(
                                 title = "NERVES · GOOGLE AND UPDATES",
                                 icon = Icons.Default.SystemUpdate,
-                                subtitle = "Play services, Android Auto and the MikuOS updater",
+                                subtitle = "Play services, Android Auto and the ${Mascot.osName} updater",
                                 accentColor = nerveBlue
                             ) {
                                 Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
@@ -575,8 +576,8 @@ private fun AnatomicalOrganCard(
             .background(
                 Brush.verticalGradient(
                     listOf(
-                        Color(0xFF0B1F2A),
-                        Color(0xFF051118)
+                        Mascot.color(0xFF0B1F2A),
+                        Mascot.color(0xFF051118)
                     )
                 )
             )
@@ -641,7 +642,7 @@ private fun MetricPill(
     Box(
         Modifier
             .clip(RoundedCornerShape(4.dp))
-            .background(Color(0xFF030D14))
+            .background(Mascot.color(0xFF030D14))
             .border(0.6.dp, color.copy(alpha = 0.5f), RoundedCornerShape(4.dp))
             .padding(horizontal = 5.dp, vertical = 2.dp)
     ) {
@@ -920,7 +921,7 @@ private fun readAppVersions(ctx: Context): AppVersions {
         info.versionName?.takeIf { it.isNotBlank() } ?: "installed"
     }.getOrDefault(NOT_INSTALLED)
     val miku = listOf(
-        "Miku Music" to "com.miku.player",
+        "${Mascot.musicAppName}" to "com.miku.player",
         "Launcher" to "com.miku.launcher",
         "Settings" to "com.miku.settings",
         "System UI" to "com.miku.systemui",

@@ -1,5 +1,6 @@
 package com.miku.launcher.weather
 
+import com.miku.launcher.Mascot
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -63,9 +64,9 @@ import kotlinx.coroutines.withContext
  * and settings (°C/°F, Windy API key, manual city / lat-lon override). Self-hosted in a Dialog
  * so the tile needs no launcher-level state; back / scrim tap / swipe-up dismisses.
  */
-private val Teal = Color(0xFF39C5BB)
-private val TealBright = Color(0xFF9FF3EC)
-private val Pink = Color(0xFFFF5C8A)
+private val Teal get() = Mascot.color(0xFF39C5BB)
+private val TealBright get() = Mascot.color(0xFF9FF3EC)
+private val Pink get() = Mascot.color(0xFFFF5C8A)
 private val Muted = Color(0xFF8BA6A9)
 private val SkyBlue = Color(0xFF80D8FF)
 
@@ -88,7 +89,7 @@ fun MikuWeatherTileDetailSheet(onDismiss: () -> Unit, onOpenObservatory: (() -> 
         Box(
             Modifier
                 .fillMaxSize()
-                .background(Color(0xF0040D12))
+                .background(Mascot.color(0xF0040D12))
                 .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null, onClick = onDismiss)
                 .swipeUpFromBottomToDismiss(onDismiss = onDismiss)
         ) {
@@ -101,7 +102,7 @@ fun MikuWeatherTileDetailSheet(onDismiss: () -> Unit, onOpenObservatory: (() -> 
                 // ---- header --------------------------------------------------------------
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
-                        Text("MIKU WEATHER", color = Teal, fontSize = 15.sp, fontWeight = FontWeight.Black, fontFamily = AudiowideFont)
+                        Text("${Mascot.nameUpper} WEATHER", color = Teal, fontSize = 15.sp, fontWeight = FontWeight.Black, fontFamily = AudiowideFont)
                         Text(
                             snap?.placeName?.ifBlank { null } ?: st.location?.name ?: "No location",
                             color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis
@@ -249,7 +250,7 @@ fun MikuWeatherTileDetailSheet(onDismiss: () -> Unit, onOpenObservatory: (() -> 
                             SheetCard(title = "OBSERVATORY") {
                                 Text(
                                     "Open the full weather screen (radar, sun times, history)",
-                                    color = Color(0xFF39C5BB), fontSize = 12.sp,
+                                    color = Mascot.color(0xFF39C5BB), fontSize = 12.sp,
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .clickable { onDismiss(); onOpenObservatory() }

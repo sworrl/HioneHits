@@ -151,46 +151,46 @@ private data class TapeTheme(
     val hubHi: Color, val hubLo: Color, val holes: Color, val ink: Color,
     val layout: TapeLayout = TapeLayout.CLEAR,
     val plasticType: PlasticType = PlasticType.CLEAR_POLYCARBONATE,
-    val brandText: String = "MIKU MUSIC",
+    val brandText: String = "${Mascot.musicAppName.uppercase()}",
     val brandSub: String = "STEREO CASSETTE TAPE",
     val brandFont: FontFamily = AudiowideFont,
-    val brandColor: Color = Color(0xFF39C5BB),
-    val brandSubColor: Color = Color(0xFF9AECE6),
+    val brandColor: Color = Mascot.color(0xFF39C5BB),
+    val brandSubColor: Color = Mascot.color(0xFF9AECE6),
     val brandTexture: BrandTexture = BrandTexture.SCREENPRINT_NEON,
-    val accent: Color = Color(0xFF39C5BB),
+    val accent: Color = Mascot.color(0xFF39C5BB),
     val wallAlpha: Float = 0.88f, val cavityAlpha: Float = 0.30f,
     val welded: Boolean = false,  // premium shells are screwed together; budget shells are melt-welded
     val motif39: Boolean = false  // the secret MIKU 39 shell's holographic "39" foil badge (drawMiku39Badge)
 )
-private val TAPE_THEMES = listOf(
-    TapeTheme("MIKU STUDIO",
-        shellHi = Color(0xFF262633), shellLo = Color(0xFF14141B), engrave = Color(0x5539C5BB),
-        bevelHi = Color(0xFF9AECE6), bevelLo = Color(0xFF0B0B10),
-        hubHi = Color(0xFFF5FFFE), hubLo = Color(0xFF2FA39B), holes = Color(0xFF0F3D39), ink = Color(0xFFE8FBF8),
+private val TAPE_THEMES get() = listOf(
+    TapeTheme("${Mascot.nameUpper} STUDIO",
+        shellHi = Color(0xFF262633), shellLo = Color(0xFF14141B), engrave = Mascot.color(0x5539C5BB),
+        bevelHi = Mascot.color(0xFF9AECE6), bevelLo = Color(0xFF0B0B10),
+        hubHi = Mascot.color(0xFFF5FFFE), hubLo = Mascot.color(0xFF2FA39B), holes = Mascot.color(0xFF0F3D39), ink = Mascot.color(0xFFE8FBF8),
         layout = TapeLayout.STUDIO, plasticType = PlasticType.SMOKED_ACRYLIC,
-        brandText = "MIKU STUDIO 90", brandSub = "TYPE II HIGH BIAS (CrO2) · 70µs EQ",
-        brandFont = AudiowideFont, brandColor = Color(0xFF39C5BB), brandSubColor = Color(0xFF9AECE6), brandTexture = BrandTexture.DEBOSSED_ENAMEL,
-        accent = Color(0xFF39C5BB), wallAlpha = 0.62f, cavityAlpha = 0.22f),
+        brandText = "${Mascot.nameUpper} STUDIO 90", brandSub = "TYPE II HIGH BIAS (CrO2) · 70µs EQ",
+        brandFont = AudiowideFont, brandColor = Mascot.color(0xFF39C5BB), brandSubColor = Mascot.color(0xFF9AECE6), brandTexture = BrandTexture.DEBOSSED_ENAMEL,
+        accent = Mascot.color(0xFF39C5BB), wallAlpha = 0.62f, cavityAlpha = 0.22f),
     TapeTheme("MEMOREX",
-        shellHi = Color(0xFF2A4A4E), shellLo = Color(0xFF0E2226), engrave = Color(0x5539C5BB),
-        bevelHi = Color(0xFF7FE6DE), bevelLo = Color(0xFF08181A),
-        hubHi = Color(0xFFFFDD3A), hubLo = Color(0xFFB38F00), holes = Color(0xFF3A2E00), ink = Color(0xFFE8FBF8),
+        shellHi = Mascot.color(0xFF2A4A4E), shellLo = Mascot.color(0xFF0E2226), engrave = Mascot.color(0x5539C5BB),
+        bevelHi = Mascot.color(0xFF7FE6DE), bevelLo = Mascot.color(0xFF08181A),
+        hubHi = Color(0xFFFFDD3A), hubLo = Color(0xFFB38F00), holes = Color(0xFF3A2E00), ink = Mascot.color(0xFFE8FBF8),
         plasticType = PlasticType.CLEAR_POLYCARBONATE,
-        brandText = "MIKU dBS-90", brandSub = "HIGH OUTPUT · LOW NOISE · WIDE DYNAMIC",
-        brandFont = RighteousFont, brandColor = Color(0xFFFFD200), brandSubColor = Color(0xFFE8FBF8), brandTexture = BrandTexture.SCREENPRINT_NEON),
+        brandText = "${Mascot.nameUpper} dBS-90", brandSub = "HIGH OUTPUT · LOW NOISE · WIDE DYNAMIC",
+        brandFont = RighteousFont, brandColor = Color(0xFFFFD200), brandSubColor = Mascot.color(0xFFE8FBF8), brandTexture = BrandTexture.SCREENPRINT_NEON),
     TapeTheme("GOLD",
         shellHi = Color(0xFFE8C878), shellLo = Color(0xFF8A6A21), engrave = Color(0x55704E12),
         bevelHi = Color(0xFFFCEFB8), bevelLo = Color(0xFF5A410E),
         hubHi = Color(0xFFF3ECD6), hubLo = Color(0xFF9A8A5E), holes = Color(0xFF241B08), ink = Color(0xFFFDF4D8),
         plasticType = PlasticType.METALLIC_FLAKE,
-        brandText = "MIKU 24K GOLD MASTER", brandSub = "AUDIOPHILE REFERENCE · SPECIAL EDITION",
+        brandText = "${Mascot.nameUpper} 24K GOLD MASTER", brandSub = "AUDIOPHILE REFERENCE · SPECIAL EDITION",
         brandFont = AudiowideFont, brandColor = Color(0xFF2C1A04), brandSubColor = Color(0xFF4E320A), brandTexture = BrandTexture.HOT_STAMP_GOLD),
     TapeTheme("MAJOR '84",
         shellHi = Color(0xFFF2E9D7), shellLo = Color(0xFFD9C9A8), engrave = Color(0x334A3520),
         bevelHi = Color(0xFFFFF9EC), bevelLo = Color(0xFF8A7A56),
         hubHi = Color(0xFFFFFFFF), hubLo = Color(0xFFB9AB8C), holes = Color(0xFF3A2F1C), ink = Color(0xFF2B2B2B),
         layout = TapeLayout.MAJOR84, plasticType = PlasticType.SATIN_POLYSTYRENE,
-        brandText = "MIKU RECORDS 1984", brandSub = "ORIGINAL STEREO CASSETTE · DOLBY SYSTEM",
+        brandText = "${Mascot.nameUpper} RECORDS 1984", brandSub = "ORIGINAL STEREO CASSETTE · DOLBY SYSTEM",
         brandFont = RighteousFont, brandColor = Color(0xFF23160C), brandSubColor = Color(0xFF4A3520), brandTexture = BrandTexture.OFFSET_PRINT_INK,
         accent = Color(0xFFC9A227), wallAlpha = 0.96f, cavityAlpha = 0.55f),
     TapeTheme("NEON WU",
@@ -198,17 +198,17 @@ private val TAPE_THEMES = listOf(
         bevelHi = Color(0xFFFFE566), bevelLo = Color(0xFF060608),
         hubHi = Color(0xFFFFD500), hubLo = Color(0xFFB89A00), holes = Color(0xFF3A3000), ink = Color(0xFFFFD500),
         layout = TapeLayout.NEON, plasticType = PlasticType.MATTE_COMPOSITE,
-        brandText = "MIKU 36 CHAMBERS", brandSub = "ENTER THE SOUND · HI-ENERGY FLUX 120µs",
+        brandText = "${Mascot.nameUpper} 36 CHAMBERS", brandSub = "ENTER THE SOUND · HI-ENERGY FLUX 120µs",
         brandFont = OrbitronFont, brandColor = Color(0xFFFFD500), brandSubColor = Color(0xFFFFF066), brandTexture = BrandTexture.SCREENPRINT_NEON,
         accent = Color(0xFFFFD500), wallAlpha = 0.94f, cavityAlpha = 0.48f, welded = true),
-    TapeTheme("NEON MIKU",
-        shellHi = Color(0xFF1B1B20), shellLo = Color(0xFF0E0E12), engrave = Color(0x4439C5BB),
-        bevelHi = Color(0xFF9AECE6), bevelLo = Color(0xFF060608),
-        hubHi = Color(0xFF39C5BB), hubLo = Color(0xFF1F8079), holes = Color(0xFF0A2C29), ink = Color(0xFF39C5BB),
+    TapeTheme("NEON ${Mascot.nameUpper}",
+        shellHi = Color(0xFF1B1B20), shellLo = Color(0xFF0E0E12), engrave = Mascot.color(0x4439C5BB),
+        bevelHi = Mascot.color(0xFF9AECE6), bevelLo = Color(0xFF060608),
+        hubHi = Mascot.color(0xFF39C5BB), hubLo = Mascot.color(0xFF1F8079), holes = Mascot.color(0xFF0A2C29), ink = Mascot.color(0xFF39C5BB),
         layout = TapeLayout.NEON, plasticType = PlasticType.MATTE_COMPOSITE,
-        brandText = "MIKU CYBER DECK", brandSub = "VOCALOID01 · DIGITAL ACCELERATION",
-        brandFont = OrbitronFont, brandColor = Color(0xFF39C5BB), brandSubColor = Color(0xFF8CF0E8), brandTexture = BrandTexture.SCREENPRINT_NEON,
-        accent = Color(0xFF39C5BB), wallAlpha = 0.94f, cavityAlpha = 0.48f, welded = true),
+        brandText = "${Mascot.nameUpper} CYBER DECK", brandSub = "VOCALOID01 · DIGITAL ACCELERATION",
+        brandFont = OrbitronFont, brandColor = Mascot.color(0xFF39C5BB), brandSubColor = Mascot.color(0xFF8CF0E8), brandTexture = BrandTexture.SCREENPRINT_NEON,
+        accent = Mascot.color(0xFF39C5BB), wallAlpha = 0.94f, cavityAlpha = 0.48f, welded = true),
     TapeTheme("EVERMORE",
         shellHi = Color(0xFFB3ADA4), shellLo = Color(0xFF8E887F), engrave = Color(0x333E3A35),
         bevelHi = Color(0xFFD8D3CA), bevelLo = Color(0xFF57524B),
@@ -217,14 +217,14 @@ private val TAPE_THEMES = listOf(
         brandText = "miku music · tape", brandSub = "intimate acoustic series · studio b",
         brandFont = Baloo2Font, brandColor = Color(0xFF181512), brandSubColor = Color(0xFF35302B), brandTexture = BrandTexture.OFFSET_PRINT_INK,
         accent = Color(0xFF3E3A35), wallAlpha = 0.95f, cavityAlpha = 0.55f, welded = true),
-    TapeTheme("PASTEL MIKU",
-        shellHi = Color(0xFFBDEEE8), shellLo = Color(0xFF8FD8D0), engrave = Color(0x330F6E66),
-        bevelHi = Color(0xFFE4FAF7), bevelLo = Color(0xFF4FA69D),
-        hubHi = Color(0xFF9ADFD8), hubLo = Color(0xFF63B8AF), holes = Color(0xFF0F6E66), ink = Color(0xFF0F6E66),
+    TapeTheme("PASTEL ${Mascot.nameUpper}",
+        shellHi = Mascot.color(0xFFBDEEE8), shellLo = Mascot.color(0xFF8FD8D0), engrave = Mascot.color(0x330F6E66),
+        bevelHi = Mascot.color(0xFFE4FAF7), bevelLo = Mascot.color(0xFF4FA69D),
+        hubHi = Mascot.color(0xFF9ADFD8), hubLo = Mascot.color(0xFF63B8AF), holes = Mascot.color(0xFF0F6E66), ink = Mascot.color(0xFF0F6E66),
         layout = TapeLayout.MERCH, plasticType = PlasticType.SATIN_POLYSTYRENE,
-        brandText = "初音ミク · MIKU POP", brandSub = "LO-FI CHILL BIAS · SWEET COMPACT CASSETTE",
-        brandFont = MochiyPopFont, brandColor = Color(0xFF083B36), brandSubColor = Color(0xFF0E5E56), brandTexture = BrandTexture.JAPANESE_KAWAII,
-        accent = Color(0xFF0F6E66), wallAlpha = 0.93f, cavityAlpha = 0.50f, welded = true),
+        brandText = "${Mascot.fullNameJa} · ${Mascot.nameUpper} POP", brandSub = "LO-FI CHILL BIAS · SWEET COMPACT CASSETTE",
+        brandFont = MochiyPopFont, brandColor = Mascot.color(0xFF083B36), brandSubColor = Mascot.color(0xFF0E5E56), brandTexture = BrandTexture.JAPANESE_KAWAII,
+        accent = Mascot.color(0xFF0F6E66), wallAlpha = 0.93f, cavityAlpha = 0.50f, welded = true),
 
     // ── Deeply real: legendary decks of the golden age ──
     TapeTheme("TDK SA-X",   // the Type II reference: smoke-black precision shell, red grade slash
@@ -232,7 +232,7 @@ private val TAPE_THEMES = listOf(
         bevelHi = Color(0xFFB8B8C2), bevelLo = Color(0xFF0B0B0E),
         hubHi = Color(0xFFE8E8EC), hubLo = Color(0xFF8A8A94), holes = Color(0xFF1E1E24), ink = Color(0xFFE9E9EE),
         layout = TapeLayout.STUDIO, plasticType = PlasticType.SMOKED_ACRYLIC,
-        brandText = "MIKU SA-X 90", brandSub = "HIGH BIAS 70µs EQ · SUPER AVILYN DUAL COATING",
+        brandText = "${Mascot.nameUpper} SA-X 90", brandSub = "HIGH BIAS 70µs EQ · SUPER AVILYN DUAL COATING",
         brandFont = OrbitronFont, brandColor = Color(0xFFF2F2F5), brandSubColor = Color(0xFFB8B8C6), brandTexture = BrandTexture.SCREENPRINT_NEON,
         accent = Color(0xFFD62828), wallAlpha = 0.58f, cavityAlpha = 0.24f),
     TapeTheme("MAXELL XLII-S",   // black + gold, the premium epitaph
@@ -240,7 +240,7 @@ private val TAPE_THEMES = listOf(
         bevelHi = Color(0xFFE9CD7A), bevelLo = Color(0xFF0A0A08),
         hubHi = Color(0xFF2A2A26), hubLo = Color(0xFF171714), holes = Color(0xFFC9A227), ink = Color(0xFFEFD98F),
         layout = TapeLayout.STUDIO, plasticType = PlasticType.MATTE_COMPOSITE,
-        brandText = "MIKU XLII-S 90", brandSub = "BLACK MAGNETITE · HIGH RESONANCE-DAMPING MECHANISM",
+        brandText = "${Mascot.nameUpper} XLII-S 90", brandSub = "BLACK MAGNETITE · HIGH RESONANCE-DAMPING MECHANISM",
         brandFont = AudiowideFont, brandColor = Color(0xFFFFD866), brandSubColor = Color(0xFFD8B84E), brandTexture = BrandTexture.HOT_STAMP_GOLD,
         accent = Color(0xFFC9A227), wallAlpha = 0.92f, cavityAlpha = 0.45f),
     TapeTheme("BASF CHROME",   // white shell, green chevron, CrO2 pedigree
@@ -248,7 +248,7 @@ private val TAPE_THEMES = listOf(
         bevelHi = Color(0xFFFFFFFA), bevelLo = Color(0xFF8F8F85),
         hubHi = Color(0xFFFFFFFF), hubLo = Color(0xFFB9B9AF), holes = Color(0xFF00552F), ink = Color(0xFF00552F),
         layout = TapeLayout.STUDIO, plasticType = PlasticType.SATIN_POLYSTYRENE,
-        brandText = "MIKU CR-E II 90", brandSub = "CHROMDIOXID EXTRA II · HIGH OUTPUT / IEC II",
+        brandText = "${Mascot.nameUpper} CR-E II 90", brandSub = "CHROMDIOXID EXTRA II · HIGH OUTPUT / IEC II",
         brandFont = RighteousFont, brandColor = Color(0xFF00452A), brandSubColor = Color(0xFF00633C), brandTexture = BrandTexture.OFFSET_PRINT_INK,
         accent = Color(0xFF00814F), wallAlpha = 0.96f, cavityAlpha = 0.55f),
     TapeTheme("SONY METAL",   // gunmetal Type IV, orange wedge
@@ -256,7 +256,7 @@ private val TAPE_THEMES = listOf(
         bevelHi = Color(0xFFB9BFC7), bevelLo = Color(0xFF14161A),
         hubHi = Color(0xFF6A7078), hubLo = Color(0xFF3A3E44), holes = Color(0xFF16181C), ink = Color(0xFFE8ECF1),
         layout = TapeLayout.STUDIO, plasticType = PlasticType.MATTE_COMPOSITE,
-        brandText = "MIKU METAL MASTER 90", brandSub = "CERAMIC GUIDE / TYPE IV (METAL) POSITION 70µs",
+        brandText = "${Mascot.nameUpper} METAL MASTER 90", brandSub = "CERAMIC GUIDE / TYPE IV (METAL) POSITION 70µs",
         brandFont = OrbitronFont, brandColor = Color(0xFFFF6600), brandSubColor = Color(0xFFFFA866), brandTexture = BrandTexture.HOT_STAMP_CHROME,
         accent = Color(0xFFFF6A00), wallAlpha = 0.93f, cavityAlpha = 0.42f),
     TapeTheme("DENON DX",   // white shell, blue bands, red tick
@@ -264,7 +264,7 @@ private val TAPE_THEMES = listOf(
         bevelHi = Color(0xFFFFFFFF), bevelLo = Color(0xFF8B919B),
         hubHi = Color(0xFFFFFFFF), hubLo = Color(0xFFAAB2BD), holes = Color(0xFF16407F), ink = Color(0xFF1F5FBF),
         layout = TapeLayout.MAJOR84, plasticType = PlasticType.SATIN_POLYSTYRENE,
-        brandText = "MIKU DX-7 90", brandSub = "DYNAMIC ACOUSTIC CASSETTE · HIGH FIDELITY",
+        brandText = "${Mascot.nameUpper} DX-7 90", brandSub = "DYNAMIC ACOUSTIC CASSETTE · HIGH FIDELITY",
         brandFont = RighteousFont, brandColor = Color(0xFF0B2F6E), brandSubColor = Color(0xFF1A4B9E), brandTexture = BrandTexture.OFFSET_PRINT_INK,
         accent = Color(0xFFCC2222), wallAlpha = 0.96f, cavityAlpha = 0.55f),
     TapeTheme("AMPEX 456",   // Grand Master studio-reel warm grey + gold
@@ -272,7 +272,7 @@ private val TAPE_THEMES = listOf(
         bevelHi = Color(0xFFC9C2B4), bevelLo = Color(0xFF2E2B25),
         hubHi = Color(0xFFB8B0A0), hubLo = Color(0xFF7A7365), holes = Color(0xFF2A261F), ink = Color(0xFFEFE6D2),
         layout = TapeLayout.MAJOR84, plasticType = PlasticType.METALLIC_FLAKE,
-        brandText = "MIKU 456 GRAND MASTER", brandSub = "PROFESSIONAL STUDIO MASTERING TAPE · HIGH COERCIVITY",
+        brandText = "${Mascot.nameUpper} 456 GRAND MASTER", brandSub = "PROFESSIONAL STUDIO MASTERING TAPE · HIGH COERCIVITY",
         brandFont = AudiowideFont, brandColor = Color(0xFF1C1712), brandSubColor = Color(0xFF3D3328), brandTexture = BrandTexture.HOT_STAMP_GOLD,
         accent = Color(0xFFB98A2F), wallAlpha = 0.95f, cavityAlpha = 0.52f),
     TapeTheme("NAKAMICHI",   // audiophile smoke-clear, everything on show
@@ -280,45 +280,45 @@ private val TAPE_THEMES = listOf(
         bevelHi = Color(0xFFCED6DA), bevelLo = Color(0xFF0E1011),
         hubHi = Color(0xFFDDE3E6), hubLo = Color(0xFF878E92), holes = Color(0xFF24282A), ink = Color(0xFFEFF4F6),
         layout = TapeLayout.CLEAR, plasticType = PlasticType.CLEAR_POLYCARBONATE,
-        brandText = "MIKU ZX REFERENCE", brandSub = "DISCRETE 3-HEAD PRECISION CALIBRATION · CRYSTALLOY",
+        brandText = "${Mascot.nameUpper} ZX REFERENCE", brandSub = "DISCRETE 3-HEAD PRECISION CALIBRATION · CRYSTALLOY",
         brandFont = OrbitronFont, brandColor = Color(0xFFE8ECEF), brandSubColor = Color(0xFF90A4AE), brandTexture = BrandTexture.MINIMAL_LASER_ETCH,
         accent = Color(0xFFB0B8BC), wallAlpha = 0.42f, cavityAlpha = 0.16f),
     // ── For fun ──
     TapeTheme("SAKURA",   // cherry-blossom merch object
-        shellHi = Color(0xFFF9D5E0), shellLo = Color(0xFFEFA9C2), engrave = Color(0x338E3557),
-        bevelHi = Color(0xFFFFF0F5), bevelLo = Color(0xFFB86787),
-        hubHi = Color(0xFFF3BCCE), hubLo = Color(0xFFCE8AA5), holes = Color(0xFF8E3557), ink = Color(0xFF8E3557),
+        shellHi = Mascot.color(0xFFF9D5E0), shellLo = Mascot.color(0xFFEFA9C2), engrave = Mascot.color(0x338E3557),
+        bevelHi = Mascot.color(0xFFFFF0F5), bevelLo = Mascot.color(0xFFB86787),
+        hubHi = Mascot.color(0xFFF3BCCE), hubLo = Mascot.color(0xFFCE8AA5), holes = Mascot.color(0xFF8E3557), ink = Mascot.color(0xFF8E3557),
         layout = TapeLayout.MERCH, plasticType = PlasticType.SATIN_POLYSTYRENE,
-        brandText = "初音ミク · 桜音 SAKURA", brandSub = "SPRING HARMONIC EDITION · 48kHz ANALOG MASTER",
-        brandFont = MochiyPopFont, brandColor = Color(0xFF5E122E), brandSubColor = Color(0xFF8C2048), brandTexture = BrandTexture.JAPANESE_KAWAII,
-        accent = Color(0xFFD1477E), wallAlpha = 0.93f, cavityAlpha = 0.48f, welded = true),
+        brandText = "${Mascot.fullNameJa} · 桜音 SAKURA", brandSub = "SPRING HARMONIC EDITION · 48kHz ANALOG MASTER",
+        brandFont = MochiyPopFont, brandColor = Mascot.color(0xFF5E122E), brandSubColor = Mascot.color(0xFF8C2048), brandTexture = BrandTexture.JAPANESE_KAWAII,
+        accent = Mascot.color(0xFFD1477E), wallAlpha = 0.93f, cavityAlpha = 0.48f, welded = true),
     TapeTheme("VAPORWAVE",   // magenta ink on black, mall-at-midnight
-        shellHi = Color(0xFF201826), shellLo = Color(0xFF100C14), engrave = Color(0x44FF3FD8),
-        bevelHi = Color(0xFFFF9BE8), bevelLo = Color(0xFF080609),
-        hubHi = Color(0xFFFF3FD8), hubLo = Color(0xFFA3238B), holes = Color(0xFF32082A), ink = Color(0xFFFF3FD8),
+        shellHi = Color(0xFF201826), shellLo = Color(0xFF100C14), engrave = Mascot.color(0x44FF3FD8),
+        bevelHi = Mascot.color(0xFFFF9BE8), bevelLo = Color(0xFF080609),
+        hubHi = Mascot.color(0xFFFF3FD8), hubLo = Mascot.color(0xFFA3238B), holes = Mascot.color(0xFF32082A), ink = Mascot.color(0xFFFF3FD8),
         layout = TapeLayout.NEON, plasticType = PlasticType.PHOSPHOR_GLOW,
         brandText = "ＭＩＫＵ  ＭＵＳＩＣ", brandSub = "ＡＥＳＴＨＥＴＩＣ  ＮＩＧＨＴ  ＣＡＳＳＥＴＴＥ  ８０ｓ",
-        brandFont = MonotonFont, brandColor = Color(0xFFFF3FD8), brandSubColor = Color(0xFFFFA6EC), brandTexture = BrandTexture.DISCO_INLINE_NEON,
-        accent = Color(0xFFFF3FD8), wallAlpha = 0.94f, cavityAlpha = 0.46f, welded = true),
+        brandFont = MonotonFont, brandColor = Mascot.color(0xFFFF3FD8), brandSubColor = Mascot.color(0xFFFFA6EC), brandTexture = BrandTexture.DISCO_INLINE_NEON,
+        accent = Mascot.color(0xFFFF3FD8), wallAlpha = 0.94f, cavityAlpha = 0.46f, welded = true),
     TapeTheme("GLOWWORM",   // glow-in-the-dark green (a real 80s gimmick shell)
         shellHi = Color(0xFF14201A), shellLo = Color(0xFF0A120E), engrave = Color(0x4466FF88),
         bevelHi = Color(0xFFB9FFCB), bevelLo = Color(0xFF050806),
         hubHi = Color(0xFF66FF88), hubLo = Color(0xFF2FA050), holes = Color(0xFF0C2A14), ink = Color(0xFF8CFFA8),
         layout = TapeLayout.NEON, plasticType = PlasticType.PHOSPHOR_GLOW,
-        brandText = "MIKU GLOW-90 [DAT]", brandSub = "PHOSPHOR LUMINESCENT MATRIX · HIGH ENERGY FLUX",
+        brandText = "${Mascot.nameUpper} GLOW-90 [DAT]", brandSub = "PHOSPHOR LUMINESCENT MATRIX · HIGH ENERGY FLUX",
         brandFont = DotGothicFont, brandColor = Color(0xFF66FF88), brandSubColor = Color(0xFFA3FFBA), brandTexture = BrandTexture.DOT_MATRIX_IMPRINT,
         accent = Color(0xFF66FF88), wallAlpha = 0.90f, cavityAlpha = 0.40f, welded = true),
     // ── Secret (index 18). APPEND ONLY: the saved theme is a raw ordinal, so nothing may ever be
     //    inserted above this line. Gated by MikuUnlocksReader.SECRET_TAPE_MIKU39 and left out of
     //    the picker entirely until earned (MikuUnlocksReader.SECRET_TAPE_INDICES). ──
-    TapeTheme("MIKU 39",   // translucent mint holo shell, pink hubs; 39 = "san-kyu", thank you
-        shellHi = Color(0xFF8FF0E6), shellLo = Color(0xFF2E9E95), engrave = Color(0x55E12885),
-        bevelHi = Color(0xFFE6FFFC), bevelLo = Color(0xFF0B3B37),
-        hubHi = Color(0xFFFFB3DD), hubLo = Color(0xFFE12885), holes = Color(0xFF3A0A24), ink = Color(0xFF053A35),
+    TapeTheme(Mascot.lore("MIKU 39", "CODA 01"),   // Miku lore only under the Miku pack. translucent mint holo shell, pink hubs; 39 = "san-kyu", thank you
+        shellHi = Mascot.color(0xFF8FF0E6), shellLo = Mascot.color(0xFF2E9E95), engrave = Mascot.color(0x55E12885),
+        bevelHi = Mascot.color(0xFFE6FFFC), bevelLo = Mascot.color(0xFF0B3B37),
+        hubHi = Mascot.color(0xFFFFB3DD), hubLo = Mascot.color(0xFFE12885), holes = Mascot.color(0xFF3A0A24), ink = Mascot.color(0xFF053A35),
         layout = TapeLayout.CLEAR, plasticType = PlasticType.CLEAR_POLYCARBONATE,
-        brandText = "MIKU 39 · SECRET TRACK", brandSub = "サンキュー · THANK YOU FOR LISTENING",
-        brandFont = OrbitronFont, brandColor = Color(0xFFE12885), brandSubColor = Color(0xFF0E5E56), brandTexture = BrandTexture.DISCO_INLINE_NEON,
-        accent = Color(0xFFE12885), wallAlpha = 0.55f, cavityAlpha = 0.20f, motif39 = true),
+        brandText = Mascot.lore("MIKU 39 · SECRET TRACK", "CODA 01 · SECRET TRACK"), brandSub = "サンキュー · THANK YOU FOR LISTENING",
+        brandFont = OrbitronFont, brandColor = Mascot.color(0xFFE12885), brandSubColor = Mascot.color(0xFF0E5E56), brandTexture = BrandTexture.DISCO_INLINE_NEON,
+        accent = Mascot.color(0xFFE12885), wallAlpha = 0.55f, cavityAlpha = 0.20f, motif39 = true),
 )
 
 /**
@@ -1037,7 +1037,7 @@ fun TapeScreen(track: Track, player: ExoPlayer, onExit: () -> Unit) {
             }
             Box(
                 Modifier.matchParentSize()
-                    .background(Color(0xCC04100F))
+                    .background(Mascot.color(0xCC04100F))
                     .pointerInput(Unit) { detectTapGestures(onTap = { showThemeModal = false }) }
             )
             Box(
@@ -1045,7 +1045,7 @@ fun TapeScreen(track: Track, player: ExoPlayer, onExit: () -> Unit) {
                     .requiredSize(width = maxHeight * 0.88f, height = maxWidth * 0.85f)
                     .rotate(90f)
                     .clip(androidx.compose.foundation.shape.RoundedCornerShape(16.dp))
-                    .background(Color(0xF50A1E21))
+                    .background(Mascot.color(0xF50A1E21))
                     .padding(14.dp)
             ) {
                 Column {
@@ -1078,10 +1078,10 @@ fun TapeScreen(track: Track, player: ExoPlayer, onExit: () -> Unit) {
                                     Box(
                                         Modifier.weight(1f)
                                             .clip(androidx.compose.foundation.shape.RoundedCornerShape(8.dp))
-                                            .background(if (isSelected) Color(0xFF14403D) else Color(0xFF0F2B2E))
+                                            .background(if (isSelected) Mascot.color(0xFF14403D) else Mascot.color(0xFF0F2B2E))
                                             .border(
                                                 width = if (isSelected) 1.5.dp else 0.5.dp,
-                                                color = if (isSelected) MikuTealBright else Color(0x2239C5BB),
+                                                color = if (isSelected) MikuTealBright else Mascot.color(0x2239C5BB),
                                                 shape = androidx.compose.foundation.shape.RoundedCornerShape(8.dp)
                                             )
                                             .clickable(enabled = !isLocked) {
@@ -1110,7 +1110,7 @@ fun TapeScreen(track: Track, player: ExoPlayer, onExit: () -> Unit) {
                                             ) {
                                                 Text(
                                                     if (isLocked) t.name + "  (locked)" else t.name,
-                                                    color = if (isSelected) MikuTealBright else Color(0xFFE8F4F2),
+                                                    color = if (isSelected) MikuTealBright else Mascot.color(0xFFE8F4F2),
                                                     fontSize = 12.sp,
                                                     fontWeight = FontWeight.Bold,
                                                     fontFamily = RighteousFont,
@@ -1236,7 +1236,7 @@ private fun DrawScope.drawStudioBackdrop(t: TapeTheme, light: Float, g: TapeGrad
         Brush.radialGradient(
             listOf(
                 lerp(Color(0xFF0B0F12), t.accent, 0.05f + 0.11f * q).copy(alpha = 0.85f),
-                lerp(Color(0xFF06090B), t.accent, 0.02f + 0.03f * q).copy(alpha = 0.92f),
+                lerp(Mascot.color(0xFF06090B), t.accent, 0.02f + 0.03f * q).copy(alpha = 0.92f),
                 Color.Black
             ),
             center = keyC,
@@ -1395,7 +1395,7 @@ private fun DrawScope.drawCassetteBaseMm(t: TapeTheme, light: Float) {
             //    that deepens with thickness. Very low alpha, but it is the difference between
             //    "glass" and "nothing at all".
             drawRoundRect(
-                Color(0xFF9FC6C2).copy(alpha = 0.055f),
+                Mascot.color(0xFF9FC6C2).copy(alpha = 0.055f),
                 topLeft = Offset(WALL, WALL), size = Size(SHELL_W - 2 * WALL, SHELL_H - 2 * WALL),
                 cornerRadius = CornerRadius(SHELL_R, SHELL_R)
             )
@@ -2811,8 +2811,8 @@ private fun MiniCassette(t: TapeTheme, modifier: Modifier = Modifier) {
 
 // The MIKU 39 badge's holographic foil. Built once: the overlay layer redraws with the moving key
 // light, and a Brush per frame would be garbage on every frame for a sheen that never changes.
-private val MIKU39_FOIL = Brush.linearGradient(
-    listOf(Color(0xFF39C5BB), Color(0xFFB9FFF6), Color(0xFFFFA6D6), Color(0xFFE12885), Color(0xFFB388FF), Color(0xFF39C5BB)),
+private val MIKU39_FOIL get() = Brush.linearGradient(
+    listOf(Mascot.color(0xFF39C5BB), Mascot.color(0xFFB9FFF6), Mascot.color(0xFFFFA6D6), Mascot.color(0xFFE12885), Mascot.color(0xFFB388FF), Mascot.color(0xFF39C5BB)),
     start = Offset(66f, 34f), end = Offset(108f, 50f)
 )
 
@@ -2841,7 +2841,7 @@ private fun DrawScope.drawSevenSeg(x: Float, y: Float, mask: Int) {
     val dw = 4.2f; val dh = 7f; val mid = y + dh / 2f
     for (pass in 0..1) {
         // A pale offset pass under the ink reads as the edge of an embossed foil stamp.
-        val c = if (pass == 0) Color(0x88FFFFFF) else Color(0xFF06302C)
+        val c = if (pass == 0) Color(0x88FFFFFF) else Mascot.color(0xFF06302C)
         val o = if (pass == 0) 0.28f else 0f
         val sw = 1.0f
         if (mask and 1 != 0) drawLine(c, Offset(x + o, y + o), Offset(x + dw + o, y + o), sw, StrokeCap.Round)
@@ -3360,11 +3360,11 @@ private data class SmudgeStreak(val yFrac: Float, val angleDeg: Float, val lenFr
 // or just decades of handling. Drawn last, over the text, not just the paper underneath it.
 private data class InkSmear(val xFrac: Float, val yFrac: Float, val wPx: Float, val hPx: Float, val angleDeg: Float, val alpha: Float)
 
-private val MASKING_TAPE_STYLES = listOf(
+private val MASKING_TAPE_STYLES get() = listOf(
     MaskingTapeStyle("Scotch Tan", Color(0xFFF7EED8), Color(0xFFE5D5B2), Color(0x228A6E3D), Color(0xFF14141E)),
     MaskingTapeStyle("Vintage Ivory", Color(0xFFFAF2E4), Color(0xFFDDD0B5), Color(0x25705A32), Color(0xFF1E2838)),
     MaskingTapeStyle("Off-White Draft", Color(0xFFFAFAFA), Color(0xFFEAE6DF), Color(0x1C606060), Color(0xFF0F1E36)),
-    MaskingTapeStyle("Aqua Painter", Color(0xFFDCF5F2), Color(0xFFB8E8E3), Color(0x2224857D), Color(0xFF0C2B2E)),
+    MaskingTapeStyle("Aqua Painter", Mascot.color(0xFFDCF5F2), Mascot.color(0xFFB8E8E3), Mascot.color(0x2224857D), Mascot.color(0xFF0C2B2E)),
     MaskingTapeStyle("Artist Cream", Color(0xFFFFF8EA), Color(0xFFF0E2C6), Color(0x208A744A), Color(0xFF281C10))
 )
 

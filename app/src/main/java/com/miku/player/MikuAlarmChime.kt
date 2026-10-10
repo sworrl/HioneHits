@@ -36,8 +36,8 @@ object MikuAlarmChime {
             .setMediaId(MEDIA_ID)
             .setMediaMetadata(
                 MediaMetadata.Builder()
-                    .setTitle("Miku Chime")
-                    .setArtist("Miku Music Alarm")
+                    .setTitle("${Mascot.name} Chime")
+                    .setArtist("${Mascot.musicAppName} Alarm")
                     .setAlbumTitle("Alarm")
                     .build()
             )

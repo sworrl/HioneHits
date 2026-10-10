@@ -77,8 +77,8 @@ fun HardwareSettingsScreen(onBack: () -> Unit) {
             .background(CyberDarkBg)
     ) {
         Image(
-            painter = painterResource(id = R.drawable.miku_audiophile_art),
-            contentDescription = "Miku artwork",
+            painter = mascotPainter(id = R.drawable.miku_audiophile_art),
+            contentDescription = "${Mascot.name} artwork",
             modifier = Modifier.fillMaxSize(),
             contentScale = ContentScale.Crop
         )
@@ -88,9 +88,9 @@ fun HardwareSettingsScreen(onBack: () -> Unit) {
                 .background(
                     Brush.verticalGradient(
                         listOf(
-                            Color(0xEE04161A),
+                            Mascot.color(0xEE04161A),
                             Color(0x99000000),
-                            Color(0xF8040D12)
+                            Mascot.color(0xF8040D12)
                         )
                     )
                 )
@@ -134,7 +134,7 @@ fun HardwareSettingsScreen(onBack: () -> Unit) {
                         Modifier
                             .fillMaxWidth()
                             .clip(RoundedCornerShape(16.dp))
-                            .background(Color(0xDD0A1E26))
+                            .background(Mascot.color(0xDD0A1E26))
                             .border(1.dp, MikuCyan, RoundedCornerShape(16.dp))
                             .clickable { DacSettingsLink.open(ctx) }
                             .padding(14.dp),
@@ -162,7 +162,7 @@ fun HardwareSettingsScreen(onBack: () -> Unit) {
                         Modifier
                             .fillMaxWidth()
                             .clip(RoundedCornerShape(16.dp))
-                            .background(Color(0xDD0A1E26))
+                            .background(Mascot.color(0xDD0A1E26))
                             .border(1.dp, MikuNeonPink, RoundedCornerShape(16.dp))
                             .clickable {
                                 ctx.startActivity(android.content.Intent(ctx, com.miku.player.profiles.ListeningProfilesActivity::class.java))
@@ -190,7 +190,7 @@ fun HardwareSettingsScreen(onBack: () -> Unit) {
                         Modifier
                             .fillMaxWidth()
                             .clip(RoundedCornerShape(16.dp))
-                            .background(Color(0xDD0A1E26))
+                            .background(Mascot.color(0xDD0A1E26))
                             .border(1.dp, if (allowUsbAudio) Color(0xFFFF9100) else MikuCyan, RoundedCornerShape(16.dp))
                             .padding(14.dp)
                     ) {
@@ -229,7 +229,7 @@ fun HardwareSettingsScreen(onBack: () -> Unit) {
                                     PlayerPreferences.saveAllowUsbAudio(ctx, allow)
                                     MikuCarAudioRouter.ensureAnalogIfCar(ctx, "settings-toggle")
                                 },
-                                colors = SwitchDefaults.colors(checkedThumbColor = MikuCyan, checkedTrackColor = Color(0xFF00695C))
+                                colors = SwitchDefaults.colors(checkedThumbColor = MikuCyan, checkedTrackColor = Mascot.color(0xFF00695C))
                             )
                         }
                     }
@@ -243,7 +243,7 @@ fun HardwareSettingsScreen(onBack: () -> Unit) {
                         Modifier
                             .fillMaxWidth()
                             .clip(RoundedCornerShape(16.dp))
-                            .background(Color(0xCC07131A))
+                            .background(Mascot.color(0xCC07131A))
                             .border(1.dp, MikuCyan.copy(alpha = 0.35f), RoundedCornerShape(16.dp))
                             .padding(16.dp)
                     ) {
@@ -316,7 +316,7 @@ fun HardwareSettingsScreen(onBack: () -> Unit) {
                                     pauseOnUnplug = it
                                     PlayerHolder.applyPauseOnUnplug(ctx, it)
                                 },
-                                colors = SwitchDefaults.colors(checkedThumbColor = MikuCyan, checkedTrackColor = Color(0xFF00695C))
+                                colors = SwitchDefaults.colors(checkedThumbColor = MikuCyan, checkedTrackColor = Mascot.color(0xFF00695C))
                             )
                         }
                     }
@@ -334,7 +334,7 @@ fun HardwareSettingsScreen(onBack: () -> Unit) {
                         Modifier
                             .fillMaxWidth()
                             .clip(RoundedCornerShape(16.dp))
-                            .background(Color(0xDD0A1E26))
+                            .background(Mascot.color(0xDD0A1E26))
                             .border(1.dp, CyberGlassBorder, RoundedCornerShape(16.dp))
                             .padding(14.dp)
                     ) {
@@ -370,7 +370,7 @@ fun HardwareSettingsScreen(onBack: () -> Unit) {
                         Modifier
                             .fillMaxWidth()
                             .clip(RoundedCornerShape(16.dp))
-                            .background(Color(0xDD0A1E26))
+                            .background(Mascot.color(0xDD0A1E26))
                             .border(1.dp, if (routed) MikuCyan.copy(alpha = 0.6f) else CyberGlassBorder, RoundedCornerShape(16.dp))
                             .padding(14.dp)
                     ) {
@@ -407,7 +407,7 @@ fun HardwareSettingsScreen(onBack: () -> Unit) {
                                 Text("Route playback to the USB DAC when attached; native rate / 24-32-bit, no resampling", color = MikuTextSecondary, fontSize = 9.5.sp)
                             }
                             Switch(checked = MikuUsbDacOutput.preferUsb, onCheckedChange = { MikuUsbDacOutput.setPreferUsb(ctx, it) },
-                                colors = SwitchDefaults.colors(checkedThumbColor = MikuCyan, checkedTrackColor = Color(0xFF00695C)))
+                                colors = SwitchDefaults.colors(checkedThumbColor = MikuCyan, checkedTrackColor = Mascot.color(0xFF00695C)))
                         }
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                             Column(Modifier.weight(1f)) {
@@ -415,7 +415,7 @@ fun HardwareSettingsScreen(onBack: () -> Unit) {
                                 Text("Hold media volume at 100% and let the DAC's own control set loudness", color = MikuTextSecondary, fontSize = 9.5.sp)
                             }
                             Switch(checked = MikuUsbDacOutput.volumePassthrough, onCheckedChange = { MikuUsbDacOutput.setVolumePassthrough(ctx, it) },
-                                colors = SwitchDefaults.colors(checkedThumbColor = MikuCyan, checkedTrackColor = Color(0xFF00695C)))
+                                colors = SwitchDefaults.colors(checkedThumbColor = MikuCyan, checkedTrackColor = Mascot.color(0xFF00695C)))
                         }
                     }
                 }

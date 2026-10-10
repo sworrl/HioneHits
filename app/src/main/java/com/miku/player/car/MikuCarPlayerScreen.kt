@@ -1,5 +1,6 @@
 package com.miku.player.car
 
+import com.miku.player.Mascot
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.media.MediaMetadataRetriever
@@ -110,7 +111,7 @@ class MikuCarPlayerScreen(carContext: CarContext) : Screen(carContext) {
 
         return PaneTemplate.Builder(pane)
             .setHeaderAction(Action.APP_ICON)
-            .setTitle("Miku Music")
+            .setTitle("${Mascot.musicAppName}")
             .build()
     }
 

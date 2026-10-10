@@ -1,5 +1,6 @@
 package com.miku.launcher.widget
 
+import com.miku.launcher.Mascot
 import android.appwidget.AppWidgetManager
 import android.appwidget.AppWidgetProvider
 import android.content.ComponentName
@@ -56,14 +57,14 @@ class MikuBpmComboWidget : AppWidgetProvider() {
             val intervalMs = try { Settings.Global.getInt(cr, "miku_beat_interval_ms", 0) } catch (_: Throwable) { 0 }
             val liveBpm = if (intervalMs > 0) 60_000 / intervalMs else 0
 
-            v.setTextViewText(R.id.widget_combo_title, title.ifEmpty { "MIKU MUSIC" })
+            v.setTextViewText(R.id.widget_combo_title, title.ifEmpty { "${Mascot.musicAppName.uppercase()}" })
             v.setTextViewText(
                 R.id.widget_combo_live,
                 if (liveBpm > 0) (if (playing) "♪ $liveBpm BPM" else "❚❚ $liveBpm BPM") else "— BPM"
             )
             v.setTextColor(
                 R.id.widget_combo_live,
-                if (playing) 0xFFFF4FA3.toInt() else 0xFF9FF3EC.toInt()
+                if (playing) Mascot.argb(0xFFFF4FA3.toInt()) else Mascot.argb(0xFF9FF3EC.toInt())
             )
 
             // ---- Tapper half (shared session store) ---------------------------------------

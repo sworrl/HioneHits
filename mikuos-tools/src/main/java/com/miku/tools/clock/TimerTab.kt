@@ -1,5 +1,6 @@
 package com.miku.tools.clock
 
+import com.miku.tools.Mascot
 import android.os.SystemClock
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.horizontalScroll
@@ -158,9 +159,9 @@ private fun TimerEntry(onStart: (Long, String) -> Unit) {
         )
         Spacer(Modifier.height(8.dp))
         GlassButton({ if (ms > 0) onStart(ms, label.trim()) }, Modifier.fillMaxWidth(), filled = true, enabled = ms > 0, minHeight = 60.dp) {
-            Icon(Icons.Filled.PlayArrow, null, tint = Color(0xFF041513))
+            Icon(Icons.Filled.PlayArrow, null, tint = Mascot.color(0xFF041513))
             Spacer(Modifier.width(8.dp))
-            Text("Start", color = Color(0xFF041513), fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
+            Text("Start", color = Mascot.color(0xFF041513), fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
         }
         Spacer(Modifier.height(8.dp))
     }
@@ -200,13 +201,13 @@ private fun TimerCard(t: ClockTimer, nowE: Long) {
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 when (t.state) {
                     TimerState.RUNNING -> GlassButton({ TimerScheduler.pause(ctx, t.id) }, Modifier.fillMaxWidth(), filled = true) {
-                        Icon(Icons.Filled.Pause, "Pause", tint = Color(0xFF041513))
+                        Icon(Icons.Filled.Pause, "Pause", tint = Mascot.color(0xFF041513))
                     }
                     TimerState.EXPIRED -> GlassButton({ TimerScheduler.reset(ctx, t.id) }, Modifier.fillMaxWidth(), filled = true, accent = Miku.PinkSoft) {
                         Text("Stop", color = Color.White, fontWeight = FontWeight.SemiBold)
                     }
                     else -> GlassButton({ TimerScheduler.start(ctx, t.id) }, Modifier.fillMaxWidth(), filled = true) {
-                        Icon(Icons.Filled.PlayArrow, "Start", tint = Color(0xFF041513))
+                        Icon(Icons.Filled.PlayArrow, "Start", tint = Mascot.color(0xFF041513))
                     }
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {

@@ -1,5 +1,6 @@
 package com.miku.launcher.widget
 
+import com.miku.launcher.Mascot
 import android.app.PendingIntent
 import android.appwidget.AppWidgetManager
 import android.appwidget.AppWidgetProvider
@@ -61,8 +62,8 @@ class MikuVolumeWidget : AppWidgetProvider() {
             val tint = when {
                 muted -> 0xFFFF5252.toInt()
                 pct >= 80 -> 0xFFFF5252.toInt()
-                pct >= 50 -> 0xFFFF4FA3.toInt()
-                else -> 0xFF39C5BB.toInt()
+                pct >= 50 -> Mascot.argb(0xFFFF4FA3.toInt())
+                else -> Mascot.argb(0xFF39C5BB.toInt())
             }
             v.setTextViewText(R.id.widget_volume_icon, if (muted) "🔇" else "🔊")
             v.setTextViewText(R.id.widget_volume_text, if (muted) "MUTE" else "VOL $pct%")

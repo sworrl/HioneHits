@@ -205,7 +205,7 @@ class MikuLibraryCallback(context: Context) : MediaLibrarySession.Callback {
             putInt(CONTENT_STYLE_PLAYABLE_HINT, CONTENT_STYLE_LIST)
         }
         val rootParams = LibraryParams.Builder().setExtras(extras).build()
-        val root = browsable(ID_ROOT, "Miku Music", null, null, MediaMetadata.MEDIA_TYPE_FOLDER_MIXED)
+        val root = browsable(ID_ROOT, "${Mascot.musicAppName}", null, null, MediaMetadata.MEDIA_TYPE_FOLDER_MIXED)
         return Futures.immediateFuture(LibraryResult.ofItem(root, rootParams))
     }
 
@@ -215,7 +215,7 @@ class MikuLibraryCallback(context: Context) : MediaLibrarySession.Callback {
         mediaId: String
     ): ListenableFuture<LibraryResult<MediaItem>> {
         val item: MediaItem? = when {
-            mediaId == ID_ROOT -> browsable(ID_ROOT, "Miku Music", null, null, MediaMetadata.MEDIA_TYPE_FOLDER_MIXED)
+            mediaId == ID_ROOT -> browsable(ID_ROOT, "${Mascot.musicAppName}", null, null, MediaMetadata.MEDIA_TYPE_FOLDER_MIXED)
             mediaId == ID_ALBUMS -> browsable(ID_ALBUMS, "Albums", null, null, MediaMetadata.MEDIA_TYPE_FOLDER_ALBUMS)
             mediaId == ID_ARTISTS -> browsable(ID_ARTISTS, "Artists", null, null, MediaMetadata.MEDIA_TYPE_FOLDER_ARTISTS)
             mediaId == ID_SONGS -> browsable(ID_SONGS, "Songs", null, null, MediaMetadata.MEDIA_TYPE_FOLDER_MIXED)

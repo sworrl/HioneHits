@@ -372,7 +372,7 @@ private fun FrequencyGraph(
         fun y(db: Float) = topPad + (yTop - db) / (yTop - yBot) * h
         val label = TextStyle(color = HwMuted, fontSize = 9.sp)
 
-        drawRect(Color(0xFF071C21), Offset(left, topPad), Size(w, h))
+        drawRect(Mascot.color(0xFF071C21), Offset(left, topPad), Size(w, h))
 
         // Band row across the top, like an IEM chart.
         BANDS.forEachIndexed { i, (name, a, b) ->
@@ -509,7 +509,7 @@ private fun ImpulseGraph(m: DacFilterModel.Model?, shown: DacFilterModel.Filter,
         fun x(t: Double) = left + ((t - t0) / (t1 - t0) * w).toFloat()
         fun y(v: Float) = topPad + (yMax - v) / (yMax - yMin) * h
         val label = TextStyle(color = HwMuted, fontSize = 9.sp)
-        drawRect(Color(0xFF071C21), Offset(left, topPad), Size(w, h))
+        drawRect(Mascot.color(0xFF071C21), Offset(left, topPad), Size(w, h))
         var t = kotlin.math.ceil(t0 / tickStep) * tickStep
         while (t <= t1 + 1e-12) {
             drawLine(Color.White.copy(alpha = if (abs(t) < 1e-9) 0.3f else 0.1f), Offset(x(t), topPad), Offset(x(t), topPad + h), 1f)
@@ -596,6 +596,10 @@ private fun Notes(
     }
     if (m == null) return
     val r = fmtRate(rate)
+    // Measured 2026-10-10 (Hione, docs/PRESS_KIT.md): the PAL audio stack runs the wired DAC at
+    // 192 kHz for every track, so these curves describe the filter at the file's rate, which is
+    // not what reaches the DAC yet. Say so before the theory.
+    line("Right now", "The DAC runs at 192 kHz for every track, so the filter only changes the sound above about 80 kHz and all five sound the same. The curves show each filter at the file's rate, for when native-rate output lands.")
     if (m.choiceIgnored) {
         line("At $r", "The chip has one fixed filter at 352.8 and 384 kHz and ignores the filter choice. It droops about 0.04 dB by 20 kHz.")
     } else when (f) {
@@ -652,8 +656,8 @@ private fun ProfileTools(
     Spacer(Modifier.height(4.dp))
     Text(
         when {
-            entry?.name != null -> "${entry.name}${if (entry.pinned) " (pinned to this jack)" else " (last used on this jack)"}. EQ ${if (entry.eqAudible) "on, ${entry.bands.count { abs(it.gainDb) > 1e-9 }} bands" else "off"}. Set profiles per jack in Miku Music, Listening profiles."
-            else -> "Miku Music has not published a profile for this jack yet. Pick one in Miku Music, Listening profiles, and it shows up here."
+            entry?.name != null -> "${entry.name}${if (entry.pinned) " (pinned to this jack)" else " (last used on this jack)"}. EQ ${if (entry.eqAudible) "on, ${entry.bands.count { abs(it.gainDb) > 1e-9 }} bands" else "off"}. Set profiles per jack in ${Mascot.musicAppName}, Listening profiles."
+            else -> "${Mascot.musicAppName} has not published a profile for this jack yet. Pick one in ${Mascot.musicAppName}, Listening profiles, and it shows up here."
         },
         color = HwMuted, fontSize = 11.5.sp, lineHeight = 15.sp,
     )
@@ -713,9 +717,9 @@ private fun ProfileTools(
         list.forEach { b -> Text("  ${trimNum(b.hz)} Hz  ${String.format(java.util.Locale.US, "%.1f", b.gainDb)} dB  Q ${b.q}", color = HwMuted, fontSize = 11.sp) }
         if (entry?.profileId != null) {
             Spacer(Modifier.height(4.dp))
-            Chip("Put these on ${entry.name}'s EQ in Miku Music", false, secondary) {
+            Chip("Put these on ${entry.name}'s EQ in ${Mascot.musicAppName}", false, secondary) {
                 OutputProfiles.sendEqToMikuMusic(ctx, entry.profileId, list, 0.0)
-                status = "Sent to Miku Music. It replaces that profile's EQ with these cuts and turns EQ on. Undo it there with Reset to recommended."
+                status = "Sent to ${Mascot.musicAppName}. It replaces that profile's EQ with these cuts and turns EQ on. Undo it there with Reset to recommended."
             }
         }
     }

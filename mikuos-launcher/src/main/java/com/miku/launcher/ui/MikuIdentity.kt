@@ -1,5 +1,6 @@
 package com.miku.launcher.ui
 
+import com.miku.launcher.Mascot
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -44,20 +45,20 @@ import com.miku.launcher.MikuTextSecondary
  */
 object MikuIdentity {
     // ---- Identity palette ----
-    val Teal = Color(0xFF39C5BB)
-    val TealBright = Color(0xFF9FF3EC)
-    val TealDeep = Color(0xFF0E1A18)
-    val TealSurface = Color(0xFF16302D)
+    val Teal get() = Mascot.color(0xFF39C5BB)
+    val TealBright get() = Mascot.color(0xFF9FF3EC)
+    val TealDeep get() = Mascot.color(0xFF0E1A18)
+    val TealSurface get() = Mascot.color(0xFF16302D)
     val Cyan = MikuCyan
-    val Pink = Color(0xFFFF5C8A)
-    val PinkHot = Color(0xFFFF2A85)
+    val Pink get() = Mascot.color(0xFFFF5C8A)
+    val PinkHot get() = Mascot.color(0xFFFF2A85)
     val PinkNeon = MikuNeonPink
-    val Lavender = Color(0xFFB388FF)
+    val Lavender get() = Mascot.color(0xFFB388FF)
     val Cream = Color(0xFFFFF4E6)
 
     // ---- Pastel kawaii tints (backgrounds of badges / empty states) ----
-    val PastelMint = Color(0xFFB9F1EA)
-    val PastelPink = Color(0xFFFFD1DF)
+    val PastelMint get() = Mascot.color(0xFFB9F1EA)
+    val PastelPink get() = Mascot.color(0xFFFFD1DF)
     val PastelSky = Color(0xFFCFE9FF)
     val PastelLilac = Color(0xFFE5D4FF)
 

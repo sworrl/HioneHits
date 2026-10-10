@@ -1,5 +1,6 @@
 package com.miku.settings.lock
 
+import com.miku.settings.Mascot
 import android.app.KeyguardManager
 import android.content.Context
 import android.content.Intent
@@ -91,7 +92,7 @@ class MikuUnlockActivity : ComponentActivity() {
                 CredentialEntry(
                     type = type,
                     title = "Enter your $noun",
-                    subtitle = if (afterRestart) "MikuOS asks for it after every restart" else null,
+                    subtitle = if (afterRestart) "${Mascot.osName} asks for it after every restart" else null,
                     error = if (wait > 0) "Too many tries. Try again in ${wait}s" else error,
                     busy = busy,
                     locked = wait > 0,

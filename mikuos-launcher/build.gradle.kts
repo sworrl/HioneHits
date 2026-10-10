@@ -27,7 +27,20 @@ val localProps = Properties().apply {
 }
 fun localProp(key: String) = localProps.getProperty(key, "")
 
+// The holiday calendar (mikuos/mascot/holidays/calendar.json) goes into assets/holidays/. Only
+// that one file: holiday art stays in the mascot packs. Missing file = no holidays, seasons only.
+val holidayCalendarDir = layout.buildDirectory.dir("generated/holidayCalendar")
+val copyHolidayCalendar = tasks.register<Copy>("copyHolidayCalendar") {
+    from(rootProject.file("../mikuos/mascot/holidays")) { include("calendar.json") }
+    into(holidayCalendarDir.map { it.dir("holidays") })
+}
+
 android {
+    sourceSets["main"].assets.srcDir(holidayCalendarDir)
+    // Unit tests touch Mascot, whose object init builds an android.util.LruCache: let the
+    // android.jar stubs return defaults instead of throwing.
+    testOptions { unitTests.isReturnDefaultValues = true }
+
     namespace = "com.miku.launcher"
     compileSdk = 34
 
@@ -154,6 +167,9 @@ android {
 }
 
 dependencies {
+    // Unit tests: holiday date rules and mascot pack switching (org.json is stubbed in android.jar).
+    testImplementation("junit:junit:4.13.2")
+    testImplementation("org.json:json:20231013")
     implementation(platform("androidx.compose:compose-bom:2024.09.02"))
     implementation("androidx.compose.material3:material3")
     implementation("androidx.compose.ui:ui")
@@ -182,3 +198,5 @@ dependencies {
     // Powers the in-launcher VPN client (com.miku.launcher.vpn) for reaching the user's home UDR.
     implementation("com.wireguard.android:tunnel:1.0.20230706")
 }
+
+tasks.named("preBuild") { dependsOn(copyHolidayCalendar) }

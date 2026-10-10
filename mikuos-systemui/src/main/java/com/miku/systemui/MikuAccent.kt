@@ -20,8 +20,8 @@ object MikuAccent {
     const val KEY_ACCENT = "miku_np_accent"
     const val KEY_ACCENT2 = "miku_np_accent2"
     const val KEY_TS = "miku_np_accent_ts"
-    const val TEAL = 0xFF39C5BB.toInt()
-    const val TEAL_BRIGHT = 0xFF00F5D4.toInt()
+    val TEAL get() = Mascot.argb(0xFF39C5BB.toInt())
+    val TEAL_BRIGHT get() = Mascot.argb(0xFF00F5D4.toInt())
 
     private val _accent = MutableStateFlow(0)
     private val _accent2 = MutableStateFlow(0)

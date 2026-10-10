@@ -236,14 +236,14 @@ fun CyberPlasmaGlowClock(
                     .size(width = 135.dp, height = 40.dp)
             ) {
                 val particles = listOf(
-                    Triple(0.12f, 0.25f, Color(0xFF00E5FF)),
-                    Triple(0.28f, 0.65f, Color(0xFFFF007F)),
-                    Triple(0.45f, 0.15f, Color(0xFF00FFCC)),
+                    Triple(0.12f, 0.25f, Mascot.color(0xFF00E5FF)),
+                    Triple(0.28f, 0.65f, Mascot.color(0xFFFF007F)),
+                    Triple(0.45f, 0.15f, Mascot.color(0xFF00FFCC)),
                     Triple(0.58f, 0.80f, Color(0xFFFFFFFF)),
-                    Triple(0.72f, 0.35f, Color(0xFF00E5FF)),
-                    Triple(0.85f, 0.70f, Color(0xFFFF007F)),
+                    Triple(0.72f, 0.35f, Mascot.color(0xFF00E5FF)),
+                    Triple(0.85f, 0.70f, Mascot.color(0xFFFF007F)),
                     Triple(0.92f, 0.20f, Color(0xFF76FF03)),
-                    Triple(0.38f, 0.90f, Color(0xFF00E5FF)),
+                    Triple(0.38f, 0.90f, Mascot.color(0xFF00E5FF)),
                     Triple(0.65f, 0.45f, Color(0xFFFFD600))
                 )
 
@@ -386,7 +386,7 @@ fun CyberPlasmaGlowClock(
                 if (dateParts.size == 3) {
                     Text(
                         text = dateParts[0],
-                        color = Color(0xFF80FFFF),
+                        color = Mascot.color(0xFF80FFFF),
                         fontSize = 13.5.sp,
                         fontWeight = FontWeight.Black,
                         fontFamily = AudiowideFont,
@@ -394,14 +394,14 @@ fun CyberPlasmaGlowClock(
                     )
                     Text(
                         text = " / ",
-                        color = Color(0xFFFF69B4),
+                        color = Mascot.color(0xFFFF69B4),
                         fontSize = 13.sp,
                         fontWeight = FontWeight.Black,
                         fontFamily = AudiowideFont
                     )
                     Text(
                         text = dateParts[1],
-                        color = Color(0xFF70FFF0),
+                        color = Mascot.color(0xFF70FFF0),
                         fontSize = 13.5.sp,
                         fontWeight = FontWeight.Black,
                         fontFamily = AudiowideFont,
@@ -409,7 +409,7 @@ fun CyberPlasmaGlowClock(
                     )
                     Text(
                         text = " / ",
-                        color = Color(0xFFFF69B4),
+                        color = Mascot.color(0xFFFF69B4),
                         fontSize = 13.sp,
                         fontWeight = FontWeight.Black,
                         fontFamily = AudiowideFont
@@ -440,12 +440,12 @@ fun CyberPlasmaGlowClock(
                     horizontalArrangement = Arrangement.spacedBy(1.5.dp),
                     modifier = Modifier.height(11.dp)
                 ) {
-                    Box(Modifier.width(2.dp).height((11 * bar1).dp).clip(RoundedCornerShape(0.5.dp)).background(Brush.verticalGradient(listOf(MikuCyan, Color(0xFF00FFCC)))))
-                    Box(Modifier.width(2.dp).height((11 * bar2).dp).clip(RoundedCornerShape(0.5.dp)).background(Brush.verticalGradient(listOf(MikuNeonPink, Color(0xFFFF4081)))))
+                    Box(Modifier.width(2.dp).height((11 * bar1).dp).clip(RoundedCornerShape(0.5.dp)).background(Brush.verticalGradient(listOf(MikuCyan, Mascot.color(0xFF00FFCC)))))
+                    Box(Modifier.width(2.dp).height((11 * bar2).dp).clip(RoundedCornerShape(0.5.dp)).background(Brush.verticalGradient(listOf(MikuNeonPink, Mascot.color(0xFFFF4081)))))
                     Box(Modifier.width(2.dp).height((11 * bar3).dp).clip(RoundedCornerShape(0.5.dp)).background(Brush.verticalGradient(listOf(Color(0xFF00FF7F), Color(0xFF76FF03)))))
                     Box(Modifier.width(2.dp).height((11 * bar4).dp).clip(RoundedCornerShape(0.5.dp)).background(Brush.verticalGradient(listOf(MikuCyan, Color(0xFF00B0FF)))))
-                    Box(Modifier.width(2.dp).height((11 * bar5).dp).clip(RoundedCornerShape(0.5.dp)).background(Brush.verticalGradient(listOf(MikuNeonPink, Color(0xFFFF007F)))))
-                    Box(Modifier.width(2.dp).height((11 * bar6).dp).clip(RoundedCornerShape(0.5.dp)).background(Brush.verticalGradient(listOf(Color(0xFF00FFCC), MikuCyan))))
+                    Box(Modifier.width(2.dp).height((11 * bar5).dp).clip(RoundedCornerShape(0.5.dp)).background(Brush.verticalGradient(listOf(MikuNeonPink, Mascot.color(0xFFFF007F)))))
+                    Box(Modifier.width(2.dp).height((11 * bar6).dp).clip(RoundedCornerShape(0.5.dp)).background(Brush.verticalGradient(listOf(Mascot.color(0xFF00FFCC), MikuCyan))))
                 }
             }
         }

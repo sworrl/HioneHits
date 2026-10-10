@@ -1,5 +1,6 @@
 package com.miku.tools.calendar
 
+import com.miku.tools.Mascot
 import android.app.Activity
 import android.content.ContentUris
 import android.content.Intent
@@ -310,9 +311,9 @@ private fun EditEventScreen(activity: Activity, intent: Intent, editId: Long?) {
                     if (o?.rrule != null && instBegin > 0) askScope = true else save(null)
                 }
             }, filled = true, minHeight = 46.dp) {
-                Icon(Icons.Outlined.Check, null, tint = Color(0xFF041513))
+                Icon(Icons.Outlined.Check, null, tint = Mascot.color(0xFF041513))
                 Spacer(Modifier.width(6.dp))
-                Text("Save", color = Color(0xFF041513), fontWeight = FontWeight.SemiBold)
+                Text("Save", color = Mascot.color(0xFF041513), fontWeight = FontWeight.SemiBold)
             }
         })
         if (!loaded) return@Column
@@ -497,7 +498,7 @@ private fun RepeatDialog(current: Repeat, weekly: MutableList<DayOfWeek>, start:
                             .clickable { if (on) weekly.remove(d) else weekly.add(d) },
                         contentAlignment = Alignment.Center
                     ) {
-                        Text(d.getDisplayName(TextStyle.NARROW, Locale.getDefault()), color = if (on) Color(0xFF02201D) else Miku.TextDim, fontWeight = FontWeight.Bold)
+                        Text(d.getDisplayName(TextStyle.NARROW, Locale.getDefault()), color = if (on) Mascot.color(0xFF02201D) else Miku.TextDim, fontWeight = FontWeight.Bold)
                     }
                 }
             }

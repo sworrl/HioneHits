@@ -1,5 +1,6 @@
 package com.miku.launcher.arco
 
+import com.miku.launcher.Mascot
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
@@ -84,7 +85,7 @@ fun MikuArcoBadge(
         CyberBespokeBadge(
             onClick = onClick,
             accentColor = accentColor,
-            gradient = listOf(accentColor.copy(alpha = if (isConnected) 0.32f else 0.16f), Color(0xFF030D14)),
+            gradient = listOf(accentColor.copy(alpha = if (isConnected) 0.32f else 0.16f), Mascot.color(0xFF030D14)),
             shape = CutCornerShape(topStart = 3.dp, bottomEnd = 3.dp, topEnd = 3.dp, bottomStart = 3.dp)
         ) {
             Row(

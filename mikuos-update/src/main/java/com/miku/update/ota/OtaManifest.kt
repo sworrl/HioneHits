@@ -1,5 +1,6 @@
 package com.miku.update.ota
 
+import com.miku.update.Mascot
 import org.json.JSONObject
 import java.time.Instant
 
@@ -15,7 +16,25 @@ data class OtaManifest(
     val apks: List<ApkEntry>,
     /** Releases pulled after the fact. A device running one of these goes back to its image copy. */
     val revoked: List<Revoked> = emptyList(),
+    /** Optional downloads that are not apps: mascot packs today. Older manifests have none. */
+    val contentPacks: List<ContentPack> = emptyList(),
 ) {
+    /**
+     * One content pack: a zip with pack.json at its root. [url] is relative to the manifest like
+     * the APK URLs, [size] and [sha256] pin the exact zip, so the manifest signature covers it.
+     */
+    data class ContentPack(
+        val id: String,
+        val kind: String,
+        val version: Int,
+        val name: String,
+        val url: String,
+        val size: Long,
+        val sha256: String,
+        /** Lowest Miku Update versionCode that can install it, or null. */
+        val minUpdaterVersion: Long?,
+    )
+
     data class Revoked(val packageName: String, val versionCode: Long, val reason: String)
 
     fun isRevoked(pkg: String, vc: Long) = revoked.any { it.packageName == pkg && it.versionCode == vc }
@@ -90,11 +109,45 @@ data class OtaManifest(
             }
         }
 
+        private val PACK_ID = Regex("^[a-z0-9_]{1,32}$")
+        /** Kinds this app can install. Unknown kinds are skipped, so a newer server does not break older apps. */
+        val PACK_KINDS = setOf("mascot")
+        const val MAX_PACK_BYTES = 128L * 1024 * 1024
+
+        fun parseContentPacks(arr: org.json.JSONArray?): List<ContentPack> = buildList {
+            if (arr == null) return@buildList
+            for (i in 0 until arr.length()) {
+                val p = arr.getJSONObject(i)
+                val kind = p.optString("kind", "mascot")
+                if (kind !in PACK_KINDS) continue
+                val id = p.getString("id")
+                require(PACK_ID.matches(id)) { "Bad id for a content pack" }
+                val sha = p.getString("sha256").lowercase()
+                require(HEX64.matches(sha)) { "Bad sha256 for content pack $id" }
+                val size = p.getLong("size")
+                require(size in 1..MAX_PACK_BYTES) { "Bad size for content pack $id" }
+                val version = p.getInt("version")
+                require(version > 0) { "Bad version for content pack $id" }
+                add(
+                    ContentPack(
+                        id = id,
+                        kind = kind,
+                        version = version,
+                        name = p.str("name") ?: id,
+                        url = p.getString("url"),
+                        size = size,
+                        sha256 = sha,
+                        minUpdaterVersion = if (p.has("min_updater_version") && !p.isNull("min_updater_version")) p.getLong("min_updater_version") else null,
+                    )
+                )
+            }
+        }
+
         fun parse(bytes: ByteArray): OtaManifest {
             val o = JSONObject(String(bytes, Charsets.UTF_8))
             val schema = o.getInt("schema_version")
             require(schema in 1..OtaConfig.SCHEMA_VERSION) {
-                "This manifest uses format $schema and this app only knows ${OtaConfig.SCHEMA_VERSION}. Update Miku Update with a full system image."
+                "This manifest uses format $schema and this app only knows ${OtaConfig.SCHEMA_VERSION}. Update ${Mascot.updateName} with a full system image."
             }
             val su = (if (o.isNull("system_update")) null else o.optJSONObject("system_update"))?.let {
                 SystemUpdate(
@@ -134,6 +187,7 @@ data class OtaManifest(
                     add(Revoked(r.getString("package"), r.getLong("versionCode"), r.str("reason") ?: ""))
                 }
             }
+            val packs = parseContentPacks(o.optJSONArray("content_packs"))
             return OtaManifest(
                 schemaVersion = schema,
                 channel = o.getString("channel"),
@@ -144,6 +198,7 @@ data class OtaManifest(
                 systemUpdate = su,
                 apks = apks,
                 revoked = revoked,
+                contentPacks = packs,
             )
         }
     }

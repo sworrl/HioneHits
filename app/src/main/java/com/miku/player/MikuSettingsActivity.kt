@@ -87,8 +87,8 @@ class MikuSettingsActivity : ComponentActivity() {
                     primary = MikuCyan,
                     secondary = MikuNeonPink,
                     background = CyberDarkBg,
-                    surface = Color(0xF5040D12),
-                    surfaceVariant = Color(0xFF071E28),
+                    surface = Mascot.color(0xF5040D12),
+                    surfaceVariant = Mascot.color(0xFF071E28),
                     onPrimary = Color.Black,
                     onSecondary = Color.Black,
                     onBackground = Color.White,
@@ -179,7 +179,7 @@ fun MikuSettingsScreen(onBack: () -> Unit) {
                 subtitle = "USB DAC mode, in the Hardware app",
                 icon = Icons.Default.Usb,
                 badge = "UAC2",
-                accentColor = Color(0xFF00E5FF),
+                accentColor = Mascot.color(0xFF00E5FF),
                 onClick = { DacSettingsLink.open(ctx) }
             ),
             SettingsCategoryItem(
@@ -228,7 +228,7 @@ fun MikuSettingsScreen(onBack: () -> Unit) {
                 title = "Storage",
                 subtitle = "MicroSD and internal storage",
                 icon = Icons.Default.SdCard,
-                accentColor = Color(0xFF00E5FF),
+                accentColor = Mascot.color(0xFF00E5FF),
                 onClick = { isStorageModalOpen = true }
             ),
             SettingsCategoryItem(
@@ -330,7 +330,7 @@ fun MikuSettingsScreen(onBack: () -> Unit) {
             .background(CyberDarkBg)
     ) {
         Image(
-            painter = painterResource(id = R.drawable.miku_bg_page1),
+            painter = mascotPainter(id = R.drawable.miku_bg_page1),
             contentDescription = null,
             modifier = Modifier.fillMaxSize(),
             contentScale = ContentScale.Crop
@@ -342,9 +342,9 @@ fun MikuSettingsScreen(onBack: () -> Unit) {
                 .background(
                     Brush.verticalGradient(
                         listOf(
-                            Color(0xEE040D12),
-                            Color(0xCC040D12),
-                            Color(0xF0040D12)
+                            Mascot.color(0xEE040D12),
+                            Mascot.color(0xCC040D12),
+                            Mascot.color(0xF0040D12)
                         )
                     )
                 )
@@ -384,7 +384,7 @@ fun MikuSettingsScreen(onBack: () -> Unit) {
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier
                         .clip(RoundedCornerShape(16.dp))
-                        .background(Color(0x4400E5FF))
+                        .background(Mascot.color(0x4400E5FF))
                         .border(1.dp, MikuCyan, RoundedCornerShape(16.dp))
                         .clickable {
                             chibiReaction = chibiReactions.random()
@@ -392,7 +392,7 @@ fun MikuSettingsScreen(onBack: () -> Unit) {
                         .padding(horizontal = 8.dp, vertical = 4.dp)
                 ) {
                     Image(
-                        painter = painterResource(id = R.drawable.ic_search_head_miku),
+                        painter = mascotPainter(id = R.drawable.ic_search_head_miku),
                         contentDescription = "Chibi Companion",
                         modifier = Modifier.size(22.dp)
                     )
@@ -417,7 +417,7 @@ fun MikuSettingsScreen(onBack: () -> Unit) {
                     .fillMaxWidth()
                     .padding(horizontal = 14.dp)
                     .clip(RoundedCornerShape(22.dp))
-                    .background(Color(0xEE0D222A))
+                    .background(Mascot.color(0xEE0D222A))
                     .border(1.dp, CyberGlassBorder, RoundedCornerShape(22.dp))
                     .padding(horizontal = 12.dp, vertical = 2.dp)
             ) {
@@ -557,8 +557,8 @@ fun Cyber3dSettingsCard(item: SettingsCategoryItem) {
             .background(
                 Brush.horizontalGradient(
                     listOf(
-                        Color(0xEE091D26),
-                        Color(0xFF041218)
+                        Mascot.color(0xEE091D26),
+                        Mascot.color(0xFF041218)
                     )
                 )
             )
@@ -703,7 +703,7 @@ fun MikuDisplaySettingsModal(onDismissRequest: () -> Unit) {
             .fillMaxWidth(0.96f)
             .fillMaxHeight(0.90f)
             .clip(RoundedCornerShape(24.dp))
-            .background(Brush.verticalGradient(listOf(Color(0xF0081C24), Color(0xF5040D12))))
+            .background(Brush.verticalGradient(listOf(Mascot.color(0xF0081C24), Mascot.color(0xF5040D12))))
             .border(1.5.dp, Brush.horizontalGradient(listOf(Color(0xFFFFD600), MikuCyan)), RoundedCornerShape(24.dp)),
         title = null,
         text = {
@@ -881,7 +881,7 @@ fun MikuDisplaySettingsModal(onDismissRequest: () -> Unit) {
                                 "Pixel Density",
                                 "${dm.densityDpi} dpi" + (refreshHz?.let { " / ${"%.0f".format(it)} Hz" } ?: " / — Hz")
                             )
-                            CyberInfoRow("Theme Mode", "Dark (Miku)")
+                            CyberInfoRow("Theme Mode", "Dark (${Mascot.name})")
                             CyberInfoRow(
                                 "Graphics Support",
                                 (glEsVersion?.let { "OpenGL ES $it" } ?: "OpenGL ES —") +
@@ -921,7 +921,7 @@ fun MikuBluetoothSettingsModal(onDismissRequest: () -> Unit) {
             .fillMaxWidth(0.96f)
             .fillMaxHeight(0.90f)
             .clip(RoundedCornerShape(24.dp))
-            .background(Brush.verticalGradient(listOf(Color(0xF0081C24), Color(0xF5040D12))))
+            .background(Brush.verticalGradient(listOf(Mascot.color(0xF0081C24), Mascot.color(0xF5040D12))))
             .border(1.5.dp, Brush.horizontalGradient(listOf(Color(0xFF2979FF), MikuCyan)), RoundedCornerShape(24.dp)),
         title = null,
         text = {
@@ -986,12 +986,12 @@ fun MikuBluetoothSettingsModal(onDismissRequest: () -> Unit) {
                                                 com.miku.player.bluetooth.MikuBluetoothController.startScan()
                                             }
                                         },
-                                        colors = ButtonDefaults.buttonColors(containerColor = if (isScanning) Color(0x33FF4081) else Color(0x332979FF)),
+                                        colors = ButtonDefaults.buttonColors(containerColor = if (isScanning) Mascot.color(0x33FF4081) else Color(0x332979FF)),
                                         contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
                                         shape = RoundedCornerShape(8.dp),
                                         modifier = Modifier.height(26.dp)
                                     ) {
-                                        Text(if (isScanning) "Stop Scan" else "Scan", color = if (isScanning) Color(0xFFFF80AB) else Color(0xFF2979FF), fontSize = 10.5.sp, fontWeight = FontWeight.Bold)
+                                        Text(if (isScanning) "Stop Scan" else "Scan", color = if (isScanning) Mascot.color(0xFFFF80AB) else Color(0xFF2979FF), fontSize = 10.5.sp, fontWeight = FontWeight.Bold)
                                     }
                                 }
 
@@ -1025,7 +1025,7 @@ fun MikuBluetoothSettingsModal(onDismissRequest: () -> Unit) {
                                                         else -> Icons.Default.Bluetooth
                                                     },
                                                     contentDescription = null,
-                                                    tint = if (devItem.isConnected) Color(0xFF00E5FF) else Color.White,
+                                                    tint = if (devItem.isConnected) Mascot.color(0xFF00E5FF) else Color.White,
                                                     modifier = Modifier.size(20.dp)
                                                 )
                                                 Spacer(Modifier.width(10.dp))
@@ -1037,7 +1037,7 @@ fun MikuBluetoothSettingsModal(onDismissRequest: () -> Unit) {
                                                             devItem.isConnecting -> "Connecting…"
                                                             else -> devItem.address
                                                         },
-                                                        color = if (devItem.isConnected) Color(0xFF00E5FF) else if (devItem.isConnecting) Color(0xFFFFD54F) else MikuTextSecondary,
+                                                        color = if (devItem.isConnected) Mascot.color(0xFF00E5FF) else if (devItem.isConnecting) Color(0xFFFFD54F) else MikuTextSecondary,
                                                         fontSize = 9.5.sp
                                                     )
                                                 }
@@ -1118,12 +1118,12 @@ fun MikuBluetoothSettingsModal(onDismissRequest: () -> Unit) {
                                                 com.miku.player.bluetooth.MikuBluetoothController.startScan()
                                             }
                                         },
-                                        colors = ButtonDefaults.buttonColors(containerColor = if (isScanning) Color(0x33FF4081) else Color(0x332979FF)),
+                                        colors = ButtonDefaults.buttonColors(containerColor = if (isScanning) Mascot.color(0x33FF4081) else Color(0x332979FF)),
                                         contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
                                         shape = RoundedCornerShape(8.dp),
                                         modifier = Modifier.height(26.dp)
                                     ) {
-                                        Text(if (isScanning) "Stop" else "Scan", color = if (isScanning) Color(0xFFFF80AB) else Color(0xFF2979FF), fontSize = 10.5.sp, fontWeight = FontWeight.Bold)
+                                        Text(if (isScanning) "Stop" else "Scan", color = if (isScanning) Mascot.color(0xFFFF80AB) else Color(0xFF2979FF), fontSize = 10.5.sp, fontWeight = FontWeight.Bold)
                                     }
                                 }
 
@@ -1196,7 +1196,7 @@ fun MikuBluetoothSettingsModal(onDismissRequest: () -> Unit) {
                                 Text("Codecs", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                                 listOf(
                                     "LDAC (990 / 660 / 330 kbps 96kHz/24-Bit)" to Color(0xFF00E676),
-                                    "Qualcomm aptX HD (576 kbps 48kHz/24-Bit)" to Color(0xFF00E5FF),
+                                    "Qualcomm aptX HD (576 kbps 48kHz/24-Bit)" to Mascot.color(0xFF00E5FF),
                                     "aptX Adaptive (Low Latency / Dynamic)" to Color(0xFF2979FF),
                                     "AAC / SBC (Standard Audio Codec)" to MikuTextSecondary
                                 ).forEach { (codec, col) ->
@@ -1258,8 +1258,8 @@ fun MikuStorageSettingsModal(onDismissRequest: () -> Unit) {
             .fillMaxWidth(0.96f)
             .fillMaxHeight(0.90f)
             .clip(RoundedCornerShape(24.dp))
-            .background(Brush.verticalGradient(listOf(Color(0xF0081C24), Color(0xF5040D12))))
-            .border(1.5.dp, Brush.horizontalGradient(listOf(Color(0xFF00E5FF), MikuPink)), RoundedCornerShape(24.dp)),
+            .background(Brush.verticalGradient(listOf(Mascot.color(0xF0081C24), Mascot.color(0xF5040D12))))
+            .border(1.5.dp, Brush.horizontalGradient(listOf(Mascot.color(0xFF00E5FF), MikuPink)), RoundedCornerShape(24.dp)),
         title = null,
         text = {
             Column(Modifier.fillMaxSize().padding(top = 4.dp)) {
@@ -1286,7 +1286,7 @@ fun MikuStorageSettingsModal(onDismissRequest: () -> Unit) {
                                 progress = { (internalStats.first.toFloat() / internalStats.second.toFloat()).coerceIn(0f, 1f) },
                                 modifier = Modifier.fillMaxWidth().height(8.dp).clip(RoundedCornerShape(4.dp)),
                                 color = MikuCyan,
-                                trackColor = Color(0xFF102830)
+                                trackColor = Mascot.color(0xFF102830)
                             )
                             Spacer(Modifier.height(4.dp))
                             Text("${internalStats.third} GB free", color = MikuTextSecondary, fontSize = 10.sp)
@@ -1313,7 +1313,7 @@ fun MikuStorageSettingsModal(onDismissRequest: () -> Unit) {
                                     progress = { (sdStats.first.toFloat() / sdStats.second.toFloat()).coerceIn(0f, 1f) },
                                     modifier = Modifier.fillMaxWidth().height(8.dp).clip(RoundedCornerShape(4.dp)),
                                     color = MikuNeonPink,
-                                    trackColor = Color(0xFF301020)
+                                    trackColor = Mascot.color(0xFF301020)
                                 )
                                 Spacer(Modifier.height(4.dp))
                                 Text("${sdStats.third} GB free", color = MikuTextSecondary, fontSize = 10.sp)
@@ -1377,7 +1377,7 @@ fun MikuAppsSettingsModal(onDismissRequest: () -> Unit) {
             .fillMaxWidth(0.96f)
             .fillMaxHeight(0.90f)
             .clip(RoundedCornerShape(24.dp))
-            .background(Brush.verticalGradient(listOf(Color(0xF0081C24), Color(0xF5040D12))))
+            .background(Brush.verticalGradient(listOf(Mascot.color(0xF0081C24), Mascot.color(0xF5040D12))))
             .border(1.5.dp, Brush.horizontalGradient(listOf(Color(0xFFFF9100), MikuCyan)), RoundedCornerShape(24.dp)),
         title = null,
         text = {
@@ -1451,7 +1451,7 @@ fun MikuSecuritySettingsModal(onDismissRequest: () -> Unit) {
             .fillMaxWidth(0.96f)
             .fillMaxHeight(0.90f)
             .clip(RoundedCornerShape(24.dp))
-            .background(Brush.verticalGradient(listOf(Color(0xF0081C24), Color(0xF5040D12))))
+            .background(Brush.verticalGradient(listOf(Mascot.color(0xF0081C24), Mascot.color(0xF5040D12))))
             .border(1.5.dp, Brush.horizontalGradient(listOf(Color(0xFFE040FB), MikuCyan)), RoundedCornerShape(24.dp)),
         title = null,
         text = {
@@ -1763,7 +1763,7 @@ fun MikuAboutDeviceModal(
             .fillMaxWidth(0.96f)
             .fillMaxHeight(0.92f)
             .clip(RoundedCornerShape(24.dp))
-            .background(Brush.verticalGradient(listOf(Color(0xF0081C24), Color(0xF5040D12))))
+            .background(Brush.verticalGradient(listOf(Mascot.color(0xF0081C24), Mascot.color(0xF5040D12))))
             .border(1.5.dp, Brush.horizontalGradient(listOf(MikuCyan, MikuNeonPink)), RoundedCornerShape(24.dp)),
         title = null,
         text = {
@@ -1781,7 +1781,7 @@ fun MikuAboutDeviceModal(
                             Modifier
                                 .fillMaxWidth()
                                 .clip(RoundedCornerShape(16.dp))
-                                .background(Brush.horizontalGradient(listOf(Color(0x3300E5FF), Color(0x33FF4081))))
+                                .background(Brush.horizontalGradient(listOf(Mascot.color(0x3300E5FF), Mascot.color(0x33FF4081))))
                                 .border(1.dp, CyberGlassBorder, RoundedCornerShape(16.dp))
                                 .padding(14.dp)
                         ) {
@@ -1818,7 +1818,7 @@ fun MikuAboutDeviceModal(
                                 }
                                 Spacer(Modifier.height(4.dp))
                                 Text(
-                                    "MikuOS · Hatsune Miku edition",
+                                    "${Mascot.osName} · ${Mascot.edition}",
                                     color = MikuTextSecondary,
                                     fontSize = 10.5.sp
                                 )
@@ -2047,7 +2047,7 @@ fun MikuDeveloperOptionsModal(
             .fillMaxWidth(0.96f)
             .fillMaxHeight(0.92f)
             .clip(RoundedCornerShape(24.dp))
-            .background(Brush.verticalGradient(listOf(Color(0xF0081C24), Color(0xF5040D12))))
+            .background(Brush.verticalGradient(listOf(Mascot.color(0xF0081C24), Mascot.color(0xF5040D12))))
             .border(1.5.dp, Brush.horizontalGradient(listOf(Color(0xFF00E676), MikuCyan)), RoundedCornerShape(24.dp)),
         title = null,
         text = {
@@ -2145,7 +2145,7 @@ fun MikuDeveloperOptionsModal(
                                         Modifier
                                             .fillMaxWidth()
                                             .clip(RoundedCornerShape(8.dp))
-                                            .background(Color(0xFF04131A))
+                                            .background(Mascot.color(0xFF04131A))
                                             .padding(horizontal = 10.dp, vertical = 6.dp)
                                     ) {
                                         Text(

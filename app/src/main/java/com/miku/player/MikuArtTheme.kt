@@ -156,7 +156,7 @@ object MikuArtTheme {
         // on until they actually clear the body-text floor, not to a fixed luminance.
         val accent = liftFor(p.color1, ground, ACCENT_MIN_CONTRAST)
         val accent2 = liftFor(p.color3, ground, ACCENT_MIN_CONTRAST)
-        val onAccent = if (accent.luminance() > 0.45f) Color(0xFF07201F) else Color.White
+        val onAccent = if (accent.luminance() > 0.45f) Mascot.color(0xFF07201F) else Color.White
         return Colors(accent, accent2, ground, surface, onAccent)
     }
 

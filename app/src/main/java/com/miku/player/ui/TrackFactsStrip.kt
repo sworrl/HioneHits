@@ -1,5 +1,6 @@
 package com.miku.player.ui
 
+import com.miku.player.Mascot
 import android.content.Context
 import android.media.AudioDeviceInfo
 import android.media.AudioFormat
@@ -69,7 +70,7 @@ import java.io.File
 
 /** One line of the data-verbose strip. Every value here is REAL — a fact is simply omitted when
  *  its source has nothing (no "—", no guesses, no defaults). */
-data class TrackFact(val label: String, val value: String, val color: Color = Color(0xFFD4ECE9))
+data class TrackFact(val label: String, val value: String, val color: Color = Mascot.color(0xFFD4ECE9))
 
 /**
  * Real audio facts for the current track, gathered from the sources the rest of the app already
@@ -303,7 +304,7 @@ fun TrackFactsStrip(
                 Modifier
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(10.dp))
-                    .background(Color(0x66020A0C))
+                    .background(Mascot.color(0x66020A0C))
                     .padding(horizontal = 8.dp, vertical = 5.dp)
                     .verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(2.dp)

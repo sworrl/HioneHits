@@ -1,5 +1,7 @@
 package com.miku.player.battery
 
+import com.miku.player.Mascot
+import com.miku.player.mascotPainter
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
@@ -343,9 +345,9 @@ fun MikuBatteryObservatoryModal(
                         .background(
                             Brush.verticalGradient(
                                 listOf(
-                                    Color(0xF8051923),
-                                    Color(0xF8030F16),
-                                    Color(0xFF010609)
+                                    Mascot.color(0xF8051923),
+                                    Mascot.color(0xF8030F16),
+                                    Mascot.color(0xFF010609)
                                 )
                             )
                         )
@@ -366,7 +368,7 @@ fun MikuBatteryObservatoryModal(
                 ) {
                     // Miku Pose Cyber Watermark
                     Image(
-                        painter = painterResource(id = R.drawable.miku_pose_dance),
+                        painter = mascotPainter(id = R.drawable.miku_pose_dance),
                         contentDescription = null,
                         modifier = Modifier
                             .fillMaxSize()
@@ -428,7 +430,7 @@ fun MikuBatteryObservatoryModal(
                                 modifier = Modifier
                                     .size(32.dp)
                                     .clip(CircleShape)
-                                    .background(Color(0xFF071B24))
+                                    .background(Mascot.color(0xFF071B24))
                                     .border(BorderStroke(1.dp, MikuNeonPink.copy(alpha = 0.6f)), CircleShape)
                                     .clickable { onDismissRequest() },
                                 contentAlignment = Alignment.Center
@@ -453,7 +455,7 @@ fun MikuBatteryObservatoryModal(
                                     Brush.verticalGradient(
                                         listOf(
                                             batteryColor.copy(alpha = 0.22f),
-                                            Color(0xFF031118)
+                                            Mascot.color(0xFF031118)
                                         )
                                     )
                                 )
@@ -497,8 +499,8 @@ fun MikuBatteryObservatoryModal(
                                 // 7-Cell Vertical Glowing Quantum Core Meter
                                 val cellColors = remember {
                                     listOf(
-                                        Color(0xFFFF4081), // Cell 7 (85-100%)
-                                        Color(0xFF00E5FF), // Cell 6 (71-85%)
+                                        Mascot.color(0xFFFF4081), // Cell 7 (85-100%)
+                                        Mascot.color(0xFF00E5FF), // Cell 6 (71-85%)
                                         Color(0xFF00E676), // Cell 5 (57-71%)
                                         Color(0xFFAEEA00), // Cell 4 (42-57%)
                                         Color(0xFFFFD600), // Cell 3 (28-42%)
@@ -536,7 +538,7 @@ fun MikuBatteryObservatoryModal(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .clip(CutCornerShape(10.dp))
-                                .background(Color(0xFF020E15))
+                                .background(Mascot.color(0xFF020E15))
                                 .border(0.8.dp, batteryColor.copy(alpha = 0.45f), CutCornerShape(10.dp))
                                 .padding(horizontal = 10.dp, vertical = 6.dp)
                         ) {
@@ -705,7 +707,7 @@ fun MikuBatteryObservatoryModal(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .clip(CutCornerShape(8.dp))
-                                    .background(Color(0xFF03141C))
+                                    .background(Mascot.color(0xFF03141C))
                                     .border(0.8.dp, CyberGlassBorder.copy(alpha = 0.4f), CutCornerShape(8.dp))
                                     .padding(horizontal = 8.dp, vertical = 4.dp),
                                 horizontalArrangement = Arrangement.SpaceBetween
@@ -741,7 +743,7 @@ fun MikuBatteryObservatoryModal(
                                     modifier = Modifier
                                         .weight(1f)
                                         .clip(CutCornerShape(6.dp))
-                                        .background(if (isSel) MikuCyan.copy(alpha = 0.25f) else Color(0xFF031016))
+                                        .background(if (isSel) MikuCyan.copy(alpha = 0.25f) else Mascot.color(0xFF031016))
                                         .border(0.8.dp, if (isSel) MikuCyan else CyberGlassBorder.copy(alpha = 0.3f), CutCornerShape(6.dp))
                                         .clickable { com.miku.player.MikuPowerGovernor.setMode(ctx, m) }
                                         .padding(vertical = 4.dp),
@@ -778,7 +780,7 @@ fun RealBatteryMetricTile(
     Box(
         modifier = modifier
             .clip(CutCornerShape(8.dp))
-            .background(Color(0xFF041620))
+            .background(Mascot.color(0xFF041620))
             .border(0.8.dp, color.copy(alpha = 0.45f), CutCornerShape(8.dp))
             .padding(horizontal = 6.dp, vertical = 4.dp)
     ) {

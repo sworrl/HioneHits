@@ -198,7 +198,7 @@ fun MikuPowerMenuScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xCC03090C))
+            .background(Mascot.color(0xCC03090C))
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null
@@ -235,9 +235,9 @@ fun MikuPowerMenuScreen(
                 .background(
                     Brush.verticalGradient(
                         listOf(
-                            Color(0xFA0B222A),
-                            Color(0xF506141A),
-                            Color(0xFA030B0F)
+                            Mascot.color(0xFA0B222A),
+                            Mascot.color(0xF506141A),
+                            Mascot.color(0xFA030B0F)
                         )
                     )
                 )
@@ -301,7 +301,7 @@ fun MikuPowerMenuScreen(
                                 letterSpacing = 1.2.sp
                             )
                             Text(
-                                text = "MikuOS · tap, then 3s to cancel",
+                                text = "${Mascot.osName} · tap, then 3s to cancel",
                                 color = MikuTealBright.copy(alpha = 0.85f),
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.Bold,
@@ -314,7 +314,7 @@ fun MikuPowerMenuScreen(
                     Box(
                         modifier = Modifier
                             .clip(RoundedCornerShape(12.dp))
-                            .background(Color(0xFF081C22))
+                            .background(Mascot.color(0xFF081C22))
                             .border(1.dp, MikuTeal.copy(alpha = 0.4f), RoundedCornerShape(12.dp))
                             .padding(horizontal = 8.dp, vertical = 4.dp)
                     ) {
@@ -344,7 +344,7 @@ fun MikuPowerMenuScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clip(RoundedCornerShape(16.dp))
-                            .background(Color(0xFF031015))
+                            .background(Mascot.color(0xFF031015))
                             .border(1.2.dp, pendingActionAccent, RoundedCornerShape(16.dp))
                             .padding(16.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
@@ -397,8 +397,8 @@ fun MikuPowerMenuScreen(
                         } else {
                             PowerPill(0, "LOCK", "Lock the screen now", Icons.Default.Lock, MikuTealBright) { executeAction("lock") }
                         }
-                        PowerPill(1, "REBOOT", "Restart", Icons.Default.RestartAlt, Color(0xFF00E5FF)) {
-                            pendingActionName = "REBOOT"; pendingActionCommand = "reboot"; pendingActionAccent = Color(0xFF00E5FF)
+                        PowerPill(1, "REBOOT", "Restart", Icons.Default.RestartAlt, Mascot.color(0xFF00E5FF)) {
+                            pendingActionName = "REBOOT"; pendingActionCommand = "reboot"; pendingActionAccent = Mascot.color(0xFF00E5FF)
                         }
                         PowerPill(2, "POWER OFF", "Turn off", Icons.Default.PowerSettingsNew, MikuPinkBright) {
                             pendingActionName = "POWER OFF"; pendingActionCommand = "reboot -p"; pendingActionAccent = MikuPinkBright
@@ -472,9 +472,9 @@ fun PowerActionTile(
             .background(
                 Brush.verticalGradient(
                     listOf(
-                        Color(0xFF0B2129),
-                        Color(0xFF05131A),
-                        Color(0xFF02090D)
+                        Mascot.color(0xFF0B2129),
+                        Mascot.color(0xFF05131A),
+                        Mascot.color(0xFF02090D)
                     )
                 )
             )
@@ -573,7 +573,7 @@ fun PowerPill(
             }
             .pressScale(interaction)
             .clip(RoundedCornerShape(28.dp))
-            .background(Brush.horizontalGradient(listOf(accent.copy(alpha = 0.22f), Color(0xFF07171E))))
+            .background(Brush.horizontalGradient(listOf(accent.copy(alpha = 0.22f), Mascot.color(0xFF07171E))))
             .border(1.dp, accent.copy(alpha = 0.7f), RoundedCornerShape(28.dp))
             .clickable(interactionSource = interaction, indication = null) {
                 MikuHaptics.confirm(view)

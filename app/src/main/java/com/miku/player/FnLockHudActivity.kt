@@ -156,8 +156,8 @@ fun FnLockBespokeMikuModal(
         }
     }
 
-    val primaryColor = if (isLocked) MikuNeonPink else Color(0xFF00E5FF)
-    val secondaryColor = if (isLocked) Color(0xFFFF5252) else Color(0xFF00FFCC)
+    val primaryColor = if (isLocked) MikuNeonPink else Mascot.color(0xFF00E5FF)
+    val secondaryColor = if (isLocked) Color(0xFFFF5252) else Mascot.color(0xFF00FFCC)
 
     val infiniteTransition = rememberInfiniteTransition(label = "LockGlowPulse")
     val pulseGlow by infiniteTransition.animateFloat(
@@ -173,7 +173,7 @@ fun FnLockBespokeMikuModal(
     Box(
         Modifier
             .fillMaxSize()
-            .background(Color(0xEE02090D))
+            .background(Mascot.color(0xEE02090D))
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null
@@ -216,9 +216,9 @@ fun FnLockBespokeMikuModal(
                     .background(
                         Brush.verticalGradient(
                             listOf(
-                                Color(0xFA09202A),
-                                Color(0xFF04121A),
-                                Color(0xFF02090D)
+                                Mascot.color(0xFA09202A),
+                                Mascot.color(0xFF04121A),
+                                Mascot.color(0xFF02090D)
                             )
                         )
                     )
@@ -239,10 +239,10 @@ fun FnLockBespokeMikuModal(
             ) {
                 // Frosted Watermark of Task-Specific Miku Art
                 Image(
-                    painter = painterResource(
+                    painter = mascotPainter(
                         if (isLocked) R.drawable.miku_pose_headphones else R.drawable.miku_pose_peace
                     ),
-                    contentDescription = "Miku artwork",
+                    contentDescription = "${Mascot.name} artwork",
                     modifier = Modifier
                         .size(130.dp)
                         .align(Alignment.BottomEnd)
@@ -271,7 +271,7 @@ fun FnLockBespokeMikuModal(
                                 contentAlignment = Alignment.Center
                             ) {
                                 Image(
-                                    painter = painterResource(
+                                    painter = mascotPainter(
                                         if (isLocked) R.drawable.miku_chibi_hearts else R.drawable.miku_sprite
                                     ),
                                     contentDescription = null,
@@ -375,7 +375,7 @@ fun FnLockBespokeMikuModal(
                                 Modifier
                                     .weight(1f)
                                     .clip(CutCornerShape(6.dp))
-                                    .background(Color(0xEE07161E))
+                                    .background(Mascot.color(0xEE07161E))
                                     .border(0.8.dp, CyberGlassBorder, CutCornerShape(6.dp))
                                     .padding(8.dp)
                             ) {
@@ -390,7 +390,7 @@ fun FnLockBespokeMikuModal(
                                 Modifier
                                     .weight(1f)
                                     .clip(CutCornerShape(6.dp))
-                                    .background(Color(0xEE07161E))
+                                    .background(Mascot.color(0xEE07161E))
                                     .border(0.8.dp, CyberGlassBorder, CutCornerShape(6.dp))
                                     .padding(8.dp)
                             ) {
@@ -405,7 +405,7 @@ fun FnLockBespokeMikuModal(
                                 Modifier
                                     .weight(1f)
                                     .clip(CutCornerShape(6.dp))
-                                    .background(Color(0xEE07161E))
+                                    .background(Mascot.color(0xEE07161E))
                                     .border(0.8.dp, CyberGlassBorder, CutCornerShape(6.dp))
                                     .padding(8.dp)
                             ) {

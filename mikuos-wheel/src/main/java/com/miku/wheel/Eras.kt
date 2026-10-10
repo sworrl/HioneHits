@@ -20,25 +20,25 @@ enum class Era(
     val h: Int,
 ) {
     MONO_2001(
-        "2001", "MikuPod 2001", "Mono, 160 x 128. Where it started.",
+        "2001", "${Mascot.name}Pod 2001", "Mono, 160 x 128. Where it started.",
         "secret.os.wheel.2001",
         "Play along to something from the year the wheel first turned.",
         160, 128
     ),
     COLOR_2004(
-        "2004", "MikuPod 2004", "Color, 220 x 176. Album art arrives.",
+        "2004", "${Mascot.name}Pod 2004", "Color, 220 x 176. Album art arrives.",
         "secret.os.wheel.2004",
         "A whole album from 2004, beat by beat.",
         220, 176
     ),
     VIDEO_2005(
-        "2005", "MikuPod 2005", "320 x 240, the big glossy one.",
+        "2005", "${Mascot.name}Pod 2005", "320 x 240, the big glossy one.",
         "secret.os.wheel.2005",
         "Five thousand taps. Keep your rhythm.",
         320, 240
     ),
     CLASSIC_2007(
-        "2007", "MikuPod 2007", "Split menus and flipping covers.",
+        "2007", "${Mascot.name}Pod 2007", "Split menus and flipping covers.",
         "secret.os.wheel.2007",
         "Flip through seven years of music in one sitting.",
         320, 240

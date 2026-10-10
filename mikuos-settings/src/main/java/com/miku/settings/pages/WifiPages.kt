@@ -1,5 +1,6 @@
 package com.miku.settings.pages
 
+import com.miku.settings.Mascot
 import android.annotation.SuppressLint
 import android.content.BroadcastReceiver
 import android.content.Context
@@ -287,7 +288,7 @@ private fun AddNetworkDialog(onDone: () -> Unit) {
 private fun WifiRow(n: WifiNet, connected: Boolean, onClick: () -> Unit) {
     Row(
         Modifier.fillMaxWidth().padding(vertical = 3.dp).clip(RoundedCornerShape(12.dp))
-            .background(if (connected) Color(0x2200E5FF) else MikuSurface2)
+            .background(if (connected) Mascot.color(0x2200E5FF) else MikuSurface2)
             .clickable(onClick = onClick).padding(12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {

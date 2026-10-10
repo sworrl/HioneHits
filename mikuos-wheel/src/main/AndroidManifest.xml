@@ -1,6 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
+    <!-- Mascot packs (Mascot.kt). Every MikuOS app declares the same signature permission, so it
+         exists whichever app is installed first. Miku Update's pack provider requires it. -->
+    <permission
+        android:name="com.miku.permission.MASCOT_PACKS"
+        android:protectionLevel="signature" />
+    <uses-permission android:name="com.miku.permission.MASCOT_PACKS" />
+    <queries>
+        <provider android:authorities="com.miku.update.mascot" />
+    </queries>
+
+
     <!-- Lists come from MediaStore, playback goes through Miku Music's Media3 session. -->
     <uses-permission android:name="android.permission.READ_MEDIA_AUDIO" />
     <uses-permission
@@ -32,6 +43,14 @@
         android:label="@string/app_name"
         android:supportsRtl="false"
         android:theme="@style/Theme.MikuWheel">
+
+        <!-- Starts Mascot (the active mascot pack) at process start. -->
+        <provider
+            android:name="com.miku.wheel.MascotInit"
+            android:authorities="${applicationId}.mascot-init"
+            android:exported="false"
+            android:initOrder="1000" />
+
 
         <!--
           One activity does everything: era picker, skins, and the HOME role. singleTask so a

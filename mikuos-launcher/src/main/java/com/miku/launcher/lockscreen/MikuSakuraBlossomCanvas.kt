@@ -1,5 +1,6 @@
 package com.miku.launcher.lockscreen
 
+import com.miku.launcher.Mascot
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.*
@@ -49,11 +50,11 @@ fun MikuSakuraBlossomCanvas(
     val sakuraColors = remember {
         listOf(
             Color(0xFFFFB7C5), // Soft Classic Sakura
-            Color(0xFFFF69B4), // Hatsune Neon Pink
-            Color(0xFFFF80AB), // Vibrant Cyber Pink
-            Color(0xFFFFF0F5), // Pearl White Blossom
-            Color(0xFFE0F7FA), // Soft Cyan Shimmer
-            Color(0xFF00E5FF)  // Cyber Cyan Glow
+            Mascot.color(0xFFFF69B4), // Hatsune Neon Pink
+            Mascot.color(0xFFFF80AB), // Vibrant Cyber Pink
+            Mascot.color(0xFFFFF0F5), // Pearl White Blossom
+            Mascot.color(0xFFE0F7FA), // Soft Cyan Shimmer
+            Mascot.color(0xFF00E5FF)  // Cyber Cyan Glow
         )
     }
 

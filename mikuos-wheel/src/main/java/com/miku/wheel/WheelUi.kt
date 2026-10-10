@@ -519,7 +519,7 @@ fun EraPicker(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Box(
                         Modifier.size(14.dp).clip(CircleShape)
-                            .background(if (open) Color(0xFF39C5BB) else Color(0xFFA7ADB3))
+                            .background(if (open) Mascot.color(0xFF39C5BB) else Color(0xFFA7ADB3))
                     )
                     Spacer(Modifier.width(12.dp))
                     BasicText(
@@ -543,10 +543,10 @@ fun EraPicker(
         }
         Spacer(Modifier.height(22.dp))
         BasicText(
-            "Exit to Miku home",
+            "Exit to ${Mascot.name} home",
             Modifier
                 .clip(RoundedCornerShape(24.dp))
-                .background(Color(0xFF39C5BB))
+                .background(Mascot.color(0xFF39C5BB))
                 .clickable(onClick = onExit)
                 .padding(horizontal = 28.dp, vertical = 12.dp),
             style = TextStyle(color = Color.White, fontSize = 18.sp, fontFamily = SansFamily, fontWeight = FontWeight.Bold)

@@ -1,5 +1,6 @@
 package com.miku.launcher.arco
 
+import com.miku.launcher.Mascot
 import android.content.Intent
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.RepeatMode
@@ -124,7 +125,7 @@ fun MikuArcoModal(onDismissRequest: () -> Unit) {
             .clickable(onClick = onDismissRequest)
             // System-gesture-style dismiss: swipe up starting at the bottom edge of the sheet.
             .swipeUpFromBottomToDismiss(onDismiss = onDismissRequest)
-            .background(Color(0xCC040D12)),
+            .background(Mascot.color(0xCC040D12)),
         contentAlignment = Alignment.TopEnd
     ) {
         Box(
@@ -141,7 +142,7 @@ fun MikuArcoModal(onDismissRequest: () -> Unit) {
                 Modifier
                     .padding(1.dp)
                     .clip(CutCornerShape(13.dp))
-                    .background(Brush.verticalGradient(listOf(Color(0xFA09222E), Color(0xFF04121A), Color(0xFF02090D))))
+                    .background(Brush.verticalGradient(listOf(Mascot.color(0xFA09222E), Mascot.color(0xFF04121A), Mascot.color(0xFF02090D))))
                     .border(
                         BorderStroke(1.dp, Brush.verticalGradient(listOf(statusColor.copy(alpha = pulseGlow), CyberGlassBorder.copy(alpha = 0.35f), statusColor.copy(alpha = 0.5f)))),
                         CutCornerShape(13.dp)
@@ -314,7 +315,7 @@ private fun ArcoModalActionButton(label: String, accentColor: Color, onClick: ()
         Modifier
             .fillMaxWidth()
             .clip(CutCornerShape(8.dp))
-            .background(Brush.verticalGradient(listOf(accentColor.copy(alpha = 0.28f), Color(0xFF030D14))))
+            .background(Brush.verticalGradient(listOf(accentColor.copy(alpha = 0.28f), Mascot.color(0xFF030D14))))
             .border(1.dp, accentColor, CutCornerShape(8.dp))
             .clickable(onClick = onClick)
             .padding(vertical = 10.dp),

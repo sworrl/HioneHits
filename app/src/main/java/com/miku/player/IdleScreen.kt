@@ -300,10 +300,10 @@ fun AmbientOverlay(player: ExoPlayer, modifier: Modifier = Modifier) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Icon(
                             Icons.Default.MusicNote, null,
-                            tint = if (isPlaying) Color(0xFF2A3A3C) else Color(0xFF1E2626),
+                            tint = if (isPlaying) Mascot.color(0xFF2A3A3C) else Color(0xFF1E2626),
                             modifier = Modifier.size(18.dp)
                         )
-                        Text(title, color = Color(0xFF2A3A3C), fontSize = 14.sp, maxLines = 1)
+                        Text(title, color = Mascot.color(0xFF2A3A3C), fontSize = 14.sp, maxLines = 1)
                         if (artist.isNotBlank()) Text(artist, color = Color(0xFF1E2626), fontSize = 12.sp, maxLines = 1)
                     }
                 }

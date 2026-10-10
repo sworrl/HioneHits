@@ -1,5 +1,6 @@
 package com.miku.launcher.bpm
 
+import com.miku.launcher.Mascot
 import android.content.Context
 import android.content.SharedPreferences
 import android.provider.MediaStore
@@ -83,14 +84,14 @@ object MikuSecrets {
      * grade held over a long run, lucky pickups and the monthly rank. No single way of playing
      * finds them all, which is the point of having them.
      */
-    val ALL: List<Secret> = listOf(
+    val ALL: List<Secret> get() = listOf(
         Secret(NEGI_BATTERY, "Leek battery icon", "Top bar and notification shade",
             "Your battery icon is a leek now. The more green, the more charge.",
             "Some leeks only grow after midnight.", true),
-        Secret(TAPE_MIKU39, "MIKU 39 cassette shell", "Miku Music, Tape Mode",
+        Secret(TAPE_MIKU39, "MIKU 39 cassette shell", "${Mascot.musicAppName}, Tape Mode",
             "A new cassette shell. Pick it in Tape Mode's theme list or keep tapping the shell button.",
             "Mi-ku. Thirty-nine clean notes in a row, no stumbles.", false),
-        Secret(LEEK_SPIN, "Spinning leek on Now Playing", "Miku Music, Now Playing",
+        Secret(LEEK_SPIN, "Spinning leek on Now Playing", "${Mascot.musicAppName}, Now Playing",
             "A leek spins in the corner of Now Playing, one turn every two beats.",
             "Catch the fever three times before you leave the stage.", true),
         Secret(HOLO_LOCK_CLOCK, "Hologram lock screen clock", "Lock screen",
@@ -102,11 +103,11 @@ object MikuSecrets {
         Secret(NEGI_SNOW, "Falling leeks on the wallpaper", "Home screen wallpaper",
             "Leeks drift down your wallpaper, and fall faster while music plays.",
             "Seven different voices. Sing along with each of them.", true),
-        Secret(BOOT_CHIME, "Miku startup chime", "Plays after a restart",
-            "Miku's own chime plays when the device starts. It follows the boot sound switch.",
+        Secret(BOOT_CHIME, "${Mascot.name} startup chime", "Plays after a restart",
+            "${Mascot.name}'s own chime plays when the device starts. It follows the boot sound switch.",
             "Her name hides in a tempo too: one, three, nine.", true),
-        Secret(GOLDEN_ICON, "Gold Miku Music icon", "Home screen and app drawer",
-            "Miku Music's icon is gold now. You earned it.",
+        Secret(GOLDEN_ICON, "Gold ${Mascot.musicAppName} icon", "Home screen and app drawer",
+            "${Mascot.musicAppName}'s icon is gold now. You earned it.",
             "A grade so high it turns things to gold. Hold it for a hundred notes.", true),
         Secret(HOLO_SKIN, "Hologram game skin", "BPM game, Skins",
             "A new skin: heart notes, scanline lane, glitchy hits.",
@@ -118,17 +119,17 @@ object MikuSecrets {
             "Your M500 can turn into a 2002 Rio Riot. Tap OPEN on this card. To leave, go to Preferences, then Exit Riot Mode.",
             "Twenty oh two on the clock. Twenty clean notes.", false),
         // The MikuPod hints must match com.miku.wheel Eras.kt, which shows them for locked eras.
-        Secret(WHEEL_2001, "MikuPod 2001", "MikuPod app, era picker",
-            "A 160 x 128 mono screen and a wheel. Tap OPEN, or open MikuPod and pick 2001.",
+        Secret(WHEEL_2001, "${Mascot.name}Pod 2001", "${Mascot.name}Pod app, era picker",
+            "A 160 x 128 mono screen and a wheel. Tap OPEN, or open ${Mascot.name}Pod and pick 2001.",
             "Play along to something from the year the wheel first turned.", false),
-        Secret(WHEEL_2004, "MikuPod 2004", "MikuPod app, era picker",
-            "Color, album art, and a gray mode for purists. Tap OPEN, or open MikuPod and pick 2004.",
+        Secret(WHEEL_2004, "${Mascot.name}Pod 2004", "${Mascot.name}Pod app, era picker",
+            "Color, album art, and a gray mode for purists. Tap OPEN, or open ${Mascot.name}Pod and pick 2004.",
             "A whole album from 2004, beat by beat.", false),
-        Secret(WHEEL_2005, "MikuPod 2005", "MikuPod app, era picker",
-            "The big glossy 320 x 240 screen. Tap OPEN, or open MikuPod and pick 2005.",
+        Secret(WHEEL_2005, "${Mascot.name}Pod 2005", "${Mascot.name}Pod app, era picker",
+            "The big glossy 320 x 240 screen. Tap OPEN, or open ${Mascot.name}Pod and pick 2005.",
             "Five thousand taps. Keep your rhythm.", false),
-        Secret(WHEEL_2007, "MikuPod 2007", "MikuPod app, era picker",
-            "Split-screen menus and Cover Flow. Tap OPEN, or open MikuPod and pick 2007.",
+        Secret(WHEEL_2007, "${Mascot.name}Pod 2007", "${Mascot.name}Pod app, era picker",
+            "Split-screen menus and Cover Flow. Tap OPEN, or open ${Mascot.name}Pod and pick 2007.",
             "Flip through seven years of music in one sitting.", false)
     )
 

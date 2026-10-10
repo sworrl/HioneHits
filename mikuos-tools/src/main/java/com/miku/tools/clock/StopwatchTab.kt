@@ -1,5 +1,6 @@
 package com.miku.tools.clock
 
+import com.miku.tools.Mascot
 import android.os.SystemClock
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Arrangement
@@ -97,9 +98,9 @@ fun StopwatchTab() {
                 },
                 modifier = Modifier.weight(1f), minHeight = 64.dp, filled = true, accent = if (sw.running) Miku.PinkSoft else Miku.Teal
             ) {
-                Icon(if (sw.running) Icons.Filled.Pause else Icons.Filled.PlayArrow, null, tint = Color(0xFF041513))
+                Icon(if (sw.running) Icons.Filled.Pause else Icons.Filled.PlayArrow, null, tint = Mascot.color(0xFF041513))
                 Spacer(Modifier.width(8.dp))
-                Text(if (sw.running) "Pause" else if (total > 0) "Resume" else "Start", color = Color(0xFF041513), fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
+                Text(if (sw.running) "Pause" else if (total > 0) "Resume" else "Start", color = Mascot.color(0xFF041513), fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
             }
         }
         if (sw.laps.isNotEmpty()) {

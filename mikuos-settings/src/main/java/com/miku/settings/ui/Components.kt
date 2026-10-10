@@ -1,5 +1,6 @@
 package com.miku.settings.ui
 
+import com.miku.settings.Mascot
 import android.content.Context
 import android.widget.Toast
 import androidx.compose.foundation.background
@@ -86,7 +87,7 @@ fun ToggleRow(
             checked = checked == true,
             enabled = enabled && checked != null,
             onCheckedChange = onChange,
-            colors = SwitchDefaults.colors(checkedThumbColor = MikuTealBright, checkedTrackColor = Color(0xFF0F3238))
+            colors = SwitchDefaults.colors(checkedThumbColor = MikuTealBright, checkedTrackColor = Mascot.color(0xFF0F3238))
         )
     }
 }

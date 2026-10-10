@@ -1,5 +1,6 @@
 package com.miku.launcher.bpm
 
+import com.miku.launcher.Mascot
 import android.content.Context
 import android.provider.Settings
 import android.util.Log
@@ -120,22 +121,22 @@ object MikuUnlocks {
      * consistency (PERFECT hits) and nerve (max combo), so no single way of playing unlocks
      * everything and each type of player has a next thing to chase.
      */
-    val ALL: List<Reward> = listOf(
+    val ALL: List<Reward> get() = listOf(
         Reward(SKIN_HONEY_SWEET, "Honey Sweet skin", "BPM game · Skins", "🍯", Goal.JUDGED_TAPS, 200),
-        Reward(PLAYER_TAPE_SAKURA, "SAKURA cassette", "Miku Music · Tape Mode", "📼", Goal.MAX_COMBO, 25),
-        Reward(OS_WALLPAPER_NEON_WAVE, "Neon Wave wallpaper", "MikuOS · Wallpapers", "🖼️", Goal.JUDGED_TAPS, 500),
-        Reward(PLAYER_VIZ_NEGI_RAIN, "Negi Rain visuals", "Miku Music · visualizer presets", "🌧️", Goal.PERFECT_HITS, 250),
+        Reward(PLAYER_TAPE_SAKURA, "SAKURA cassette", "${Mascot.musicAppName} · Tape Mode", "📼", Goal.MAX_COMBO, 25),
+        Reward(OS_WALLPAPER_NEON_WAVE, "Neon Wave wallpaper", "${Mascot.osName} · Wallpapers", "🖼️", Goal.JUDGED_TAPS, 500),
+        Reward(PLAYER_VIZ_NEGI_RAIN, "Negi Rain visuals", "${Mascot.musicAppName} · visualizer presets", "🌧️", Goal.PERFECT_HITS, 250),
         Reward(SKIN_GOTHIC_DIVA, "Gothic Lolita skin", "BPM game · Skins", "🖤", Goal.MAX_COMBO, 50),
-        Reward(OS_TOPBAR_AURORA, "Aurora top bar", "MikuOS · Top bar theme", "🌈", Goal.JUDGED_TAPS, 1_500),
-        Reward(PLAYER_TAPE_VAPORWAVE, "VAPORWAVE cassette", "Miku Music · Tape Mode", "📼", Goal.MAX_COMBO, 75),
-        Reward(PLAYER_PROJECTM_VORTEX_CORE, "Miku Vortex visuals", "Miku Music · visualizer presets", "🌀", Goal.PERFECT_HITS, 1_000),
-        Reward(OS_THEME_COZY_CAFE, "Cozy Cafe theme", "MikuOS · Themes", "☕", Goal.JUDGED_TAPS, 3_000),
+        Reward(OS_TOPBAR_AURORA, "Aurora top bar", "${Mascot.osName} · Top bar theme", "🌈", Goal.JUDGED_TAPS, 1_500),
+        Reward(PLAYER_TAPE_VAPORWAVE, "VAPORWAVE cassette", "${Mascot.musicAppName} · Tape Mode", "📼", Goal.MAX_COMBO, 75),
+        Reward(PLAYER_PROJECTM_VORTEX_CORE, "${Mascot.name} Vortex visuals", "${Mascot.musicAppName} · visualizer presets", "🌀", Goal.PERFECT_HITS, 1_000),
+        Reward(OS_THEME_COZY_CAFE, "Cozy Cafe theme", "${Mascot.osName} · Themes", "☕", Goal.JUDGED_TAPS, 3_000),
         Reward(SKIN_SNOW_CRYSTAL, "Snow Crystal skin", "BPM game · Skins", "❄️", Goal.MAX_COMBO, 100),
-        Reward(PLAYER_VIZ_VOCALOID_CIRCUIT, "Vocaloid Circuit visuals", "Miku Music · visualizer presets", "🔌", Goal.PERFECT_HITS, 2_500),
-        Reward(OS_WALLPAPER_CYBER_HOLOGRAM, "Cyber Space Hologram", "MikuOS · Wallpapers", "🛸", Goal.JUDGED_TAPS, 5_000),
-        Reward(PLAYER_TAPE_GLOWWORM, "GLOWWORM cassette", "Miku Music · Tape Mode", "📼", Goal.MAX_COMBO, 150),
-        Reward(OS_THEME_CYBER_STAGE, "Cyber Stage theme", "MikuOS · Themes", "🎆", Goal.JUDGED_TAPS, 10_000),
-        Reward(OS_TOPBAR_MIDNIGHT, "Midnight top bar", "MikuOS · Top bar theme", "🌙", Goal.SEASON_POINTS, 50_000)
+        Reward(PLAYER_VIZ_VOCALOID_CIRCUIT, "Vocaloid Circuit visuals", "${Mascot.musicAppName} · visualizer presets", "🔌", Goal.PERFECT_HITS, 2_500),
+        Reward(OS_WALLPAPER_CYBER_HOLOGRAM, "Cyber Space Hologram", "${Mascot.osName} · Wallpapers", "🛸", Goal.JUDGED_TAPS, 5_000),
+        Reward(PLAYER_TAPE_GLOWWORM, "GLOWWORM cassette", "${Mascot.musicAppName} · Tape Mode", "📼", Goal.MAX_COMBO, 150),
+        Reward(OS_THEME_CYBER_STAGE, "Cyber Stage theme", "${Mascot.osName} · Themes", "🎆", Goal.JUDGED_TAPS, 10_000),
+        Reward(OS_TOPBAR_MIDNIGHT, "Midnight top bar", "${Mascot.osName} · Top bar theme", "🌙", Goal.SEASON_POINTS, 50_000)
     )
 
     fun rewardFor(id: String): Reward? = ALL.firstOrNull { it.id == id }

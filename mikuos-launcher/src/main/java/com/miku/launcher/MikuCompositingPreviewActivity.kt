@@ -35,14 +35,14 @@ class MikuCompositingPreviewActivity : ComponentActivity() {
             ) {
                 Column(
                     Modifier.clip(RoundedCornerShape(20.dp))
-                        .background(Color(0x220FF5FF))
-                        .border(1.dp, Color(0xFF00E5FF), RoundedCornerShape(20.dp))
+                        .background(Mascot.color(0x220FF5FF))
+                        .border(1.dp, Mascot.color(0xFF00E5FF), RoundedCornerShape(20.dp))
                         .padding(horizontal = 28.dp, vertical = 24.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Text("KDE COMPOSITING", color = Color(0xFFFF80AB), fontSize = 13.sp, fontWeight = FontWeight.Black)
+                    Text("KDE COMPOSITING", color = Mascot.color(0xFFFF80AB), fontSize = 13.sp, fontWeight = FontWeight.Black)
                     Spacer(Modifier.height(10.dp))
-                    Text(label, color = Color(0xFF00E5FF), fontSize = 20.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
+                    Text(label, color = Mascot.color(0xFF00E5FF), fontSize = 20.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
                     Spacer(Modifier.height(10.dp))
                     Text("tap to dismiss (plays exit)", color = Color.White.copy(alpha = 0.5f), fontSize = 10.sp)
                 }

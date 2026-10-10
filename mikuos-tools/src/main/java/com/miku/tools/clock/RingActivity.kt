@@ -1,5 +1,6 @@
 package com.miku.tools.clock
 
+import com.miku.tools.Mascot
 import android.os.Bundle
 import android.os.SystemClock
 import android.view.KeyEvent
@@ -163,7 +164,7 @@ private fun RingScreen(onEmpty: () -> Unit) {
             when {
                 alarm != null -> {
                     Text(alarm.label.ifBlank { "Alarm" }, color = Miku.Text, fontSize = 28.sp, fontWeight = FontWeight.SemiBold, textAlign = TextAlign.Center)
-                    if (snap.music) Text("Playing from Miku Music", color = Miku.PinkSoft, fontSize = 15.sp)
+                    if (snap.music) Text("Playing from ${Mascot.musicAppName}", color = Miku.PinkSoft, fontSize = 15.sp)
                 }
                 timer != null -> {
                     Text("Time's up", color = Miku.Text, fontSize = 28.sp, fontWeight = FontWeight.SemiBold)

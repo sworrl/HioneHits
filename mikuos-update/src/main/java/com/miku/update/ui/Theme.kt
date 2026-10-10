@@ -1,5 +1,6 @@
 package com.miku.update.ui
 
+import com.miku.update.Mascot
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -35,18 +36,18 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
 // MikuOS palette, same values as mikuos-settings' Theme.kt (#39C5BB teal, diva pink, carbon).
-val MikuTeal = Color(0xFF39C5BB)
-val MikuTealBright = Color(0xFF00F5D4)
-val MikuPink = Color(0xFFFF2A85)
-val MikuPinkBright = Color(0xFFFF4081)
+val MikuTeal get() = Mascot.color(0xFF39C5BB)
+val MikuTealBright get() = Mascot.color(0xFF00F5D4)
+val MikuPink get() = Mascot.color(0xFFFF2A85)
+val MikuPinkBright get() = Mascot.color(0xFFFF4081)
 val MikuGold = Color(0xFFFFD54F)
-val MikuDarkBg = Color(0xFF070B0D)
-val MikuSurface1 = Color(0xFF0D1417)
-val MikuSurface2 = Color(0xFF131E22)
+val MikuDarkBg get() = Mascot.color(0xFF070B0D)
+val MikuSurface1 get() = Mascot.color(0xFF0D1417)
+val MikuSurface2 get() = Mascot.color(0xFF131E22)
 val MikuMuted = Color(0xFF7E9AA0)
-val MikuWhite = Color(0xFFF0FDFE)
+val MikuWhite get() = Mascot.color(0xFFF0FDFE)
 
-private val GlassFill = Brush.verticalGradient(listOf(Color(0xCC0E1D21), Color(0xCC081114)))
+private val GlassFill get() = Brush.verticalGradient(listOf(Mascot.color(0xCC0E1D21), Mascot.color(0xCC081114)))
 private val GlassEdge = Brush.linearGradient(listOf(MikuTeal.copy(alpha = 0.55f), MikuPink.copy(alpha = 0.30f)))
 private val GlassEdgeHot = Brush.linearGradient(listOf(MikuPink.copy(alpha = 0.75f), MikuTealBright.copy(alpha = 0.45f)))
 
@@ -118,7 +119,7 @@ fun ToggleRow(title: String, summary: String?, checked: Boolean, enabled: Boolea
             checked = checked,
             enabled = enabled,
             onCheckedChange = onChange,
-            colors = SwitchDefaults.colors(checkedThumbColor = MikuTealBright, checkedTrackColor = Color(0xFF0F3238)),
+            colors = SwitchDefaults.colors(checkedThumbColor = MikuTealBright, checkedTrackColor = Mascot.color(0xFF0F3238)),
         )
     }
 }

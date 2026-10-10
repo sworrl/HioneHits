@@ -1,5 +1,6 @@
 package com.miku.launcher.battery
 
+import com.miku.launcher.Mascot
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
@@ -159,7 +160,7 @@ fun MikuFullscreenChargingModal(
     Box(
         Modifier
             .fillMaxSize()
-            .background(Color(0xF502090D))
+            .background(Mascot.color(0xF502090D))
             .clickable { onDismiss() }
             // System-gesture-style dismiss: swipe up starting at the bottom edge. Replaces the
             // old any-direction fling dismiss so a stray graze can't kill the modal.
@@ -221,7 +222,7 @@ fun MikuFullscreenChargingModal(
                                 MikuCyan,
                                 MikuNeonPink,
                                 Color(0xFF00FF88),
-                                Color(0xFFB388FF),
+                                Mascot.color(0xFFB388FF),
                                 MikuCyan
                             )
                         ),
@@ -239,9 +240,9 @@ fun MikuFullscreenChargingModal(
                         .background(
                             Brush.radialGradient(
                                 listOf(
-                                    Color(0xFF041C24),
-                                    Color(0xFF020E14),
-                                    Color(0xFF010609)
+                                    Mascot.color(0xFF041C24),
+                                    Mascot.color(0xFF020E14),
+                                    Mascot.color(0xFF010609)
                                 )
                             )
                         )
@@ -288,7 +289,7 @@ fun MikuFullscreenChargingModal(
                                 listOf(
                                     MikuCyan.copy(alpha = 0.85f),
                                     Color(0xFF00B0FF).copy(alpha = 0.65f),
-                                    Color(0xFF004D40)
+                                    Mascot.color(0xFF004D40)
                                 )
                             )
                         )
@@ -342,7 +343,7 @@ fun MikuFullscreenChargingModal(
                         Modifier
                             .weight(1f)
                             .clip(RoundedCornerShape(10.dp))
-                            .background(Color(0xFF05151E))
+                            .background(Mascot.color(0xFF05151E))
                             .border(1.dp, MikuCyan.copy(alpha = 0.6f), RoundedCornerShape(10.dp))
                             .padding(8.dp),
                         contentAlignment = Alignment.Center
@@ -358,7 +359,7 @@ fun MikuFullscreenChargingModal(
                         Modifier
                             .weight(1f)
                             .clip(RoundedCornerShape(10.dp))
-                            .background(Color(0xFF05151E))
+                            .background(Mascot.color(0xFF05151E))
                             .border(1.dp, Color(0xFF00FF88).copy(alpha = 0.6f), RoundedCornerShape(10.dp))
                             .padding(8.dp),
                         contentAlignment = Alignment.Center
@@ -378,7 +379,7 @@ fun MikuFullscreenChargingModal(
                         Modifier
                             .weight(1f)
                             .clip(RoundedCornerShape(10.dp))
-                            .background(Color(0xFF05151E))
+                            .background(Mascot.color(0xFF05151E))
                             .border(1.dp, MikuNeonPink.copy(alpha = 0.6f), RoundedCornerShape(10.dp))
                             .padding(8.dp),
                         contentAlignment = Alignment.Center
@@ -397,7 +398,7 @@ fun MikuFullscreenChargingModal(
                         Modifier
                             .weight(1f)
                             .clip(RoundedCornerShape(10.dp))
-                            .background(Color(0xFF05151E))
+                            .background(Mascot.color(0xFF05151E))
                             .border(1.dp, CyberGlassBorder.copy(alpha = 0.5f), RoundedCornerShape(10.dp))
                             .padding(8.dp)
                     ) {
@@ -427,7 +428,7 @@ fun MikuFullscreenChargingModal(
                         Modifier
                             .weight(1f)
                             .clip(RoundedCornerShape(10.dp))
-                            .background(Color(0xFF05151E))
+                            .background(Mascot.color(0xFF05151E))
                             .border(1.dp, CyberGlassBorder.copy(alpha = 0.5f), RoundedCornerShape(10.dp))
                             .padding(8.dp)
                     ) {

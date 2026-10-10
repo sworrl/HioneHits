@@ -1,5 +1,6 @@
 package com.miku.tools.calendar
 
+import com.miku.tools.Mascot
 import android.app.AlarmManager
 import android.app.Notification
 import android.app.NotificationChannel
@@ -106,7 +107,7 @@ open class ReminderReceiver : BroadcastReceiver() {
         }
         val n = Notification.Builder(ctx, CHANNEL)
             .setSmallIcon(R.drawable.ic_stat_event)
-            .setColor(0xFF39C5BB.toInt())
+            .setColor(Mascot.argb(0xFF39C5BB.toInt()))
             .setContentTitle(a.title.ifBlank { "(No title)" })
             .setContentText(text)
             .setCategory(Notification.CATEGORY_EVENT)

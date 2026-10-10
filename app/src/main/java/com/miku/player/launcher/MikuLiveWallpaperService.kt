@@ -1,5 +1,6 @@
 package com.miku.player.launcher
 
+import com.miku.player.Mascot
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
@@ -54,7 +55,7 @@ class MikuLiveWallpaperService : WallpaperService() {
             super.onSurfaceCreated(holder)
             startMs = android.os.SystemClock.uptimeMillis()
             art = runCatching {
-                BitmapFactory.decodeResource(resources, R.drawable.miku_wallpaper)
+                Mascot.decodeResource(resources, R.drawable.miku_wallpaper)
             }.getOrNull()
         }
 
@@ -117,6 +118,6 @@ class MikuLiveWallpaperService : WallpaperService() {
         const val PARALLAX_PX = 60f
         const val GLOW_PERIOD_S = 6.0
         const val GLOW_MAX_ALPHA = 36     // out of 255 — subtle
-        val MIKU_TEAL = Color.parseColor("#39C5BB")
+        val MIKU_TEAL get() = Mascot.argb(Color.parseColor("#39C5BB"))
     }
 }

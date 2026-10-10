@@ -31,12 +31,12 @@ import com.miku.player.ui.swipeUpFromBottomToDismiss
 import kotlinx.coroutines.launch
 import java.util.Locale
 
-private val CyberNeonCyan = Color(0xFF00FFCC)
-private val CyberNeonPink = Color(0xFFFF0055)
+private val CyberNeonCyan get() = Mascot.color(0xFF00FFCC)
+private val CyberNeonPink get() = Mascot.color(0xFFFF0055)
 private val CyberModalDark = Color(0xFF05080C)
 private val CyberTerminalBg = Color(0xFF000B06)
-private val CyberMutedCyan = Color(0xFF008888)
-private val CyberGridLine = Color(0xFF003838)
+private val CyberMutedCyan get() = Mascot.color(0xFF008888)
+private val CyberGridLine get() = Mascot.color(0xFF003838)
 
 @Composable
 fun MikuMonitorModal(
@@ -750,7 +750,7 @@ fun CyberTactileButton(
     text: String,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
-    accentColor: Color = Color(0xFF00FFCC),
+    accentColor: Color = Mascot.color(0xFF00FFCC),
     icon: androidx.compose.ui.graphics.vector.ImageVector? = null,
     isDanger: Boolean = false
 ) {
@@ -761,7 +761,7 @@ fun CyberTactileButton(
             .background(accentColor.copy(alpha = 0.15f))
             .border(
                 1.dp,
-                if (isDanger) Color(0xFFFF0055) else accentColor.copy(alpha = 0.7f),
+                if (isDanger) Mascot.color(0xFFFF0055) else accentColor.copy(alpha = 0.7f),
                 RoundedCornerShape(8.dp)
             )
             .clickable { onClick() }
@@ -770,12 +770,12 @@ fun CyberTactileButton(
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             if (icon != null) {
-                Icon(icon, contentDescription = null, tint = if (isDanger) Color(0xFFFF0055) else accentColor, modifier = Modifier.size(14.dp))
+                Icon(icon, contentDescription = null, tint = if (isDanger) Mascot.color(0xFFFF0055) else accentColor, modifier = Modifier.size(14.dp))
                 Spacer(Modifier.width(4.dp))
             }
             Text(
                 text = text,
-                color = if (isDanger) Color(0xFFFF0055) else Color.White,
+                color = if (isDanger) Mascot.color(0xFFFF0055) else Color.White,
                 fontSize = 8.5.sp,
                 fontWeight = FontWeight.Bold,
                 fontFamily = AudiowideFont,

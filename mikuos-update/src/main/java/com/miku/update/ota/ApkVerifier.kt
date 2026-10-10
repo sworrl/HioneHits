@@ -1,5 +1,6 @@
 package com.miku.update.ota
 
+import com.miku.update.Mascot
 import android.content.Context
 import android.content.pm.ApplicationInfo
 import android.content.pm.PackageInfo
@@ -49,7 +50,7 @@ object ApkVerifier {
 
     /** Throws [Refused] unless [apk] is safe to install as [entry]. */
     fun verify(ctx: Context, apk: File, expectedPkg: String, expectedVersionCode: Long?) {
-        if (!OtaConfig.isUpdatable(expectedPkg)) throw Refused("$expectedPkg is not a MikuOS app this updater may touch")
+        if (!OtaConfig.isUpdatable(expectedPkg)) throw Refused("$expectedPkg is not a ${Mascot.osName} app this updater may touch")
 
         val pm = ctx.packageManager
         @Suppress("DEPRECATION")

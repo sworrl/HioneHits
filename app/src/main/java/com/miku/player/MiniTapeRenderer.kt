@@ -103,7 +103,7 @@ object MiniTapeRenderer {
             lineTo(labelRect.left + 61f * s, labelRect.bottom)
             close()
         }
-        paint.color = Color.parseColor("#39C5BB")
+        paint.color = Mascot.argb(Color.parseColor("#39C5BB"))
         canvas.drawPath(slashPath, paint)
 
         // Track Title & Artist Text on Label
@@ -117,7 +117,7 @@ object MiniTapeRenderer {
         paint.color = Color.parseColor("#5A5A62")
         paint.typeface = Typeface.DEFAULT
         paint.textSize = 2.6f * s
-        val displayArtist = if (artist.isNotBlank()) artist.take(32) else "Miku Music"
+        val displayArtist = if (artist.isNotBlank()) artist.take(32) else "${Mascot.musicAppName}"
         canvas.drawText(displayArtist, labelRect.left + 2.5f * s, labelRect.top + 9.5f * s, paint)
 
         paint.color = Color.parseColor("#141418")
@@ -134,7 +134,7 @@ object MiniTapeRenderer {
 
         // Window Frame Outline
         paint.style = Paint.Style.FILL
-        paint.color = Color.parseColor("#0F1416")
+        paint.color = Mascot.argb(Color.parseColor("#0F1416"))
         canvas.drawRoundRect(winRect, 2.5f * s, 2.5f * s, paint)
 
         // Album Art inside Window (stripped viz BG for light IO footprint!)
@@ -149,14 +149,14 @@ object MiniTapeRenderer {
             paint.color = Color.parseColor("#33000000")
             canvas.drawRect(winRect, paint)
         } else {
-            paint.color = Color.parseColor("#0C2B2E")
+            paint.color = Mascot.argb(Color.parseColor("#0C2B2E"))
             canvas.drawRect(winRect, paint)
         }
         canvas.restore()
 
         paint.style = Paint.Style.STROKE
         paint.strokeWidth = 0.6f * s
-        paint.color = Color.parseColor("#7FE6DE")
+        paint.color = Mascot.argb(Color.parseColor("#7FE6DE"))
         canvas.drawRoundRect(winRect, 2.5f * s, 2.5f * s, paint)
 
         // 4) Reels & Wound Tape Packs
@@ -237,7 +237,7 @@ object MiniTapeRenderer {
         paint.style = Paint.Style.FILL
         paint.shader = RadialGradient(
             cx, cy, r * 1.6f,
-            Color.parseColor("#4439C5BB"), Color.parseColor("#0039C5BB"),
+            Mascot.argb(Color.parseColor("#4439C5BB")), Mascot.argb(Color.parseColor("#0039C5BB")),
             Shader.TileMode.CLAMP
         )
         canvas.drawCircle(cx, cy, r * 1.6f, paint)
@@ -247,7 +247,7 @@ object MiniTapeRenderer {
     private fun drawPrevGlyph(canvas: Canvas, cx: Float, cy: Float, r: Float, s: Float, paint: Paint) {
         glowBacking(canvas, cx, cy, r, paint)
         paint.style = Paint.Style.FILL
-        paint.color = Color.parseColor("#7FE6DE")
+        paint.color = Mascot.argb(Color.parseColor("#7FE6DE"))
         for (i in 0 until 2) {
             val ox = cx - r * 0.55f + i * r * 0.85f
             val tri = Path().apply {
@@ -263,7 +263,7 @@ object MiniTapeRenderer {
     private fun drawNextGlyph(canvas: Canvas, cx: Float, cy: Float, r: Float, s: Float, paint: Paint) {
         glowBacking(canvas, cx, cy, r, paint)
         paint.style = Paint.Style.FILL
-        paint.color = Color.parseColor("#7FE6DE")
+        paint.color = Mascot.argb(Color.parseColor("#7FE6DE"))
         for (i in 0 until 2) {
             val ox = cx + r * 0.55f - i * r * 0.85f
             val tri = Path().apply {

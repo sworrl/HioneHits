@@ -14,6 +14,17 @@
 -->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
+    <!-- Mascot packs (Mascot.kt). Every MikuOS app declares the same signature permission, so it
+         exists whichever app is installed first. Miku Update's pack provider requires it. -->
+    <permission
+        android:name="com.miku.permission.MASCOT_PACKS"
+        android:protectionLevel="signature" />
+    <uses-permission android:name="com.miku.permission.MASCOT_PACKS" />
+    <queries>
+        <provider android:authorities="com.miku.update.mascot" />
+    </queries>
+
+
     <uses-feature android:name="android.hardware.camera.any" android:required="false" />
     <uses-feature android:name="android.hardware.microphone" android:required="false" />
 
@@ -41,6 +52,14 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.MikuMedia"
         android:largeHeap="false">
+
+        <!-- Starts Mascot (the active mascot pack) at process start. -->
+        <provider
+            android:name="com.miku.media.MascotInit"
+            android:authorities="${applicationId}.mascot-init"
+            android:exported="false"
+            android:initOrder="1000" />
+
 
         <!-- ============================== GALLERY ============================== -->
         <activity

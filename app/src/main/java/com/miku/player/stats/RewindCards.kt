@@ -1,5 +1,6 @@
 package com.miku.player.stats
 
+import com.miku.player.Mascot
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -65,19 +66,19 @@ import kotlin.math.sin
 
 // ============================================================================================ palette
 
-val RewindTeal = Color(0xFF39C5BB)
-val RewindTealBright = Color(0xFF7FE6DE)
-val RewindPink = Color(0xFFFF2277)
-val RewindPinkSoft = Color(0xFFFF6FA6)
-val RewindInk = Color(0xFFF2FBFA)
-val RewindMuted = Color(0xFF9CC4BF)
+val RewindTeal get() = Mascot.color(0xFF39C5BB)
+val RewindTealBright get() = Mascot.color(0xFF7FE6DE)
+val RewindPink get() = Mascot.color(0xFFFF2277)
+val RewindPinkSoft get() = Mascot.color(0xFFFF6FA6)
+val RewindInk get() = Mascot.color(0xFFF2FBFA)
+val RewindMuted get() = Mascot.color(0xFF9CC4BF)
 
 /** Card-to-card background variety without per-card art: alternate teal-led / pink-led washes. */
 private fun washFor(index: Int): List<Color> = when (index % 4) {
-    0 -> listOf(Color(0xFF0B3A40), CyberDarkBg, Color(0xFF12071B))
-    1 -> listOf(Color(0xFF3A0A22), CyberDarkBg, Color(0xFF062A2E))
-    2 -> listOf(Color(0xFF07262B), Color(0xFF12071B), CyberDarkBg)
-    else -> listOf(Color(0xFF1C0A2E), CyberDarkBg, Color(0xFF0B3A40))
+    0 -> listOf(Mascot.color(0xFF0B3A40), CyberDarkBg, Color(0xFF12071B))
+    1 -> listOf(Mascot.color(0xFF3A0A22), CyberDarkBg, Mascot.color(0xFF062A2E))
+    2 -> listOf(Mascot.color(0xFF07262B), Color(0xFF12071B), CyberDarkBg)
+    else -> listOf(Color(0xFF1C0A2E), CyberDarkBg, Mascot.color(0xFF0B3A40))
 }
 
 // ============================================================================================ particles
@@ -192,7 +193,7 @@ private fun Footer(period: RewindPeriod) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         Box(Modifier.size(8.dp).clip(CircleShape).background(RewindTeal))
         Spacer(Modifier.width(6.dp))
-        Text("MIKU REWIND · ${period.label.uppercase()}", color = RewindMuted, fontSize = 10.sp, letterSpacing = 1.5.sp, fontWeight = FontWeight.SemiBold)
+        Text("${Mascot.nameUpper} REWIND · ${period.label.uppercase()}", color = RewindMuted, fontSize = 10.sp, letterSpacing = 1.5.sp, fontWeight = FontWeight.SemiBold)
     }
 }
 
@@ -611,7 +612,7 @@ private fun GenresCard(s: RewindStory.Genres, period: RewindPeriod) {
 @Composable
 private fun SummaryCard(s: RewindStory.Summary, period: RewindPeriod) {
     CardFrame(period) {
-        Eyebrow("Miku Rewind", RewindPinkSoft)
+        Eyebrow("${Mascot.name} Rewind", RewindPinkSoft)
         Spacer(Modifier.height(4.dp))
         Headline(period.label, 34)
         Spacer(Modifier.height(12.dp))

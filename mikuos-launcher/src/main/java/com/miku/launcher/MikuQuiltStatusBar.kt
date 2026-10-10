@@ -28,9 +28,9 @@ import androidx.compose.ui.unit.dp
  * it can wrap an existing FlowRow/Row without disturbing the swipe-down-to-open-shade gesture.
  */
 fun Modifier.quiltStitch(
-    fillStart: Color = Color(0x1A0EE7DD),
-    fillEnd: Color = Color(0x14FF4FA3),
-    seam: Color = Color(0xB339C5BB),
+    fillStart: Color = Mascot.color(0x1A0EE7DD),
+    fillEnd: Color = Mascot.color(0x14FF4FA3),
+    seam: Color = Mascot.color(0xB339C5BB),
     corner: Dp = 11.dp,
     seamInset: Dp = 3.dp
 ): Modifier = this.drawBehind {

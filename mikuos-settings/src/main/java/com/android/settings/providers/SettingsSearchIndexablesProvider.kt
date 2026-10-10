@@ -1,5 +1,6 @@
 package com.android.settings.providers
 
+import com.miku.settings.Mascot
 import android.content.ContentProvider
 import android.content.ContentValues
 import android.database.Cursor
@@ -56,7 +57,7 @@ class SettingsSearchIndexablesProvider : ContentProvider() {
         addRawItem(cursor, "bluetooth_settings", "Bluetooth & LDAC", "Bluetooth codecs, LDAC 990 kbps, aptX HD", "android.settings.BLUETOOTH_SETTINGS")
         addRawItem(cursor, "display_settings", "Display & Brightness", "Brightness, screen timeout and sleep", "android.settings.DISPLAY_SETTINGS")
         addRawItem(cursor, "sound_settings", "Audio & Volume", "Hardware volume, media levels and DSD", "android.settings.SOUND_SETTINGS")
-        addRawItem(cursor, "about_device", "About MikuOS", "HiBy M500 Hatsune Miku Edition, Android 14, GKI 5.15", "android.settings.DEVICE_INFO_SETTINGS")
+        addRawItem(cursor, "about_device", "About ${Mascot.osName}", "HiBy M500 ${Mascot.edition}, Android 14, GKI 5.15", "android.settings.DEVICE_INFO_SETTINGS")
         return cursor
     }
 
@@ -68,7 +69,7 @@ class SettingsSearchIndexablesProvider : ContentProvider() {
         row.add("summaryOff", summary)
         row.add("entries", "")
         row.add("keywords", "miku, settings, hardware, audio, dac, flac, dsd")
-        row.add("screenTitle", "MikuOS Settings")
+        row.add("screenTitle", "${Mascot.settingsName}")
         row.add("className", "com.miku.settings.MikuSettingsActivity")
         row.add("iconResId", 0)
         row.add("intentAction", intentAction)

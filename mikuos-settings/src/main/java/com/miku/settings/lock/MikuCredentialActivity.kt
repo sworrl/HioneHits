@@ -1,5 +1,6 @@
 package com.miku.settings.lock
 
+import com.miku.settings.Mascot
 import android.app.Activity
 import android.content.Context
 import android.content.Intent
@@ -163,7 +164,7 @@ class MikuCredentialActivity : ComponentActivity() {
                     )
                     Step.CHOOSE -> LockTypeChoice(
                         title = if (secure) "Choose a new screen lock" else "Choose a screen lock",
-                        subtitle = "MikuOS asks for it after every restart",
+                        subtitle = "${Mascot.osName} asks for it after every restart",
                         onPick = { t -> newType = t; go(Step.NEW) },
                         onCancel = { finish() }
                     )
@@ -227,7 +228,7 @@ private fun PatternNotice(onClose: () -> Unit) {
         Text("A pattern lock is set", color = MikuWhite, fontSize = 19.sp, fontWeight = FontWeight.Bold)
         Spacer(Modifier.height(6.dp))
         Text(
-            "MikuOS handles PINs and passwords. Remove the pattern in the stock lock settings, then set a PIN or password here.",
+            "${Mascot.osName} handles PINs and passwords. Remove the pattern in the stock lock settings, then set a PIN or password here.",
             color = MikuMuted, fontSize = 12.5.sp, textAlign = TextAlign.Center
         )
         Spacer(Modifier.height(16.dp))

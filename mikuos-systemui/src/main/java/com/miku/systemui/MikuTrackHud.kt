@@ -157,7 +157,7 @@ class MikuTrackHud(
     private inner class HudView(context: Context) : View(context) {
         private var p: Payload? = null
         private var art: Bitmap? = null
-        private var accent = 0xFF39C5BB.toInt()
+        private var accent = Mascot.argb(0xFF39C5BB.toInt())
         private var boundAt = 0L
         private var marquee = 0f
         private var marqueeAnim: ValueAnimator? = null
@@ -169,10 +169,10 @@ class MikuTrackHud(
         private val glass = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL }
         private val fillPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL }
         private val glow = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL }
-        private val titlePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0xFFF0FDFB.toInt(); textSize = dp(14f); isFakeBoldText = true }
-        private val artistPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0xFF80DEEA.toInt(); textSize = dp(12f) }
+        private val titlePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Mascot.argb(0xFFF0FDFB.toInt()); textSize = dp(14f); isFakeBoldText = true }
+        private val artistPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Mascot.argb(0xFF80DEEA.toInt()); textSize = dp(12f) }
         private val chipPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { textSize = dp(10f); isFakeBoldText = true }
-        private val heartPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0xFFFF4081.toInt(); textSize = dp(13f); textAlign = Paint.Align.CENTER }
+        private val heartPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Mascot.argb(0xFFFF4081.toInt()); textSize = dp(13f); textAlign = Paint.Align.CENTER }
         private val xPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0xFF8BA6A9.toInt(); textSize = dp(14f); textAlign = Paint.Align.CENTER }
         private val artPaint = Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG)
         private val progressPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL }
@@ -185,7 +185,7 @@ class MikuTrackHud(
 
         fun bind(np: Payload) {
             p = np; boundAt = SystemClock.elapsedRealtime()
-            art = null; accent = if (np.accent != 0) np.accent else (MikuAccent.accent.value.takeIf { it != 0 } ?: 0xFF39C5BB.toInt())
+            art = null; accent = if (np.accent != 0) np.accent else (MikuAccent.accent.value.takeIf { it != 0 } ?: Mascot.argb(0xFF39C5BB.toInt()))
             invalidate()
             val uri = np.artUri
             if (!uri.isNullOrBlank()) Thread {
@@ -253,10 +253,10 @@ class MikuTrackHud(
             glow.shader = RadialGradient(w * 0.18f, h * 0.5f, w * 0.7f, intArrayOf(accent and 0x55FFFFFF, 0x00000000), null, Shader.TileMode.CLAMP)
             rect.set(-dp(6f), -dp(6f), w + dp(6f), h + dp(6f)); canvas.drawRoundRect(rect, cardR + dp(6f), cardR + dp(6f), glow)
             // glass card
-            glass.shader = LinearGradient(0f, 0f, w, h, intArrayOf(0xF60B222A.toInt(), 0xFA061319.toInt()), null, Shader.TileMode.CLAMP)
+            glass.shader = LinearGradient(0f, 0f, w, h, intArrayOf(Mascot.argb(0xF60B222A.toInt()), Mascot.argb(0xFA061319.toInt())), null, Shader.TileMode.CLAMP)
             rect.set(0f, 0f, w, h); canvas.drawRoundRect(rect, cardR, cardR, glass)
             // MikuGlass sheen, top-edge light and refraction rim (art accent -> Miku pink), under the content
-            glassFx.drawOver(canvas, rect, cardR, accent, 0xFFFF4081.toInt())
+            glassFx.drawOver(canvas, rect, cardR, accent, Mascot.argb(0xFFFF4081.toInt()))
             // art
             val pad = dp(8f); val artSz = dp(56f)
             artDst.set(pad.toInt(), pad.toInt(), (pad + artSz).toInt(), (pad + artSz).toInt())

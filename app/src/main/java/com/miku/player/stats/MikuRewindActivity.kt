@@ -1,5 +1,6 @@
 package com.miku.player.stats
 
+import com.miku.player.Mascot
 import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
@@ -111,7 +112,7 @@ fun MikuRewindScreen(onBack: () -> Unit) {
         if (cached != null) { deck = cached; loading = false; return@LaunchedEffect }
         loading = true
         val d = runCatching { builder.build(period) }.getOrElse {
-            RewindDeck(period, 0, listOf(RewindStory.NotEnough("Miku Rewind", 0, Threshold.DECK, "listens (stats DB unreadable: ${it.message})")))
+            RewindDeck(period, 0, listOf(RewindStory.NotEnough("${Mascot.name} Rewind", 0, Threshold.DECK, "listens (stats DB unreadable: ${it.message})")))
         }
         decks[period.key] = d
         deck = d
@@ -130,7 +131,7 @@ fun MikuRewindScreen(onBack: () -> Unit) {
                     modifier = Modifier.size(36.dp).clip(CircleShape).clickable { onBack() }.padding(6.dp)
                 )
                 Column(Modifier.weight(1f).padding(start = 4.dp)) {
-                    Text("MIKU REWIND", color = RewindTealBright, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 2.sp)
+                    Text("${Mascot.nameUpper} REWIND", color = RewindTealBright, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 2.sp)
                     Text(period.label, color = RewindInk, fontSize = 16.sp, fontWeight = FontWeight.Bold)
                 }
                 val canShare = !loading && !sharing && deck != null
@@ -146,10 +147,10 @@ fun MikuRewindScreen(onBack: () -> Unit) {
                                 val send = Intent(Intent.ACTION_SEND).apply {
                                     type = "image/png"
                                     putExtra(Intent.EXTRA_STREAM, uri)
-                                    putExtra(Intent.EXTRA_SUBJECT, "Miku Rewind · ${period.label}")
+                                    putExtra(Intent.EXTRA_SUBJECT, "${Mascot.name} Rewind · ${period.label}")
                                     addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                                 }
-                                runCatching { ctx.startActivity(Intent.createChooser(send, "Share Miku Rewind")) }
+                                runCatching { ctx.startActivity(Intent.createChooser(send, "Share ${Mascot.name} Rewind")) }
                                     .onFailure { Toast.makeText(ctx, "Saved ${f.absolutePath}", Toast.LENGTH_LONG).show() }
                             } catch (t: Throwable) {
                                 Toast.makeText(ctx, "Share failed: ${t.message}", Toast.LENGTH_LONG).show()

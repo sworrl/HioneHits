@@ -1,5 +1,7 @@
 package com.miku.launcher.lockscreen
 
+import com.miku.launcher.Mascot
+import com.miku.launcher.mascotPainter
 import android.app.KeyguardManager
 import android.app.admin.DevicePolicyManager
 import android.content.ComponentName
@@ -855,13 +857,25 @@ fun MikuKawaiiLockscreenScreen(
                 )
             }
     ) {
-        // 1. Fullscreen Wallpaper Backdrop (bundled Miku portrait)
-        Image(
-            painter = painterResource(id = R.drawable.miku_boot_splash),
-            contentDescription = "Lockscreen Wallpaper",
-            modifier = Modifier.fillMaxSize(),
-            contentScale = ContentScale.Crop
-        )
+        // 1. Fullscreen Wallpaper Backdrop: holiday art in a holiday window, otherwise the
+        //    pack's portrait (holiday/HolidayState).
+        remember { com.miku.launcher.holiday.HolidayState.start(context); true }
+        val holidayBackdrop = com.miku.launcher.holiday.HolidayState.lockBitmap.value
+        if (holidayBackdrop != null) {
+            Image(
+                bitmap = holidayBackdrop,
+                contentDescription = "Lockscreen Wallpaper",
+                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.Crop
+            )
+        } else {
+            Image(
+                painter = mascotPainter(id = R.drawable.miku_boot_splash),
+                contentDescription = "Lockscreen Wallpaper",
+                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.Crop
+            )
+        }
 
         // 2. Frosted Cyber Glow Vignette
         Box(
@@ -870,10 +884,10 @@ fun MikuKawaiiLockscreenScreen(
                 .background(
                     Brush.verticalGradient(
                         listOf(
-                            Color(0xEE02090D),
-                            Color(0x7704121A),
-                            Color(0x9902090D),
-                            Color(0xF802090D)
+                            Mascot.color(0xEE02090D),
+                            Mascot.color(0x7704121A),
+                            Mascot.color(0x9902090D),
+                            Mascot.color(0xF802090D)
                         )
                     )
                 )
@@ -901,16 +915,16 @@ fun MikuKawaiiLockscreenScreen(
             // batteryPercent < 0 = the sticky broadcast was unreadable → neutral badge + "—%".
             val batteryKnown = batteryPercent >= 0
             val batteryColor = when {
-                !batteryKnown -> Color(0xFF88BAC6)
+                !batteryKnown -> Mascot.color(0xFF88BAC6)
                 isCharging -> com.miku.launcher.ui.MikuIdentity.Leek
                 batteryPercent > 60 -> palette.primary
                 batteryPercent > 20 -> com.miku.launcher.ui.MikuIdentity.Gold
                 else -> com.miku.launcher.ui.MikuIdentity.Coral
             }
             val batteryGradient = when {
-                !batteryKnown -> listOf(Color(0xEE0B1A20), Color(0xFF030D14))
+                !batteryKnown -> listOf(Mascot.color(0xEE0B1A20), Mascot.color(0xFF030D14))
                 isCharging -> listOf(Color(0x5500E676), Color(0xFF04150E))
-                batteryPercent > 60 -> listOf(Color(0xEE081F2A), Color(0xFF030D14))
+                batteryPercent > 60 -> listOf(Mascot.color(0xEE081F2A), Mascot.color(0xFF030D14))
                 batteryPercent > 20 -> listOf(Color(0x55FFD600), Color(0xFF1E1704))
                 else -> listOf(Color(0x66FF1744), Color(0xFF200508))
             }
@@ -931,7 +945,7 @@ fun MikuKawaiiLockscreenScreen(
                     Modifier
                         .height(20.dp)
                         .clip(CutCornerShape(4.dp))
-                        .background(Color(0x9904121A))
+                        .background(Mascot.color(0x9904121A))
                         .border(0.8.dp, palette.accent.copy(alpha = 0.7f), CutCornerShape(4.dp))
                         .padding(horizontal = 4.5.dp, vertical = 1.dp)
                 ) {
@@ -964,7 +978,7 @@ fun MikuKawaiiLockscreenScreen(
                         Modifier
                             .height(20.dp)
                             .clip(CutCornerShape(4.dp))
-                            .background(Color(0x9904121A))
+                            .background(Mascot.color(0x9904121A))
                             .border(0.8.dp, Color(0xFF00FF7F).copy(alpha = 0.7f), CutCornerShape(4.dp))
                             .padding(horizontal = 4.5.dp, vertical = 1.dp)
                     ) {
@@ -1290,12 +1304,12 @@ fun MikuLockscreenMegaClock(time: String) {
             modifier = Modifier.size(width = 260.dp, height = 90.dp)
         ) {
             val particles = listOf(
-                Triple(0.10f, 0.20f, Color(0xFF00E5FF)),
-                Triple(0.25f, 0.70f, Color(0xFFFF007F)),
-                Triple(0.40f, 0.30f, Color(0xFF00FFCC)),
+                Triple(0.10f, 0.20f, Mascot.color(0xFF00E5FF)),
+                Triple(0.25f, 0.70f, Mascot.color(0xFFFF007F)),
+                Triple(0.40f, 0.30f, Mascot.color(0xFF00FFCC)),
                 Triple(0.60f, 0.85f, Color(0xFFFFFFFF)),
-                Triple(0.75f, 0.25f, Color(0xFF00E5FF)),
-                Triple(0.90f, 0.65f, Color(0xFFFF007F)),
+                Triple(0.75f, 0.25f, Mascot.color(0xFF00E5FF)),
+                Triple(0.90f, 0.65f, Mascot.color(0xFFFF007F)),
                 Triple(0.50f, 0.50f, com.miku.launcher.ui.MikuIdentity.Gold)
             )
 
@@ -1453,7 +1467,7 @@ fun Miku5HourLockscreenTrendCapsule(
             .background(
                 Brush.verticalGradient(
                     listOf(
-                        Color(0xEE061C26),
+                        Mascot.color(0xEE061C26),
                         Color(0xF6020A10)
                     )
                 )
@@ -1554,7 +1568,7 @@ fun Miku5HourLockscreenTrendCapsule(
                         if (pt.precipProbPct > 0) {
                             Text(
                                 text = "${pt.precipProbPct}%",
-                                color = Color(0xFF00E5FF),
+                                color = Mascot.color(0xFF00E5FF),
                                 fontSize = 8.5.dampedSp(),
                                 fontWeight = FontWeight.Bold
                             )
@@ -1625,7 +1639,7 @@ fun Miku5HourLockscreenTrendCapsule(
                 )
 
                 pointsOffset.forEach { p ->
-                    drawCircle(Color(0xFF04121A), radius = 2.dp.toPx(), center = p)
+                    drawCircle(Mascot.color(0xFF04121A), radius = 2.dp.toPx(), center = p)
                     drawCircle(MikuCyan, radius = 1.2.dp.toPx(), center = p)
                 }
             }
@@ -1676,15 +1690,15 @@ private fun LockscreenNowPlayingWidget(
                     .clip(CutCornerShape(14.dp))
                     .background(
                         Brush.verticalGradient(
-                            listOf(Color(0xF00A2330), Color(0xF8051219), Color(0xFB020A0E))
+                            listOf(Mascot.color(0xF00A2330), Mascot.color(0xF8051219), Mascot.color(0xFB020A0E))
                         )
                     )
                     .border(
                         1.2.dp,
                         Brush.horizontalGradient(
                             listOf(
-                                if (localLikedState) Color(0xFFFF2277) else com.miku.launcher.ui.MikuNowPlayingAccent.blend(palette.primary, npAccentLock.full, if (npAccentLock.active) 0.3f else 0f).copy(alpha = 0.85f),
-                                com.miku.launcher.ui.MikuNowPlayingAccent.blend(Color(0xFF39C5BB), npAccentLock.full, if (npAccentLock.active) 0.3f else 0f).copy(alpha = 0.5f),
+                                if (localLikedState) Mascot.color(0xFFFF2277) else com.miku.launcher.ui.MikuNowPlayingAccent.blend(palette.primary, npAccentLock.full, if (npAccentLock.active) 0.3f else 0f).copy(alpha = 0.85f),
+                                com.miku.launcher.ui.MikuNowPlayingAccent.blend(Mascot.color(0xFF39C5BB), npAccentLock.full, if (npAccentLock.active) 0.3f else 0f).copy(alpha = 0.5f),
                                 MikuNeonPink.copy(alpha = 0.7f)
                             )
                         ),
@@ -1704,8 +1718,8 @@ private fun LockscreenNowPlayingWidget(
                             Modifier
                                 .size(38.dp)
                                 .clip(CircleShape)
-                                .background(Color(0xFF030D12))
-                                .border(1.2.dp, if (localLikedState) Color(0xFFFF2277) else MikuNeonPink, CircleShape),
+                                .background(Mascot.color(0xFF030D12))
+                                .border(1.2.dp, if (localLikedState) Mascot.color(0xFFFF2277) else MikuNeonPink, CircleShape),
                             contentAlignment = Alignment.Center
                         ) {
                             // artwork is a fresh ByteArray/Uri object on EVERY controller poll (each
@@ -1758,11 +1772,11 @@ private fun LockscreenNowPlayingWidget(
                                 .background(
                                     if (localLikedState) {
                                         Brush.radialGradient(
-                                            listOf(Color(0x66FF1774), Color(0x28FF1774), Color(0xFF15040D))
+                                            listOf(Mascot.color(0x66FF1774), Mascot.color(0x28FF1774), Mascot.color(0xFF15040D))
                                         )
                                     } else {
                                         Brush.verticalGradient(
-                                            listOf(Color(0x2800E5FF), Color(0x0C00E5FF))
+                                            listOf(Mascot.color(0x2800E5FF), Mascot.color(0x0C00E5FF))
                                         )
                                     }
                                 )
@@ -1770,11 +1784,11 @@ private fun LockscreenNowPlayingWidget(
                                     if (localLikedState) 1.2.dp else 0.8.dp,
                                     if (localLikedState) {
                                         Brush.linearGradient(
-                                            listOf(Color(0xFFFF1774), Color(0xFFFF5288), Color(0xFFFF0055))
+                                            listOf(Mascot.color(0xFFFF1774), Mascot.color(0xFFFF5288), Mascot.color(0xFFFF0055))
                                         )
                                     } else {
                                         Brush.linearGradient(
-                                            listOf(Color(0x6600E5FF), Color(0x2200E5FF))
+                                            listOf(Mascot.color(0x6600E5FF), Mascot.color(0x2200E5FF))
                                         )
                                     },
                                     CircleShape
@@ -1811,7 +1825,7 @@ private fun LockscreenNowPlayingWidget(
                             Icon(
                                 imageVector = if (localLikedState) Icons.Filled.Favorite else Icons.Default.FavoriteBorder,
                                 contentDescription = "Like song",
-                                tint = if (localLikedState) Color(0xFFFF1774) else Color(0xFF00E5FF),
+                                tint = if (localLikedState) Mascot.color(0xFFFF1774) else Mascot.color(0xFF00E5FF),
                                 modifier = Modifier.size(16.dp)
                             )
                         }
@@ -1822,7 +1836,7 @@ private fun LockscreenNowPlayingWidget(
                         Box(
                             Modifier
                                 .clip(CutCornerShape(6.dp))
-                                .background(if (showHistoryDrawer) Color(0x5500E5FF) else Color(0x2200E5FF))
+                                .background(if (showHistoryDrawer) Mascot.color(0x5500E5FF) else Mascot.color(0x2200E5FF))
                                 .border(0.8.dp, palette.primary.copy(alpha = 0.6f), CutCornerShape(6.dp))
                                 .clickable {
                                     onInteraction()
@@ -1910,7 +1924,7 @@ private fun LockscreenNowPlayingWidget(
                                 .clip(RoundedCornerShape(6.dp))
                                 .background(
                                     Brush.horizontalGradient(
-                                        listOf(Color(0x66FF1177), Color(0x449D4EDD))
+                                        listOf(Mascot.color(0x66FF1177), Color(0x449D4EDD))
                                     )
                                 )
                                 .border(0.8.dp, if (miniTapCount >= 10) Color(0xFFFFD700) else MikuNeonPink, RoundedCornerShape(6.dp))
@@ -2125,8 +2139,8 @@ private fun LockscreenNowPlayingWidget(
                                     scrubbing = false
                                 },
                                 colors = SliderDefaults.colors(
-                                    thumbColor = if (localLikedState) Color(0xFFFF2277) else palette.primary,
-                                    activeTrackColor = if (localLikedState) Color(0xFFFF2277) else palette.primary,
+                                    thumbColor = if (localLikedState) Mascot.color(0xFFFF2277) else palette.primary,
+                                    activeTrackColor = if (localLikedState) Mascot.color(0xFFFF2277) else palette.primary,
                                     inactiveTrackColor = Color(0x33FFFFFF)
                                 ),
                                 modifier = Modifier
@@ -2139,14 +2153,14 @@ private fun LockscreenNowPlayingWidget(
                             ) {
                                 Text(
                                     posStr,
-                                    color = Color(0xFFB0D0D8),
+                                    color = Mascot.color(0xFFB0D0D8),
                                     fontSize = 8.5.dampedSp(),
                                     fontWeight = FontWeight.Bold,
                                     fontFamily = AudiowideFont
                                 )
                                 Text(
                                     durStr,
-                                    color = Color(0xFFB0D0D8),
+                                    color = Mascot.color(0xFFB0D0D8),
                                     fontSize = 8.5.dampedSp(),
                                     fontWeight = FontWeight.Bold,
                                     fontFamily = AudiowideFont
@@ -2165,7 +2179,7 @@ private fun LockscreenNowPlayingWidget(
                             Modifier
                                 .size(30.dp)
                                 .clip(CutCornerShape(6.dp))
-                                .background(Color(0x3300E5FF))
+                                .background(Mascot.color(0x3300E5FF))
                                 .mikuPressScale(pressedScale = 0.9f, glowColor = palette.primary, hapticFeedback = false)
                                 .clickable {
                                     onInteraction()
@@ -2184,8 +2198,8 @@ private fun LockscreenNowPlayingWidget(
                                 .background(
                                     Brush.radialGradient(
                                         listOf(
-                                            if (localLikedState) Color(0xFFFF2277) else palette.primary,
-                                            if (localLikedState) Color(0xFFAA0044) else Color(0xFF0099AA)
+                                            if (localLikedState) Mascot.color(0xFFFF2277) else palette.primary,
+                                            if (localLikedState) Mascot.color(0xFFAA0044) else Mascot.color(0xFF0099AA)
                                         )
                                     )
                                 )
@@ -2200,7 +2214,7 @@ private fun LockscreenNowPlayingWidget(
                             Icon(
                                 imageVector = if (nowPlaying.isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
                                 contentDescription = "Play/Pause",
-                                tint = Color(0xFF030D12),
+                                tint = Mascot.color(0xFF030D12),
                                 modifier = Modifier.size(20.dp)
                             )
                         }
@@ -2209,7 +2223,7 @@ private fun LockscreenNowPlayingWidget(
                             Modifier
                                 .size(30.dp)
                                 .clip(CutCornerShape(6.dp))
-                                .background(Color(0x3300E5FF))
+                                .background(Mascot.color(0x3300E5FF))
                                 .mikuPressScale(pressedScale = 0.9f, glowColor = palette.primary, hapticFeedback = false)
                                 .clickable {
                                     onInteraction()
@@ -2233,7 +2247,7 @@ private fun LockscreenNowPlayingWidget(
                                 .fillMaxWidth()
                                 .padding(top = 8.dp)
                                 .clip(RoundedCornerShape(8.dp))
-                                .background(Color(0xEE030D14))
+                                .background(Mascot.color(0xEE030D14))
                                 .border(1.dp, palette.primary.copy(alpha = 0.4f), RoundedCornerShape(8.dp))
                                 .padding(6.dp)
                         ) {
@@ -2264,7 +2278,7 @@ private fun LockscreenNowPlayingWidget(
                                             Modifier
                                                 .fillMaxWidth()
                                                 .clip(RoundedCornerShape(4.dp))
-                                                .background(Color(0x33061C26))
+                                                .background(Mascot.color(0x33061C26))
                                                 .clickable {
                                                     onInteraction()
                                                     com.miku.launcher.haptics.MikuHaptics.tick(context)
@@ -2285,7 +2299,7 @@ private fun LockscreenNowPlayingWidget(
                                                 )
                                                 Text(
                                                     item.artist.ifBlank { "Unknown artist" },
-                                                    color = Color(0xFF88BAC6),
+                                                    color = Mascot.color(0xFF88BAC6),
                                                     fontSize = 12.sp,
                                                     maxLines = 1
                                                 )

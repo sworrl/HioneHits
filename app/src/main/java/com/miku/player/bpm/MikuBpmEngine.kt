@@ -1,5 +1,6 @@
 package com.miku.player.bpm
 
+import com.miku.player.Mascot
 import com.miku.player.safeQuery
 import com.miku.player.MikuPowerGovernor
 import android.content.Context
@@ -60,7 +61,7 @@ object MikuBpmEngine {
         private set
     @Volatile var isPlaying: Boolean = false
         private set
-    @Volatile var dominantColor: Int = 0xFF39C5BB.toInt()
+    @Volatile var dominantColor: Int = Mascot.argb(0xFF39C5BB.toInt())
         private set
 
     /**

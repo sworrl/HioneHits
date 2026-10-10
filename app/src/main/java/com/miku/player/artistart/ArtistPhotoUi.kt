@@ -1,5 +1,6 @@
 package com.miku.player.artistart
 
+import com.miku.player.Mascot
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
@@ -108,7 +109,7 @@ fun ArtistPhotoCreditButton(artist: ArtistGroup, modifier: Modifier = Modifier) 
         modifier
             .size(26.dp)
             .clip(RoundedCornerShape(13.dp))
-            .background(Color(0x66041416))
+            .background(Mascot.color(0x66041416))
             .border(1.dp, Color.White.copy(alpha = 0.25f), RoundedCornerShape(13.dp))
             .clickable { show = true },
         contentAlignment = Alignment.Center
@@ -130,7 +131,7 @@ private fun ArtistPhotoCreditDialog(ctx: Context, key: String, info: ArtistPhoto
         onDismissRequest = onDismiss,
         containerColor = Surface1,
         titleContentColor = Color.White,
-        textContentColor = Color(0xFFE8F4F2),
+        textContentColor = Mascot.color(0xFFE8F4F2),
         title = { Text("Artist photo credit", fontWeight = FontWeight.Bold) },
         text = {
             Column {
@@ -178,7 +179,7 @@ private fun CreditRow(label: String, value: String, link: String? = null, ctx: C
         Text(label, color = Muted, fontSize = 12.sp, modifier = Modifier.width(64.dp))
         Text(
             value + (if (link != null) " ↗" else ""),
-            color = if (link != null) MikuTealBright else Color(0xFFE8F4F2),
+            color = if (link != null) MikuTealBright else Mascot.color(0xFFE8F4F2),
             fontSize = 12.5.sp, maxLines = 3, overflow = TextOverflow.Ellipsis,
             modifier = if (link != null && ctx != null) Modifier.clickable { openUrl(ctx, link) } else Modifier
         )
@@ -208,7 +209,7 @@ fun ArtistPhotoSettingsCard(ctx: Context) {
         Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(18.dp))
-            .background(Brush.verticalGradient(listOf(Surface1, Color(0xFF0A2A33))))
+            .background(Brush.verticalGradient(listOf(Surface1, Mascot.color(0xFF0A2A33))))
             .border(1.dp, MikuTeal.copy(alpha = 0.35f), RoundedCornerShape(18.dp))
             .padding(18.dp)
     ) {
@@ -248,7 +249,7 @@ fun ArtistPhotoSettingsCard(ctx: Context) {
             Row(
                 Modifier
                     .clip(RoundedCornerShape(14.dp))
-                    .background(Color(0x22FF5FA2))
+                    .background(Mascot.color(0x22FF5FA2))
                     .border(1.dp, MikuPink.copy(alpha = 0.5f), RoundedCornerShape(14.dp))
                     .clickable {
                         ArtistPhotoCache.clearAll(ctx)
@@ -277,7 +278,7 @@ private fun PhotoToggleRow(title: String, subtitle: String, checked: Boolean, on
         verticalAlignment = Alignment.CenterVertically
     ) {
         Column(Modifier.weight(1f)) {
-            Text(title, color = Color(0xFFE8F4F2), fontSize = 13.5.sp, fontWeight = FontWeight.SemiBold)
+            Text(title, color = Mascot.color(0xFFE8F4F2), fontSize = 13.5.sp, fontWeight = FontWeight.SemiBold)
             Text(subtitle, color = Muted, fontSize = 11.5.sp)
         }
         Spacer(Modifier.width(8.dp))
@@ -285,7 +286,7 @@ private fun PhotoToggleRow(title: String, subtitle: String, checked: Boolean, on
             checked = checked, onCheckedChange = onCheckedChange,
             colors = SwitchDefaults.colors(
                 checkedThumbColor = MikuPink, checkedTrackColor = MikuTeal.copy(alpha = 0.6f),
-                uncheckedThumbColor = Muted, uncheckedTrackColor = Color(0xFF0A2022)
+                uncheckedThumbColor = Muted, uncheckedTrackColor = Mascot.color(0xFF0A2022)
             )
         )
     }

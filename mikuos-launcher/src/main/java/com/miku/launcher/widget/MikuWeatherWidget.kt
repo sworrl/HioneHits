@@ -1,5 +1,6 @@
 package com.miku.launcher.widget
 
+import com.miku.launcher.Mascot
 import android.appwidget.AppWidgetManager
 import android.appwidget.AppWidgetProvider
 import android.content.ComponentName
@@ -82,7 +83,7 @@ class MikuWeatherWidget : AppWidgetProvider() {
             // Severe conditions flip the temp readout red, matching the in-bar badge's urgency cue.
             v.setTextColor(
                 R.id.widget_weather_temp,
-                if (fresh && w.severeWarning != null) 0xFFFF5252.toInt() else 0xFF39C5BB.toInt()
+                if (fresh && w.severeWarning != null) 0xFFFF5252.toInt() else Mascot.argb(0xFF39C5BB.toInt())
             )
 
             renderAlertLine(ctx, v)

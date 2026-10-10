@@ -32,7 +32,7 @@ class LibraryDaemonService : Service() {
     override fun onCreate() {
         super.onCreate()
         cachedBannerArt = try {
-            android.graphics.BitmapFactory.decodeResource(resources, R.drawable.miku_banner_cyber_stage)
+            Mascot.decodeResource(resources, R.drawable.miku_banner_cyber_stage)
         } catch (_: Throwable) { null }
         createNotificationChannel()
         startForeground(NOTIFICATION_ID, buildNotification("Watching the music library"))
@@ -252,7 +252,7 @@ class LibraryDaemonService : Service() {
 
         val sync = MikuSyncTransceiver.state.value
         val syncDetail = if (!MikuIngestGate.isEnabled(this)) {
-            "Network sync is off, so only the SD card is scanned. Turn it on from the MikuOS quick settings."
+            "Network sync is off, so only the SD card is scanned. Turn it on from the ${Mascot.osName} quick settings."
         } else if (sync.isTransferring) {
             "Receiving at ${String.format("%.1f", sync.transferRateMBs)} MB/s to ${MikuVolumes.removableLabel(this) ?: "the MicroSD"}/MUSIC."
         } else {
@@ -262,20 +262,20 @@ class LibraryDaemonService : Service() {
         val bigStyle = if (wideBackgroundArt != null) {
             NotificationCompat.BigPictureStyle()
                 .bigPicture(wideBackgroundArt)
-                .setBigContentTitle("Miku Monitor")
+                .setBigContentTitle("${Mascot.name} Monitor")
                 .setSummaryText("$lastTrackCount tracks on SD card")
         } else {
             NotificationCompat.BigTextStyle()
-                .setBigContentTitle("Miku Monitor")
+                .setBigContentTitle("${Mascot.name} Monitor")
                 .setSummaryText("Local storage and network sync")
                 .bigText("$status\n\n$syncDetail")
         }
 
         return NotificationCompat.Builder(this, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_miku_monitor_status)
-            .setColor(0xFF00E5FF.toInt())
+            .setColor(Mascot.argb(0xFF00E5FF.toInt()))
             .setColorized(true)
-            .setContentTitle("Miku Monitor")
+            .setContentTitle("${Mascot.name} Monitor")
             .setSubText(if (MikuIngestGate.isEnabled(this)) "rsyncd :${MikuSyncTransceiver.RSYNC_PORT}" else "local SD only")
             .setContentText(status)
             .setStyle(bigStyle)

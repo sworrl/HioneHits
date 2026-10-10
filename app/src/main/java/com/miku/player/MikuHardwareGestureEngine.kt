@@ -318,15 +318,15 @@ fun MikuHeartGestureHudOverlay(modifier: Modifier = Modifier) {
                     .clip(RoundedCornerShape(22.dp))
                     .background(
                         Brush.verticalGradient(
-                            if (toastState.isLiked) listOf(Color(0xF02A0015), Color(0xF5100008))
-                            else listOf(Color(0xE6081A24), Color(0xF2030D13))
+                            if (toastState.isLiked) listOf(Mascot.color(0xF02A0015), Mascot.color(0xF5100008))
+                            else listOf(Mascot.color(0xE6081A24), Mascot.color(0xF2030D13))
                         )
                     )
                     .border(
                         1.5.dp,
                         Brush.horizontalGradient(
-                            if (toastState.isLiked) listOf(Color(0xFFFF2277), Color(0xFFFF88AA))
-                            else listOf(Color(0xFF39C5BB), Color(0x66FFFFFF))
+                            if (toastState.isLiked) listOf(Mascot.color(0xFFFF2277), Mascot.color(0xFFFF88AA))
+                            else listOf(Mascot.color(0xFF39C5BB), Color(0x66FFFFFF))
                         ),
                         RoundedCornerShape(22.dp)
                     )
@@ -341,14 +341,14 @@ fun MikuHeartGestureHudOverlay(modifier: Modifier = Modifier) {
                             .size(38.dp)
                             .clip(CircleShape)
                             .background(
-                                if (toastState.isLiked) Color(0x33FF2277) else Color(0x2239C5BB)
+                                if (toastState.isLiked) Mascot.color(0x33FF2277) else Mascot.color(0x2239C5BB)
                             ),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
                             imageVector = if (toastState.isLiked) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
                             contentDescription = "Favorite",
-                            tint = if (toastState.isLiked) Color(0xFFFF2277) else Color(0xFF39C5BB),
+                            tint = if (toastState.isLiked) Mascot.color(0xFFFF2277) else Mascot.color(0xFF39C5BB),
                             modifier = Modifier.size(22.dp)
                         )
                     }
@@ -356,7 +356,7 @@ fun MikuHeartGestureHudOverlay(modifier: Modifier = Modifier) {
                     Column(modifier = Modifier.widthIn(max = 240.dp)) {
                         Text(
                             text = if (toastState.isLiked) "ADDED TO LIKED SONGS" else "REMOVED FROM LIKED SONGS",
-                            color = if (toastState.isLiked) Color(0xFFFF5599) else Color(0xFF9FF3EC),
+                            color = if (toastState.isLiked) Mascot.color(0xFFFF5599) else Mascot.color(0xFF9FF3EC),
                             fontSize = 9.sp,
                             fontWeight = FontWeight.Black,
                             fontFamily = AudiowideFont,
@@ -372,7 +372,7 @@ fun MikuHeartGestureHudOverlay(modifier: Modifier = Modifier) {
                         )
                         Text(
                             text = toastState.trackArtist,
-                            color = Color(0xFFB0D0D8),
+                            color = Mascot.color(0xFFB0D0D8),
                             fontSize = 10.sp,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis

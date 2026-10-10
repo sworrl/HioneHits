@@ -1,5 +1,6 @@
 package com.miku.tools.clock
 
+import com.miku.tools.Mascot
 import android.content.Context
 import android.media.AudioAttributes
 import android.media.MediaPlayer
@@ -179,9 +180,9 @@ private fun MikuMusicCard(next: Long?) {
         Icon(Icons.Outlined.LibraryMusic, null, tint = Miku.PinkSoft, modifier = Modifier.size(26.dp))
         Spacer(Modifier.width(14.dp))
         Column(Modifier.weight(1f)) {
-            Text("Miku Music alarms", color = Miku.Text, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+            Text("${Mascot.musicAppName} alarms", color = Miku.Text, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
             Text(
-                if (next != null) "Next: ${ClockFormat.whenText(ctx, next)}" else "Wake to your library. Set them up in Miku Music.",
+                if (next != null) "Next: ${ClockFormat.whenText(ctx, next)}" else "Wake to your library. Set them up in ${Mascot.musicAppName}.",
                 color = Miku.Muted, fontSize = 13.sp, maxLines = 2
             )
         }
@@ -212,7 +213,7 @@ private fun AlarmCard(a: ClockAlarm, now: Long, onClick: () -> Unit, onToggle: (
             val line = buildList {
                 if (a.label.isNotBlank()) add(a.label)
                 add(ClockFormat.daysSummary(a.days))
-                if (a.sound != WakeSound.TONE) add("Miku Music")
+                if (a.sound != WakeSound.TONE) add("${Mascot.musicAppName}")
             }.joinToString("  ·  ")
             Text(line, color = if (dim) Miku.Faint else Miku.TextDim, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
             val status = when {
@@ -302,8 +303,8 @@ private fun AlarmEditorDialog(original: ClockAlarm, onDismiss: () -> Unit) {
             Text(
                 when (sound) {
                     WakeSound.TONE -> "Plays an alarm sound."
-                    WakeSound.MUSIC_SHUFFLE -> "Miku Music plays a random song from your library. The tone plays if no music starts."
-                    WakeSound.MUSIC_RESUME -> "Miku Music picks up where you left off. The tone plays if no music starts."
+                    WakeSound.MUSIC_SHUFFLE -> "${Mascot.musicAppName} plays a random song from your library. The tone plays if no music starts."
+                    WakeSound.MUSIC_RESUME -> "${Mascot.musicAppName} picks up where you left off. The tone plays if no music starts."
                 },
                 color = Miku.Muted, fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp, start = 4.dp)
             )
@@ -366,7 +367,7 @@ private fun DayPicker(selected: Set<Int>, onToggle: (Int) -> Unit) {
                     .border(1.dp, if (on) Miku.TealGlow else Miku.Faint, CircleShape),
                 contentAlignment = Alignment.Center
             ) {
-                Text(letters[d - 1], color = if (on) Color(0xFF02201D) else Miku.TextDim, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                Text(letters[d - 1], color = if (on) Mascot.color(0xFF02201D) else Miku.TextDim, fontWeight = FontWeight.Bold, fontSize = 16.sp)
             }
         }
     }
@@ -385,8 +386,8 @@ fun TimePickDialog(hour: Int, minute: Int, onDismiss: () -> Unit, onPick: (Int, 
             TimePicker(
                 state,
                 colors = TimePickerDefaults.colors(
-                    clockDialColor = Color(0xFF13232A),
-                    clockDialSelectedContentColor = Color(0xFF02201D),
+                    clockDialColor = Mascot.color(0xFF13232A),
+                    clockDialSelectedContentColor = Mascot.color(0xFF02201D),
                     clockDialUnselectedContentColor = Miku.TextDim,
                     selectorColor = Miku.Teal,
                     periodSelectorBorderColor = Miku.Faint,
@@ -394,7 +395,7 @@ fun TimePickDialog(hour: Int, minute: Int, onDismiss: () -> Unit, onPick: (Int, 
                     periodSelectorSelectedContentColor = Miku.Text,
                     periodSelectorUnselectedContentColor = Miku.Muted,
                     timeSelectorSelectedContainerColor = Miku.Teal.copy(alpha = 0.3f),
-                    timeSelectorUnselectedContainerColor = Color(0xFF13232A),
+                    timeSelectorUnselectedContainerColor = Mascot.color(0xFF13232A),
                     timeSelectorSelectedContentColor = Miku.Text,
                     timeSelectorUnselectedContentColor = Miku.TextDim,
                 )
@@ -410,7 +411,7 @@ fun TimePickDialog(hour: Int, minute: Int, onDismiss: () -> Unit, onPick: (Int, 
 fun ringtoneTitle(ctx: Context, spec: String?): String = when (spec) {
     null -> "Default alarm sound"
     ClockAlarm.RINGTONE_SILENT -> "Silent"
-    ClockAlarm.RINGTONE_CHIME -> "Miku chime"
+    ClockAlarm.RINGTONE_CHIME -> "${Mascot.name} chime"
     else -> runCatching { RingtoneManager.getRingtone(ctx, Uri.parse(spec))?.getTitle(ctx) }.getOrNull() ?: "Custom sound"
 }
 
@@ -424,7 +425,7 @@ fun RingtonePickerDialog(current: String?, onPick: (String?) -> Unit, onDismiss:
     var selected by remember { mutableStateOf(current) }
     val options = remember { mutableStateListOf(
         ToneOption("Default alarm sound", null),
-        ToneOption("Miku chime", ClockAlarm.RINGTONE_CHIME),
+        ToneOption("${Mascot.name} chime", ClockAlarm.RINGTONE_CHIME),
         ToneOption("Silent", ClockAlarm.RINGTONE_SILENT),
     ) }
     LaunchedEffect(Unit) {

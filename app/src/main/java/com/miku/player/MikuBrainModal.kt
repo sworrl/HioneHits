@@ -68,7 +68,7 @@ fun MikuBrainModal(
                     .fillMaxSize()
                     .padding(1.dp)
                     .clip(CutCornerShape(15.dp))
-                    .background(Color(0xFF040D12))
+                    .background(Mascot.color(0xFF040D12))
                     .border(
                         BorderStroke(
                             1.dp,
@@ -85,8 +85,8 @@ fun MikuBrainModal(
             ) {
                 // Background Artwork
                 Image(
-                    painter = painterResource(id = R.drawable.miku_cyber_stage),
-                    contentDescription = "Miku Brain Background",
+                    painter = mascotPainter(id = R.drawable.miku_cyber_stage),
+                    contentDescription = "${Mascot.name} Brain Background",
                     modifier = Modifier.fillMaxSize(),
                     contentScale = ContentScale.Crop
                 )
@@ -98,9 +98,9 @@ fun MikuBrainModal(
                         .background(
                             Brush.verticalGradient(
                                 listOf(
-                                    Color(0xF2040D12),
-                                    Color(0xD8040D12),
-                                    Color(0xFA040D12)
+                                    Mascot.color(0xF2040D12),
+                                    Mascot.color(0xD8040D12),
+                                    Mascot.color(0xFA040D12)
                                 )
                             )
                         )
@@ -127,7 +127,7 @@ fun MikuBrainModal(
                                 contentAlignment = Alignment.Center
                             ) {
                                 Image(
-                                    painter = painterResource(R.drawable.miku_audiophile_art),
+                                    painter = mascotPainter(R.drawable.miku_audiophile_art),
                                     contentDescription = null,
                                     modifier = Modifier.size(28.dp)
                                 )
@@ -176,7 +176,7 @@ fun MikuBrainModal(
                                 .fillMaxWidth()
                                 .padding(1.dp)
                                 .clip(CutCornerShape(9.dp))
-                                .background(Color(0xEE0A1E26))
+                                .background(Mascot.color(0xEE0A1E26))
                                 .border(1.dp, MikuCyan.copy(alpha = 0.5f), CutCornerShape(9.dp))
                                 .padding(12.dp)
                         ) {
@@ -276,7 +276,7 @@ fun MikuBrainModal(
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(38.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xDD0A222E)),
+                        colors = ButtonDefaults.buttonColors(containerColor = Mascot.color(0xDD0A222E)),
                         border = BorderStroke(1.dp, MikuCyan.copy(alpha = 0.8f)),
                         shape = CutCornerShape(8.dp)
                     ) {
@@ -309,7 +309,7 @@ private fun BoneCard(
         Modifier
             .fillMaxWidth()
             .clip(CutCornerShape(10.dp))
-            .background(Color(0xDD0A1E26))
+            .background(Mascot.color(0xDD0A1E26))
             .border(1.dp, if (isOk) CyberGlassBorder else Color(0xFFFF5252), CutCornerShape(10.dp))
             .padding(10.dp)
     ) {

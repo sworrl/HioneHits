@@ -1,5 +1,6 @@
 package com.miku.tools.calendar
 
+import com.miku.tools.Mascot
 import android.Manifest
 import android.accounts.Account
 import android.content.ContentResolver
@@ -224,7 +225,7 @@ object CalendarRepo {
             put(Calendars.ACCOUNT_TYPE, CalendarContract.ACCOUNT_TYPE_LOCAL)
             put(Calendars.NAME, "miku_local")
             put(Calendars.CALENDAR_DISPLAY_NAME, "On this device")
-            put(Calendars.CALENDAR_COLOR, 0xFF39C5BB.toInt())
+            put(Calendars.CALENDAR_COLOR, Mascot.argb(0xFF39C5BB.toInt()))
             put(Calendars.CALENDAR_ACCESS_LEVEL, Calendars.CAL_ACCESS_OWNER)
             put(Calendars.OWNER_ACCOUNT, acct)
             put(Calendars.VISIBLE, 1)

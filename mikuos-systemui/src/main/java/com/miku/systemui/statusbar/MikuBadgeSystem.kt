@@ -1,5 +1,6 @@
 package com.miku.systemui.statusbar
 
+import com.miku.systemui.Mascot
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
@@ -48,13 +49,13 @@ import androidx.compose.material3.Text
  */
 object MikuBrand {
     // Palette — aligned with the launcher's Cyber tokens so the OS reads as one skin.
-    val Cyan = Color(0xFF00E5FF)
-    val NeonPink = Color(0xFFFF4081)
+    val Cyan get() = Mascot.color(0xFF00E5FF)
+    val NeonPink get() = Mascot.color(0xFFFF4081)
     val Gold = Color(0xFFFFD54F)
     val Green = Color(0xFF00FF7F)
-    val TextPrimary = Color(0xFFE0F7FA)
-    val TextSecondary = Color(0xFF80DEEA)
-    val GlassBorder = Color(0x3300E5FF)
+    val TextPrimary get() = Mascot.color(0xFFE0F7FA)
+    val TextSecondary get() = Mascot.color(0xFF80DEEA)
+    val GlassBorder get() = Mascot.color(0x3300E5FF)
 
     // TODO(font): ship Audiowide/Orbitron TTFs to this module's res/font and
     // replace these — launcher/systemui/settings currently fall back to monospace.
@@ -91,7 +92,7 @@ fun MikuStatusBadge(
     modifier: Modifier = Modifier,
     onClick: (() -> Unit)? = null,
     shape: Shape = CutCornerShape(MikuStatusBarMetrics.BadgeCorner),
-    bodyGradient: List<Color> = listOf(Color(0xEE0A222C), Color(0xFF041218)),
+    bodyGradient: List<Color> = listOf(Mascot.color(0xEE0A222C), Mascot.color(0xFF041218)),
     content: @Composable RowScope.() -> Unit
 ) {
     Box(
@@ -169,7 +170,7 @@ fun MikuIdentityBadge(onClick: (() -> Unit)? = null) {
     MikuStatusBadge(
         accentColor = MikuBrand.Cyan,
         onClick = onClick,
-        bodyGradient = listOf(Color(0x3300E5FF), Color(0xFF041218))
+        bodyGradient = listOf(Mascot.color(0x3300E5FF), Mascot.color(0xFF041218))
     ) {
         MikuBadgeLabel(MikuBrand.IdentityMark, MikuBrand.Cyan, sizeSp = 9.5.sp)
     }
@@ -194,7 +195,7 @@ fun MikuNowPlayingBadge(
     MikuStatusBadge(
         accentColor = MikuBrand.NeonPink,
         onClick = onClick,
-        bodyGradient = listOf(Color(0x44FF4081), Color(0xFF160410)),
+        bodyGradient = listOf(Mascot.color(0x44FF4081), Mascot.color(0xFF160410)),
         shape = CutCornerShape(4.dp)
     ) {
         Row(

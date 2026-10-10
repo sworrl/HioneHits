@@ -1,5 +1,6 @@
 package com.miku.player.entitlement
 
+import com.miku.player.Mascot
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
@@ -98,7 +99,7 @@ fun MikuLicenseModal(onDismissRequest: () -> Unit) {
             .fillMaxWidth(0.96f)
             .fillMaxHeight(0.90f)
             .clip(RoundedCornerShape(24.dp))
-            .background(Brush.verticalGradient(listOf(Color(0xF0081C24), Color(0xF5040D12))))
+            .background(Brush.verticalGradient(listOf(Mascot.color(0xF0081C24), Mascot.color(0xF5040D12))))
             .border(1.5.dp, Brush.horizontalGradient(listOf(Color(0xFFFFD740), MikuCyan)), RoundedCornerShape(24.dp)),
         title = null,
         text = {
@@ -130,7 +131,7 @@ fun MikuLicenseModal(onDismissRequest: () -> Unit) {
                             CyberSwitchRow(
                                 title = "Remote entitlement",
                                 subtitle = if (st.configured)
-                                    "Ask ${st.endpointHost} once a day whether this device may run Miku Music. Off by default. Any error counts as allowed."
+                                    "Ask ${st.endpointHost} once a day whether this device may run ${Mascot.musicAppName}. Off by default. Any error counts as allowed."
                                 else
                                     "Not set up in this build (miku.entitlement.url and .hmac are empty), so the switch does nothing.",
                                 checked = st.enabled,
@@ -304,7 +305,7 @@ fun EntitlementBlockedScreen(onUnblocked: () -> Unit) {
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             Icon(Icons.Default.Lock, null, tint = MikuNeonPink, modifier = Modifier.size(56.dp))
-            Text("Miku Music is not licensed on this device", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
+            Text("${Mascot.musicAppName} is not licensed on this device", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
             Text(
                 st.decision.note.ifBlank { "This unit has been marked as disallowed by the licensing server." },
                 color = MikuTextSecondary, fontSize = 13.sp, textAlign = TextAlign.Center

@@ -120,17 +120,17 @@ data class MikuGlassStyle(
 
 object MikuGlass {
     /** Glass tint: Miku's dark teal, lighter at the top. */
-    val TintTop = Color(0xFF123540)
-    val TintBottom = Color(0xFF04131A)
+    val TintTop get() = Mascot.color(0xFF123540)
+    val TintBottom get() = Mascot.color(0xFF04131A)
     /** Specular light. Teal-white rather than pure white, so highlights stay in the Miku family. */
-    val Frost = Color(0xFFD9FFFA)
-    val ShadowInk = Color(0xFF000609)
+    val Frost get() = Mascot.color(0xFFD9FFFA)
+    val ShadowInk get() = Mascot.color(0xFF000609)
 
-    val Panel = MikuGlassStyle(Color(0xFF0C2731), Color(0xFF030C11), opacity = 0.97f, rimWidth = 1.2.dp, rim = 0.9f, specular = 0.6f)
+    val Panel get() = MikuGlassStyle(Mascot.color(0xFF0C2731), Mascot.color(0xFF030C11), opacity = 0.97f, rimWidth = 1.2.dp, rim = 0.9f, specular = 0.6f)
     val Card = MikuGlassStyle(TintTop, TintBottom, opacity = 0.90f, rim = 0.75f, specular = 0.8f, shadow = 6.dp)
     val Tile = MikuGlassStyle(TintTop, TintBottom, opacity = 0.90f, rimWidth = 1.1.dp, rim = 0.85f, specular = 1f, shadow = 6.dp, glow = 7.dp)
     val Chip = MikuGlassStyle(TintTop, TintBottom, opacity = 0.88f, rim = 0.7f, specular = 0.9f, shadow = 3.dp)
-    val Groove = MikuGlassStyle(Color(0xFF020A0E), Color(0xFF0A2129), opacity = 0.92f, rim = 0.45f, specular = 0.7f, recessed = true)
+    val Groove get() = MikuGlassStyle(Mascot.color(0xFF020A0E), Mascot.color(0xFF0A2129), opacity = 0.92f, rim = 0.45f, specular = 0.7f, recessed = true)
 
     /** The shade panel: clearer when SurfaceFlinger is blurring what is behind it. */
     fun panelStyle(blur: Boolean): MikuGlassStyle = if (blur) Panel.copy(opacity = 0.82f) else Panel
@@ -182,7 +182,7 @@ object MikuGlass {
          * Draw over an already-filled rounded card, before its content. [alpha] 0..255 fades the
          * whole effect; [withRim] false keeps a surface's own neon border instead of the refraction rim.
          */
-        fun drawOver(canvas: android.graphics.Canvas, r: RectF, radius: Float, accent: Int, accent2: Int = 0xFFFF4081.toInt(), alpha: Int = 255, withRim: Boolean = true) {
+        fun drawOver(canvas: android.graphics.Canvas, r: RectF, radius: Float, accent: Int, accent2: Int = Mascot.argb(0xFFFF4081.toInt()), alpha: Int = 255, withRim: Boolean = true) {
             rebuild(r, accent, accent2)
             sheen.alpha = alpha; edge.alpha = alpha; rim.alpha = alpha
             canvas.drawRoundRect(r, radius, radius, sheen)
@@ -194,7 +194,7 @@ object MikuGlass {
         }
 
         /** Same, for an arbitrary card path (the chamfered volume bar) whose bounds are [r]. */
-        fun drawOver(canvas: android.graphics.Canvas, path: android.graphics.Path, r: RectF, accent: Int, accent2: Int = 0xFFFF4081.toInt(), alpha: Int = 255, withRim: Boolean = true) {
+        fun drawOver(canvas: android.graphics.Canvas, path: android.graphics.Path, r: RectF, accent: Int, accent2: Int = Mascot.argb(0xFFFF4081.toInt()), alpha: Int = 255, withRim: Boolean = true) {
             rebuild(r, accent, accent2)
             sheen.alpha = alpha; edge.alpha = alpha; rim.alpha = alpha
             canvas.drawPath(path, sheen)
@@ -220,7 +220,7 @@ object MikuGlass {
             beadRect.set(cx - rx, cy - ry, cx + rx, cy + ry)
             beadBody.shader = android.graphics.RadialGradient(
                 cx - rx * 0.25f, cy - ry * 0.35f, max(rx, ry) * 1.25f,
-                intArrayOf(0xFFD9FFFA.toInt(), 0xEBD9FFFA.toInt(), (accent and 0xFFFFFF) or (0xF2 shl 24)),
+                intArrayOf(Mascot.argb(0xFFD9FFFA.toInt()), Mascot.argb(0xEBD9FFFA.toInt()), (accent and 0xFFFFFF) or (0xF2 shl 24)),
                 floatArrayOf(0f, 0.55f, 1f), Shader.TileMode.CLAMP
             )
             beadBody.alpha = alpha

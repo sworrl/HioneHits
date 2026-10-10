@@ -1,5 +1,6 @@
 package com.miku.player.profiles
 
+import com.miku.player.Mascot
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -109,7 +110,7 @@ fun ListeningProfilesScreen(onBack: () -> Unit) {
         val diffs = live?.let { describeDiffs(it, p.effective, p.hardware.connection.isWired) }.orEmpty()
         AlertDialog(
             onDismissRequest = { confirmUse = null },
-            containerColor = Color(0xFF0A1E26),
+            containerColor = Mascot.color(0xFF0A1E26),
             title = { Text("Use ${p.name}", fontFamily = AudiowideFont, fontSize = 14.sp, color = MikuCyan) },
             text = {
                 Column {
@@ -163,7 +164,7 @@ fun ListeningProfilesScreen(onBack: () -> Unit) {
         var name by remember(p.id) { mutableStateOf(p.name) }
         AlertDialog(
             onDismissRequest = { renaming = null },
-            containerColor = Color(0xFF0A1E26),
+            containerColor = Mascot.color(0xFF0A1E26),
             title = { Text("Rename", color = MikuCyan, fontFamily = AudiowideFont, fontSize = 14.sp) },
             text = { MikuField(name, { name = it }, "Name") },
             confirmButton = { TextButton(onClick = { ListeningProfileStore.rename(ctx, p.id, name); renaming = null }) { Text("SAVE", color = MikuCyan) } },
@@ -174,7 +175,7 @@ fun ListeningProfilesScreen(onBack: () -> Unit) {
     deleting?.let { p ->
         AlertDialog(
             onDismissRequest = { deleting = null },
-            containerColor = Color(0xFF0A1E26),
+            containerColor = Mascot.color(0xFF0A1E26),
             title = { Text("Delete ${p.name}?", color = YoursPink, fontFamily = AudiowideFont, fontSize = 14.sp) },
             text = { Text("This custom profile and its auto-switch rules are removed. The current sound is not changed.", color = Color.White, fontSize = 12.sp) },
             confirmButton = {
@@ -686,7 +687,7 @@ private fun ProfileRow(p: ListeningProfile, isCurrent: Boolean, isSelected: Bool
         Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(12.dp))
-            .background(if (isSelected) Color(0x2200E5FF) else CyberGlassCard)
+            .background(if (isSelected) Mascot.color(0x2200E5FF) else CyberGlassCard)
             .border(1.dp, if (isCurrent) MikuCyan else CyberGlassBorder, RoundedCornerShape(12.dp))
             .clickable(onClick = onClick)
             .padding(horizontal = 12.dp, vertical = 9.dp),
@@ -725,7 +726,7 @@ private fun CreateProfileDialog(from: ListeningProfile?, onDismiss: () -> Unit, 
     var unit by remember { mutableStateOf(src?.sensitivityUnit ?: "dB/mW") }
     AlertDialog(
         onDismissRequest = onDismiss,
-        containerColor = Color(0xFF0A1E26),
+        containerColor = Mascot.color(0xFF0A1E26),
         title = { Text(if (from != null) "Duplicate ${from.name}" else "New profile", color = MikuCyan, fontFamily = AudiowideFont, fontSize = 14.sp) },
         text = {
             Column(Modifier.verticalScroll(rememberScrollState())) {
@@ -777,7 +778,7 @@ private fun AssignDialog(
     fun add(r: AutoSwitchRule) { if (rules.none { it.kind == r.kind && it.value.equals(r.value, true) }) rules = rules + r }
     AlertDialog(
         onDismissRequest = onDismiss,
-        containerColor = Color(0xFF0A1E26),
+        containerColor = Mascot.color(0xFF0A1E26),
         title = { Text("Auto-switch: ${profile.name}", color = MikuCyan, fontFamily = AudiowideFont, fontSize = 13.sp) },
         text = {
             Column(Modifier.verticalScroll(rememberScrollState())) {

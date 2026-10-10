@@ -1,5 +1,6 @@
 package com.miku.tools.clock
 
+import com.miku.tools.Mascot
 import android.app.AlarmManager
 import android.app.Notification
 import android.app.NotificationChannel
@@ -125,7 +126,7 @@ object ClockNotify {
     )
 
     fun builder(ctx: Context, channel: String): Notification.Builder =
-        Notification.Builder(ctx, channel).setSmallIcon(R.drawable.ic_stat_alarm).setColor(0xFF39C5BB.toInt())
+        Notification.Builder(ctx, channel).setSmallIcon(R.drawable.ic_stat_alarm).setColor(Mascot.argb(0xFF39C5BB.toInt()))
 
     fun nm(ctx: Context): NotificationManager = ctx.getSystemService(NotificationManager::class.java)
 }

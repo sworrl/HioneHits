@@ -44,7 +44,7 @@ object RootShell {
         suAbsent = true
         if (loggedAbsence.compareAndSet(false, true)) {
             Log.i(TAG, "no root available ($reason) - optional root-backed extras are off. This is the " +
-                "normal, supported state: MikuOS is platform-signed and every feature has a " +
+                "normal, supported state: ${Mascot.osName} is platform-signed and every feature has a " +
                 "root-free path. Call RootShell.recheck() if the user grants root later.")
         }
     }

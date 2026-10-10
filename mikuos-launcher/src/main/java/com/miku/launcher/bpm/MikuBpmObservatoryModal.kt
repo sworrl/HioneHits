@@ -1,5 +1,6 @@
 package com.miku.launcher.bpm
 
+import com.miku.launcher.Mascot
 import android.os.SystemClock
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.*
@@ -52,10 +53,10 @@ import kotlin.random.Random
 // =========================================================================
 // 🌸 ULTRA KAWAII SWEET PASTEL PALETTE & JUICY ARCADE THEME
 // =========================================================================
-private val KawaiiSakuraPink = Color(0xFFFF85B3)
-private val KawaiiHotPink = Color(0xFFFF3385)
-private val KawaiiMikuMint = Color(0xFF39C5BB)
-private val KawaiiSoftTeal = Color(0xFF66E0D8)
+private val KawaiiSakuraPink get() = Mascot.color(0xFFFF85B3)
+private val KawaiiHotPink get() = Mascot.color(0xFFFF3385)
+private val KawaiiMikuMint get() = Mascot.color(0xFF39C5BB)
+private val KawaiiSoftTeal get() = Mascot.color(0xFF66E0D8)
 private val KawaiiLavender = Color(0xFFDFB8FF)
 private val KawaiiGoldenHoney = Color(0xFFFFD166)
 private val KawaiiPeach = Color(0xFFFF9E80)
@@ -1190,7 +1191,7 @@ private fun BpmHeroRhythmMatchCard(
                 Column(Modifier.weight(1f)) {
                     Text(
                         text = when {
-                            !isPlaying && trackTitle == null -> "MikuOS Player"
+                            !isPlaying && trackTitle == null -> "${Mascot.osName} Player"
                             !isPlaying && trackTitle != null -> "$trackTitle (paused)"
                             trackTitle != null -> "$trackTitle"
                             else -> "Unknown track"
@@ -1220,7 +1221,7 @@ private fun BpmHeroRhythmMatchCard(
                     Box(
                         Modifier
                             .clip(RoundedCornerShape(10.dp))
-                            .background(Color(0x44FF3385))
+                            .background(Mascot.color(0x44FF3385))
                             .border(1.dp, KawaiiHotPink, RoundedCornerShape(10.dp))
                             .padding(horizontal = 6.dp, vertical = 2.dp)
                     ) {
@@ -1635,7 +1636,7 @@ private fun BpmTimingCalibrationRow() {
         Box(
             Modifier
                 .clip(RoundedCornerShape(8.dp))
-                .background(Color(0x2239C5BB))
+                .background(Mascot.color(0x2239C5BB))
                 .border(1.dp, KawaiiMikuMint, RoundedCornerShape(8.dp))
                 .clickable {
                     MikuRhythmCalibration.nudge(-5)
@@ -1647,7 +1648,7 @@ private fun BpmTimingCalibrationRow() {
         Box(
             Modifier
                 .clip(RoundedCornerShape(8.dp))
-                .background(Color(0x2239C5BB))
+                .background(Mascot.color(0x2239C5BB))
                 .border(1.dp, KawaiiMikuMint, RoundedCornerShape(8.dp))
                 .clickable {
                     MikuRhythmCalibration.nudge(5)
@@ -1660,7 +1661,7 @@ private fun BpmTimingCalibrationRow() {
             Box(
                 Modifier
                     .clip(RoundedCornerShape(8.dp))
-                    .background(Color(0x55FF3385))
+                    .background(Mascot.color(0x55FF3385))
                     .border(1.dp, KawaiiHotPink, RoundedCornerShape(8.dp))
                     .clickable {
                         val applied = MikuRhythmCalibration.applySuggestion()
@@ -2569,7 +2570,7 @@ private fun BpmCalibrationFooter(
                 Box(
                     Modifier
                         .clip(RoundedCornerShape(10.dp))
-                        .background(Color(0x55FF3385))
+                        .background(Mascot.color(0x55FF3385))
                         .border(1.dp, KawaiiHotPink, RoundedCornerShape(10.dp))
                         .clickable {
                             com.miku.launcher.haptics.MikuHaptics.like(ctx)
@@ -2624,7 +2625,7 @@ private fun BpmCalibrationFooter(
                 Box(
                     Modifier
                         .clip(RoundedCornerShape(10.dp))
-                        .background(Color(0x3339C5BB))
+                        .background(Mascot.color(0x3339C5BB))
                         .border(1.dp, KawaiiMikuMint, RoundedCornerShape(10.dp))
                         .clickable {
                             calculatedTapBpm = halfVal
@@ -2652,8 +2653,8 @@ private fun BpmCalibrationFooter(
                 Box(
                     Modifier
                         .clip(RoundedCornerShape(10.dp))
-                        .background(Color(0x3300E5FF))
-                        .border(1.dp, Color(0xFF00E5FF), RoundedCornerShape(10.dp))
+                        .background(Mascot.color(0x3300E5FF))
+                        .border(1.dp, Mascot.color(0xFF00E5FF), RoundedCornerShape(10.dp))
                         .clickable {
                             com.miku.launcher.haptics.MikuHaptics.tick(ctx)
                             coroutineScope.launch {
@@ -2673,7 +2674,7 @@ private fun BpmCalibrationFooter(
                         }
                         .padding(horizontal = 6.dp, vertical = 4.dp)
                 ) {
-                    Text("LOOK UP", color = Color(0xFF00E5FF), fontSize = 11.sp, fontWeight = FontWeight.Bold, fontFamily = AudiowideFont)
+                    Text("LOOK UP", color = Mascot.color(0xFF00E5FF), fontSize = 11.sp, fontWeight = FontWeight.Bold, fontFamily = AudiowideFont)
                 }
             }
         }
@@ -2772,7 +2773,7 @@ private fun BpmObservatoryHeader(
                 modifier = Modifier
                     .size(32.dp)
                     .clip(CircleShape)
-                    .background(Color(0x33FF85B3))
+                    .background(Mascot.color(0x33FF85B3))
             ) {
                 Icon(
                     Icons.Default.Close,

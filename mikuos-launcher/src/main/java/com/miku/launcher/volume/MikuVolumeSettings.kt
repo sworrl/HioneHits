@@ -1,5 +1,6 @@
 package com.miku.launcher.volume
 
+import com.miku.launcher.Mascot
 import android.content.Context
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -57,7 +58,7 @@ fun MikuVolumeUiSettingRow(
         Spacer(Modifier.height(4.dp))
         Text(
             text = "Pick the volume popup that shows when you change the volume:",
-            color = Color(0xFF9EC4C7),
+            color = Mascot.color(0xFF9EC4C7),
             fontSize = 11.5.sp,
             lineHeight = 15.sp
         )
@@ -81,7 +82,7 @@ fun MikuVolumeUiSettingRow(
         // Option 2: Center Cyber Arc / Modal (Miku Music Style)
         VolumeStyleOptionCard(
             title = "Center popup",
-            description = "A centered popup with a loudness warning meter (the original Miku Music style)",
+            description = "A centered popup with a loudness warning meter (the original ${Mascot.musicAppName} style)",
             isSelected = selectedStyle == VolumeHudStyle.CENTER_CYBER_MODAL,
             onClick = {
                 selectedStyle = VolumeHudStyle.CENTER_CYBER_MODAL
@@ -107,8 +108,8 @@ fun MikuVolumeUiSettingRow(
                 )
                 Spacer(Modifier.height(2.dp))
                 Text(
-                    text = if (useHiby) "On (the stock HiBy wheel popup)" else "Off (the MikuOS popup is used)",
-                    color = Color(0xFF7FB9C6),
+                    text = if (useHiby) "On (the stock HiBy wheel popup)" else "Off (the ${Mascot.osName} popup is used)",
+                    color = Mascot.color(0xFF7FB9C6),
                     fontSize = 10.sp
                 )
             }
@@ -119,9 +120,9 @@ fun MikuVolumeUiSettingRow(
                     MikuVolumeManager.setUseHibyDialog(ctx, it)
                 },
                 colors = SwitchDefaults.colors(
-                    checkedThumbColor = Color(0xFF00E5FF),
-                    checkedTrackColor = Color(0x5500E5FF),
-                    uncheckedThumbColor = Color(0xFF7FB9C6),
+                    checkedThumbColor = Mascot.color(0xFF00E5FF),
+                    checkedTrackColor = Mascot.color(0x5500E5FF),
+                    uncheckedThumbColor = Mascot.color(0xFF7FB9C6),
                     uncheckedTrackColor = Color(0x33FFFFFF)
                 )
             )
@@ -140,7 +141,7 @@ private fun VolumeStyleOptionCard(
         modifier = Modifier
             .fillMaxWidth()
             .background(
-                if (isSelected) Color(0x3300E5FF) else Color(0x14FFFFFF),
+                if (isSelected) Mascot.color(0x3300E5FF) else Color(0x14FFFFFF),
                 RoundedCornerShape(10.dp)
             )
             .border(
@@ -158,14 +159,14 @@ private fun VolumeStyleOptionCard(
             Icon(
                 imageVector = if (isSelected) Icons.Default.CheckCircle else Icons.Default.RadioButtonUnchecked,
                 contentDescription = null,
-                tint = if (isSelected) MikuCyan else Color(0xFF7FB9C6),
+                tint = if (isSelected) MikuCyan else Mascot.color(0xFF7FB9C6),
                 modifier = Modifier.size(20.dp)
             )
             Spacer(Modifier.width(10.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = title,
-                    color = if (isSelected) Color.White else Color(0xFFD0E0E3),
+                    color = if (isSelected) Color.White else Mascot.color(0xFFD0E0E3),
                     fontSize = 13.sp,
                     fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
                 )
@@ -183,7 +184,7 @@ private fun VolumeStyleOptionCard(
 
 private fun Modifier.clipToRoundedGlass(): Modifier = this
     .background(
-        Brush.horizontalGradient(listOf(Color(0x2200E5FF), Color(0x11000000))),
+        Brush.horizontalGradient(listOf(Mascot.color(0x2200E5FF), Color(0x11000000))),
         RoundedCornerShape(14.dp)
     )
-    .border(1.2.dp, Color(0x3300E5FF), RoundedCornerShape(14.dp))
+    .border(1.2.dp, Mascot.color(0x3300E5FF), RoundedCornerShape(14.dp))

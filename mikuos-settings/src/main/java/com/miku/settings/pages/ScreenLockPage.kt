@@ -1,5 +1,6 @@
 package com.miku.settings.pages
 
+import com.miku.settings.Mascot
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.runtime.*
@@ -52,7 +53,7 @@ fun ScreenLockPage() {
                 Section(
                     "When to ask",
                     note = "Android also asks again 24 hours after the last time you entered it, " +
-                        "and when the screen stayed off for 8 hours. MikuOS cannot change that."
+                        "and when the screen stayed off for 8 hours. ${Mascot.osName} cannot change that."
                 ) {
                     ToggleRow(
                         "Ask for $noun only after restart",

@@ -1,5 +1,6 @@
 package com.miku.tools.calc
 
+import com.miku.tools.Mascot
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
@@ -422,7 +423,7 @@ private fun CalcKey(
             .border(1.dp, Color.White.copy(alpha = 0.25f), shape)
         KeyKind.OP -> Modifier.glass(shape, tint = Miku.Teal.copy(alpha = 0.16f))
         KeyKind.CLEAR -> Modifier.glass(shape, accent = Miku.PinkSoft, tint = Miku.Pink.copy(alpha = 0.10f))
-        KeyKind.FN -> Modifier.glass(shape, tint = Color(0x660B1519), rimAlpha = 0.25f)
+        KeyKind.FN -> Modifier.glass(shape, tint = Mascot.color(0x660B1519), rimAlpha = 0.25f)
         KeyKind.NUM -> Modifier.glass(shape)
     }
     Box(

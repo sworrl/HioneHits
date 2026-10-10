@@ -126,7 +126,7 @@ class UpdateReceiver : BroadcastReceiver() {
         }
         val notif = androidx.core.app.NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(android.R.drawable.stat_sys_download_done)
-            .setContentTitle("Miku Music Player updated")
+            .setContentTitle("${Mascot.musicAppName} Player updated")
             .setContentText("Tap to pick up where you left off")
             .setPriority(androidx.core.app.NotificationCompat.PRIORITY_HIGH)
             .setAutoCancel(true)
@@ -154,14 +154,14 @@ fun UpdateOverlayScreen(modifier: Modifier = Modifier) {
     }
     if (mode == UpdateOverlayMode.NONE) return
     val (headline, sub) = when (mode) {
-        UpdateOverlayMode.UPDATING -> "Updating Miku Music Player" to
+        UpdateOverlayMode.UPDATING -> "Updating ${Mascot.musicAppName} Player" to
             (UpdateOverlay.versionLabel.value.takeIf { it.isNotBlank() }?.let { "to $it. Tap the notification afterward to pick up where you left off" }
                 ?: "Tap the notification afterward to pick up where you left off")
         UpdateOverlayMode.RESUMING -> "Resuming…" to "Picking up where you left off"
         UpdateOverlayMode.NONE -> "" to ""
     }
     Box(
-        modifier.fillMaxSize().background(Color(0xFF071115)),
+        modifier.fillMaxSize().background(Mascot.color(0xFF071115)),
         contentAlignment = Alignment.Center
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {

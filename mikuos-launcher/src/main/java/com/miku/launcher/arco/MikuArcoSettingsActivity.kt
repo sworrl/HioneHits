@@ -1,5 +1,6 @@
 package com.miku.launcher.arco
 
+import com.miku.launcher.Mascot
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
@@ -165,7 +166,7 @@ private fun ArcoTabPill(label: String, selected: Boolean, onClick: () -> Unit) {
     Box(
         Modifier
             .clip(CutCornerShape(6.dp))
-            .background(if (selected) MikuCyan.copy(alpha = 0.22f) else Color(0x140A222C))
+            .background(if (selected) MikuCyan.copy(alpha = 0.22f) else Mascot.color(0x140A222C))
             .border(1.dp, if (selected) MikuCyan else CyberGlassBorder, CutCornerShape(6.dp))
             .clickable(onClick = onClick)
             .padding(horizontal = 10.dp, vertical = 6.dp)
@@ -178,7 +179,7 @@ private fun arcoCardModifier(accent: Color) = Modifier
     .fillMaxWidth()
     .padding(bottom = 12.dp)
     .clip(CutCornerShape(12.dp))
-    .background(Brush.verticalGradient(listOf(Color(0xEE0C2936), Color(0xFF04141E), Color(0xFF020B10))))
+    .background(Brush.verticalGradient(listOf(Mascot.color(0xEE0C2936), Mascot.color(0xFF04141E), Mascot.color(0xFF020B10))))
     .border(BorderStroke(1.dp, Brush.linearGradient(listOf(accent, CyberGlassBorder.copy(alpha = 0.4f), accent.copy(alpha = 0.6f)))), CutCornerShape(12.dp))
     .padding(12.dp)
 
@@ -203,7 +204,7 @@ private fun ArcoConnectionPane(onPaired: () -> Unit) {
     val isPaired = ArcoClient.isPaired
 
     var manualUrl by remember { mutableStateOf(ArcoClient.serverUrl ?: "") }
-    var deviceName by remember { mutableStateOf(android.os.Build.MODEL ?: "MikuOS Device") }
+    var deviceName by remember { mutableStateOf(android.os.Build.MODEL ?: "${Mascot.osName} Device") }
     var pairingSession by remember { mutableStateOf<ArcoPairInitResponse?>(null) }
     var pairingServerUrl by remember { mutableStateOf("") }
     var codeInput by remember { mutableStateOf("") }
@@ -314,7 +315,7 @@ private fun ArcoConnectionPane(onPaired: () -> Unit) {
             isWorking = true
             errorText = null
             scope.launch {
-                ArcoClient.initiatePairing(manualUrl.trim(), deviceName.ifBlank { "MikuOS Device" })
+                ArcoClient.initiatePairing(manualUrl.trim(), deviceName.ifBlank { "${Mascot.osName} Device" })
                     .onSuccess { pairingSession = it; pairingServerUrl = manualUrl.trim() }
                     .onFailure { errorText = it.message ?: "Pairing request failed" }
                 isWorking = false
@@ -330,7 +331,7 @@ private fun ArcoConnectionPane(onPaired: () -> Unit) {
             Text("Check that the notification on ${session.server_name} shows the SAME code:", color = MikuTextSecondary, fontSize = 9.5.sp)
             Spacer(Modifier.height(6.dp))
             Box(
-                Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp)).background(Color(0x22FF4081)).padding(vertical = 12.dp),
+                Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp)).background(Mascot.color(0x22FF4081)).padding(vertical = 12.dp),
                 contentAlignment = Alignment.Center
             ) {
                 Text(session.display_code, color = Color.White, fontSize = 26.sp, fontWeight = FontWeight.Black, fontFamily = AudiowideFont, letterSpacing = 2.sp)
@@ -458,11 +459,11 @@ private fun ArcoDashboardPane() {
                     ArcoClient.setMusicVisualizerBridgeEnabled(on)
                     if (on) ArcoMusicVisualizerBridge.start(ctx) else ArcoMusicVisualizerBridge.stop()
                 },
-                colors = SwitchDefaults.colors(checkedThumbColor = MikuNeonPink, checkedTrackColor = Color(0x33FF4081))
+                colors = SwitchDefaults.colors(checkedThumbColor = MikuNeonPink, checkedTrackColor = Mascot.color(0x33FF4081))
             )
         }
         Text(
-            "The bands are made up from the tempo and beat phase, not a real FFT. MikuOS doesn't broadcast per-band spectrum data yet.",
+            "The bands are made up from the tempo and beat phase, not a real FFT. ${Mascot.osName} doesn't broadcast per-band spectrum data yet.",
             color = MikuTextSecondary, fontSize = 7.5.sp
         )
     }
@@ -533,7 +534,7 @@ private fun ArcoThemeCard(theme: ArcoTheme, isActive: Boolean, onClick: () -> Un
     Column(
         Modifier
             .clip(CutCornerShape(10.dp))
-            .background(Color(0xFF04141E))
+            .background(Mascot.color(0xFF04141E))
             .border(if (isActive) 2.dp else 0.8.dp, if (isActive) Color.White else CyberGlassBorder, CutCornerShape(10.dp))
             .clickable(onClick = onClick)
             .padding(bottom = 8.dp)
@@ -582,7 +583,7 @@ private fun ArcoZonesPane() {
                 Box(
                     Modifier
                         .clip(CutCornerShape(6.dp))
-                        .background(if (isSel) MikuGold.copy(alpha = 0.25f) else Color(0x140A222C))
+                        .background(if (isSel) MikuGold.copy(alpha = 0.25f) else Mascot.color(0x140A222C))
                         .border(1.dp, if (isSel) MikuGold else CyberGlassBorder, CutCornerShape(6.dp))
                         .clickable { selected = if (isSel) selected - zone.id else selected + zone.id }
                         .padding(horizontal = 9.dp, vertical = 6.dp)
@@ -710,7 +711,7 @@ private fun ArcoModalActionButtonFull(label: String, accentColor: Color, enabled
         modifier
             .fillMaxWidth()
             .clip(CutCornerShape(8.dp))
-            .background(Brush.verticalGradient(listOf(accentColor.copy(alpha = 0.28f * alpha), Color(0xFF030D14))))
+            .background(Brush.verticalGradient(listOf(accentColor.copy(alpha = 0.28f * alpha), Mascot.color(0xFF030D14))))
             .border(1.dp, accentColor.copy(alpha = alpha), CutCornerShape(8.dp))
             .then(if (enabled) Modifier.clickable(onClick = onClick) else Modifier)
             .padding(vertical = 10.dp),

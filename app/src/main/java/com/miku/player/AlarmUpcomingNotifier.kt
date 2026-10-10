@@ -98,7 +98,7 @@ object AlarmUpcomingNotifier {
         if (nm.getNotificationChannel(CHANNEL_ID) == null) {
             nm.createNotificationChannel(
                 NotificationChannel(CHANNEL_ID, "Upcoming alarm", NotificationManager.IMPORTANCE_LOW).apply {
-                    description = "Quiet reminder while a Miku Music alarm is due within 24 hours"
+                    description = "Quiet reminder while a ${Mascot.musicAppName} alarm is due within 24 hours"
                     setShowBadge(false)
                 }
             )

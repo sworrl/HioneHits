@@ -10,24 +10,24 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 
-val MikuTeal = Color(0xFF39C5BB)
-val MikuTealBright = Color(0xFF00F5D4)
-val MikuPink = Color(0xFFFF2A85)
-val MikuPinkBright = Color(0xFFFF4081)
-val MikuPurple = Color(0xFFB388FF)
+val MikuTeal get() = Mascot.color(0xFF39C5BB)
+val MikuTealBright get() = Mascot.color(0xFF00F5D4)
+val MikuPink get() = Mascot.color(0xFFFF2A85)
+val MikuPinkBright get() = Mascot.color(0xFFFF4081)
+val MikuPurple get() = Mascot.color(0xFFB388FF)
 val MikuGold = Color(0xFFFFD54F)
-val MikuCyan = Color(0xFF00E5FF)
-val MikuNeonPink = Color(0xFFFF4081)
-val MikuTextPrimary = Color(0xFFE0F7FA)
-val MikuTextSecondary = Color(0xFF80DEEA)
-val MikuDarkBg = Color(0xFF040D12)
-val MikuSurface1 = Color(0xFF071922)
-val MikuSurface2 = Color(0xFF0E242C)
-val MikuCardBg = Color(0xFF06141B)
+val MikuCyan get() = Mascot.color(0xFF00E5FF)
+val MikuNeonPink get() = Mascot.color(0xFFFF4081)
+val MikuTextPrimary get() = Mascot.color(0xFFE0F7FA)
+val MikuTextSecondary get() = Mascot.color(0xFF80DEEA)
+val MikuDarkBg get() = Mascot.color(0xFF040D12)
+val MikuSurface1 get() = Mascot.color(0xFF071922)
+val MikuSurface2 get() = Mascot.color(0xFF0E242C)
+val MikuCardBg get() = Mascot.color(0xFF06141B)
 val MikuMuted = Color(0xFF8BA6A9)
-val MikuWhite = Color(0xFFF0FDFB)
-val CyberGlassBorder = Color(0x3300E5FF)
-val CyberGlassCard = Color(0xDD0A1E26)
+val MikuWhite get() = Mascot.color(0xFFF0FDFB)
+val CyberGlassBorder get() = Mascot.color(0x3300E5FF)
+val CyberGlassCard get() = Mascot.color(0xDD0A1E26)
 val AudiowideFont = androidx.compose.ui.text.font.FontFamily.Monospace
 val OrbitronFont = androidx.compose.ui.text.font.FontFamily.Monospace
 
@@ -46,9 +46,9 @@ fun Modifier.mikuTile(isActive: Boolean) = this
     .clip(RoundedCornerShape(13.dp))
     .background(
         if (isActive)
-            Brush.verticalGradient(listOf(Color(0xFF0E3842), Color(0xFF082228), Color(0xFF030E12)))
+            Brush.verticalGradient(listOf(Mascot.color(0xFF0E3842), Mascot.color(0xFF082228), Mascot.color(0xFF030E12)))
         else
-            Brush.verticalGradient(listOf(Color(0xFF0B2129), Color(0xFF05131A), Color(0xFF02090D)))
+            Brush.verticalGradient(listOf(Mascot.color(0xFF0B2129), Mascot.color(0xFF05131A), Mascot.color(0xFF02090D)))
     )
     .border(
         1.1.dp,
@@ -68,8 +68,8 @@ fun Modifier.mikuCard(
     .border(1.dp, borderColor, RoundedCornerShape(cornerRadius.dp))
 
 fun Modifier.mikuHeroCard(
-    startColor: Color = Color(0xFF0D2529),
-    endColor: Color = Color(0xFF071215)
+    startColor: Color = Mascot.color(0xFF0D2529),
+    endColor: Color = Mascot.color(0xFF071215)
 ) = this
     .clip(RoundedCornerShape(18.dp))
     .background(Brush.verticalGradient(listOf(startColor, endColor)))
@@ -91,9 +91,9 @@ fun Modifier.mikuGlassCard() = this
     .background(
         Brush.verticalGradient(
             listOf(
-                Color(0xEE0D2630),
-                Color(0xFF07171E),
-                Color(0xFA030B0F)
+                Mascot.color(0xEE0D2630),
+                Mascot.color(0xFF07171E),
+                Mascot.color(0xFA030B0F)
             )
         )
     )

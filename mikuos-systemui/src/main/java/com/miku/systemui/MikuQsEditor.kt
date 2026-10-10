@@ -290,7 +290,7 @@ fun MikuQsEditor(
                             val r = CornerRadius(20.dp.toPx())
                             // section wells: lit teal (place) / pink (remove) while a tile hovers them
                             fun well(top: Float, bottom: Float, lit: Float, c: Color) {
-                                drawRoundRect(Color(0xFF020A0E).copy(alpha = 0.55f), Offset(-pad, top - pad), Size(size.width + 2 * pad, bottom - top + 2 * pad), r)
+                                drawRoundRect(Mascot.color(0xFF020A0E).copy(alpha = 0.55f), Offset(-pad, top - pad), Size(size.width + 2 * pad, bottom - top + 2 * pad), r)
                                 drawRoundRect(
                                     c.copy(alpha = 0.18f + 0.62f * lit), Offset(-pad, top - pad),
                                     Size(size.width + 2 * pad, bottom - top + 2 * pad), r, style = Stroke((1f + 1.2f * lit) * 1.dp.toPx())

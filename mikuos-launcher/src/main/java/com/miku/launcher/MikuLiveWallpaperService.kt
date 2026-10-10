@@ -1,5 +1,6 @@
 package com.miku.launcher.launcher
 
+import com.miku.launcher.Mascot
 import android.graphics.*
 import android.os.Handler
 import android.os.Looper
@@ -90,6 +91,11 @@ class MikuLiveWallpaperService : WallpaperService() {
         }
 
         private fun loadBackground() {
+            // Holiday or season art first, then the pack's wallpaper, then the built-in drawable.
+            runCatching {
+                (com.miku.launcher.holiday.HolidayState.homeBitmapNow(this@MikuLiveWallpaperService)
+                    ?: Mascot.artFor(this@MikuLiveWallpaperService, R.drawable.miku_wallpaper))
+            }.getOrNull()?.let { bgBitmap = it; return }
             try {
                 val drawable = ResourcesCompat.getDrawable(resources, R.drawable.miku_wallpaper, null)
                 if (drawable != null) {
@@ -124,7 +130,7 @@ class MikuLiveWallpaperService : WallpaperService() {
                         speedY = Random.nextFloat() * 1.5f + 0.5f,
                         speedX = (Random.nextFloat() - 0.5f) * 0.8f,
                         alpha = Random.nextInt(120, 240),
-                        color = if (Random.nextBoolean()) Color.parseColor("#00E5FF") else Color.parseColor("#FF80AB")
+                        color = if (Random.nextBoolean()) Mascot.argb(Color.parseColor("#00E5FF")) else Mascot.argb(Color.parseColor("#FF80AB"))
                     )
                 )
             }
@@ -144,7 +150,7 @@ class MikuLiveWallpaperService : WallpaperService() {
                     if (bg != null) {
                         canvas.drawBitmap(bg, 0f, 0f, bgPaint)
                     } else {
-                        canvas.drawColor(Color.parseColor("#040D12"))
+                        canvas.drawColor(Mascot.argb(Color.parseColor("#040D12")))
                     }
 
                     // Update and draw floating cyber particles / sakura petals
@@ -175,7 +181,7 @@ class MikuLiveWallpaperService : WallpaperService() {
                         if (r.alpha <= 0 || r.radius > 200f) {
                             it.remove()
                         } else {
-                            ripplePaint.color = Color.parseColor("#00E5FF")
+                            ripplePaint.color = Mascot.argb(Color.parseColor("#00E5FF"))
                             ripplePaint.alpha = r.alpha
                             canvas.drawCircle(r.x, r.y, r.radius, ripplePaint)
                         }

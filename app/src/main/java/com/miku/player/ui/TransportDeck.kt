@@ -1,5 +1,6 @@
 package com.miku.player.ui
 
+import com.miku.player.Mascot
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -134,7 +135,7 @@ private fun LedKey(
                             drawRoundRect(ledColor.copy(alpha = 0.45f), topLeft = Offset(-2f, -2f), size = androidx.compose.ui.geometry.Size(size.width + 4f, size.height + 4f), cornerRadius = rr)
                             drawRoundRect(lerp(ledColor, Color.White, 0.3f), cornerRadius = rr)
                         } else {
-                            drawRoundRect(Color(0xFF12292D), cornerRadius = rr)
+                            drawRoundRect(Mascot.color(0xFF12292D), cornerRadius = rr)
                             drawRoundRect(Color(0x33FFFFFF), cornerRadius = rr, style = Stroke(0.8f))
                         }
                     }

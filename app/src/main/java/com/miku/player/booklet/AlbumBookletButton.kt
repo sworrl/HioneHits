@@ -1,5 +1,6 @@
 package com.miku.player.booklet
 
+import com.miku.player.Mascot
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -69,7 +70,7 @@ fun AlbumBookletButton(
     Row(
         modifier
             .clip(RoundedCornerShape(19.dp))
-            .background(androidx.compose.ui.graphics.Color(0xFF0F2B2E))
+            .background(Mascot.color(0xFF0F2B2E))
             .border(1.dp, MikuTeal.copy(alpha = 0.5f), RoundedCornerShape(19.dp))
             .clickable {
                 Haptics.tick(ctx)

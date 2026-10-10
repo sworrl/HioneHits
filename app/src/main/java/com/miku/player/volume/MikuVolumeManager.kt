@@ -1,5 +1,6 @@
 package com.miku.player.volume
 
+import com.miku.player.Mascot
 import android.content.Context
 import android.database.ContentObserver
 import android.media.AudioManager
@@ -303,9 +304,9 @@ fun sampleVolumeGradientColor(pct: Int, isMuted: Boolean): Color {
     if (isMuted) return Color(0xFFFF5252)
     return when {
         pct >= 85 -> Color(0xFFFF1744) // Danger Red
-        pct >= 70 -> Color(0xFFFF4081) // Neon Pink
-        pct >= 50 -> Color(0xFFB388FF) // Electric Purple
-        pct >= 25 -> Color(0xFF00E5FF) // Miku Cyan
+        pct >= 70 -> Mascot.color(0xFFFF4081) // Neon Pink
+        pct >= 50 -> Mascot.color(0xFFB388FF) // Electric Purple
+        pct >= 25 -> Mascot.color(0xFF00E5FF) // Miku Cyan
         else -> Color(0xFF00FF88)      // Cyber Emerald
     }
 }
@@ -359,14 +360,14 @@ fun MikuCyberVolumeHudOverlay(
                     .clip(CutCornerShape(12.dp))
                     .background(
                         Brush.verticalGradient(
-                            if (isDanger) listOf(Color(0xF5240810), Color(0xFA140205))
-                            else listOf(Color(0xF008202D), Color(0xFA030D14))
+                            if (isDanger) listOf(Mascot.color(0xF5240810), Color(0xFA140205))
+                            else listOf(Mascot.color(0xF008202D), Mascot.color(0xFA030D14))
                         )
                     )
                     .border(
                         (1.0f + glowBrightness * 0.8f).dp,
                         Brush.verticalGradient(
-                            if (isDanger) listOf(Color(0xFFFF1744), Color(0xFFFF007F), Color(0xFFFF5252))
+                            if (isDanger) listOf(Color(0xFFFF1744), Mascot.color(0xFFFF007F), Color(0xFFFF5252))
                             else listOf(dynamicColor, MikuCyan, Color(0xFF7C4DFF))
                         ),
                         CutCornerShape(12.dp)
@@ -402,7 +403,7 @@ fun MikuCyberVolumeHudOverlay(
                             .weight(1f)
                             .padding(vertical = 4.dp)
                             .clip(RoundedCornerShape(11.dp))
-                            .background(Color(0x5504141E))
+                            .background(Mascot.color(0x5504141E))
                             .border(
                                 0.9.dp,
                                 if (isDanger) Color(0xFFFF1744).copy(alpha = hazardPulse)
@@ -434,10 +435,10 @@ fun MikuCyberVolumeHudOverlay(
                                 Brush.verticalGradient(
                                     0.00f to Color(0xFFFF1744),
                                     0.12f to Color(0xFFFF5252),
-                                    0.25f to Color(0xFFFF3399),
+                                    0.25f to Mascot.color(0xFFFF3399),
                                     0.50f to Color(0xFF9D4EDD),
-                                    0.75f to Color(0xFF00F5D4),
-                                    1.00f to Color(0xFF00E5FF),
+                                    0.75f to Mascot.color(0xFF00F5D4),
+                                    1.00f to Mascot.color(0xFF00E5FF),
                                     startY = 0f,
                                     endY = h
                                 )
@@ -526,7 +527,7 @@ fun MikuCyberVolumeHudOverlay(
                             .clip(CutCornerShape(4.dp))
                             .background(
                                 Brush.horizontalGradient(
-                                    listOf(Color(0xFFFF1744), Color(0xFFFF007F))
+                                    listOf(Color(0xFFFF1744), Mascot.color(0xFFFF007F))
                                 )
                             )
                             .border(1.dp, Color.White.copy(alpha = 0.95f), CutCornerShape(4.dp))
@@ -565,14 +566,14 @@ fun MikuCyberVolumeHudOverlay(
                         .background(
                             Brush.verticalGradient(
                                 if (isDanger) listOf(Color(0xF033050C), Color(0xF5180004))
-                                else listOf(Color(0xE6081A24), Color(0xF2030D13))
+                                else listOf(Mascot.color(0xE6081A24), Mascot.color(0xF2030D13))
                             )
                         )
                         .border(
                             1.5.dp,
                             Brush.horizontalGradient(
-                                if (isDanger) listOf(Color(0xFFFF0044), Color(0xFFFF5500).copy(alpha = hazardPulse))
-                                else listOf(Color(0xFF39C5BB), Color(0xFFFF4FA3))
+                                if (isDanger) listOf(Mascot.color(0xFFFF0044), Color(0xFFFF5500).copy(alpha = hazardPulse))
+                                else listOf(Mascot.color(0xFF39C5BB), Mascot.color(0xFFFF4FA3))
                             ),
                             RoundedCornerShape(20.dp)
                         )
@@ -586,7 +587,7 @@ fun MikuCyberVolumeHudOverlay(
                             modifier = Modifier
                                 .size(34.dp)
                                 .clip(CircleShape)
-                                .background(if (isDanger) Color(0x44FF0044) else Color(0x3339C5BB)),
+                                .background(if (isDanger) Mascot.color(0x44FF0044) else Mascot.color(0x3339C5BB)),
                             contentAlignment = Alignment.Center
                         ) {
                             val icon = when {
@@ -598,7 +599,7 @@ fun MikuCyberVolumeHudOverlay(
                             Icon(
                                 icon,
                                 contentDescription = "Volume",
-                                tint = if (isDanger) Color(0xFFFF2255) else Color(0xFF39C5BB),
+                                tint = if (isDanger) Color(0xFFFF2255) else Mascot.color(0xFF39C5BB),
                                 modifier = Modifier.size(20.dp)
                             )
                         }
@@ -607,14 +608,14 @@ fun MikuCyberVolumeHudOverlay(
                             Row(verticalAlignment = Alignment.Bottom) {
                                 Text(
                                     text = String.format(Locale.US, "%d", volState.volumePct),
-                                    color = if (isDanger) Color(0xFFFF3366) else Color.White,
+                                    color = if (isDanger) Mascot.color(0xFFFF3366) else Color.White,
                                     fontSize = 20.sp,
                                     fontWeight = FontWeight.Black,
                                     fontFamily = AudiowideFont
                                 )
                                 Text(
                                     text = if (isDanger) " / 100 [HIGH]" else " / 100",
-                                    color = if (isDanger) Color(0xFFFF88AA) else Color(0xFF9FF3EC),
+                                    color = if (isDanger) Mascot.color(0xFFFF88AA) else Mascot.color(0xFF9FF3EC),
                                     fontSize = 10.5.sp,
                                     fontWeight = FontWeight.Bold,
                                     fontFamily = AudiowideFont,
@@ -637,8 +638,8 @@ fun MikuCyberVolumeHudOverlay(
                                         .clip(RoundedCornerShape(3.dp))
                                         .background(
                                             Brush.horizontalGradient(
-                                                if (isDanger) listOf(Color(0xFFFF0055), Color(0xFFFF8800))
-                                                else listOf(Color(0xFF39C5BB), Color(0xFFFF4FA3))
+                                                if (isDanger) listOf(Mascot.color(0xFFFF0055), Color(0xFFFF8800))
+                                                else listOf(Mascot.color(0xFF39C5BB), Mascot.color(0xFFFF4FA3))
                                             )
                                         )
                                 )

@@ -15,6 +15,17 @@
     android:sharedUserId="android.uid.system"
     tools:ignore="SharedUserId">
 
+    <!-- Mascot packs (Mascot.kt). Every MikuOS app declares the same signature permission, so it
+         exists whichever app is installed first. Miku Update's pack provider requires it. -->
+    <permission
+        android:name="com.miku.permission.MASCOT_PACKS"
+        android:protectionLevel="signature" />
+    <uses-permission android:name="com.miku.permission.MASCOT_PACKS" />
+    <queries>
+        <provider android:authorities="com.miku.update.mascot" />
+    </queries>
+
+
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.INSTALL_PACKAGES" />
@@ -37,20 +48,78 @@
         android:networkSecurityConfig="@xml/network_security_config"
         android:theme="@style/Theme.MikuUpdate">
 
+        <!-- Starts Mascot (the active mascot pack) at process start. -->
+        <provider
+            android:name="com.miku.update.MascotInit"
+            android:authorities="${applicationId}.mascot-init"
+            android:exported="false"
+            android:initOrder="1000" />
+
+
         <activity
             android:name=".ui.MainActivity"
             android:exported="true"
             android:launchMode="singleTask"
             android:theme="@style/Theme.MikuUpdate">
             <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-            <intent-filter>
                 <action android:name="com.miku.update.action.OPEN" />
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </activity>
+
+
+        <!-- Home-screen entries, one per mascot label set. Mascot.syncAliases enables the one the
+             active pack names and disables the others. The activity itself keeps no LAUNCHER
+             filter, so explicit launches by class name keep working whatever the pack. -->
+        <activity-alias
+            android:name=".ui.MainActivityMiku"
+            android:targetActivity=".ui.MainActivity"
+            android:exported="true"
+            android:enabled="true"
+            android:label="Miku Update"
+            android:icon="@mipmap/ic_launcher"
+            android:roundIcon="@mipmap/ic_launcher">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".ui.MainActivityHione"
+            android:targetActivity=".ui.MainActivity"
+            android:exported="true"
+            android:enabled="false"
+            android:label="Hione Update"
+            android:icon="@mipmap/ic_launcher_hione"
+            android:roundIcon="@mipmap/ic_launcher_hione_round">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".ui.MainActivityPlain"
+            android:targetActivity=".ui.MainActivity"
+            android:exported="true"
+            android:enabled="false"
+            android:label="Updates"
+            android:icon="@mipmap/ic_launcher"
+            android:roundIcon="@mipmap/ic_launcher">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <!-- Mascot packs for every MikuOS app: built-in ones from assets/mascot, downloaded ones
+             from this app's private storage. Read only, platform-signed callers only. -->
+        <provider
+            android:name=".mascot.MascotPackProvider"
+            android:authorities="com.miku.update.mascot"
+            android:exported="true"
+            android:readPermission="com.miku.permission.MASCOT_PACKS"
+            android:writePermission="android.permission.INSTALL_PACKAGES"
+            android:grantUriPermissions="false" />
 
         <!-- PackageInstaller session and uninstall results come back here through our own
              PendingIntents, so it does not need to be exported. -->

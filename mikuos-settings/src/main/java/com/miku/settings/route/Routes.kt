@@ -1,5 +1,6 @@
 package com.miku.settings.route
 
+import com.miku.settings.Mascot
 import android.content.Intent
 import android.net.Uri
 import android.provider.Settings
@@ -29,7 +30,7 @@ object Routes {
     const val EXTRA_LISTENER = "android.provider.extra.NOTIFICATION_LISTENER_COMPONENT_NAME"
 
     /** Interim: page not rebuilt yet; stock opens while it exists. */
-    private val LATER = Dest.Stock("This screen is not built into MikuOS yet.")
+    private val LATER get() = Dest.Stock("This screen is not built into ${Mascot.osName} yet.")
     /** The feature does not apply to this device. */
     private fun na(why: String) = Dest.Stock(why)
 
@@ -49,6 +50,9 @@ object Routes {
         val a = intent.action ?: return Dest.Section(null)
         return when (a) {
             Settings.ACTION_SETTINGS -> Dest.Section(null)
+
+            // ---- MikuOS: Theme & mascot (pack picker, holiday settings)
+            "com.miku.settings.action.MASCOT" -> Dest.Page("mascot")
 
             // ---- Network & internet
             Settings.ACTION_WIRELESS_SETTINGS, Settings.ACTION_AIRPLANE_MODE_SETTINGS,
@@ -167,7 +171,7 @@ object Routes {
                 na("This device has no fingerprint or face sensor.")
             "android.settings.WORK_MODE_VIEW", "android.settings.MANAGED_PROFILE_SETTINGS", "android.settings.MANAGE_CROSS_PROFILE_ACCESS",
             "android.settings.ENTERPRISE_PRIVACY_SETTINGS", "android.settings.SHOW_REMOTE_BUGREPORT_DIALOG" ->
-                na("MikuOS does not use work profiles or device management.")
+                na("${Mascot.osName} does not use work profiles or device management.")
             "android.settings.WIFI_CALLING_SETTINGS", "android.telephony.ims.action.SHOW_CAPABILITY_DISCOVERY_OPT_IN" ->
                 na("This device has no phone dialer, so calling features are off.")
             "android.settings.ASSIST_GESTURE_SETTINGS", "android.settings.COMMUNAL_SETTINGS", "com.android.settings.STYLUS_USI_DETAILS_SETTINGS",

@@ -1,5 +1,6 @@
 package com.miku.media.gallery
 
+import com.miku.media.Mascot
 import android.app.Activity
 import android.net.Uri
 import androidx.activity.compose.BackHandler
@@ -354,7 +355,7 @@ fun ThumbCell(
                     .border(1.5.dp, MikuWhite, CircleShape),
                 contentAlignment = Alignment.Center
             ) {
-                if (selected) Icon(Icons.Rounded.CheckCircle, null, tint = Color(0xFF00201D), modifier = Modifier.size(18.dp))
+                if (selected) Icon(Icons.Rounded.CheckCircle, null, tint = Mascot.color(0xFF00201D), modifier = Modifier.size(18.dp))
             }
         }
     }

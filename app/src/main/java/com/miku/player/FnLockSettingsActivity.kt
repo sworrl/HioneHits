@@ -66,8 +66,8 @@ fun FnLockSettingsScreen(onBack: () -> Unit) {
     ) {
         // Bespoke Hatsune Miku Pose Backdrop
         Image(
-            painter = painterResource(id = R.drawable.miku_pose_headphones),
-            contentDescription = "Miku artwork",
+            painter = mascotPainter(id = R.drawable.miku_pose_headphones),
+            contentDescription = "${Mascot.name} artwork",
             modifier = Modifier.fillMaxSize(),
             contentScale = ContentScale.Crop
         )
@@ -79,9 +79,9 @@ fun FnLockSettingsScreen(onBack: () -> Unit) {
                 .background(
                     Brush.verticalGradient(
                         listOf(
-                            Color(0xEE040D12),
+                            Mascot.color(0xEE040D12),
                             Color(0xBB000000),
-                            Color(0xF8040D12)
+                            Mascot.color(0xF8040D12)
                         )
                     )
                 )
@@ -115,7 +115,7 @@ fun FnLockSettingsScreen(onBack: () -> Unit) {
                 Box(
                     Modifier
                         .clip(RoundedCornerShape(12.dp))
-                        .background(Color(0x3300E5FF))
+                        .background(Mascot.color(0x3300E5FF))
                         .border(1.dp, MikuCyan, RoundedCornerShape(12.dp))
                         .padding(horizontal = 8.dp, vertical = 4.dp)
                 ) {
@@ -141,7 +141,7 @@ fun FnLockSettingsScreen(onBack: () -> Unit) {
                         Modifier
                             .fillMaxWidth()
                             .clip(RoundedCornerShape(18.dp))
-                            .background(Color(0xDD0A1E26))
+                            .background(Mascot.color(0xDD0A1E26))
                             .border(1.5.dp, MikuCyan, RoundedCornerShape(18.dp))
                             .padding(14.dp)
                     ) {
@@ -168,7 +168,7 @@ fun FnLockSettingsScreen(onBack: () -> Unit) {
                         Modifier
                             .fillMaxWidth()
                             .clip(RoundedCornerShape(16.dp))
-                            .background(Color(0xDD0A1E26))
+                            .background(Mascot.color(0xDD0A1E26))
                             .border(1.dp, CyberGlassBorder, RoundedCornerShape(16.dp))
                             .padding(14.dp)
                     ) {
@@ -193,7 +193,7 @@ fun FnLockSettingsScreen(onBack: () -> Unit) {
                                 Modifier
                                     .fillMaxWidth()
                                     .clip(RoundedCornerShape(10.dp))
-                                    .background(if (isSel) Color(0x3300E5FF) else Color.Transparent)
+                                    .background(if (isSel) Mascot.color(0x3300E5FF) else Color.Transparent)
                                     .clickable {
                                         fnMode = id
                                         try {
@@ -247,7 +247,7 @@ fun FnLockSettingsScreen(onBack: () -> Unit) {
                         Modifier
                             .fillMaxWidth()
                             .clip(RoundedCornerShape(16.dp))
-                            .background(Color(0xDD0A1E26))
+                            .background(Mascot.color(0xDD0A1E26))
                             .border(1.dp, CyberGlassBorder, RoundedCornerShape(16.dp))
                             .padding(14.dp)
                     ) {
@@ -285,7 +285,7 @@ fun FnLockSettingsScreen(onBack: () -> Unit) {
                                         MikuPocketLockManager.applyLockState(ctx, isLocked = true, showHud = false)
                                     }
                                 },
-                                colors = SwitchDefaults.colors(checkedThumbColor = MikuCyan, checkedTrackColor = Color(0xFF00695C))
+                                colors = SwitchDefaults.colors(checkedThumbColor = MikuCyan, checkedTrackColor = Mascot.color(0xFF00695C))
                             )
                         }
 
@@ -318,7 +318,7 @@ fun FnLockSettingsScreen(onBack: () -> Unit) {
                                         MikuPocketLockManager.applyLockState(ctx, isLocked = true, showHud = false)
                                     }
                                 },
-                                colors = SwitchDefaults.colors(checkedThumbColor = MikuNeonPink, checkedTrackColor = Color(0xFF880E4F))
+                                colors = SwitchDefaults.colors(checkedThumbColor = MikuNeonPink, checkedTrackColor = Mascot.color(0xFF880E4F))
                             )
                         }
                     }

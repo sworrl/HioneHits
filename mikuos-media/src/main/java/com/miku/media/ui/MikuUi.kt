@@ -1,5 +1,6 @@
 package com.miku.media.ui
 
+import com.miku.media.Mascot
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
@@ -53,17 +54,17 @@ import com.miku.media.R
 
 // Same palette as mikuos-settings (canonical #39C5BB teal, obsidian surfaces, diva pink), so the
 // three apps sit next to Settings and the launcher without looking borrowed.
-val MikuTeal = Color(0xFF39C5BB)
-val MikuTealBright = Color(0xFF00F5D4)
-val MikuTealGlow = Color(0xFF56F0E0)
-val MikuPink = Color(0xFFFF2A85)
-val MikuPinkSoft = Color(0xFFFF4081)
+val MikuTeal get() = Mascot.color(0xFF39C5BB)
+val MikuTealBright get() = Mascot.color(0xFF00F5D4)
+val MikuTealGlow get() = Mascot.color(0xFF56F0E0)
+val MikuPink get() = Mascot.color(0xFFFF2A85)
+val MikuPinkSoft get() = Mascot.color(0xFFFF4081)
 val MikuGold = Color(0xFFFFD54F)
-val MikuBg = Color(0xFF070B0D)
-val MikuSurface1 = Color(0xFF0D1417)
-val MikuSurface2 = Color(0xFF131E22)
+val MikuBg get() = Mascot.color(0xFF070B0D)
+val MikuSurface1 get() = Mascot.color(0xFF0D1417)
+val MikuSurface2 get() = Mascot.color(0xFF131E22)
 val MikuMuted = Color(0xFF7E9AA0)
-val MikuWhite = Color(0xFFF0FDFE)
+val MikuWhite get() = Mascot.color(0xFFF0FDFE)
 val MikuDanger = Color(0xFFFF5370)
 
 val Orbitron = FontFamily(Font(R.font.orbitron, FontWeight.Normal), Font(R.font.orbitron, FontWeight.Bold))
@@ -71,9 +72,9 @@ val Orbitron = FontFamily(Font(R.font.orbitron, FontWeight.Normal), Font(R.font.
 /** Minimum touch target. The M500 panel is 360x640dp; 48dp keeps controls thumb-sized. */
 val TouchTarget = 48.dp
 
-private val MikuColors: ColorScheme = darkColorScheme(
+private val MikuColors: ColorScheme get() = darkColorScheme(
     primary = MikuTeal,
-    onPrimary = Color(0xFF00201D),
+    onPrimary = Mascot.color(0xFF00201D),
     secondary = MikuPink,
     onSecondary = Color.White,
     background = MikuBg,
@@ -110,7 +111,7 @@ fun Modifier.glass(
     .clip(RoundedCornerShape(corner))
     .drawBehind {
         val rr = CornerRadius(corner.toPx(), corner.toPx())
-        drawRoundRect(Color(0xFF061012).copy(alpha = fillAlpha), cornerRadius = rr)
+        drawRoundRect(Mascot.color(0xFF061012).copy(alpha = fillAlpha), cornerRadius = rr)
         drawRoundRect(
             Brush.verticalGradient(listOf(tint.copy(alpha = 0.16f), Color.Transparent)),
             cornerRadius = rr
@@ -130,7 +131,7 @@ fun Modifier.glassCircle(tint: Color = MikuTeal, fillAlpha: Float = 0.5f): Modif
     .clip(CircleShape)
     .drawBehind {
         val r = size.minDimension / 2f
-        drawCircle(Color(0xFF061012).copy(alpha = fillAlpha), r)
+        drawCircle(Mascot.color(0xFF061012).copy(alpha = fillAlpha), r)
         drawCircle(Brush.verticalGradient(listOf(tint.copy(alpha = 0.18f), Color.Transparent)), r)
         drawCircle(
             Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.35f), Color.Transparent)),
@@ -234,7 +235,7 @@ fun GlassButton(
     ) {
         val fg = when {
             !enabled -> MikuMuted
-            filled -> Color(0xFF00201D)
+            filled -> Mascot.color(0xFF00201D)
             else -> MikuWhite
         }
         if (icon != null) {
@@ -267,7 +268,7 @@ fun GlassSegments(
             ) {
                 Text(
                     label,
-                    color = if (on) Color(0xFF00201D) else MikuWhite,
+                    color = if (on) Mascot.color(0xFF00201D) else MikuWhite,
                     fontSize = 14.sp,
                     fontWeight = if (on) FontWeight.Bold else FontWeight.Medium,
                     maxLines = 1

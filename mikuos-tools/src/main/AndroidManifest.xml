@@ -2,6 +2,17 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
+    <!-- Mascot packs (Mascot.kt). Every MikuOS app declares the same signature permission, so it
+         exists whichever app is installed first. Miku Update's pack provider requires it. -->
+    <permission
+        android:name="com.miku.permission.MASCOT_PACKS"
+        android:protectionLevel="signature" />
+    <uses-permission android:name="com.miku.permission.MASCOT_PACKS" />
+    <queries>
+        <provider android:authorities="com.miku.update.mascot" />
+    </queries>
+
+
     <!-- ===================================================================================
          Clock
          =================================================================================== -->
@@ -60,6 +71,14 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.MikuTools"
         tools:ignore="DataExtractionRules">
+
+        <!-- Starts Mascot (the active mascot pack) at process start. -->
+        <provider
+            android:name="com.miku.tools.MascotInit"
+            android:authorities="${applicationId}.mascot-init"
+            android:exported="false"
+            android:initOrder="1000" />
+
 
         <!-- ================================ Clock ================================ -->
 

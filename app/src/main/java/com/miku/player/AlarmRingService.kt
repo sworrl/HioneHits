@@ -379,7 +379,7 @@ class AlarmRingService : Service() {
         ensureChannel()
         return NotificationCompat.Builder(this, CHANNEL_ID)
             .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
-            .setContentTitle("Miku Music Alarm")
+            .setContentTitle("${Mascot.musicAppName} Alarm")
             .setCategory(NotificationCompat.CATEGORY_ALARM)
             .setPriority(NotificationCompat.PRIORITY_MAX)
             .build()
@@ -390,7 +390,7 @@ class AlarmRingService : Service() {
         if (nm.getNotificationChannel(CHANNEL_ID) == null) {
             nm.createNotificationChannel(
                 NotificationChannel(CHANNEL_ID, "Alarms", NotificationManager.IMPORTANCE_HIGH).apply {
-                    description = "Miku Music alarm ringing"
+                    description = "${Mascot.musicAppName} alarm ringing"
                     setBypassDnd(true)
                     lockscreenVisibility = android.app.Notification.VISIBILITY_PUBLIC
                     // Sound comes from the player itself (bit-perfect path) — never the channel.

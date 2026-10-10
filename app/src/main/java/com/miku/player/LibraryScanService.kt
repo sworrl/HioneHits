@@ -291,13 +291,13 @@ class LibraryScanService : Service() {
         if (nm.getNotificationChannel(CHANNEL_ID) == null) {
             nm.createNotificationChannel(
                 NotificationChannel(CHANNEL_ID, "Library Scan", NotificationManager.IMPORTANCE_LOW).apply {
-                    description = "Shows while Miku Music scans your library"
+                    description = "Shows while ${Mascot.musicAppName} scans your library"
                 }
             )
         }
         return NotificationCompat.Builder(this, CHANNEL_ID)
             .setSmallIcon(android.R.drawable.ic_popup_sync)
-            .setContentTitle("Miku Music: scanning library")
+            .setContentTitle("${Mascot.musicAppName}: scanning library")
             .setContentText(status)
             .setOngoing(true)
             .setSilent(true)

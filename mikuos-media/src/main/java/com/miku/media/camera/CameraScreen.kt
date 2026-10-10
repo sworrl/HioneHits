@@ -1,5 +1,6 @@
 package com.miku.media.camera
 
+import com.miku.media.Mascot
 import android.Manifest
 import android.app.KeyguardManager
 import android.content.Context
@@ -704,7 +705,7 @@ private fun ZoomChips(zoom: Float, maxZoom: Float, onZoom: (Float) -> Unit) {
                     .pressable { onZoom(s) },
                 contentAlignment = Alignment.Center
             ) {
-                Text(label, color = if (nearest) Color(0xFF00201D) else MikuWhite, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                Text(label, color = if (nearest) Mascot.color(0xFF00201D) else MikuWhite, fontSize = 13.sp, fontWeight = FontWeight.Bold)
             }
         }
     }

@@ -1,5 +1,7 @@
 package com.miku.launcher.crash
 
+import com.miku.launcher.Mascot
+import com.miku.launcher.mascotPainter
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
@@ -52,7 +54,7 @@ class MikuCrashActivity : ComponentActivity() {
         window.navigationBarColor = android.graphics.Color.BLACK
 
         val crashDetails = intent.getStringExtra("crash_details") ?: "No crash details were passed in"
-        val errorType = intent.getStringExtra("error_type") ?: "MikuOS Panic"
+        val errorType = intent.getStringExtra("error_type") ?: "${Mascot.osName} Panic"
 
         setContent {
             MikuCrashScreen(
@@ -98,8 +100,8 @@ fun MikuCrashScreen(
         ) {
             // Morty "Get your s**t together" Fullscreen Visual Asset
             Image(
-                painter = painterResource(id = R.drawable.img_os_crash),
-                contentDescription = "Miku OS Panic",
+                painter = mascotPainter(id = R.drawable.img_os_crash),
+                contentDescription = "${Mascot.name} OS Panic",
                 contentScale = ContentScale.Fit,
                 modifier = Modifier
                     .fillMaxWidth(0.92f)
@@ -113,7 +115,7 @@ fun MikuCrashScreen(
                 Modifier
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(10.dp))
-                    .background(Color(0xFF100407))
+                    .background(Mascot.color(0xFF100407))
                     .border(1.dp, com.miku.launcher.ui.MikuIdentity.Coral.copy(alpha = 0.7f), RoundedCornerShape(10.dp))
                     .padding(10.dp)
             ) {
@@ -124,14 +126,14 @@ fun MikuCrashScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            "MikuOS crashed: $errorType",
+                            "${Mascot.osName} crashed: $errorType",
                             color = com.miku.launcher.ui.MikuIdentity.Coral,
                             fontSize = 9.sp,
                             fontWeight = FontWeight.Black
                         )
                         Text(
                             if (showDetails) "HIDE LOGS" else "SHOW LOGS",
-                            color = Color(0xFF00E5FF),
+                            color = Mascot.color(0xFF00E5FF),
                             fontSize = 8.sp,
                             fontWeight = FontWeight.Bold,
                             modifier = Modifier.clickable { showDetails = !showDetails }
@@ -161,7 +163,7 @@ fun MikuCrashScreen(
                 // Restart Miku OS Button
                 Button(
                     onClick = onRestartOs,
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF00E5FF)),
+                    colors = ButtonDefaults.buttonColors(containerColor = Mascot.color(0xFF00E5FF)),
                     shape = RoundedCornerShape(10.dp),
                     modifier = Modifier.weight(1f).height(44.dp)
                 ) {
@@ -178,17 +180,17 @@ fun MikuCrashScreen(
                     onClick = {
                         try {
                             val cb = ctx.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                            cb.setPrimaryClip(ClipData.newPlainText("MikuOS Crash Log", crashDetails))
+                            cb.setPrimaryClip(ClipData.newPlainText("${Mascot.osName} Crash Log", crashDetails))
                             Toast.makeText(ctx, "Crash log copied", Toast.LENGTH_SHORT).show()
                         } catch (_: Throwable) {}
                     },
-                    border = BorderStroke(1.dp, Color(0xFFFF4081)),
+                    border = BorderStroke(1.dp, Mascot.color(0xFFFF4081)),
                     shape = RoundedCornerShape(10.dp),
                     modifier = Modifier.weight(1f).height(44.dp)
                 ) {
                     Text(
                         "COPY LOGS",
-                        color = Color(0xFFFF4081),
+                        color = Mascot.color(0xFFFF4081),
                         fontSize = 10.5.sp,
                         fontWeight = FontWeight.Bold
                     )

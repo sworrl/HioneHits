@@ -32,6 +32,25 @@ val copyOtaKeys = tasks.register<Copy>("copyOtaKeys") {
     into(otaKeyAssetsDir.map { it.dir("ota-keys") })
 }
 
+// The built-in mascot packs (mikuos/mascot/packs/<id>) go into assets/mascot/<id>, served to the
+// other apps by MascotPackProvider. Only what the apps read at run time: pack.json, art, the
+// character drawables, the recolored theme icons, the big launcher icon and the voice clips.
+// Popup frames and the boot video are image-only and stay out. So do source photos over 1 MB.
+val mascotPackIds = listOf("miku", "hione")
+val mascotAssetsDir = layout.buildDirectory.dir("generated/mascotPacks")
+val copyMascotPacks = tasks.register<Sync>("copyMascotPacks") {
+    val packsDir = rootProject.file("../mikuos/mascot/packs")
+    mascotPackIds.forEach { id ->
+        from(File(packsDir, id)) {
+            include("pack.json", "art/**", "res/drawable*/**", "res/icons-xxxhdpi/**", "res/mipmap-xxxhdpi/**",
+                "voice/raw/**", "voice/boot/**")
+            exclude { it.isDirectory.not() && it.name.lowercase().let { n -> n.endsWith(".jpg") || n.endsWith(".jpeg") } && it.file.length() > 1_000_000 }
+            into(id)
+        }
+    }
+    into(mascotAssetsDir.map { it.dir("mascot") })
+}
+
 // android.os.UpdateEngine is @SystemApi, so it is missing from the public android.jar. Two small
 // stubs in src/systemapi are compiled into a jar that is only on the compile classpath; the APK
 // never carries them and the real classes come from the framework at run time.
@@ -49,6 +68,10 @@ val systemApiStubJar = tasks.register<Jar>("systemApiStubJar") {
 }
 
 android {
+    // Launcher icons for the mascot label aliases (ic_launcher_hione*), one shared copy for every
+    // app that has an alias. See Mascot.kt and mikuos/mascot/runtime.
+    sourceSets["main"].res.srcDir(rootProject.file("../mikuos/mascot/runtime/res"))
+
     namespace = "com.miku.update"
     compileSdk = 34
 
@@ -61,6 +84,12 @@ android {
     }
 
     sourceSets["main"].assets.srcDir(otaKeyAssetsDir)
+    sourceSets["main"].assets.srcDir(mascotAssetsDir)
+
+    // Pack files stay uncompressed in the APK so the provider can hand out a real fd for them.
+    androidResources {
+        noCompress += listOf("webp", "png", "jpg", "jpeg", "ogg", "json")
+    }
 
     // Same signing pattern as miku-sysbridge: the platform key, because this app runs as the
     // system UID (sharedUserId android.uid.system) and that only installs when platform-signed.
@@ -149,9 +178,12 @@ android {
     }
 }
 
-tasks.named("preBuild") { dependsOn(copyOtaKeys) }
+tasks.named("preBuild") { dependsOn(copyOtaKeys, copyMascotPacks) }
 
 dependencies {
+    // PackFilesTest, ContentPackParseTest (org.json is stubbed in android.jar).
+    testImplementation("junit:junit:4.13.2")
+    testImplementation("org.json:json:20231013")
     compileOnly(files(systemApiStubJar.flatMap { it.archiveFile }).builtBy(systemApiStubJar))
     implementation(platform("androidx.compose:compose-bom:2024.09.02"))
     implementation("androidx.compose.material3:material3")

@@ -1,5 +1,6 @@
 package com.miku.launcher.widget
 
+import com.miku.launcher.Mascot
 import android.app.PendingIntent
 import android.appwidget.AppWidgetManager
 import android.appwidget.AppWidgetProvider
@@ -55,11 +56,11 @@ class MikuBatteryWidget : AppWidgetProvider() {
                 charging -> 0xFF00E676.toInt()
                 pct <= 15 -> 0xFFFF5252.toInt()
                 pct <= 35 -> 0xFFFFD600.toInt()
-                else -> 0xFF39C5BB.toInt()
+                else -> Mascot.argb(0xFF39C5BB.toInt())
             }
             val pctText = if (pct < 0) "--%" else "$pct%"
             v.setTextViewText(R.id.widget_battery_text, if (charging) "$pctText CHG" else pctText)
-            v.setTextColor(R.id.widget_battery_text, if (pct in 0..15) tint else 0xFF9FF3EC.toInt())
+            v.setTextColor(R.id.widget_battery_text, if (pct in 0..15) tint else Mascot.argb(0xFF9FF3EC.toInt()))
             v.setInt(R.id.widget_battery_icon, "setColorFilter", tint)
 
             v.setOnClickPendingIntent(R.id.widget_battery_root, launchLauncher(ctx))

@@ -55,7 +55,7 @@ class Renderer(ctx: Context, val st: Style) {
     private val shaders = HashMap<Long, Shader>()
 
     private val logo: Bitmap? = try {
-        BitmapFactory.decodeResource(ctx.resources, st.logoRes, BitmapFactory.Options().apply { inScaled = false })
+        Mascot.decodeResource(ctx.resources, st.logoRes, BitmapFactory.Options().apply { inScaled = false })
     } catch (_: Throwable) { null }
 
     var batteryPct = 100
@@ -452,7 +452,7 @@ class Renderer(ctx: Context, val st: Style) {
         val link = skin.link
         if (!link.hasItem) {
             font(st.bodyFace, st.bodyPx, dim)
-            drawCentered(if (link.connected) "Nothing playing" else "Waiting for Miku Music", w / 2f, h / 2f + 4)
+            drawCentered(if (link.connected) "Nothing playing" else "Waiting for ${Mascot.musicAppName}", w / 2f, h / 2f + 4)
             return
         }
         val albumId = skin.lib.song(link.mediaId)?.albumId ?: -1L

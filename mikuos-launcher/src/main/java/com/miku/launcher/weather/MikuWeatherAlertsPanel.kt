@@ -1,5 +1,6 @@
 package com.miku.launcher.weather
 
+import com.miku.launcher.Mascot
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -43,11 +44,11 @@ import com.miku.launcher.MikuTextSecondary
 private val WxMuted = Color(0xFF8BA6A9)
 
 fun alertColor(severity: String): Color = when (MikuNwsAlerts.severityRank(severity)) {
-    4 -> Color(0xFFFF2D6F)   // Extreme
+    4 -> Mascot.color(0xFFFF2D6F)   // Extreme
     3 -> Color(0xFFFF5252)   // Severe
     2 -> Color(0xFFFFB300)   // Moderate
     1 -> Color(0xFFFFE066)   // Minor
-    else -> Color(0xFF80DEEA)
+    else -> Mascot.color(0xFF80DEEA)
 }
 
 /**
@@ -124,7 +125,7 @@ fun MikuWeatherAlertsPanel(modifier: Modifier = Modifier) {
         val best = st.radios.firstOrNull { it.inService }
         if (best != null) {
             Column(
-                Modifier.fillMaxWidth().clip(CutCornerShape(5.dp)).background(Color(0x1A00E5FF))
+                Modifier.fillMaxWidth().clip(CutCornerShape(5.dp)).background(Mascot.color(0x1A00E5FF))
                     .border(1.dp, MikuCyan.copy(alpha = 0.35f), CutCornerShape(5.dp))
                     .clickable { radiosOpen = !radiosOpen }
                     .padding(horizontal = 7.dp, vertical = 4.dp)

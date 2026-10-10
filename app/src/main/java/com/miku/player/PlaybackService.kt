@@ -73,7 +73,7 @@ class PlaybackService : MediaLibraryService() {
             }
             val n = androidx.core.app.NotificationCompat.Builder(this, EARLY_CHANNEL)
                 .setSmallIcon(android.R.drawable.ic_media_play)
-                .setContentTitle("Miku Music")
+                .setContentTitle("${Mascot.musicAppName}")
                 .setContentText("Starting playback service")
                 .setOngoing(true)
                 .setSilent(true)

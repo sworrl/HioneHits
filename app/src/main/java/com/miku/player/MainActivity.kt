@@ -133,9 +133,9 @@ import com.miku.player.artistart.ArtistPhotoCreditButton
 import com.miku.player.artistart.ArtistPhotoImage
 import com.miku.player.artistart.ArtistPhotoSettingsCard
 
-private val MikuColors = darkColorScheme(
-    primary = MikuTeal, onPrimary = Color(0xFF00201D), secondary = MikuPink,
-    background = Ground, surface = Surface1, onBackground = Color(0xFFE8F4F2), onSurface = Color(0xFFE8F4F2),
+private val MikuColors get() = darkColorScheme(
+    primary = MikuTeal, onPrimary = Mascot.color(0xFF00201D), secondary = MikuPink,
+    background = Ground, surface = Surface1, onBackground = Mascot.color(0xFFE8F4F2), onSurface = Mascot.color(0xFFE8F4F2),
 )
 
 // Every M3 type-scale role mapped to the bundled Miku font kit instead of the default Typography()
@@ -179,7 +179,7 @@ fun Modifier.glassCard(corner: androidx.compose.ui.unit.Dp = 14.dp, tint: Color 
         val rr = CornerRadius(corner.toPx(), corner.toPx())
         drawRoundRect(Color(0x33000000), topLeft = Offset(0f, 1.6.dp.toPx()), size = size, cornerRadius = rr)
         drawRoundRect(
-            Brush.verticalGradient(listOf(tint.copy(alpha = 0.14f), Color(0xFF0A2022).copy(alpha = 0.5f))),
+            Brush.verticalGradient(listOf(tint.copy(alpha = 0.14f), Mascot.color(0xFF0A2022).copy(alpha = 0.5f))),
             cornerRadius = rr
         )
         drawRoundRect(
@@ -1672,7 +1672,7 @@ private fun MikuAnimatedBootSplash(onFinished: () -> Unit) {
             modifier = Modifier
                 .fillMaxSize()
                 .alpha(alpha)
-                .background(Color(0xFF041416))
+                .background(Mascot.color(0xFF041416))
         ) {
             // Fullscreen Bespoke Kawaii Miku Artwork with Crossfade Pose Animation
             Crossfade(
@@ -1681,10 +1681,10 @@ private fun MikuAnimatedBootSplash(onFinished: () -> Unit) {
                 label = "poseCrossfade"
             ) { pose ->
                 Image(
-                    painter = painterResource(
+                    painter = mascotPainter(
                         id = if (pose == 1) R.drawable.miku_boot_splash else R.drawable.miku_boot_splash_pose2
                     ),
-                    contentDescription = "Miku Boot Splash Pose",
+                    contentDescription = "${Mascot.name} Boot Splash Pose",
                     contentScale = ContentScale.Crop,
                     modifier = Modifier
                         .fillMaxSize()
@@ -1699,10 +1699,10 @@ private fun MikuAnimatedBootSplash(onFinished: () -> Unit) {
                     .background(
                         Brush.verticalGradient(
                             listOf(
-                                Color(0x77041416),
-                                Color(0x11041416),
-                                Color(0x88041416),
-                                Color(0xF5041416)
+                                Mascot.color(0x77041416),
+                                Mascot.color(0x11041416),
+                                Mascot.color(0x88041416),
+                                Mascot.color(0xF5041416)
                             )
                         )
                     )
@@ -1754,13 +1754,13 @@ private fun MikuAnimatedBootSplash(onFinished: () -> Unit) {
                 Box(
                     modifier = Modifier
                         .clip(RoundedCornerShape(20.dp))
-                        .background(Brush.horizontalGradient(listOf(Color(0xE60A2B2E), Color(0xE61C081A))))
+                        .background(Brush.horizontalGradient(listOf(Mascot.color(0xE60A2B2E), Mascot.color(0xE61C081A))))
                         .border(1.5.dp, Brush.horizontalGradient(listOf(MikuTealBright, MikuPink)), RoundedCornerShape(20.dp))
                         .padding(horizontal = 24.dp, vertical = 12.dp)
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Text(
-                            text = "MIKU MUSIC PLAYER",
+                            text = "${Mascot.musicAppName.uppercase()} PLAYER",
                             color = Color.White,
                             fontSize = 17.sp,
                             fontWeight = FontWeight.Black,
@@ -1769,7 +1769,7 @@ private fun MikuAnimatedBootSplash(onFinished: () -> Unit) {
                         )
                         Spacer(Modifier.height(3.dp))
                         Text(
-                            text = if (currentPose == 1) "初音ミク · STARTING" else "STARTING UP",
+                            text = if (currentPose == 1) "${Mascot.fullNameJa} · STARTING" else "STARTING UP",
                             color = if (currentPose == 1) MikuTealBright else MikuPink,
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Bold,
@@ -1912,7 +1912,7 @@ private fun MikuAnimatedBootSplash(onFinished: () -> Unit) {
             // the pill) is unambiguous — fades out with everything else, not a persistent nag.
             Row(
                 Modifier.align(Alignment.Center)
-                    .clip(RoundedCornerShape(20.dp)).background(Color(0xCC061417))
+                    .clip(RoundedCornerShape(20.dp)).background(Mascot.color(0xCC061417))
                     .padding(horizontal = 16.dp, vertical = 8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -1942,7 +1942,7 @@ private fun MikuAnimatedBootSplash(onFinished: () -> Unit) {
             ) {
                 Row(
                     Modifier.align(Alignment.TopCenter).statusBarsPadding().padding(top = 6.dp)
-                        .clip(RoundedCornerShape(20.dp)).background(Color(0xB3061417))
+                        .clip(RoundedCornerShape(20.dp)).background(Mascot.color(0xB3061417))
                         .padding(horizontal = 12.dp, vertical = 5.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -2070,8 +2070,8 @@ private fun MikuAnimatedBootSplash(onFinished: () -> Unit) {
             .clip(RoundedCornerShape(16.dp))
             .drawBehind {
                 val rr = CornerRadius(16.dp.toPx(), 16.dp.toPx())
-                val topC = if (isScanning) Color(0xFF1C5A57) else Color(0xFF123634)
-                val botC = if (isScanning) Color(0xFF4A1638) else Color(0xFF1C0D18)
+                val topC = if (isScanning) Mascot.color(0xFF1C5A57) else Mascot.color(0xFF123634)
+                val botC = if (isScanning) Mascot.color(0xFF4A1638) else Mascot.color(0xFF1C0D18)
                 if (!pressed) {
                     drawRoundRect(Color(0x66000000), topLeft = Offset(0f, 2.2f), size = size, cornerRadius = rr)
                     drawRoundRect(Brush.verticalGradient(listOf(topC, botC)), cornerRadius = rr)
@@ -2131,7 +2131,7 @@ private fun MikuAnimatedBootSplash(onFinished: () -> Unit) {
                 Box(
                     modifier = Modifier
                         .clip(RoundedCornerShape(8.dp))
-                        .background(if (d > 0) Color(0xFF0E4035) else Color(0xFF4A1024))
+                        .background(if (d > 0) Mascot.color(0xFF0E4035) else Mascot.color(0xFF4A1024))
                         .padding(horizontal = 4.dp, vertical = 1.dp)
                 ) {
                     Text(
@@ -2180,7 +2180,7 @@ private fun MikuAnimatedBootSplash(onFinished: () -> Unit) {
                 ) {}
                 .clip(RoundedCornerShape(22.dp))
                 .mikuGlassPanel(ctx, hazeState, HazeMaterials.thick(Ground), Ground)
-                .background(Brush.verticalGradient(listOf(Color(0xE6072328), Color(0xF2031114))))
+                .background(Brush.verticalGradient(listOf(Mascot.color(0xE6072328), Mascot.color(0xF2031114))))
                 .border(1.dp, MikuTealBright.copy(alpha = 0.5f), RoundedCornerShape(22.dp))
                 .padding(18.dp)
         ) {
@@ -2191,13 +2191,13 @@ private fun MikuAnimatedBootSplash(onFinished: () -> Unit) {
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     androidx.compose.foundation.Image(
-                        painter = androidx.compose.ui.res.painterResource(R.drawable.ic_miku_monitor_status),
+                        painter = mascotPainter(R.drawable.ic_miku_monitor_status),
                         contentDescription = null,
                         modifier = Modifier.size(24.dp)
                     )
                     Spacer(Modifier.width(10.dp))
                     Text(
-                        "Miku Monitor",
+                        "${Mascot.name} Monitor",
                         color = Color.White,
                         fontSize = 16.sp,
                         fontWeight = FontWeight.Bold,
@@ -2442,7 +2442,7 @@ private fun MikuAnimatedBootSplash(onFinished: () -> Unit) {
                         flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK or android.content.Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED
                     }
                     if (launch == null) {
-                        android.widget.Toast.makeText(ctx, "The MikuOS launcher isn't installed, so the sync screen can't open", android.widget.Toast.LENGTH_SHORT).show()
+                        android.widget.Toast.makeText(ctx, "The ${Mascot.osName} launcher isn't installed, so the sync screen can't open", android.widget.Toast.LENGTH_SHORT).show()
                     } else try { ctx.startActivity(launch) } catch (t: Throwable) {
                         android.widget.Toast.makeText(ctx, "Couldn't open the sync screen: ${t.message}", android.widget.Toast.LENGTH_SHORT).show()
                     }
@@ -2544,7 +2544,7 @@ private fun MikuAnimatedBootSplash(onFinished: () -> Unit) {
                     .border(1.5.dp, Brush.horizontalGradient(listOf(MikuCyan.copy(alpha = 0.8f), MikuNeonPink.copy(alpha = 0.6f))), RoundedCornerShape(22.dp))
             ) {
                 androidx.compose.foundation.Image(
-                    painter = androidx.compose.ui.res.painterResource(MikuArt.djMegaphone),
+                    painter = mascotPainter(MikuArt.djMegaphone),
                     contentDescription = null,
                     contentScale = androidx.compose.ui.layout.ContentScale.Crop,
                     alignment = Alignment.TopCenter,
@@ -2618,7 +2618,7 @@ private fun MikuAnimatedBootSplash(onFinished: () -> Unit) {
                                 progress = { progressFraction },
                                 modifier = Modifier.fillMaxWidth().height(7.dp).clip(RoundedCornerShape(3.5.dp)),
                                 color = MikuCyan,
-                                trackColor = Color(0xFF10323C)
+                                trackColor = Mascot.color(0xFF10323C)
                             )
                             Spacer(Modifier.height(8.dp))
                             Row(
@@ -2645,7 +2645,7 @@ private fun MikuAnimatedBootSplash(onFinished: () -> Unit) {
                             LinearProgressIndicator(
                                 modifier = Modifier.fillMaxWidth().height(7.dp).clip(RoundedCornerShape(3.5.dp)),
                                 color = MikuCyan,
-                                trackColor = Color(0xFF10323C)
+                                trackColor = Mascot.color(0xFF10323C)
                             )
                             Spacer(Modifier.height(8.dp))
                             Text(
@@ -2741,7 +2741,7 @@ fun expandNotificationShade(ctx: Context) {
             }
     ) {
         androidx.compose.foundation.Image(
-            painter = androidx.compose.ui.res.painterResource(MikuArt.bgWide),
+            painter = mascotPainter(MikuArt.bgWide),
             contentDescription = null,
             contentScale = androidx.compose.ui.layout.ContentScale.Crop,
             alpha = 0.14f,
@@ -2818,7 +2818,7 @@ private fun tabColor(t: Tab): Color = when (t) {
     Tab.HOME -> MikuTealBright
     Tab.ARTISTS -> MikuPink
     Tab.ALBUMS -> MikuGold
-    Tab.GENRES -> Color(0xFFB388FF) // violet — same family used for the "ultra hi-res" tech badge tier
+    Tab.GENRES -> Mascot.color(0xFFB388FF) // violet — same family used for the "ultra hi-res" tech badge tier
     Tab.SONGS -> MikuTeal
 }
 
@@ -2949,7 +2949,7 @@ private fun tabColor(t: Tab): Color = when (t) {
                     .clip(RoundedCornerShape(18.dp))
             ) {
                 androidx.compose.foundation.Image(
-                    painter = androidx.compose.ui.res.painterResource(MikuArt.bannerCyberStage),
+                    painter = mascotPainter(MikuArt.bannerCyberStage),
                     contentDescription = null,
                     contentScale = androidx.compose.ui.layout.ContentScale.Crop,
                     // The banner's aspect ratio crops the SIDES off this source, and dead-center
@@ -2971,7 +2971,7 @@ private fun tabColor(t: Tab): Color = when (t) {
                         .fillMaxWidth()
                         .padding(horizontal = 14.dp, vertical = 10.dp)
                 ) {
-                    Text("ミク · DAILY HIGHLIGHT", color = MikuTealBright, fontSize = 11.5.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.5.sp)
+                    Text("${Mascot.nameJa} · DAILY HIGHLIGHT", color = MikuTealBright, fontSize = 11.5.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.5.sp)
                     val subText = if (highlight.favCount > 0 || highlight.gemCount > 0) {
                         "${highlight.tracks.size} tracks · ${highlight.favCount} Favs · ${highlight.discCount} Fresh · ${highlight.gemCount} Gems"
                     } else {
@@ -3048,7 +3048,7 @@ private fun tabColor(t: Tab): Color = when (t) {
                                 }
                             }
                             Spacer(Modifier.height(4.dp))
-                            Text(t.title, color = Color(0xFFE8F4F2), fontSize = 12.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            Text(t.title, color = Mascot.color(0xFFE8F4F2), fontSize = 12.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                             Text(t.artist, color = Muted, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         }
                     }
@@ -3153,7 +3153,7 @@ modifier = Modifier.clickable { onPlay(likedTracks, 0) }
                                 AlbumArtImage(trackId = t.id, modifier = Modifier.fillMaxSize(), trackPath = t.path)
                             }
                             Spacer(Modifier.height(6.dp))
-                            Text(t.title, color = Color(0xFFE8F4F2), fontSize = 12.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            Text(t.title, color = Mascot.color(0xFFE8F4F2), fontSize = 12.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                             Text(t.artist, color = Muted, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         }
                     }
@@ -3163,17 +3163,17 @@ modifier = Modifier.clickable { onPlay(likedTracks, 0) }
                     Modifier.padding(horizontal = 14.dp, vertical = 4.dp)
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(16.dp))
-                        .background(Color(0xFF092124))
+                        .background(Mascot.color(0xFF092124))
                         .border(1.dp, MikuTeal.copy(alpha = 0.35f), RoundedCornerShape(16.dp))
                         .padding(12.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Box(
-                        Modifier.size(54.dp).clip(RoundedCornerShape(12.dp)).background(Color(0xFF041416))
+                        Modifier.size(54.dp).clip(RoundedCornerShape(12.dp)).background(Mascot.color(0xFF041416))
                     ) {
                         androidx.compose.foundation.Image(
-                            painter = androidx.compose.ui.res.painterResource(MikuArt.chibiHearts),
-                            contentDescription = "Miku",
+                            painter = mascotPainter(MikuArt.chibiHearts),
+                            contentDescription = "${Mascot.name}",
                             contentScale = ContentScale.Crop,
                             modifier = Modifier.fillMaxSize()
                         )
@@ -3209,7 +3209,7 @@ modifier = Modifier.clickable { onPlay(likedTracks, 0) }
                         Column(Modifier.width(116.dp).padding(4.dp).clickable { onPlay(recentlyPlayed, i) }) {
                             AlbumArtImage(t.id, Modifier.size(108.dp).clip(RoundedCornerShape(14.dp)), trackPath = t.path)
                             Spacer(Modifier.height(6.dp))
-                            Text(t.title, color = Color(0xFFE8F4F2), fontSize = 12.sp, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            Text(t.title, color = Mascot.color(0xFFE8F4F2), fontSize = 12.sp, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
                             Text(t.artist, color = Muted, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         }
                     }
@@ -3473,7 +3473,7 @@ private fun <T> AlphabetFastScroller(
                     .offset(x = (-1).dp, y = animatedReticleYOffsetDp)
                     .size(width = 22.dp, height = 13.dp)
                     .clip(RoundedCornerShape(6.dp))
-                    .background(Color(0xFF072428))
+                    .background(Mascot.color(0xFF072428))
                     .border(1.2.dp, MikuTealBright, RoundedCornerShape(6.dp)),
                 contentAlignment = Alignment.Center
             ) {
@@ -3497,7 +3497,7 @@ private fun <T> AlphabetFastScroller(
                     .clip(CircleShape)
                     .background(
                         Brush.radialGradient(
-                            listOf(Color(0xFF0F3E42), Color(0xFF041618))
+                            listOf(Mascot.color(0xFF0F3E42), Mascot.color(0xFF041618))
                         )
                     )
                     .border(1.8.dp, MikuTealBright, CircleShape),
@@ -3539,7 +3539,7 @@ private fun MikuSearchBar(
             modifier = Modifier.weight(1f),
             singleLine = true,
             textStyle = androidx.compose.ui.text.TextStyle(
-                color = Color(0xFFE8F4F2),
+                color = Mascot.color(0xFFE8F4F2),
                 fontSize = 13.5.sp,
                 fontWeight = FontWeight.Medium
             ),
@@ -3580,12 +3580,12 @@ fun MikuEmptyState(
             modifier = Modifier
                 .size(130.dp)
                 .clip(RoundedCornerShape(24.dp))
-                .background(Color(0xFF071B1E))
+                .background(Mascot.color(0xFF071B1E))
                 .border(1.5.dp, Brush.horizontalGradient(listOf(MikuTeal, MikuPink)), RoundedCornerShape(24.dp))
         ) {
             androidx.compose.foundation.Image(
-                painter = androidx.compose.ui.res.painterResource(imageRes),
-                contentDescription = "Miku",
+                painter = mascotPainter(imageRes),
+                contentDescription = "${Mascot.name}",
                 contentScale = ContentScale.Crop,
                 modifier = Modifier.fillMaxSize()
             )
@@ -3828,7 +3828,7 @@ fun MikuEmptyState(
                             }
                             Spacer(Modifier.width(14.dp))
                             Column(Modifier.weight(1f)) {
-                                Text(a.name, color = if (artistLiked) MikuTeal else Color(0xFFE8F4F2), fontSize = 16.5.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, fontWeight = FontWeight.SemiBold, fontFamily = Baloo2Font)
+                                Text(a.name, color = if (artistLiked) MikuTeal else Mascot.color(0xFFE8F4F2), fontSize = 16.5.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, fontWeight = FontWeight.SemiBold, fontFamily = Baloo2Font)
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     Text("${a.tracks.size} tracks · ${a.albumCount} albums", color = Muted, fontSize = 12.5.sp, fontFamily = Baloo2Font)
                                     // Guarded on totalTracks like every other quality widget
@@ -3922,7 +3922,7 @@ private fun ArtistSortSettingsModal(
                 .fillMaxWidth()
                 .mikuGlassPanel(
                     androidx.compose.ui.platform.LocalContext.current, hazeState,
-                    HazeMaterials.thick(Color(0xFF07191C)), Color(0xFF07191C),
+                    HazeMaterials.thick(Mascot.color(0xFF07191C)), Mascot.color(0xFF07191C),
                     shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
                 )
                 .border(1.dp, MikuTeal.copy(alpha = 0.5f), RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp))
@@ -3956,7 +3956,7 @@ private fun ArtistSortSettingsModal(
                 Modifier
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(12.dp))
-                    .background(if (sortIgnoreThe) Color(0xFF0E383B) else Color(0xFF041416))
+                    .background(if (sortIgnoreThe) Mascot.color(0xFF0E383B) else Mascot.color(0xFF041416))
                     .clickable { onUpdateSort(true) }
                     .padding(14.dp),
                 verticalAlignment = Alignment.CenterVertically
@@ -3976,7 +3976,7 @@ private fun ArtistSortSettingsModal(
                 Modifier
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(12.dp))
-                    .background(if (!sortIgnoreThe) Color(0xFF0E383B) else Color(0xFF041416))
+                    .background(if (!sortIgnoreThe) Mascot.color(0xFF0E383B) else Mascot.color(0xFF041416))
                     .clickable { onUpdateSort(false) }
                     .padding(14.dp),
                 verticalAlignment = Alignment.CenterVertically
@@ -4005,7 +4005,7 @@ private fun ArtistSortSettingsModal(
                         .fillMaxWidth()
                         .padding(bottom = 6.dp)
                         .clip(RoundedCornerShape(12.dp))
-                        .background(if (selected) Color(0xFF0E383B) else Color(0xFF041416))
+                        .background(if (selected) Mascot.color(0xFF0E383B) else Mascot.color(0xFF041416))
                         .clickable { onUpdateDisplay(modeKey) }
                         .padding(14.dp),
                     verticalAlignment = Alignment.CenterVertically
@@ -4095,7 +4095,7 @@ private fun ArtistSortSettingsModal(
                             trackPath = reprTrack.path
                         )
                     } else {
-                        Box(Modifier.fillMaxSize().mikuHazeSource(ctx, hazeState).background(Color(0xFF0C2B2E)))
+                        Box(Modifier.fillMaxSize().mikuHazeSource(ctx, hazeState).background(Mascot.color(0xFF0C2B2E)))
                     }
                 }
 
@@ -4103,7 +4103,7 @@ private fun ArtistSortSettingsModal(
                 // sits on its own real glass panel instead of needing a heavy full-height scrim.
                 Box(
                     Modifier.fillMaxWidth().height(90.dp).align(Alignment.TopStart).background(
-                        Brush.verticalGradient(listOf(Color(0x66041416), Color.Transparent))
+                        Brush.verticalGradient(listOf(Mascot.color(0x66041416), Color.Transparent))
                     )
                 )
                 // "ⓘ" photo credit — renders nothing unless a real artist photo is in use.
@@ -4115,7 +4115,7 @@ private fun ArtistSortSettingsModal(
                         .fillMaxWidth()
                         .mikuGlassPanel(
                             androidx.compose.ui.platform.LocalContext.current, hazeState,
-                            HazeMaterials.thick(Color(0xFF041416)), Color(0xFF041416),
+                            HazeMaterials.thick(Mascot.color(0xFF041416)), Mascot.color(0xFF041416),
                             shape = RoundedCornerShape(topStart = 22.dp, topEnd = 22.dp)
                         )
                         .padding(horizontal = 16.dp, vertical = 12.dp)
@@ -4159,9 +4159,9 @@ private fun ArtistSortSettingsModal(
                                 .padding(horizontal = 16.dp, vertical = 8.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Icon(Icons.Default.PlayArrow, null, tint = Color(0xFF04161A), modifier = Modifier.size(18.dp))
+                            Icon(Icons.Default.PlayArrow, null, tint = Mascot.color(0xFF04161A), modifier = Modifier.size(18.dp))
                             Spacer(Modifier.width(6.dp))
-                            Text("Play All", color = Color(0xFF04161A), fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                            Text("Play All", color = Mascot.color(0xFF04161A), fontSize = 13.sp, fontWeight = FontWeight.Bold)
                         }
 
                         Spacer(Modifier.width(10.dp))
@@ -4170,7 +4170,7 @@ private fun ArtistSortSettingsModal(
                             modifier = Modifier
                                 .size(36.dp)
                                 .clip(RoundedCornerShape(18.dp))
-                                .background(Color(0xFF0F2B2E))
+                                .background(Mascot.color(0xFF0F2B2E))
                                 .border(1.dp, MikuTeal.copy(alpha = 0.5f), RoundedCornerShape(18.dp))
                                 .clickable { if (a.tracks.isNotEmpty()) onPlay(a.tracks.shuffled(), 0) },
                             contentAlignment = Alignment.Center
@@ -4227,7 +4227,7 @@ private fun ArtistSortSettingsModal(
                                 if (albumRepr != null) {
                                     AlbumArtImage(trackId = albumRepr.id, modifier = Modifier.fillMaxSize(), trackPath = albumRepr.path, year = albumRepr.year)
                                 } else {
-                                    Box(Modifier.fillMaxSize().background(Color(0xFF123438)), contentAlignment = Alignment.Center) {
+                                    Box(Modifier.fillMaxSize().background(Mascot.color(0xFF123438)), contentAlignment = Alignment.Center) {
                                         Icon(Icons.Default.Album, null, tint = MikuTeal.copy(alpha = .6f), modifier = Modifier.size(42.dp))
                                     }
                                 }
@@ -4243,7 +4243,7 @@ private fun ArtistSortSettingsModal(
                                 )
                             }
                             Spacer(Modifier.height(6.dp))
-                            Text(al.name, color = Color(0xFFE8F4F2), fontSize = 12.5.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            Text(al.name, color = Mascot.color(0xFFE8F4F2), fontSize = 12.5.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                             val yr = al.tracks.firstOrNull { it.year > 0 }?.year ?: 0
                             // Guarded — see the artist row: the breakdown resolves asynchronously.
                             if (alQuality.totalTracks > 0) Text(
@@ -4350,12 +4350,12 @@ private fun ArtistSortSettingsModal(
                                     .fillMaxWidth()
                                     .aspectRatio(1f)
                                     .clip(RoundedCornerShape(14.dp))
-                                    .background(Color(0xFF0F2B2E))
+                                    .background(Mascot.color(0xFF0F2B2E))
                             ) {
                                 if (reprTrack != null) {
                                     AlbumArtImage(trackId = reprTrack.id, modifier = Modifier.fillMaxSize(), trackPath = reprTrack.path, year = reprTrack.year)
                                 } else {
-                                    Box(Modifier.fillMaxSize().background(Color(0xFF123438)), contentAlignment = Alignment.Center) {
+                                    Box(Modifier.fillMaxSize().background(Mascot.color(0xFF123438)), contentAlignment = Alignment.Center) {
                                         Icon(Icons.Default.Album, null, tint = MikuTeal.copy(alpha = .6f), modifier = Modifier.size(46.dp))
                                     }
                                 }
@@ -4376,7 +4376,7 @@ private fun ArtistSortSettingsModal(
                                         .padding(5.dp)
                                         .size(30.dp)
                                         .clip(RoundedCornerShape(15.dp))
-                                        .background(Color(0xDD041416))
+                                        .background(Mascot.color(0xDD041416))
                                         .border(1.dp, MikuTeal.copy(alpha = 0.5f), RoundedCornerShape(15.dp))
                                         .clickable { onShuffle(al) },
                                     contentAlignment = Alignment.Center
@@ -4386,7 +4386,7 @@ private fun ArtistSortSettingsModal(
                             }
                             Text(
                                 al.name,
-                                color = Color(0xFFE8F4F2),
+                                color = Mascot.color(0xFFE8F4F2),
                                 fontSize = 14.sp,
                                 fontWeight = FontWeight.Medium,
                                 maxLines = 1,
@@ -4397,7 +4397,7 @@ private fun ArtistSortSettingsModal(
                                 al.tracks.firstNotNullOfOrNull { TrackYear.yearFor(ctx, it)?.takeIf { y -> y > 0 } ?: it.year.takeIf { y -> y > 0 } } ?: 0
                             }
                             val playsTag = if (albumPlays > 0) "  ·  ▶ $albumPlays" else ""
-                            Text(al.artist + (if (yr > 0) "  ·  $yr" else "") + playsTag, color = if (yr > 0) Color(0xFFC0DDD9) else Muted, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            Text(al.artist + (if (yr > 0) "  ·  $yr" else "") + playsTag, color = if (yr > 0) Mascot.color(0xFFC0DDD9) else Muted, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                             // Pressing/edition tag when the album title carries one
                             releaseTag(al.name)?.let { tag ->
                                 DataChip(tag, ReleaseTagColor)
@@ -4472,9 +4472,9 @@ private fun ArtistSortSettingsModal(
                         trackPath = reprTrack.path
                     )
                 } else {
-                    Box(Modifier.matchParentSize().mikuHazeSource(ctx, hazeState).background(Color(0xFF123F44)))
+                    Box(Modifier.matchParentSize().mikuHazeSource(ctx, hazeState).background(Mascot.color(0xFF123F44)))
                 }
-                Box(Modifier.matchParentSize().background(Brush.verticalGradient(listOf(Color(0x99123F44), Color(0xCC041416)))))
+                Box(Modifier.matchParentSize().background(Brush.verticalGradient(listOf(Mascot.color(0x99123F44), Mascot.color(0xCC041416)))))
 
                 // Like heart
                 if (likeAlbum != null) {
@@ -4484,14 +4484,14 @@ private fun ArtistSortSettingsModal(
                 }
                 Column(
                     Modifier.fillMaxWidth()
-                        .mikuGlassPanel(ctx, hazeState, HazeMaterials.regular(Color(0xFF041416)), Color(0xFF041416), fallbackAlpha = 0.82f)
+                        .mikuGlassPanel(ctx, hazeState, HazeMaterials.regular(Mascot.color(0xFF041416)), Mascot.color(0xFF041416), fallbackAlpha = 0.82f)
                         .statusBarsPadding().padding(16.dp)
                 ) {
                     // PERF (2026-09-17): off the main thread + cached (see TrackTech.qualityForGroup).
                     val albumQualityBreakdown = TrackTech.qualityForGroup(ctx, sortedTracks)
                     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                         // Large Cover Artwork (120x120dp) with Glanceable Quality Crest Overlay
-                        Box(Modifier.size(120.dp).clip(RoundedCornerShape(16.dp)).background(Color(0xFF0C2B2E))) {
+                        Box(Modifier.size(120.dp).clip(RoundedCornerShape(16.dp)).background(Mascot.color(0xFF0C2B2E))) {
                             if (reprTrack != null) {
                                 AlbumArtImage(trackId = reprTrack.id, modifier = Modifier.fillMaxSize(), trackPath = reprTrack.path, year = reprTrack.year)
                             } else {
@@ -4563,9 +4563,9 @@ private fun ArtistSortSettingsModal(
                                 .padding(horizontal = 18.dp, vertical = 8.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Icon(Icons.Default.PlayArrow, null, tint = Color(0xFF04161A), modifier = Modifier.size(20.dp))
+                            Icon(Icons.Default.PlayArrow, null, tint = Mascot.color(0xFF04161A), modifier = Modifier.size(20.dp))
                             Spacer(Modifier.width(6.dp))
-                            Text("Play Album", color = Color(0xFF04161A), fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                            Text("Play Album", color = Mascot.color(0xFF04161A), fontSize = 13.sp, fontWeight = FontWeight.Bold)
                         }
 
                         Spacer(Modifier.width(10.dp))
@@ -4574,7 +4574,7 @@ private fun ArtistSortSettingsModal(
                             modifier = Modifier
                                 .size(38.dp)
                                 .clip(RoundedCornerShape(19.dp))
-                                .background(Color(0xFF0F2B2E))
+                                .background(Mascot.color(0xFF0F2B2E))
                                 .border(1.dp, MikuTeal.copy(alpha = 0.5f), RoundedCornerShape(19.dp))
                                 .clickable { if (sortedTracks.isNotEmpty()) onPlay(sortedTracks.shuffled(), 0) },
                             contentAlignment = Alignment.Center
@@ -4601,7 +4601,7 @@ private fun ArtistSortSettingsModal(
                             modifier = Modifier
                                 .size(38.dp)
                                 .clip(RoundedCornerShape(19.dp))
-                                .background(Color(0xFF0F2B2E))
+                                .background(Mascot.color(0xFF0F2B2E))
                                 .border(1.dp, MikuTeal.copy(alpha = 0.5f), RoundedCornerShape(19.dp))
                                 .clickable {
                                     PlayerHolder.player?.let { p -> QueueManager.playNext(ctx, p, sortedTracks) }
@@ -4618,7 +4618,7 @@ private fun ArtistSortSettingsModal(
                             modifier = Modifier
                                 .size(38.dp)
                                 .clip(RoundedCornerShape(19.dp))
-                                .background(Color(0xFF1C081A))
+                                .background(Mascot.color(0xFF1C081A))
                                 .border(1.dp, MikuPink.copy(alpha = 0.5f), RoundedCornerShape(19.dp))
                                 .clickable {
                                     PlayerHolder.player?.let { p -> QueueManager.playLast(ctx, p, sortedTracks) }
@@ -4732,7 +4732,7 @@ private fun ArtistSortSettingsModal(
                 } else if (tier >= 2) {
                     Brush.verticalGradient(listOf(Color(0xF220190A), Color(0xF80A0702)))
                 } else {
-                    Brush.verticalGradient(listOf(Color(0xF20B1D20), Color(0xF8040F11)))
+                    Brush.verticalGradient(listOf(Mascot.color(0xF20B1D20), Mascot.color(0xF8040F11)))
                 }
                 drawPath(path, glassFill)
 
@@ -4740,7 +4740,7 @@ private fun ArtistSortSettingsModal(
                 if (isRainbow) {
                     drawCircle(
                         Brush.radialGradient(
-                            listOf(Color(0x35FF3399), Color(0x2500F5D4), Color.Transparent),
+                            listOf(Mascot.color(0x35FF3399), Mascot.color(0x2500F5D4), Color.Transparent),
                             radius = size.maxDimension * 0.75f
                         ),
                         center = Offset(size.width * 0.5f, size.height * 0.5f)
@@ -4854,7 +4854,7 @@ private fun ArtistSortSettingsModal(
     fontSize: androidx.compose.ui.unit.TextUnit = 9.5.sp
 ) {
     val tier = when {
-        color == MikuPink || color == Color(0xFFFF5C5C) || color == Color(0xFFB388FF) -> 3
+        color == MikuPink || color == Color(0xFFFF5C5C) || color == Mascot.color(0xFFB388FF) -> 3
         color == MikuGold || color == Color(0xFF4FC3F7) -> 2
         else -> 1
     }
@@ -4996,7 +4996,7 @@ private fun ArtistSortSettingsModal(
         val arcSize = androidx.compose.ui.geometry.Size(size.width - stroke, size.height - stroke)
         val topLeft = Offset(inset, inset)
         // 270° speedometer sweep, gap at the bottom — background track, then the filled portion.
-        drawArc(Color(0xFF1A2C2E), startAngle = 135f, sweepAngle = 270f, useCenter = false,
+        drawArc(Mascot.color(0xFF1A2C2E), startAngle = 135f, sweepAngle = 270f, useCenter = false,
             topLeft = topLeft, size = arcSize, style = Stroke(stroke, cap = StrokeCap.Round))
         drawArc(color, startAngle = 135f, sweepAngle = 270f * animatedScore, useCenter = false,
             topLeft = topLeft, size = arcSize, style = Stroke(stroke, cap = StrokeCap.Round))
@@ -5027,7 +5027,7 @@ fun AudioQualityCrestOverlay(
         breakdown.isVinylRip -> Triple(Color(0xFFFFB300), Color(0x66FF8F00), "⊚")
         tier == 4 -> Triple(Color(0xFFDFB8FF), Color(0x669C27B0), "💎")
         tier == 3 -> Triple(Color(0xFFFFD166), Color(0x66FF9800), "👑")
-        tier == 2 -> Triple(MikuTealBright, Color(0x6600B4D8), "✧")
+        tier == 2 -> Triple(MikuTealBright, Mascot.color(0x6600B4D8), "✧")
         else -> Triple(Color(0xFFB0BEC5), Color(0x44546E7A), "♪")
     }
 
@@ -5035,7 +5035,7 @@ fun AudioQualityCrestOverlay(
         modifier = modifier
             .size(size)
             .clip(CircleShape)
-            .background(if (breakdown.isVinylRip) Color(0xEE160E04) else Color(0xEE031215))
+            .background(if (breakdown.isVinylRip) Color(0xEE160E04) else Mascot.color(0xEE031215))
             .border(
                 1.5.dp,
                 when {
@@ -5139,11 +5139,11 @@ fun AudioQualitySpecLine(
             .width(42.dp)
             .height(4.dp)
             .clip(RoundedCornerShape(2.dp))
-            .background(Color(0xFF0F1E24))
+            .background(Mascot.color(0xFF0F1E24))
     ) {
         Row(Modifier.fillMaxSize()) {
             if (breakdown.masterFraction > 0f) {
-                Box(Modifier.weight(breakdown.masterFraction).fillMaxHeight().background(Color(0xFFB388FF)))
+                Box(Modifier.weight(breakdown.masterFraction).fillMaxHeight().background(Mascot.color(0xFFB388FF)))
             }
             if (breakdown.studioHiResFraction > 0f) {
                 Box(Modifier.weight(breakdown.studioHiResFraction).fillMaxHeight().background(Color(0xFFFFD166)))
@@ -5197,7 +5197,7 @@ fun AudioQualitySpecLine(
         Box(Modifier.size(48.dp).clip(RoundedCornerShape(10.dp)), contentAlignment = Alignment.Center) {
             AlbumArtImage(trackId = t.id, modifier = Modifier.fillMaxSize(), trackPath = t.path)
             if (isCurrent) {
-                Box(Modifier.matchParentSize().background(Color(0xAA04161A)), contentAlignment = Alignment.Center) {
+                Box(Modifier.matchParentSize().background(Mascot.color(0xAA04161A)), contentAlignment = Alignment.Center) {
                     EqualizerBars(NowPlayingState.playing, Modifier.size(22.dp))
                 }
             }
@@ -5206,7 +5206,7 @@ fun AudioQualitySpecLine(
         Column(Modifier.weight(1f)) {
             Text(
                 t.title,
-                color = if (isCurrent) MikuTeal else Color(0xFFE8F4F2),
+                color = if (isCurrent) MikuTeal else Mascot.color(0xFFE8F4F2),
                 fontSize = 19.5.sp,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
@@ -5246,7 +5246,7 @@ fun AudioQualitySpecLine(
                 Spacer(Modifier.width(14.dp))
                 Column(Modifier.weight(1f)) {
                     Text(t.title, color = MikuTealBright, fontSize = 18.sp, fontWeight = FontWeight.Bold, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                    Text(t.artist, color = Color(0xFFD4E8E5), fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(t.artist, color = Mascot.color(0xFFD4E8E5), fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     if (t.album.isNotBlank()) Text(
                         t.album + if (t.year > 0) "  ·  ${t.year}" else "",
                         color = Muted, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -5266,7 +5266,7 @@ fun AudioQualitySpecLine(
                     modifier = Modifier
                         .weight(1f)
                         .clip(RoundedCornerShape(14.dp))
-                        .background(Color(0xFF0F2B2E))
+                        .background(Mascot.color(0xFF0F2B2E))
                         .border(1.2.dp, MikuTeal, RoundedCornerShape(14.dp))
                         .clickable {
                             PlayerHolder.player?.let { p -> QueueManager.playNext(ctx, p, listOf(t)) }
@@ -5286,7 +5286,7 @@ fun AudioQualitySpecLine(
                     modifier = Modifier
                         .weight(1f)
                         .clip(RoundedCornerShape(14.dp))
-                        .background(Color(0xFF1C081A))
+                        .background(Mascot.color(0xFF1C081A))
                         .border(1.2.dp, MikuPink, RoundedCornerShape(14.dp))
                         .clickable {
                             PlayerHolder.player?.let { p -> QueueManager.playLast(ctx, p, listOf(t)) }
@@ -5326,7 +5326,7 @@ fun AudioQualitySpecLine(
     }
 }
 
-@Composable private fun MetricRow(label: String, value: String, valueColor: Color = Color(0xFFD4E8E5)) = Row(
+@Composable private fun MetricRow(label: String, value: String, valueColor: Color = Mascot.color(0xFFD4E8E5)) = Row(
     Modifier.fillMaxWidth().padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically
 ) {
     Text(label.uppercase(), color = Muted, fontSize = 11.sp, fontWeight = FontWeight.Bold, modifier = Modifier.width(120.dp))
@@ -5369,7 +5369,7 @@ private fun relTime(then: Long): String {
     Column(Modifier.width(104.dp).padding(4.dp).clickable(onClick = onClick)) {
         Box(Modifier.size(96.dp).clip(shape)) {
             if (artOf != null) AlbumArtImage(trackId = artOf, modifier = Modifier.fillMaxSize(), trackPath = artPath ?: "")
-            else Box(Modifier.fillMaxSize().background(Color(0xFF123438)))
+            else Box(Modifier.fillMaxSize().background(Mascot.color(0xFF123438)))
             if (prominence > 0f) {
                 Box(
                     Modifier.align(Alignment.TopEnd).padding(4.dp)
@@ -5382,7 +5382,7 @@ private fun relTime(then: Long): String {
             }
         }
         Spacer(Modifier.height(5.dp))
-        Text(title, color = Color(0xFFE8F4F2), fontSize = 12.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        Text(title, color = Mascot.color(0xFFE8F4F2), fontSize = 12.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
         Text(subtitle, color = Muted, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
 }
@@ -5471,12 +5471,12 @@ private fun MikuVibePromptCard(
                 Button(
                     onClick = { executeVibe("") },
                     enabled = !isSynthesizing,
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0x33FF4081)),
+                    colors = ButtonDefaults.buttonColors(containerColor = Mascot.color(0x33FF4081)),
                     contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
                     shape = RoundedCornerShape(12.dp),
                     modifier = Modifier.height(28.dp)
                 ) {
-                    Text("Random", color = Color(0xFFFF80AB), fontSize = 11.sp, fontWeight = FontWeight.ExtraBold)
+                    Text("Random", color = Mascot.color(0xFFFF80AB), fontSize = 11.sp, fontWeight = FontWeight.ExtraBold)
                 }
             }
 
@@ -5499,7 +5499,7 @@ private fun MikuVibePromptCard(
                         )
                         Text(
                             text = "${(vibeProgress * 100).toInt()}%",
-                            color = Color(0xFFFF80AB),
+                            color = Mascot.color(0xFFFF80AB),
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Bold,
                             fontFamily = AudiowideFont
@@ -5513,7 +5513,7 @@ private fun MikuVibePromptCard(
                             .height(6.dp)
                             .clip(RoundedCornerShape(3.dp)),
                         color = MikuCyan,
-                        trackColor = Color(0x2800E5FF)
+                        trackColor = Mascot.color(0x2800E5FF)
                     )
                 }
             }
@@ -5719,9 +5719,9 @@ private fun MikuVibePromptCard(
             .padding(horizontal = 15.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Icon(Icons.Default.PlayArrow, null, tint = Color(0xFF04161A), modifier = Modifier.size(16.dp))
+        Icon(Icons.Default.PlayArrow, null, tint = Mascot.color(0xFF04161A), modifier = Modifier.size(16.dp))
         Spacer(Modifier.width(4.dp))
-        Text("Play Mix", color = Color(0xFF04161A), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+        Text("Play Mix", color = Mascot.color(0xFF04161A), fontSize = 12.sp, fontWeight = FontWeight.Bold)
     }
 }
 
@@ -5773,7 +5773,7 @@ internal val settingsCategoryRequest = androidx.compose.runtime.mutableStateOf<S
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp, vertical = 6.dp)
                     .clip(RoundedCornerShape(14.dp))
-                    .background(Color(0xFF071B20))
+                    .background(Mascot.color(0xFF071B20))
                     .padding(4.dp),
                 horizontalArrangement = Arrangement.spacedBy(4.dp)
             ) {
@@ -5818,7 +5818,7 @@ internal val settingsCategoryRequest = androidx.compose.runtime.mutableStateOf<S
                                 Modifier
                                     .fillMaxWidth()
                                     .clip(RoundedCornerShape(14.dp))
-                                    .background(Brush.horizontalGradient(listOf(Color(0xFF0F3238), Color(0xFF071B20))))
+                                    .background(Brush.horizontalGradient(listOf(Mascot.color(0xFF0F3238), Mascot.color(0xFF071B20))))
                                     .border(1.dp, MikuTealBright.copy(alpha = 0.4f), RoundedCornerShape(14.dp))
                                     .clickable {
                                         if (isDac) DacSettingsLink.open(ctx)
@@ -5871,7 +5871,7 @@ internal val settingsCategoryRequest = androidx.compose.runtime.mutableStateOf<S
                             com.miku.player.ui.NowPlayingLook.load(ctx)
                             SettingsToggleRow(
                                 title = "Album-art dynamic color",
-                                subtitle = "Tint the Now Playing background, wavy bar and keys from the cover art (off = Miku teal)",
+                                subtitle = "Tint the Now Playing background, wavy bar and keys from the cover art (off = ${Mascot.name} teal)",
                                 checked = com.miku.player.ui.NowPlayingLook.dynamicColor
                             ) { com.miku.player.ui.NowPlayingLook.setDynamicColor(ctx, it) }
                         }
@@ -5957,16 +5957,16 @@ internal val settingsCategoryRequest = androidx.compose.runtime.mutableStateOf<S
         Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(18.dp))
-            .background(Brush.verticalGradient(listOf(Surface1, Color(0xFF0A2528))))
+            .background(Brush.verticalGradient(listOf(Surface1, Mascot.color(0xFF0A2528))))
             .border(1.dp, MikuTealBright.copy(alpha = 0.2f), RoundedCornerShape(18.dp))
             .padding(18.dp)
     ) {
-        Text("Miku Music Player", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Black, fontFamily = AudiowideFont)
+        Text("${Mascot.musicAppName} Player", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Black, fontFamily = AudiowideFont)
         Text("v${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})", color = Muted, fontSize = 12.5.sp)
 
         Spacer(Modifier.height(16.dp))
         androidx.compose.foundation.Image(
-            painter = androidx.compose.ui.res.painterResource(MikuArt.falconTechnixLogo),
+            painter = mascotPainter(MikuArt.falconTechnixLogo),
             contentDescription = "Falcon Technix (opens falcontechnix.com)",
             modifier = Modifier
                 .height(56.dp)
@@ -6049,7 +6049,7 @@ internal val settingsCategoryRequest = androidx.compose.runtime.mutableStateOf<S
 @Composable private fun IdleTimingRow(title: String, subtitle: String, valueSec: Int, range: ClosedFloatingPointRange<Float>, onChange: (Int) -> Unit) {
     Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp)) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            Text(title, color = Color(0xFFE8F4F2), fontSize = 14.sp, fontWeight = FontWeight.SemiBold, fontFamily = Baloo2Font)
+            Text(title, color = Mascot.color(0xFFE8F4F2), fontSize = 14.sp, fontWeight = FontWeight.SemiBold, fontFamily = Baloo2Font)
             Text("${valueSec}s", color = MikuTealBright, fontSize = 13.sp, fontWeight = FontWeight.Bold, fontFamily = Baloo2Font)
         }
         Text(subtitle, color = Muted, fontSize = 11.sp, fontFamily = Baloo2Font)
@@ -6134,14 +6134,14 @@ private fun gracefulAppRestart(ctx: android.content.Context) {
         Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(14.dp))
-            .background(Color(0xFF07272B))
+            .background(Mascot.color(0xFF07272B))
             .border(1.dp, MikuTealBright.copy(alpha = 0.25f), RoundedCornerShape(14.dp))
             .padding(14.dp)
     ) {
         Text("Platform Hardware Access", color = MikuTealBright, fontSize = 13.sp, fontWeight = FontWeight.Bold)
         Spacer(Modifier.height(4.dp))
         Text(
-            "MikuOS runs without su. Miku Music is platform-signed, so the DAC, input lock and power controls go straight through the Android platform APIs — there is nothing to grant here.",
+            "${Mascot.osName} runs without su. ${Mascot.musicAppName} is platform-signed, so the DAC, input lock and power controls go straight through the Android platform APIs — there is nothing to grant here.",
             color = Muted,
             fontSize = 11.5.sp,
             lineHeight = 15.sp
@@ -6177,7 +6177,7 @@ private fun gracefulAppRestart(ctx: android.content.Context) {
         Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(16.dp))
-            .background(Brush.verticalGradient(listOf(Color(0xFF07272B), Color(0xFF041417))))
+            .background(Brush.verticalGradient(listOf(Mascot.color(0xFF07272B), Mascot.color(0xFF041417))))
             .border(1.dp, MikuTealBright.copy(alpha = 0.35f), RoundedCornerShape(16.dp))
             .padding(14.dp)
     ) {
@@ -6275,7 +6275,7 @@ private fun gracefulAppRestart(ctx: android.content.Context) {
         Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(14.dp))
-            .background(if (hasInputLock) Color(0xFF07272B) else Color(0xFF2B2407))
+            .background(if (hasInputLock) Mascot.color(0xFF07272B) else Color(0xFF2B2407))
             .border(1.dp, if (hasInputLock) MikuTealBright.copy(alpha = 0.3f) else Color(0xFFFFD166).copy(alpha = 0.3f), RoundedCornerShape(14.dp))
             .padding(14.dp)
     ) {
@@ -6340,7 +6340,7 @@ private fun gracefulAppRestart(ctx: android.content.Context) {
     Box(
         Modifier
             .fillMaxSize()
-            .background(Color(0xD904161A))
+            .background(Mascot.color(0xD904161A))
             .statusBarsPadding()
             .navigationBarsPadding()
             .padding(24.dp),
@@ -6397,7 +6397,7 @@ private fun gracefulAppRestart(ctx: android.content.Context) {
     Box(
         Modifier
             .fillMaxSize()
-            .background(Color(0xFF04161A))
+            .background(Mascot.color(0xFF04161A))
             .statusBarsPadding()
             .navigationBarsPadding()
             .padding(24.dp)
@@ -6426,7 +6426,7 @@ private fun gracefulAppRestart(ctx: android.content.Context) {
                 Spacer(Modifier.height(16.dp))
                 Text("ROOT (SU)", color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Black, fontFamily = AudiowideFont)
                 Spacer(Modifier.height(6.dp))
-                Text("HiBy M500 Hatsune Miku Edition", color = MikuTealBright, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                Text("HiBy M500 ${Mascot.edition}", color = MikuTealBright, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
 
                 Spacer(Modifier.height(28.dp))
 
@@ -6451,7 +6451,7 @@ private fun gracefulAppRestart(ctx: android.content.Context) {
                     Modifier
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(12.dp))
-                        .background(Color(0xFF0F2B2E))
+                        .background(Mascot.color(0xFF0F2B2E))
                         .padding(14.dp)
                 ) {
                     Text(
@@ -6470,11 +6470,11 @@ private fun gracefulAppRestart(ctx: android.content.Context) {
                         .fillMaxWidth()
                         .height(50.dp)
                         .clip(RoundedCornerShape(25.dp))
-                        .background(Brush.horizontalGradient(listOf(MikuTealBright, Color(0xFF00E5FF))))
+                        .background(Brush.horizontalGradient(listOf(MikuTealBright, Mascot.color(0xFF00E5FF))))
                         .clickable(onClick = onConfirm),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text("ENABLE PRIVILEGED ACCESS", color = Color(0xFF04161A), fontSize = 13.sp, fontWeight = FontWeight.Black, letterSpacing = 0.8.sp)
+                    Text("ENABLE PRIVILEGED ACCESS", color = Mascot.color(0xFF04161A), fontSize = 13.sp, fontWeight = FontWeight.Black, letterSpacing = 0.8.sp)
                 }
 
                 Spacer(Modifier.height(10.dp))
@@ -6955,7 +6955,7 @@ private fun alarmSummary(a: Alarm): String {
             onValueChange = onValueChange,
             modifier = Modifier.weight(1f),
             singleLine = true,
-            textStyle = androidx.compose.ui.text.TextStyle(color = Color(0xFFE8F4F2), fontSize = 13.5.sp, fontWeight = FontWeight.Medium),
+            textStyle = androidx.compose.ui.text.TextStyle(color = Mascot.color(0xFFE8F4F2), fontSize = 13.5.sp, fontWeight = FontWeight.Medium),
             cursorBrush = androidx.compose.ui.graphics.SolidColor(Color(0xFFD51007)),
             visualTransformation = if (isPassword) androidx.compose.ui.text.input.PasswordVisualTransformation() else androidx.compose.ui.text.input.VisualTransformation.None,
             keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
@@ -6984,7 +6984,7 @@ private fun alarmSummary(a: Alarm): String {
     verticalAlignment = Alignment.CenterVertically
 ) {
     Column(Modifier.weight(1f)) {
-        Text(title, color = Color(0xFFE8F4F2), fontSize = 14.5.sp, fontWeight = FontWeight.SemiBold)
+        Text(title, color = Mascot.color(0xFFE8F4F2), fontSize = 14.5.sp, fontWeight = FontWeight.SemiBold)
         Text(subtitle, color = Muted, fontSize = 12.sp)
     }
     Spacer(Modifier.width(8.dp))
@@ -6997,7 +6997,7 @@ private fun alarmSummary(a: Alarm): String {
 @Composable private fun HeartToggle(checked: Boolean, onCheckedChange: ((Boolean) -> Unit)? = null) {
     val ctx = LocalContext.current
     val thumbOffset by animateDpAsState(if (checked) 24.dp else 2.dp, spring(dampingRatio = 0.55f), label = "heartToggleOffset")
-    val trackColor by animateColorAsState(if (checked) MikuTealBright.copy(alpha = 0.28f) else Color(0xFF123438), label = "heartToggleTrack")
+    val trackColor by animateColorAsState(if (checked) MikuTealBright.copy(alpha = 0.28f) else Mascot.color(0xFF123438), label = "heartToggleTrack")
     val heartColor by animateColorAsState(if (checked) MikuPink else Muted, label = "heartToggleColor")
     val heartScale by animateFloatAsState(if (checked) 1.08f else 0.9f, spring(dampingRatio = 0.5f), label = "heartToggleScale")
     Box(
@@ -7031,7 +7031,7 @@ private fun alarmSummary(a: Alarm): String {
     }
 }
 
-@Composable private fun CircleArt() = Box(Modifier.size(46.dp).clip(RoundedCornerShape(50)).background(Color(0xFF123438)),
+@Composable private fun CircleArt() = Box(Modifier.size(46.dp).clip(RoundedCornerShape(50)).background(Mascot.color(0xFF123438)),
     contentAlignment = Alignment.Center) { Icon(Icons.Default.Person, null, tint = MikuTeal.copy(alpha = .6f)) }
 
 /**
@@ -7100,7 +7100,7 @@ object TransportShapes {
         modifier = modifier
             .drawBehind {
                 val rr = CornerRadius(cornerRadius.toPx(), cornerRadius.toPx())
-                drawRoundRect(Brush.verticalGradient(listOf(Color(0xFF030C10), Color(0xFF0B2226))), cornerRadius = rr)
+                drawRoundRect(Brush.verticalGradient(listOf(Mascot.color(0xFF030C10), Mascot.color(0xFF0B2226))), cornerRadius = rr)
                 // inset shadow biting in from the top edge (recessed, not raised)
                 drawRoundRect(
                     Brush.verticalGradient(listOf(Color(0x8A000000), Color.Transparent), endY = size.height * 0.55f),
@@ -7249,8 +7249,8 @@ object TransportShapes {
                             listOf(
                                 palette.color2.copy(alpha = 0.88f),
                                 palette.color1.copy(alpha = 0.20f),
-                                Color(0xF2051114),
-                                Color(0xFA02080A)
+                                Mascot.color(0xF2051114),
+                                Mascot.color(0xFA02080A)
                             )
                         )
                     )
@@ -7274,7 +7274,7 @@ object TransportShapes {
                         Brush.horizontalGradient(listOf(palette.color1, MikuTealBright))
                     }
                     Box(
-                        Modifier.fillMaxWidth().height(3.dp).background(Color(0xFF07201F))
+                        Modifier.fillMaxWidth().height(3.dp).background(Mascot.color(0xFF07201F))
                             .drawBehind {
                                 val w = size.width * progress.value.coerceIn(0f, 1f)
                                 if (w > 0f) drawRect(progressBrush, size = Size(w, size.height))
@@ -7297,11 +7297,11 @@ object TransportShapes {
                         Spacer(Modifier.width(9.dp))
                         val line = remember(track.id, track.title, track.artist, track.album, displayYear, palette.color1) {
                             androidx.compose.ui.text.buildAnnotatedString {
-                                withStyle(androidx.compose.ui.text.SpanStyle(color = Color(0xFFEAF6F4), fontWeight = FontWeight.Bold)) { append(track.title) }
-                                withStyle(androidx.compose.ui.text.SpanStyle(color = Color(0x88EAF6F4))) { append("   ·   ") }
+                                withStyle(androidx.compose.ui.text.SpanStyle(color = Mascot.color(0xFFEAF6F4), fontWeight = FontWeight.Bold)) { append(track.title) }
+                                withStyle(androidx.compose.ui.text.SpanStyle(color = Mascot.color(0x88EAF6F4))) { append("   ·   ") }
                                 withStyle(androidx.compose.ui.text.SpanStyle(color = palette.color1, fontWeight = FontWeight.SemiBold)) { append(track.artist) }
                                 if (track.album.isNotBlank()) {
-                                    withStyle(androidx.compose.ui.text.SpanStyle(color = Color(0x88EAF6F4))) { append("   ·   ") }
+                                    withStyle(androidx.compose.ui.text.SpanStyle(color = Mascot.color(0x88EAF6F4))) { append("   ·   ") }
                                     withStyle(androidx.compose.ui.text.SpanStyle(color = Color(0xFFC9DEDB))) { append(track.album) }
                                     if (displayYear != null) withStyle(androidx.compose.ui.text.SpanStyle(color = MikuGold)) { append("  $displayYear") }
                                 }
@@ -7376,7 +7376,7 @@ object TransportShapes {
                                 keyShape = TransportShapes.hero,
                                 modifier = Modifier.size(width = 46.dp, height = 34.dp)
                             ) {
-                                PlayPauseGlyph(isPlaying, tint = Color(0xFF00201D), size = 20.dp)
+                                PlayPauseGlyph(isPlaying, tint = Mascot.color(0xFF00201D), size = 20.dp)
                             }
                             HapticIconButton(
                                 onClick = { player.seekToNextMediaItem() },
@@ -7513,7 +7513,7 @@ private val STORAGE_ROOT_RE = Regex("^(/storage/[^/]+)")
         modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(18.dp))
-            .background(Brush.verticalGradient(listOf(Surface1, Color(0xFF0A2528))))
+            .background(Brush.verticalGradient(listOf(Surface1, Mascot.color(0xFF0A2528))))
             .border(1.dp, MikuTealBright.copy(alpha = 0.25f), RoundedCornerShape(18.dp))
             .padding(16.dp)
     ) {
@@ -7576,9 +7576,9 @@ private val STORAGE_ROOT_RE = Regex("^(/storage/[^/]+)")
 
         Spacer(Modifier.height(10.dp))
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(Icons.Default.Schedule, null, tint = Color(0xFFB388FF), modifier = Modifier.size(14.dp))
+            Icon(Icons.Default.Schedule, null, tint = Mascot.color(0xFFB388FF), modifier = Modifier.size(14.dp))
             Spacer(Modifier.width(6.dp))
-            Text(fmtDurationLong(stats.totalDurationMs), color = Color(0xFFB388FF), fontSize = 13.sp, fontWeight = FontWeight.Black, fontFamily = OrbitronFont)
+            Text(fmtDurationLong(stats.totalDurationMs), color = Mascot.color(0xFFB388FF), fontSize = 13.sp, fontWeight = FontWeight.Black, fontFamily = OrbitronFont)
             Spacer(Modifier.width(5.dp))
             Text("total listening time", color = Muted, fontSize = 10.5.sp)
         }
@@ -7616,7 +7616,7 @@ private val STORAGE_ROOT_RE = Regex("^(/storage/[^/]+)")
             val inset = stroke / 2f
             val arcSize = androidx.compose.ui.geometry.Size(size.width - stroke, size.height - stroke)
             val topLeft = Offset(inset, inset)
-            drawArc(Color(0xFF12292C), 0f, 360f, false, topLeft, arcSize, style = Stroke(stroke, cap = StrokeCap.Round))
+            drawArc(Mascot.color(0xFF12292C), 0f, 360f, false, topLeft, arcSize, style = Stroke(stroke, cap = StrokeCap.Round))
             drawArc(Color(0xFF4FC3F7), -90f, animUsed * 360f, false, topLeft, arcSize, style = Stroke(stroke, cap = StrokeCap.Round))
             if (animLib > 0.002f) {
                 val libInset = stroke * 1.1f
@@ -7668,12 +7668,12 @@ private fun fmtDurationLong(ms: Long): String {
 
 @Composable private fun LibRow(icon: androidx.compose.ui.graphics.vector.ImageVector, title: String, sub: String, tint: Color, onClick: () -> Unit) = Row(
     Modifier.fillMaxWidth().clickable { onClick() }.padding(horizontal = 16.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-    Box(Modifier.size(46.dp).clip(RoundedCornerShape(10.dp)).background(Color(0xFF123438)), contentAlignment = Alignment.Center) {
+    Box(Modifier.size(46.dp).clip(RoundedCornerShape(10.dp)).background(Mascot.color(0xFF123438)), contentAlignment = Alignment.Center) {
         Icon(icon, null, tint = tint)
     }
     Spacer(Modifier.width(12.dp))
     Column(Modifier.weight(1f)) {
-        Text(title, color = Color(0xFFE8F4F2), fontSize = 16.sp, fontWeight = FontWeight.Medium)
+        Text(title, color = Mascot.color(0xFFE8F4F2), fontSize = 16.sp, fontWeight = FontWeight.Medium)
         Text(sub, color = Muted, fontSize = 12.sp)
     }
     Icon(Icons.Default.ChevronRight, null, tint = Muted)
@@ -7687,9 +7687,9 @@ private fun fmtDurationLong(ms: Long): String {
     Modifier.fillMaxSize().padding(32.dp), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
     Icon(Icons.Default.MusicNote, null, tint = MikuTeal, modifier = Modifier.size(64.dp))
     Spacer(Modifier.height(16.dp))
-    Text("Miku Music needs access to your audio", color = Color(0xFFE8F4F2), fontSize = 16.sp)
+    Text("${Mascot.musicAppName} needs access to your audio", color = Mascot.color(0xFFE8F4F2), fontSize = 16.sp)
     Spacer(Modifier.height(20.dp))
-    Button(onClick = onGrant, colors = ButtonDefaults.buttonColors(containerColor = MikuTeal)) { Text("Grant access", color = Color(0xFF00201D)) }
+    Button(onClick = onGrant, colors = ButtonDefaults.buttonColors(containerColor = MikuTeal)) { Text("Grant access", color = Mascot.color(0xFF00201D)) }
 }
 
 /** Shown instead of the whole app on anything that isn't the HiBy M500 — see isSupportedDevice(). */
@@ -7697,7 +7697,7 @@ private fun fmtDurationLong(ms: Long): String {
     Column(Modifier.padding(32.dp), horizontalAlignment = Alignment.CenterHorizontally) {
         Icon(Icons.Default.MusicNote, null, tint = MikuTeal, modifier = Modifier.size(56.dp))
         Spacer(Modifier.height(16.dp))
-        Text("Miku Music is built for the HiBy M500", color = Color(0xFFE8F4F2), fontSize = 17.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
+        Text("${Mascot.musicAppName} is built for the HiBy M500", color = Mascot.color(0xFFE8F4F2), fontSize = 17.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
         Spacer(Modifier.height(8.dp))
         Text(
             "It relies on this device's own hardware (DAC/amp controls, side transport keys, on-device library) and won't run anywhere else.",

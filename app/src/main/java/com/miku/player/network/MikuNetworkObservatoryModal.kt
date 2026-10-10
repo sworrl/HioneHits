@@ -1,5 +1,7 @@
 package com.miku.player.network
 
+import com.miku.player.Mascot
+import com.miku.player.mascotPainter
 import android.content.Context
 import android.content.Intent
 import android.provider.Settings
@@ -79,8 +81,8 @@ fun Cyber3dIconButton(
                 .background(
                     Brush.verticalGradient(
                         listOf(
-                            Color(0xEE16303E),
-                            Color(0xFF081822)
+                            Mascot.color(0xEE16303E),
+                            Mascot.color(0xFF081822)
                         )
                     )
                 )
@@ -173,7 +175,7 @@ fun MikuNetworkObservatoryModal(
     Box(
         Modifier
             .fillMaxSize()
-            .background(Color(0xEB040D12))
+            .background(Mascot.color(0xEB040D12))
             .clickable { onDismissRequest() }
             .swipeUpFromBottomToDismiss(onDismiss = onDismissRequest)
     ) {
@@ -203,9 +205,9 @@ fun MikuNetworkObservatoryModal(
                     .background(
                         Brush.verticalGradient(
                             listOf(
-                                Color(0xFA09222E),
-                                Color(0xFF04121A),
-                                Color(0xFF02090D)
+                                Mascot.color(0xFA09222E),
+                                Mascot.color(0xFF04121A),
+                                Mascot.color(0xFF02090D)
                             )
                         )
                     )
@@ -226,8 +228,8 @@ fun MikuNetworkObservatoryModal(
             ) {
                 // Frosted Watermark of Task-Specific Telecom & RF Announcer Miku Art
                 Image(
-                    painter = painterResource(R.drawable.miku_dj_megaphone),
-                    contentDescription = "Miku artwork",
+                    painter = mascotPainter(R.drawable.miku_dj_megaphone),
+                    contentDescription = "${Mascot.name} artwork",
                     modifier = Modifier
                         .fillMaxSize()
                         .align(Alignment.Center)
@@ -363,12 +365,12 @@ private fun MikuNetObsHeaderBar(
                 Modifier
                     .size(34.dp)
                     .clip(CutCornerShape(8.dp))
-                    .background(Color(0x3300E5FF))
+                    .background(Mascot.color(0x3300E5FF))
                     .border(1.dp, MikuCyan, CutCornerShape(8.dp)),
                 contentAlignment = Alignment.Center
             ) {
                 Image(
-                    painter = painterResource(R.drawable.miku_dj_megaphone),
+                    painter = mascotPainter(R.drawable.miku_dj_megaphone),
                     contentDescription = null,
                     modifier = Modifier.size(28.dp)
                 )
@@ -406,7 +408,7 @@ private fun MikuNetObsHeaderBar(
                 onCheckedChange = { MikuNetworkService.setWifiEnabled(ctx, it) },
                 colors = SwitchDefaults.colors(
                     checkedThumbColor = MikuCyan,
-                    checkedTrackColor = Color(0x3300E5FF),
+                    checkedTrackColor = Mascot.color(0x3300E5FF),
                     uncheckedThumbColor = Color.Gray,
                     uncheckedTrackColor = Color(0x22FFFFFF)
                 ),
@@ -474,16 +476,16 @@ private fun MikuNetObsConnectedWifiHero(
                     .background(
                         Brush.verticalGradient(
                             listOf(
-                                Color(0xEE0C2936),
-                                Color(0xFF04141E),
-                                Color(0xFF020B10)
+                                Mascot.color(0xEE0C2936),
+                                Mascot.color(0xFF04141E),
+                                Mascot.color(0xFF020B10)
                             )
                         )
                     )
                     .border(
                         BorderStroke(
                             1.dp,
-                            Brush.linearGradient(listOf(MikuCyan, Color(0x3300E5FF), Color(0xFF2979FF)))
+                            Brush.linearGradient(listOf(MikuCyan, Mascot.color(0x3300E5FF), Color(0xFF2979FF)))
                         ),
                         CutCornerShape(11.dp)
                     )
@@ -587,7 +589,7 @@ private fun MikuNetObsConnectedWifiHero(
                         Modifier
                             .fillMaxWidth()
                             .clip(CutCornerShape(6.dp))
-                            .background(Color(0x66020A0E))
+                            .background(Mascot.color(0x66020A0E))
                             .border(0.5.dp, CyberGlassBorder.copy(alpha = 0.4f), CutCornerShape(6.dp))
                             .padding(8.dp),
                         verticalArrangement = Arrangement.spacedBy(3.dp)
@@ -659,7 +661,7 @@ private fun MikuNetObsConnectedWifiHero(
                                     .fillMaxSize()
                                     .padding(1.dp)
                                     .clip(CutCornerShape(5.dp))
-                                    .background(Color(0xEE102430))
+                                    .background(Mascot.color(0xEE102430))
                                     .border(1.dp, CyberGlassBorder, CutCornerShape(5.dp)),
                                 contentAlignment = Alignment.Center
                             ) {
@@ -723,7 +725,7 @@ private fun MikuNetObsAvailableApList(
             Modifier
                 .fillMaxWidth()
                 .clip(CutCornerShape(8.dp))
-                .background(Color(0x220A222C))
+                .background(Mascot.color(0x220A222C))
                 .border(1.dp, CyberGlassBorder, CutCornerShape(8.dp))
                 .padding(14.dp),
             contentAlignment = Alignment.Center
@@ -766,7 +768,7 @@ private fun MikuNetObsAvailableApList(
                             .fillMaxWidth()
                             .padding(1.dp)
                             .clip(CutCornerShape(7.dp))
-                            .background(Color(0xEE091F2A))
+                            .background(Mascot.color(0xEE091F2A))
                             .border(1.dp, if (ap.isSaved) MikuCyan.copy(alpha = 0.6f) else CyberGlassBorder.copy(alpha = 0.4f), CutCornerShape(7.dp))
                             .padding(horizontal = 10.dp, vertical = 8.dp)
                     ) {
@@ -810,7 +812,7 @@ private fun MikuNetObsAvailableApList(
                                         Box(
                                             Modifier
                                                 .clip(CutCornerShape(3.dp))
-                                                .background(if (ap.bandLabel == "5GHz") Color(0x3300E5FF) else Color(0x22FFFFFF))
+                                                .background(if (ap.bandLabel == "5GHz") Mascot.color(0x3300E5FF) else Color(0x22FFFFFF))
                                                 .padding(horizontal = 4.dp, vertical = 1.dp)
                                         ) {
                                             Text(ap.bandLabel, color = if (ap.bandLabel == "5GHz") MikuCyan else Color.LightGray, fontSize = 6.5.sp, fontWeight = FontWeight.Bold)
@@ -901,7 +903,7 @@ private fun MikuNetObsChannelSpectrogram(
                 .fillMaxWidth()
                 .padding(1.dp)
                 .clip(CutCornerShape(9.dp))
-                .background(Color(0xFF031018))
+                .background(Mascot.color(0xFF031018))
                 .border(1.dp, CyberGlassBorder.copy(alpha = 0.5f), CutCornerShape(9.dp))
                 .padding(10.dp)
         ) {
@@ -928,7 +930,7 @@ private fun MikuNetObsChannelSpectrogram(
                                 Modifier
                                     .width(42.dp)
                                     .clip(CutCornerShape(4.dp))
-                                    .background(Color(0x2200E5FF))
+                                    .background(Mascot.color(0x2200E5FF))
                                     .border(0.5.dp, MikuCyan.copy(alpha = 0.4f), CutCornerShape(4.dp))
                                     .padding(4.dp),
                                 contentAlignment = Alignment.Center
@@ -1012,7 +1014,7 @@ private fun MikuNetObsHardwareControls(
                 .fillMaxWidth()
                 .padding(1.dp)
                 .clip(CutCornerShape(9.dp))
-                .background(Color(0xEE0A232F))
+                .background(Mascot.color(0xEE0A232F))
                 .border(1.dp, CyberGlassBorder.copy(alpha = 0.5f), CutCornerShape(9.dp))
                 .padding(10.dp)
         ) {
@@ -1044,7 +1046,7 @@ private fun MikuNetObsHardwareControls(
                     )
                 }
 
-                HorizontalDivider(color = Color(0x2200E5FF))
+                HorizontalDivider(color = Mascot.color(0x2200E5FF))
 
                 Row(
                     Modifier.fillMaxWidth(),
@@ -1064,7 +1066,7 @@ private fun MikuNetObsHardwareControls(
                     )
                 }
 
-                HorizontalDivider(color = Color(0x2200E5FF))
+                HorizontalDivider(color = Mascot.color(0x2200E5FF))
 
                 Row(
                     Modifier.fillMaxWidth(),
@@ -1137,7 +1139,7 @@ private fun MikuNetObsWireGuardCard(
                 .fillMaxWidth()
                 .padding(1.dp)
                 .clip(CutCornerShape(9.dp))
-                .background(Color(0xEE081F26))
+                .background(Mascot.color(0xEE081F26))
                 .border(1.dp, Color(0xFF00E676).copy(alpha = 0.5f), CutCornerShape(9.dp))
                 .padding(10.dp)
         ) {
@@ -1154,7 +1156,7 @@ private fun MikuNetObsWireGuardCard(
                                 Modifier
                                     .size(7.dp)
                                     .clip(CircleShape)
-                                    .background(if (isHomeWifi) Color(0xFF00E5FF) else Color(0xFF00E676))
+                                    .background(if (isHomeWifi) Mascot.color(0xFF00E5FF) else Color(0xFF00E676))
                             )
                             Spacer(Modifier.width(6.dp))
                             Text(
@@ -1199,7 +1201,7 @@ private fun MikuNetObsWireGuardCard(
                     Modifier
                         .fillMaxWidth()
                         .clip(CutCornerShape(4.dp))
-                        .background(Color(0xFF04131A))
+                        .background(Mascot.color(0xFF04131A))
                         .padding(horizontal = 8.dp, vertical = 6.dp)
                 ) {
                     Column {
@@ -1269,7 +1271,7 @@ private fun MikuNetObsConnectDialog(
                         .fillMaxWidth()
                         .padding(1.dp)
                         .clip(CutCornerShape(13.dp))
-                        .background(Color(0xFF031620))
+                        .background(Mascot.color(0xFF031620))
                         .border(1.dp, MikuCyan, CutCornerShape(13.dp))
                         .padding(14.dp)
                 ) {
@@ -1370,7 +1372,7 @@ private fun MikuNetObsConnectDialog(
                                         .fillMaxSize()
                                         .padding(1.dp)
                                         .clip(CutCornerShape(5.dp))
-                                        .background(Color(0xEE09303E))
+                                        .background(Mascot.color(0xEE09303E))
                                         .border(1.dp, MikuCyan, CutCornerShape(5.dp)),
                                     contentAlignment = Alignment.Center
                                 ) {
@@ -1426,7 +1428,7 @@ private fun MikuNetObsAddHiddenDialog(
                         .fillMaxWidth()
                         .padding(1.dp)
                         .clip(CutCornerShape(13.dp))
-                        .background(Color(0xFF031620))
+                        .background(Mascot.color(0xFF031620))
                         .border(1.dp, MikuNeonPink, CutCornerShape(13.dp))
                         .padding(14.dp)
                 ) {
@@ -1530,7 +1532,7 @@ private fun MikuNetObsAddHiddenDialog(
                                         .fillMaxSize()
                                         .padding(1.dp)
                                         .clip(CutCornerShape(5.dp))
-                                        .background(Color(0xEE3A091E))
+                                        .background(Mascot.color(0xEE3A091E))
                                         .border(1.dp, MikuNeonPink, CutCornerShape(5.dp)),
                                     contentAlignment = Alignment.Center
                                 ) {
@@ -1586,7 +1588,7 @@ private fun MikuNetObsWireGuardQrModal(
                         .fillMaxWidth()
                         .padding(1.dp)
                         .clip(CutCornerShape(13.dp))
-                        .background(Color(0xFF031620))
+                        .background(Mascot.color(0xFF031620))
                         .border(1.dp, Color(0xFF00E676), CutCornerShape(13.dp))
                         .padding(14.dp)
                 ) {
@@ -1624,7 +1626,7 @@ private fun MikuNetObsWireGuardQrModal(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .clip(RoundedCornerShape(8.dp))
-                                    .background(Color(0xFF04121A))
+                                    .background(Mascot.color(0xFF04121A))
                                     .border(1.dp, Color(0xFF00E676).copy(alpha = 0.5f), RoundedCornerShape(8.dp))
                                     .padding(12.dp)
                             ) {

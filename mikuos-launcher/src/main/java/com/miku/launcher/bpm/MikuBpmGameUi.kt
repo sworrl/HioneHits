@@ -1,5 +1,6 @@
 package com.miku.launcher.bpm
 
+import com.miku.launcher.Mascot
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
@@ -45,9 +46,9 @@ import kotlin.random.Random
 // instructions, so anything new goes beside it as small composables.
 
 private val Gold = Color(0xFFFFD166)
-private val Mint = Color(0xFF39C5BB)
+private val Mint get() = Mascot.color(0xFF39C5BB)
 private val Muted = Color(0xFFD8B4E2)
-private val Pink = Color(0xFFFF3385)
+private val Pink get() = Mascot.color(0xFFFF3385)
 
 /**
  * Sheet shake, as a horizontal pixel offset. Read inside graphicsLayer so the shake moves the
@@ -172,7 +173,7 @@ fun MikuCelebrationOverlay(modifier: Modifier = Modifier) {
                 .clip(RoundedCornerShape(22.dp))
                 .background(
                     Brush.verticalGradient(
-                        if (item.secret) listOf(Color(0xF2062A2C), Color(0xF2140818))
+                        if (item.secret) listOf(Mascot.color(0xF2062A2C), Color(0xF2140818))
                         else listOf(Color(0xF22A1A06), Color(0xF2140818))
                     )
                 )
@@ -200,9 +201,9 @@ fun MikuCelebrationOverlay(modifier: Modifier = Modifier) {
                 fontFamily = AudiowideFont, textAlign = TextAlign.Center
             )
             Spacer(Modifier.height(4.dp))
-            Text(item.where, color = Color(0xFF66E0D8), fontSize = 12.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
+            Text(item.where, color = Mascot.color(0xFF66E0D8), fontSize = 12.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
             Spacer(Modifier.height(10.dp))
-            Text(item.howTo, color = Color(0xFFE8F4F2), fontSize = 12.sp, lineHeight = 16.sp, textAlign = TextAlign.Center)
+            Text(item.howTo, color = Mascot.color(0xFFE8F4F2), fontSize = 12.sp, lineHeight = 16.sp, textAlign = TextAlign.Center)
             Spacer(Modifier.height(14.dp))
             val remaining = queue.size - 1
             Text(
@@ -228,7 +229,7 @@ fun BpmSecretMysteryCard() {
             .width(200.dp)
             .fillMaxHeight()
             .clip(RoundedCornerShape(14.dp))
-            .background(Brush.linearGradient(listOf(Color(0x5539C5BB), Color(0x55FF4FA3))))
+            .background(Brush.linearGradient(listOf(Mascot.color(0x5539C5BB), Mascot.color(0x55FF4FA3))))
             .border(1.dp, Mint.copy(alpha = 0.8f), RoundedCornerShape(14.dp))
             .padding(6.dp)
     ) {
@@ -238,8 +239,8 @@ fun BpmSecretMysteryCard() {
                 color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Black, maxLines = 1
             )
             Text(
-                hint?.let { "Clue: $it" } ?: "You found everything. Miku is impressed and a little scared.",
-                color = Color(0xFFE0F7FA), fontSize = 9.sp, lineHeight = 11.sp,
+                hint?.let { "Clue: $it" } ?: "You found everything. ${Mascot.name} is impressed and a little scared.",
+                color = Mascot.color(0xFFE0F7FA), fontSize = 9.sp, lineHeight = 11.sp,
                 maxLines = 3, overflow = TextOverflow.Ellipsis
             )
             Text("$found of $total found. New clue every day.", color = Gold, fontSize = 8.5.sp, fontWeight = FontWeight.Bold, maxLines = 1)
@@ -271,7 +272,7 @@ fun BpmSecretCard(secret: MikuSecrets.Secret) {
                 if (openIntent != null) {
                     Text(
                         "OPEN",
-                        color = Color(0xFF04161A),
+                        color = Mascot.color(0xFF04161A),
                         fontSize = 9.sp, fontWeight = FontWeight.Black,
                         modifier = Modifier
                             .clip(RoundedCornerShape(6.dp))
@@ -286,7 +287,7 @@ fun BpmSecretCard(secret: MikuSecrets.Secret) {
                 if (secret.toggleable) {
                     Text(
                         if (enabled) "ON" else "OFF",
-                        color = if (enabled) Color(0xFF04161A) else Muted,
+                        color = if (enabled) Mascot.color(0xFF04161A) else Muted,
                         fontSize = 9.sp, fontWeight = FontWeight.Black,
                         modifier = Modifier
                             .clip(RoundedCornerShape(6.dp))
@@ -302,7 +303,7 @@ fun BpmSecretCard(secret: MikuSecrets.Secret) {
                     )
                 }
             }
-            Text(secret.where, color = Color(0xFF66E0D8), fontSize = 8.5.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(secret.where, color = Mascot.color(0xFF66E0D8), fontSize = 8.5.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
             Text(secret.howTo, color = Muted, fontSize = 8.5.sp, lineHeight = 10.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
         }
     }

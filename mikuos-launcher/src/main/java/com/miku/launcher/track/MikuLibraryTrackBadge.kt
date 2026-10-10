@@ -1,5 +1,6 @@
 package com.miku.launcher.track
 
+import com.miku.launcher.Mascot
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -34,7 +35,7 @@ fun MikuLibraryTrackBadge(
         modifier = modifier
             .height(24.dp)
             .clip(RoundedCornerShape(12.dp))
-            .background(Color(0xFF04181C))
+            .background(Mascot.color(0xFF04181C))
             .border(1.dp, MikuCyan.copy(alpha = 0.85f), RoundedCornerShape(12.dp))
             .clickable { onClick() }
             .padding(horizontal = 8.dp),

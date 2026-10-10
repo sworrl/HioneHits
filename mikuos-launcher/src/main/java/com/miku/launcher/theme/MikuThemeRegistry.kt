@@ -1,5 +1,6 @@
 package com.miku.launcher.theme
 
+import com.miku.launcher.Mascot
 import android.content.Context
 import android.content.SharedPreferences
 import androidx.compose.ui.graphics.Color
@@ -88,17 +89,17 @@ object MikuThemeRegistry {
      * (720x1280 — the exact M500 panel resolution). This is the "classic" wallpaper-picker
      * entry that already exists in MikuLauncherActivity.kt's `wallpapers` list; this theme
      * entry just gives it a place in the theme system too. */
-    val Default = MikuTheme(
+    val Default get() = MikuTheme(
         id = "default",
         displayName = "Default (Beach)",
-        description = "Miku on the shore at sunrise. This is the default.",
+        description = "${Mascot.name} on the shore at sunrise. This is the default.",
         wallpaperDrawableName = "miku_wallpaper", // already exists: R.drawable.miku_wallpaper
         lockscreenDrawableName = "miku_wallpaper",
         accentPalette = MikuAccentPalette(
-            primary = Color(0xFF39C5BB),   // Miku teal
-            secondary = Color(0xFF7ED6E0), // sea-foam
+            primary = Mascot.color(0xFF39C5BB),   // Miku teal
+            secondary = Mascot.color(0xFF7ED6E0), // sea-foam
             tertiary = Color(0xFFFF9E80),  // coral (her hair-tie / warm accents)
-            background = Color(0xFFEAF6F6)
+            background = Mascot.color(0xFFEAF6F6)
         ),
         keyboardThemeRef = null,
         hasRealArt = true
@@ -107,17 +108,17 @@ object MikuThemeRegistry {
     /** Dedicated art IS bundled (res/drawable-nodpi/theme_halloween_wallpaper.jpg), so hasRealArt is
      * true — it was left false with an "art not sourced yet" description long after the file landed,
      * which would have badged a real theme "coming soon" in the picker. */
-    val Halloween = MikuTheme(
+    val Halloween get() = MikuTheme(
         id = "halloween",
         displayName = "Halloween",
-        description = "Jack-o-lantern Miku, witch hat and candy colors.",
+        description = "Jack-o-lantern ${Mascot.name}, witch hat and candy colors.",
         wallpaperDrawableName = "theme_halloween_wallpaper", // present: res/drawable-nodpi/theme_halloween_wallpaper.jpg
         lockscreenDrawableName = "theme_halloween_wallpaper",
         accentPalette = MikuAccentPalette(
             primary = Color(0xFFFF7518),   // pumpkin orange
             secondary = Color(0xFF6A3FA0), // witch violet
-            tertiary = Color(0xFF39C5BB),  // keep a sliver of Miku teal so it still reads "Miku"
-            background = Color(0xFF140A10)
+            tertiary = Mascot.color(0xFF39C5BB),  // keep a sliver of Miku teal so it still reads "Miku"
+            background = Mascot.color(0xFF140A10)
         ),
         keyboardThemeRef = null,
         hasRealArt = true
@@ -127,17 +128,17 @@ object MikuThemeRegistry {
      * see res/drawable-nodpi/theme_beach_icecream_wallpaper.jpg. The old comment/description still
      * called it a stand-in that "reuses Default's beach art" with hasRealArt = false, which the
      * picker would have shown as a placeholder claim about art that actually exists. */
-    val BeachIcecream = MikuTheme(
+    val BeachIcecream get() = MikuTheme(
         id = "beach_icecream",
         displayName = "Beach (Ice Cream)",
-        description = "Miku with ice cream on the beach.",
+        description = "${Mascot.name} with ice cream on the beach.",
         wallpaperDrawableName = "theme_beach_icecream_wallpaper", // present: res/drawable-nodpi/theme_beach_icecream_wallpaper.jpg
         lockscreenDrawableName = "theme_beach_icecream_wallpaper",
         accentPalette = MikuAccentPalette(
-            primary = Color(0xFF39C5BB),
+            primary = Mascot.color(0xFF39C5BB),
             secondary = Color(0xFFFFB6C1), // strawberry ice-cream pink
             tertiary = Color(0xFFFFF3D6),  // vanilla cream
-            background = Color(0xFFEAF6F6)
+            background = Mascot.color(0xFFEAF6F6)
         ),
         keyboardThemeRef = null,
         hasRealArt = true
@@ -148,15 +149,15 @@ object MikuThemeRegistry {
      * a.k.a. miku_renders/banners/banner_02_waifu_cyber_stage_16x9.jpg — Miku on a neon concert
      * stage holding the cassette-UI DAP). Picked as a bonus built-in theme because it already
      * has finished, on-brand art and a natural teal/magenta accent pair. */
-    val CyberStage = MikuTheme(
+    val CyberStage get() = MikuTheme(
         id = "cyber_stage",
         displayName = "Cyber Stage",
-        description = "Neon concert-stage Miku with the cassette-deck DAP UI.",
+        description = "Neon concert-stage ${Mascot.name} with the cassette-deck DAP UI.",
         wallpaperDrawableName = "miku_banner_cyber_stage", // already exists in res/drawable
         lockscreenDrawableName = "miku_banner_cyber_stage",
         accentPalette = MikuAccentPalette(
-            primary = Color(0xFF39C5BB),
-            secondary = Color(0xFFE03177), // neon magenta
+            primary = Mascot.color(0xFF39C5BB),
+            secondary = Mascot.color(0xFFE03177), // neon magenta
             tertiary = Color(0xFF2F5DFF),  // stage laser blue
             background = Color(0xFF060B18)
         ),
@@ -168,15 +169,15 @@ object MikuThemeRegistry {
      * (source: miku_renders/09_waifu_cozy_cafe.jpg — Miku in a sweater in a warm vinyl/lo-fi
      * lounge, cassette-UI DAP in hand). Second bonus built-in theme; warm palette contrasts
      * nicely with Cyber Stage. */
-    val CozyCafe = MikuTheme(
+    val CozyCafe get() = MikuTheme(
         id = "cozy_cafe",
         displayName = "Cozy Cafe",
-        description = "Lo-fi vinyl lounge Miku in a knit sweater, mug of coffee in frame.",
+        description = "Lo-fi vinyl lounge ${Mascot.name} in a knit sweater, mug of coffee in frame.",
         wallpaperDrawableName = "theme_cozy_cafe_wallpaper", // present: res/drawable-nodpi/theme_cozy_cafe_wallpaper.jpg
         lockscreenDrawableName = "theme_cozy_cafe_wallpaper",
         accentPalette = MikuAccentPalette(
             primary = Color(0xFFD89B4A),   // warm amber / tungsten bulb glow
-            secondary = Color(0xFF4FB3AC), // muted teal
+            secondary = Mascot.color(0xFF4FB3AC), // muted teal
             tertiary = Color(0xFFF0DFC0),  // cream
             background = Color(0xFF2A1B12) // dark wood
         ),

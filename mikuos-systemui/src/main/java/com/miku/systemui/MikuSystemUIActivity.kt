@@ -44,7 +44,7 @@ fun MikuSystemUIConfigScreen(onExit: () -> Unit) {
             TopAppBar(
                 title = {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text("MIKU", color = MikuTealBright, fontSize = 17.sp, fontWeight = FontWeight.Black)
+                        Text("${Mascot.nameUpper}", color = MikuTealBright, fontSize = 17.sp, fontWeight = FontWeight.Black)
                         Text("OS SYSTEMUI", color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.Bold)
                     }
                 },

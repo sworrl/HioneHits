@@ -1,5 +1,6 @@
 package com.miku.settings.pages
 
+import com.miku.settings.Mascot
 import android.app.Activity
 import android.app.KeyguardManager
 import android.app.NotificationManager
@@ -82,12 +83,12 @@ fun SoundPage() {
         item {
             Section {
                 NavRow("DAC settings", "Filter, gain, DRE and USB DAC, in the Hardware app", Icons.Default.Headphones) { com.miku.settings.DacSettingsLink.open(ctx) }
-                NavRow("MikuOS sounds", "Charger, battery, lock, screenshot and other system sounds", Icons.Default.MusicNote) { nav.push("miku_sounds") }
+                NavRow("${Mascot.osName} sounds", "Charger, battery, lock, screenshot and other system sounds", Icons.Default.MusicNote) { nav.push("miku_sounds") }
             }
         }
         item {
             key(tick, refresh) {
-                Section("Volume", note = "MikuOS may hold media volume at the hardware level. These sliders set the Android stream volume.") {
+                Section("Volume", note = "${Mascot.osName} may hold media volume at the hardware level. These sliders set the Android stream volume.") {
                     listOf(
                         AudioManager.STREAM_MUSIC to "Media",
                         AudioManager.STREAM_RING to "Ring",
@@ -125,7 +126,7 @@ fun SoundPage() {
                     ToggleRow("Touch vibration", "Short vibration on taps", p.sys(Settings.System.HAPTIC_FEEDBACK_ENABLED)?.let { it == 1 }) { p.putSys(Settings.System.HAPTIC_FEEDBACK_ENABLED, if (it) 1 else 0) }
                     // MikuOS haptics: checked by the haptics helper in SystemUI, the launcher and
                     // Miku Music. Turning it on also turns on Touch vibration, which HiBy ships off.
-                    ToggleRow("MikuOS haptics", "Clicks and ticks in MikuOS, the launcher and Miku Music", (p.glob("miku_haptics") ?: 1) == 1) {
+                    ToggleRow("${Mascot.osName} haptics", "Clicks and ticks in ${Mascot.osName}, the launcher and ${Mascot.musicAppName}", (p.glob("miku_haptics") ?: 1) == 1) {
                         p.putGlob("miku_haptics", if (it) 1 else 0)
                         if (it) p.putSys(Settings.System.HAPTIC_FEEDBACK_ENABLED, 1)
                     }
@@ -226,8 +227,8 @@ fun DisplayMorePage() {
                         if (runCatching { ui.nightMode = if (it) UiModeManager.MODE_NIGHT_YES else UiModeManager.MODE_NIGHT_NO }.isFailure) toast(ctx, "Dark theme was not changed")
                         refresh++
                     }
-                    ToggleRow("Auto-rotate screen", "MikuOS ships locked to portrait", p.sys(Settings.System.ACCELEROMETER_ROTATION)?.let { it == 1 }) { p.putSys(Settings.System.ACCELEROMETER_ROTATION, if (it) 1 else 0) }
-                    ToggleRow("Android adaptive brightness", "MikuOS has its own ambient light control on the Display & Light page. Turning both on makes them fight.",
+                    ToggleRow("Auto-rotate screen", "${Mascot.osName} ships locked to portrait", p.sys(Settings.System.ACCELEROMETER_ROTATION)?.let { it == 1 }) { p.putSys(Settings.System.ACCELEROMETER_ROTATION, if (it) 1 else 0) }
+                    ToggleRow("Android adaptive brightness", "${Mascot.osName} has its own ambient light control on the Display & Light page. Turning both on makes them fight.",
                         p.sys(Settings.System.SCREEN_BRIGHTNESS_MODE)?.let { it == Settings.System.SCREEN_BRIGHTNESS_MODE_AUTOMATIC }) {
                         p.putSys(Settings.System.SCREEN_BRIGHTNESS_MODE, if (it) Settings.System.SCREEN_BRIGHTNESS_MODE_AUTOMATIC else Settings.System.SCREEN_BRIGHTNESS_MODE_MANUAL)
                     }
@@ -495,7 +496,7 @@ fun A11yServicePage(flat: String) {
                 ToggleRow("Use $label", null, on) {
                     if (it) ask = true else { if (!A11yOps.set(ctx, flat, false)) toast(ctx, "Service was not changed"); refresh++ }
                 }
-                if (isMiku) BodyText("This is part of MikuOS. Turning it off can break the notification shade and gestures.")
+                if (isMiku) BodyText("This is part of ${Mascot.osName}. Turning it off can break the notification shade and gestures.")
                 info.loadDescription(ctx.packageManager)?.let { Spacer(Modifier.height(6.dp)); BodyText(it) }
                 info.settingsActivityName?.let { act ->
                     NavRow("Settings", null) {

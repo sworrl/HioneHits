@@ -1,5 +1,6 @@
 package com.miku.launcher.ui
 
+import com.miku.launcher.Mascot
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -109,7 +110,7 @@ fun Modifier.mikuBeatPulse(accent: Color, corner: Dp = 12.dp, kick: Float = 0.06
  */
 @Composable
 fun MikuBpmGameEntryPill(onClick: () -> Unit, modifier: Modifier = Modifier) {
-    val accent = Color(0xFFFF4FA3)
+    val accent = Mascot.color(0xFFFF4FA3)
     Box(
         modifier
             .mikuBeatPulse(accent, corner = 12.dp)

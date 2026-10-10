@@ -143,9 +143,9 @@ fun resolveAppDisplayLabel(pkg: String, activityName: String = "", rawLabel: Str
         p.contains("radio") && !p.contains("miku") -> "Legacy FM Radio"
         p == "com.hiby.music" || p.contains("hibymusic") -> "Legacy HiBy Music"
         p.contains("hibytape") || p == "com.hiby.tape" -> "Legacy Tape"
-        p == "com.miku.player" && (a.contains("settings") || r.contains("settings")) -> "Miku Settings"
+        p == "com.miku.player" && (a.contains("settings") || r.contains("settings")) -> "${Mascot.name} Settings"
         p == "com.miku.player" && (a.contains("fmradio") || a.contains("radio") || r.contains("radio")) -> "FM Radio"
-        p == "com.miku.player" -> "Miku Music"
+        p == "com.miku.player" -> "${Mascot.musicAppName}"
         else -> rawLabel.ifBlank { "App" }
     }
 }
@@ -562,6 +562,12 @@ fun MikuLauncherScreen() {
         wallpapers.firstOrNull { it.id == currentWallpaperId }?.resId ?: R.drawable.miku_wallpaper
     }
 
+    // Holiday and season art (holiday/HolidayState): replaces the wallpaper only while the
+    // choice is the default one and no gallery picture is set.
+    remember { com.miku.launcher.holiday.HolidayState.start(ctx); true }
+    val seasonalWallpaper = com.miku.launcher.holiday.HolidayState.homeBitmap.value
+        ?.takeIf { currentWallpaperId in com.miku.launcher.holiday.HolidayState.DEFAULT_WALLPAPER_IDS }
+
     var isOnboardingOpen by remember {
         mutableStateOf(!prefs.getBoolean("miku_onboarding_completed", false))
     }
@@ -838,7 +844,7 @@ fun MikuLauncherScreen() {
         // 4. Ensure Miku Suite is explicitly registered
         val mikuSuite = listOf(
             InstalledApp(
-                label = "Miku Music",
+                label = "${Mascot.musicAppName}",
                 packageName = "com.miku.player",
                 activityName = "com.miku.player.MainActivity",
                 iconResId = R.drawable.ic_miku_music_brand,
@@ -847,7 +853,7 @@ fun MikuLauncherScreen() {
                 isSystemApp = false
             ),
             InstalledApp(
-                label = "Miku Settings",
+                label = "${Mascot.name} Settings",
                 packageName = "com.miku.settings",
                 activityName = "com.miku.settings.MikuSettingsActivity",
                 iconResId = R.drawable.ic_settings_miku,
@@ -875,7 +881,8 @@ fun MikuLauncherScreen() {
         allApps = deduped.sortedBy { it.label.lowercase() }
     }
 
-    LaunchedEffect(Unit) {
+    // Keyed on the mascot pack: app names in the drawer and dock come from the active pack.
+    LaunchedEffect(Mascot.id) {
         withContext(Dispatchers.IO) {
             try {
                 loadAllApps()
@@ -988,9 +995,16 @@ fun MikuLauncherScreen() {
                 modifier = Modifier.fillMaxSize().graphicsLayer(),
                 contentScale = ContentScale.Crop
             )
+        } else if (seasonalWallpaper != null) {
+            Image(
+                bitmap = seasonalWallpaper,
+                contentDescription = "Wallpaper",
+                modifier = Modifier.fillMaxSize().graphicsLayer(),
+                contentScale = ContentScale.Crop
+            )
         } else {
             Image(
-                painter = painterResource(id = currentWallpaperRes),
+                painter = mascotPainter(id = currentWallpaperRes),
                 contentDescription = "Wallpaper",
                 modifier = Modifier.fillMaxSize().graphicsLayer(),
                 contentScale = ContentScale.Crop
@@ -1005,9 +1019,9 @@ fun MikuLauncherScreen() {
                 .background(
                     Brush.verticalGradient(
                         listOf(
-                            Color(0x66040D12),
+                            Mascot.color(0x66040D12),
                             Color(0x22000000),
-                            Color(0xCC040D12)
+                            Mascot.color(0xCC040D12)
                         )
                     )
                 )
@@ -1314,7 +1328,7 @@ fun HardwareWidgetsPage(
     }
     Box(Modifier.fillMaxSize()) {
         Image(
-            painter = painterResource(id = R.drawable.miku_bg_page1),
+            painter = mascotPainter(id = R.drawable.miku_bg_page1),
             contentDescription = null,
             modifier = Modifier.fillMaxSize(),
             contentScale = ContentScale.Crop
@@ -1323,7 +1337,7 @@ fun HardwareWidgetsPage(
         Box(
             Modifier
                 .fillMaxSize()
-                .background(Color(0xCC040D12))
+                .background(Mascot.color(0xCC040D12))
         )
 
         Column(
@@ -1456,7 +1470,7 @@ fun CyberRecentsOverview(
     Box(
         Modifier
             .fillMaxSize()
-            .background(Color(0xF2030D14))
+            .background(Mascot.color(0xF2030D14))
             .systemBarsPadding()
             .pointerInput(Unit) {
                 detectTapGestures { onClose() }
@@ -1536,8 +1550,8 @@ fun CyberRecentsOverview(
                                 .background(
                                     Brush.verticalGradient(
                                         listOf(
-                                            Color(0xFF09202C),
-                                            Color(0xFF05121A)
+                                            Mascot.color(0xFF09202C),
+                                            Mascot.color(0xFF05121A)
                                         )
                                     )
                                 )
@@ -1593,7 +1607,7 @@ fun CyberRecentsOverview(
                                     ) {
                                         if (task.iconRes != null) {
                                             Image(
-                                                painter = painterResource(id = task.iconRes),
+                                                painter = mascotPainter(id = task.iconRes),
                                                 contentDescription = null,
                                                 modifier = Modifier.size(26.dp)
                                             )
@@ -1640,14 +1654,14 @@ fun CyberRecentsOverview(
                                         .weight(1f)
                                         .padding(vertical = 10.dp)
                                         .clip(RoundedCornerShape(12.dp))
-                                        .background(Color(0xFF030D12))
+                                        .background(Mascot.color(0xFF030D12))
                                         .border(0.8.dp, CyberGlassBorder.copy(alpha = 0.5f), RoundedCornerShape(12.dp)),
                                     contentAlignment = Alignment.Center
                                 ) {
                                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                         if (task.iconRes != null) {
                                             Image(
-                                                painter = painterResource(id = task.iconRes),
+                                                painter = mascotPainter(id = task.iconRes),
                                                 contentDescription = null,
                                                 modifier = Modifier.size(54.dp)
                                             )
@@ -1689,7 +1703,7 @@ fun CyberRecentsOverview(
             if (tasks.isNotEmpty()) {
                 Button(
                     onClick = onClearAll,
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0x33FF4081)),
+                    colors = ButtonDefaults.buttonColors(containerColor = Mascot.color(0x33FF4081)),
                     border = BorderStroke(1.dp, MikuNeonPink),
                     shape = RoundedCornerShape(16.dp),
                     modifier = Modifier.height(42.dp)
@@ -1719,7 +1733,7 @@ fun CyberAppContextDialog(
             alpha = appear.value.coerceIn(0f, 1f)
         },
         onDismissRequest = onDismiss,
-        containerColor = Color(0xF504141E),
+        containerColor = Mascot.color(0xF504141E),
         tonalElevation = 12.dp,
         shape = CutCornerShape(16.dp),
         title = {
@@ -1750,7 +1764,7 @@ fun CyberAppContextDialog(
                         onTogglePinDesktop()
                         onDismiss()
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0x3300E5FF)),
+                    colors = ButtonDefaults.buttonColors(containerColor = Mascot.color(0x3300E5FF)),
                     border = BorderStroke(1.dp, MikuCyan.copy(alpha = 0.8f)),
                     shape = RoundedCornerShape(12.dp),
                     modifier = Modifier.fillMaxWidth().height(42.dp)
@@ -1774,7 +1788,7 @@ fun CyberAppContextDialog(
                     modifier = Modifier.fillMaxWidth().height(42.dp)
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Default.Info, contentDescription = null, tint = Color(0xFF00E5FF), modifier = Modifier.size(16.dp))
+                        Icon(Icons.Default.Info, contentDescription = null, tint = Mascot.color(0xFF00E5FF), modifier = Modifier.size(16.dp))
                         Spacer(Modifier.width(8.dp))
                         Text("App Details", color = Color.White, fontSize = 11.5.sp, fontFamily = AudiowideFont)
                     }
@@ -1848,9 +1862,9 @@ fun CyberDesktopContextMenuModal(
                     .background(
                         Brush.verticalGradient(
                             listOf(
-                                Color(0xFA09222E),
-                                Color(0xFF04121A),
-                                Color(0xFF02090D)
+                                Mascot.color(0xFA09222E),
+                                Mascot.color(0xFF04121A),
+                                Mascot.color(0xFF02090D)
                             )
                         )
                     )
@@ -1888,7 +1902,7 @@ fun CyberDesktopContextMenuModal(
                             onDismiss()
                             onWallpaperAndStyle()
                         },
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0x2200E5FF)),
+                        colors = ButtonDefaults.buttonColors(containerColor = Mascot.color(0x2200E5FF)),
                         border = BorderStroke(1.dp, MikuCyan.copy(alpha = 0.7f)),
                         shape = RoundedCornerShape(12.dp),
                         modifier = Modifier.fillMaxWidth().height(42.dp)
@@ -1907,12 +1921,12 @@ fun CyberDesktopContextMenuModal(
                             onWidgets()
                         },
                         colors = ButtonDefaults.buttonColors(containerColor = Color(0x227C4DFF)),
-                        border = BorderStroke(1.dp, Color(0xFFB388FF).copy(alpha = 0.7f)),
+                        border = BorderStroke(1.dp, Mascot.color(0xFFB388FF).copy(alpha = 0.7f)),
                         shape = RoundedCornerShape(12.dp),
                         modifier = Modifier.fillMaxWidth().height(42.dp)
                     ) {
                         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Default.Widgets, contentDescription = null, tint = Color(0xFFB388FF), modifier = Modifier.size(18.dp))
+                            Icon(Icons.Default.Widgets, contentDescription = null, tint = Mascot.color(0xFFB388FF), modifier = Modifier.size(18.dp))
                             Spacer(Modifier.width(10.dp))
                             Text("Widgets", color = Color.White, fontSize = 11.5.sp, fontFamily = AudiowideFont)
                         }
@@ -1924,7 +1938,7 @@ fun CyberDesktopContextMenuModal(
                             onDismiss()
                             onHomeSettings()
                         },
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0x22FF4081)),
+                        colors = ButtonDefaults.buttonColors(containerColor = Mascot.color(0x22FF4081)),
                         border = BorderStroke(1.dp, MikuNeonPink.copy(alpha = 0.7f)),
                         shape = RoundedCornerShape(12.dp),
                         modifier = Modifier.fillMaxWidth().height(42.dp)
@@ -1975,7 +1989,7 @@ fun CyberAllAppsDrawer(
     ) {
         // Waifu Streetwear Tokyo App Drawer Artwork Backdrop (06_waifu_streetwear_tokyo.jpg)
         Image(
-            painter = painterResource(id = R.drawable.miku_drawer_bg_tokyo),
+            painter = mascotPainter(id = R.drawable.miku_drawer_bg_tokyo),
             contentDescription = "App drawer background",
             modifier = Modifier.fillMaxSize(),
             contentScale = ContentScale.Crop
@@ -1988,9 +2002,9 @@ fun CyberAllAppsDrawer(
                 .background(
                     Brush.verticalGradient(
                         listOf(
-                            Color(0x66040D12),
-                            Color(0x33040D12),
-                            Color(0x88040D12)
+                            Mascot.color(0x66040D12),
+                            Mascot.color(0x33040D12),
+                            Mascot.color(0x88040D12)
                         )
                     )
                 )
@@ -2234,9 +2248,9 @@ fun DesktopAppIconItem(
         Box(
             Modifier
                 .size(MikuDimens.appIconArt)
-                .then(if (isBpmGame) Modifier.mikuBeatPulse(Color(0xFFFF4FA3), corner = 16.dp, insideCover = true) else Modifier)
+                .then(if (isBpmGame) Modifier.mikuBeatPulse(Mascot.color(0xFFFF4FA3), corner = 16.dp, insideCover = true) else Modifier)
                 .clip(RoundedCornerShape(16.dp))
-                .background(Color(0x1A00E5FF))
+                .background(Mascot.color(0x1A00E5FF))
                 .border(0.8.dp, CyberGlassBorder, RoundedCornerShape(16.dp)),
             contentAlignment = Alignment.Center
         ) {
@@ -2297,7 +2311,7 @@ fun DockIconItem(
             contentAlignment = Alignment.Center
         ) {
             Image(
-                painter = painterResource(id = iconRes),
+                painter = mascotPainter(id = iconRes),
                 contentDescription = label,
                 modifier = Modifier.fillMaxSize()
             )
@@ -2423,7 +2437,7 @@ fun launchApp(ctx: Context, app: InstalledApp) {
             ctx.startActivity(legacyIntent, MikuCompositing.optionsFor(ctx, MikuTransitionEvent.SETTINGS))
             return
         }
-        if (app.activityName.contains("Settings", ignoreCase = true) || app.label.contains("Miku Settings", ignoreCase = true) || app.packageName == "com.miku.settings") {
+        if (app.activityName.contains("Settings", ignoreCase = true) || app.label.contains("${Mascot.name} Settings", ignoreCase = true) || app.packageName == "com.miku.settings") {
             val intent = ctx.packageManager.getLaunchIntentForPackage("com.miku.settings")?.apply {
                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED)
             }
@@ -2432,7 +2446,7 @@ fun launchApp(ctx: Context, app: InstalledApp) {
                 return
             }
         }
-        if (app.packageName == "com.miku.player" || app.label.contains("Miku Music", ignoreCase = true)) {
+        if (app.packageName == "com.miku.player" || app.label.contains("${Mascot.musicAppName}", ignoreCase = true)) {
             val intent = Intent().apply {
                 setClassName("com.miku.player", "com.miku.player.MainActivity")
                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED)
@@ -2469,7 +2483,7 @@ fun resolveMatchingApp(allApps: List<InstalledApp>, pkg: String, cls: String): I
             return allApps.firstOrNull { it.activityName.contains("Settings") || it.label.contains("Settings") }
         }
         if (cls.contains("MainActivity") || cls.contains("player")) {
-            return allApps.firstOrNull { it.activityName.contains("MainActivity") || it.label.contains("Miku Music") || it.label.contains("Music") }
+            return allApps.firstOrNull { it.activityName.contains("MainActivity") || it.label.contains("${Mascot.musicAppName}") || it.label.contains("Music") }
         }
     }
     return allApps.firstOrNull { it.packageName == pkg && (it.activityName.isEmpty() || it.activityName == cls || cls.endsWith(it.activityName)) }
@@ -2893,17 +2907,17 @@ fun MikuCyberWeatherGpsBadge(
     val isCloudy = code in listOf(2, 3, 45, 48) || weather.summary.contains("Cloud", ignoreCase = true) || weather.summary.contains("Overcast", ignoreCase = true)
 
     val badgeGradient = when {
-        isThunder -> listOf(Color(0xF020083B), Color(0xFA0B0218), Color(0xF02A042A))
-        isRain -> listOf(Color(0xF003202E), Color(0xFA02121A), Color(0xF0011C24))
-        isSnow -> listOf(Color(0xF006243A), Color(0xFA051726), Color(0xF00C2E42))
+        isThunder -> listOf(Color(0xF020083B), Color(0xFA0B0218), Mascot.color(0xF02A042A))
+        isRain -> listOf(Mascot.color(0xF003202E), Mascot.color(0xFA02121A), Mascot.color(0xF0011C24))
+        isSnow -> listOf(Color(0xF006243A), Color(0xFA051726), Mascot.color(0xF00C2E42))
         isNight -> listOf(Color(0xF0051120), Color(0xFA020912), Color(0xF00A1324))
-        isCloudy -> listOf(Color(0xF00C202B), Color(0xFA07151D), Color(0xF012222D))
-        else -> listOf(Color(0xF01A2412), Color(0xFA0A1810), Color(0xF0071C26)) // Sunny/Clear Day
+        isCloudy -> listOf(Mascot.color(0xF00C202B), Mascot.color(0xFA07151D), Mascot.color(0xF012222D))
+        else -> listOf(Color(0xF01A2412), Color(0xFA0A1810), Mascot.color(0xF0071C26)) // Sunny/Clear Day
     }
 
     val rimColor = when {
         isThunder -> Color(0xFFE040FB)
-        isRain -> Color(0xFF00E5FF)
+        isRain -> Mascot.color(0xFF00E5FF)
         isSnow -> Color(0xFF80D8FF)
         isNight -> Color(0xFF7C4DFF)
         isCloudy -> Color(0xFF40C4FF)
@@ -2953,7 +2967,7 @@ fun MikuCyberWeatherGpsBadge(
                             strokeWidth = 1.5f
                         )
                         drawLine(
-                            color = Color(0xFF00E5FF),
+                            color = Mascot.color(0xFF00E5FF),
                             start = Offset(w * 0.52f, h * 0.55f),
                             end = Offset(w * 0.48f, h),
                             strokeWidth = 1.2f
@@ -2966,7 +2980,7 @@ fun MikuCyberWeatherGpsBadge(
                         val rx = (idx * 27f + weatherAnimPhase * 40f) % w
                         val ry = (idx * 13f + weatherAnimPhase * h * 2.2f) % h
                         drawLine(
-                            color = Color(0x6600E5FF),
+                            color = Mascot.color(0x6600E5FF),
                             start = Offset(rx, ry),
                             end = Offset(rx - 4f, ry + 7f),
                             strokeWidth = 1.1f
@@ -3077,7 +3091,7 @@ fun MikuCyberWeatherGpsBadge(
                     ) {
                         Text("▲${weather.highTempF.toInt()}°", color = Color(0xFFFF5252), fontSize = 11.sp, fontWeight = FontWeight.Bold)
                         Spacer(Modifier.width(3.dp))
-                        Text("▼${weather.lowTempF.toInt()}°", color = Color(0xFF00E5FF), fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        Text("▼${weather.lowTempF.toInt()}°", color = Mascot.color(0xFF00E5FF), fontSize = 11.sp, fontWeight = FontWeight.Bold)
                     }
                 }
 
@@ -3109,7 +3123,7 @@ fun MikuCyberWeatherGpsBadge(
                     Text(if (wxReal) "${weather.windSpeedMph.toInt()}mph" else "Wind —", color = MikuTextSecondary, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                     if (wxReal && weather.precipitationProbPct > 0) {
                         Spacer(Modifier.width(4.dp))
-                        Text("${weather.precipitationProbPct}% rain", color = Color(0xFFFF80AB), fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        Text("${weather.precipitationProbPct}% rain", color = Mascot.color(0xFFFF80AB), fontSize = 11.sp, fontWeight = FontWeight.Bold)
                     }
                 }
 
@@ -3207,8 +3221,8 @@ fun ConnectedRfNetworkCapsule(
                 .background(
                     Brush.horizontalGradient(
                         listOf(
-                            Color(0xEE08202A),
-                            Color(0xFF041218),
+                            Mascot.color(0xEE08202A),
+                            Mascot.color(0xFF041218),
                             Color(0xEE061C14)
                         )
                     )
@@ -3386,8 +3400,8 @@ fun UnifiedWeatherGpsCapsule(
                 .background(
                     Brush.horizontalGradient(
                         listOf(
-                            Color(0xEE08202A),
-                            Color(0xFF041218),
+                            Mascot.color(0xEE08202A),
+                            Mascot.color(0xFF041218),
                             Color(0xEE061C14)
                         )
                     )
@@ -3553,7 +3567,7 @@ fun MikuThermalBadge(
         maxTemp >= 55f -> com.miku.launcher.ui.MikuIdentity.Coral // Hot / Throttle Warning: Red
         maxTemp >= 45f -> Color(0xFFFF9100) // Warm: Amber Orange
         maxTemp >= 38f -> com.miku.launcher.ui.MikuIdentity.Gold // Nominal Warm: Gold
-        maxTemp >= 30f -> Color(0xFF00E5FF) // Cool Nominal: Cyan
+        maxTemp >= 30f -> Mascot.color(0xFF00E5FF) // Cool Nominal: Cyan
         else -> com.miku.launcher.ui.MikuIdentity.Leek           // Low Ambient: Mint Green
     }
 
@@ -3566,7 +3580,7 @@ fun MikuThermalBadge(
     CyberBespokeBadge(
         onClick = onClick,
         accentColor = tempColor,
-        gradient = listOf(tempColor.copy(alpha = 0.28f), Color(0xFF030D14)),
+        gradient = listOf(tempColor.copy(alpha = 0.28f), Mascot.color(0xFF030D14)),
         shape = CutCornerShape(topStart = 4.dp, bottomEnd = 4.dp, topEnd = 4.dp, bottomStart = 4.dp)
     ) {
         Row(
@@ -3605,15 +3619,15 @@ fun MikuBpmEngineBadge(
     val bpmColor = when {
         !isPlaying || liveBpm == 0 -> Color(0xFF8BA6A9)
         liveBpm >= 150 -> com.miku.launcher.ui.MikuIdentity.Coral // Hardcore / Fast: Red
-        liveBpm >= 126 -> Color(0xFFFF4081) // Diva / Vocaloid Dance: Pink
-        liveBpm >= 100 -> Color(0xFF00E5FF) // Pop / Groove: Cyan
+        liveBpm >= 126 -> Mascot.color(0xFFFF4081) // Diva / Vocaloid Dance: Pink
+        liveBpm >= 100 -> Mascot.color(0xFF00E5FF) // Pop / Groove: Cyan
         else -> Color(0xFF00FF7F)           // Lo-Fi / Chill: Mint Green
     }
 
     CyberBespokeBadge(
         onClick = onClick,
         accentColor = bpmColor,
-        gradient = listOf(bpmColor.copy(alpha = if (isPlaying) 0.35f else 0.15f), Color(0xFF030D14)),
+        gradient = listOf(bpmColor.copy(alpha = if (isPlaying) 0.35f else 0.15f), Mascot.color(0xFF030D14)),
         shape = CutCornerShape(topStart = 4.dp, bottomEnd = 4.dp, topEnd = 4.dp, bottomStart = 4.dp)
     ) {
         Row(
@@ -3655,7 +3669,7 @@ fun MikuQuantumBatteryBadge(
     val batteryColor = when {
         !batteryKnown -> MikuTextSecondary
         isCharging -> com.miku.launcher.ui.MikuIdentity.Leek
-        batteryPct > 50 -> Color(0xFF00E5FF)
+        batteryPct > 50 -> Mascot.color(0xFF00E5FF)
         batteryPct > 20 -> com.miku.launcher.ui.MikuIdentity.Gold
         else -> com.miku.launcher.ui.MikuIdentity.Coral
     }
@@ -3681,7 +3695,7 @@ fun MikuQuantumBatteryBadge(
                 Brush.horizontalGradient(
                     listOf(
                         batteryColor.copy(alpha = if (isCharging) 0.35f else 0.20f),
-                        Color(0xFF030D14)
+                        Mascot.color(0xFF030D14)
                     )
                 )
             )
@@ -3715,7 +3729,7 @@ fun MikuQuantumBatteryBadge(
                     .width(18.dp)
                     .height(9.dp)
                     .clip(RoundedCornerShape(1.5.dp))
-                    .background(Color(0xFF02090D))
+                    .background(Mascot.color(0xFF02090D))
                     .border(0.6.dp, batteryColor.copy(alpha = 0.6f), RoundedCornerShape(1.5.dp))
                     .padding(1.dp),
                 horizontalArrangement = Arrangement.spacedBy(0.8.dp),
@@ -3746,7 +3760,7 @@ fun MikuQuantumBatteryBadge(
                 Icon(
                     imageVector = Icons.Default.Bolt,
                     contentDescription = "charging",
-                    tint = Color(0xFF00FFCC),
+                    tint = Mascot.color(0xFF00FFCC),
                     modifier = Modifier.size(13.dp).padding(end = 1.dp)
                 )
             }
@@ -3774,7 +3788,7 @@ fun CyberBespokeBadge(
     modifier: Modifier = Modifier,
     accentColor: Color,
     shape: Shape = CutCornerShape(5.dp),
-    gradient: List<Color> = listOf(Color(0xEE0A222C), Color(0xFF041218)),
+    gradient: List<Color> = listOf(Mascot.color(0xEE0A222C), Mascot.color(0xFF041218)),
     borderAlphaBase: Float = 0.95f,
     content: @Composable RowScope.() -> Unit
 ) {
@@ -3852,7 +3866,7 @@ fun MikuNowPlayingBadge(
         liveBpm >= 100 -> MikuCyan
         else -> Color(0xFF00FF7F)
     }
-    val bandColors = listOf(Color(0xFF00FF7F), MikuCyan, Color(0xFF7FE6DE), MikuNeonPink, com.miku.launcher.ui.MikuIdentity.Coral)
+    val bandColors = listOf(Color(0xFF00FF7F), MikuCyan, Mascot.color(0xFF7FE6DE), MikuNeonPink, com.miku.launcher.ui.MikuIdentity.Coral)
     val nBars = bandColors.size
     val interval = beatIntervalMs.coerceIn(250L, 1500L).toInt()
 
@@ -3874,7 +3888,7 @@ fun MikuNowPlayingBadge(
     CyberBespokeBadge(
         onClick = onClick,
         accentColor = tierColor,
-        gradient = listOf(tierColor.copy(alpha = if (isPlaying) 0.32f else 0.14f), Color(0xFF120410)),
+        gradient = listOf(tierColor.copy(alpha = if (isPlaying) 0.32f else 0.14f), Mascot.color(0xFF120410)),
         shape = CutCornerShape(5.dp)
     ) {
         Row(
@@ -3913,7 +3927,7 @@ fun MikuNowPlayingBadge(
 fun Cyber3dEmbossedPill(
     onClick: (() -> Unit)? = null,
     borderColor: Color = CyberGlassBorder,
-    glowGradient: List<Color> = listOf(Color(0xEE0E242C), Color(0xFF041015)),
+    glowGradient: List<Color> = listOf(Mascot.color(0xEE0E242C), Mascot.color(0xFF041015)),
     content: @Composable RowScope.() -> Unit
 ) {
     val lowPowerGate by com.miku.launcher.ui.rememberAmbientGate()
@@ -3955,7 +3969,7 @@ fun Cyber3dEmbossedPill(
                         Brush.linearGradient(
                             listOf(
                                 borderColor.copy(alpha = shimmerAlpha),
-                                Color(0x2200E5FF),
+                                Mascot.color(0x2200E5FF),
                                 borderColor.copy(alpha = shimmerAlpha * 0.8f)
                             )
                         )
@@ -4218,14 +4232,14 @@ fun CyberPlasmaGlowClock(
             // Layer 1: Ambient Floating Cyber Particles & Stardust Canvas
             val particles = remember {
                 listOf(
-                    Triple(0.12f, 0.25f, Color(0xFF00E5FF)),
-                    Triple(0.28f, 0.65f, Color(0xFFFF007F)),
-                    Triple(0.45f, 0.15f, Color(0xFF00FFCC)),
+                    Triple(0.12f, 0.25f, Mascot.color(0xFF00E5FF)),
+                    Triple(0.28f, 0.65f, Mascot.color(0xFFFF007F)),
+                    Triple(0.45f, 0.15f, Mascot.color(0xFF00FFCC)),
                     Triple(0.58f, 0.80f, Color(0xFFFFFFFF)),
-                    Triple(0.72f, 0.35f, Color(0xFF00E5FF)),
-                    Triple(0.85f, 0.70f, Color(0xFFFF007F)),
+                    Triple(0.72f, 0.35f, Mascot.color(0xFF00E5FF)),
+                    Triple(0.85f, 0.70f, Mascot.color(0xFFFF007F)),
                     Triple(0.92f, 0.20f, com.miku.launcher.ui.MikuIdentity.Leek),
-                    Triple(0.38f, 0.90f, Color(0xFF00E5FF)),
+                    Triple(0.38f, 0.90f, Mascot.color(0xFF00E5FF)),
                     Triple(0.65f, 0.45f, com.miku.launcher.ui.MikuIdentity.Gold)
                 )
             }
@@ -4396,7 +4410,7 @@ fun CyberPlasmaGlowClock(
                     )
                     Text(
                         text = dateParts[1],
-                        color = Color(0xFF56F0E0).copy(alpha = glowAlpha * 0.7f),
+                        color = Mascot.color(0xFF56F0E0).copy(alpha = glowAlpha * 0.7f),
                         fontSize = 13.5.sp,
                         fontWeight = FontWeight.Black,
                         fontFamily = AudiowideFont,
@@ -4415,7 +4429,7 @@ fun CyberPlasmaGlowClock(
                     )
                     Text(
                         text = dateParts[2],
-                        color = Color(0xFFB388FF).copy(alpha = glowAlpha * 0.7f),
+                        color = Mascot.color(0xFFB388FF).copy(alpha = glowAlpha * 0.7f),
                         fontSize = 13.5.sp,
                         fontWeight = FontWeight.Black,
                         fontFamily = AudiowideFont,
@@ -4432,7 +4446,7 @@ fun CyberPlasmaGlowClock(
                 if (dateParts.size == 3) {
                     Text(
                         text = dateParts[0],
-                        color = Color(0xFF80FFFF),
+                        color = Mascot.color(0xFF80FFFF),
                         fontSize = 13.5.sp,
                         fontWeight = FontWeight.Black,
                         fontFamily = AudiowideFont,
@@ -4442,7 +4456,7 @@ fun CyberPlasmaGlowClock(
                     )
                     Text(
                         text = " / ",
-                        color = Color(0xFFFF69B4),
+                        color = Mascot.color(0xFFFF69B4),
                         fontSize = 13.sp,
                         fontWeight = FontWeight.Black,
                         fontFamily = AudiowideFont,
@@ -4451,7 +4465,7 @@ fun CyberPlasmaGlowClock(
                     )
                     Text(
                         text = dateParts[1],
-                        color = Color(0xFF70FFF0),
+                        color = Mascot.color(0xFF70FFF0),
                         fontSize = 13.5.sp,
                         fontWeight = FontWeight.Black,
                         fontFamily = AudiowideFont,
@@ -4461,7 +4475,7 @@ fun CyberPlasmaGlowClock(
                     )
                     Text(
                         text = " / ",
-                        color = Color(0xFFFF69B4),
+                        color = Mascot.color(0xFFFF69B4),
                         fontSize = 13.sp,
                         fontWeight = FontWeight.Black,
                         fontFamily = AudiowideFont,
@@ -4498,12 +4512,12 @@ fun CyberPlasmaGlowClock(
                     horizontalArrangement = Arrangement.spacedBy(1.5.dp),
                     modifier = Modifier.height(11.dp)
                 ) {
-                    Box(Modifier.width(2.dp).height((11 * bar1).dp).clip(RoundedCornerShape(0.5.dp)).background(Brush.verticalGradient(listOf(MikuCyan, Color(0xFF00FFCC)))))
-                    Box(Modifier.width(2.dp).height((11 * bar2).dp).clip(RoundedCornerShape(0.5.dp)).background(Brush.verticalGradient(listOf(MikuNeonPink, Color(0xFFFF4081)))))
+                    Box(Modifier.width(2.dp).height((11 * bar1).dp).clip(RoundedCornerShape(0.5.dp)).background(Brush.verticalGradient(listOf(MikuCyan, Mascot.color(0xFF00FFCC)))))
+                    Box(Modifier.width(2.dp).height((11 * bar2).dp).clip(RoundedCornerShape(0.5.dp)).background(Brush.verticalGradient(listOf(MikuNeonPink, Mascot.color(0xFFFF4081)))))
                     Box(Modifier.width(2.dp).height((11 * bar3).dp).clip(RoundedCornerShape(0.5.dp)).background(Brush.verticalGradient(listOf(Color(0xFF00FF7F), com.miku.launcher.ui.MikuIdentity.Leek))))
                     Box(Modifier.width(2.dp).height((11 * bar4).dp).clip(RoundedCornerShape(0.5.dp)).background(Brush.verticalGradient(listOf(MikuCyan, Color(0xFF00B0FF)))))
-                    Box(Modifier.width(2.dp).height((11 * bar5).dp).clip(RoundedCornerShape(0.5.dp)).background(Brush.verticalGradient(listOf(MikuNeonPink, Color(0xFFFF007F)))))
-                    Box(Modifier.width(2.dp).height((11 * bar6).dp).clip(RoundedCornerShape(0.5.dp)).background(Brush.verticalGradient(listOf(Color(0xFF00FFCC), MikuCyan))))
+                    Box(Modifier.width(2.dp).height((11 * bar5).dp).clip(RoundedCornerShape(0.5.dp)).background(Brush.verticalGradient(listOf(MikuNeonPink, Mascot.color(0xFFFF007F)))))
+                    Box(Modifier.width(2.dp).height((11 * bar6).dp).clip(RoundedCornerShape(0.5.dp)).background(Brush.verticalGradient(listOf(Mascot.color(0xFF00FFCC), MikuCyan))))
                 }
             }
         }
@@ -4529,7 +4543,7 @@ fun CyberNotificationShadeModal(
     Box(
         Modifier
             .fillMaxSize()
-            .background(Color(0xE6040D12))
+            .background(Mascot.color(0xE6040D12))
             .clickable { onClose() }
     ) {
         // High-Tech Cyber Glass Container (Safe screen inset with smooth corners)
@@ -4544,9 +4558,9 @@ fun CyberNotificationShadeModal(
                 .background(
                     Brush.verticalGradient(
                         listOf(
-                            Color(0xFF071922),
-                            Color(0xFF041017),
-                            Color(0xFA020A0E)
+                            Mascot.color(0xFF071922),
+                            Mascot.color(0xFF041017),
+                            Mascot.color(0xFA020A0E)
                         )
                     )
                 )
@@ -4612,7 +4626,7 @@ fun CyberNotificationShadeModal(
                         Box(
                             Modifier
                                 .clip(RoundedCornerShape(12.dp))
-                                .background(Color(0xFF061820))
+                                .background(Mascot.color(0xFF061820))
                                 .border(0.8.dp, MikuCyan.copy(alpha = 0.5f), RoundedCornerShape(12.dp))
                                 .padding(horizontal = 8.dp, vertical = 5.dp)
                         ) {
@@ -4641,7 +4655,7 @@ fun CyberNotificationShadeModal(
                             modifier = Modifier
                                 .size(32.dp)
                                 .clip(CircleShape)
-                                .background(Color(0x3300E5FF))
+                                .background(Mascot.color(0x3300E5FF))
                                 .border(1.dp, MikuCyan, CircleShape)
                         ) {
                             Icon(Icons.Default.Settings, contentDescription = "Settings", tint = MikuCyan, modifier = Modifier.size(16.dp))
@@ -4707,8 +4721,8 @@ fun CyberQuickTile(
                 .clip(RoundedCornerShape(12.dp))
                 .background(
                     Brush.verticalGradient(
-                        if (isActive) listOf(accentColor.copy(alpha = 0.35f), Color(0xFF071922), Color(0xFF030D12))
-                        else listOf(Color(0xEE0B222C), Color(0xFF05131A), Color(0xFF02090D))
+                        if (isActive) listOf(accentColor.copy(alpha = 0.35f), Mascot.color(0xFF071922), Mascot.color(0xFF030D12))
+                        else listOf(Mascot.color(0xEE0B222C), Mascot.color(0xFF05131A), Mascot.color(0xFF02090D))
                     )
                 )
                 .border(
@@ -4717,7 +4731,7 @@ fun CyberQuickTile(
                         Brush.linearGradient(
                             if (isActive) listOf(
                                 accentColor.copy(alpha = 0.95f),
-                                Color(0xFFB388FF).copy(alpha = 0.6f),
+                                Mascot.color(0xFFB388FF).copy(alpha = 0.6f),
                                 accentColor.copy(alpha = 0.8f)
                             )
                             else listOf(
@@ -4838,8 +4852,8 @@ private fun CyberShadeConnectivitySection(isWifiConnected: Boolean) {
             Modifier
                 .weight(1f)
                 .clip(RoundedCornerShape(16.dp))
-                .background(if (isWifiConnected) MikuCyan.copy(alpha = 0.2f) else Color(0xFF081820))
-                .border(1.dp, if (isWifiConnected) MikuCyan else Color(0xFF1E3A45), RoundedCornerShape(16.dp))
+                .background(if (isWifiConnected) MikuCyan.copy(alpha = 0.2f) else Mascot.color(0xFF081820))
+                .border(1.dp, if (isWifiConnected) MikuCyan else Mascot.color(0xFF1E3A45), RoundedCornerShape(16.dp))
                 .clickable {
                     try { ctx.startActivity(Intent(android.provider.Settings.ACTION_WIFI_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK), MikuCompositing.optionsFor(ctx, MikuTransitionEvent.SETTINGS)) } catch (_: Throwable) {}
                 }
@@ -4949,7 +4963,7 @@ private fun CyberShadeSliderSection() {
         Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(16.dp))
-            .background(Color(0xFF081C24))
+            .background(Mascot.color(0xFF081C24))
             .border(1.dp, MikuCyan.copy(alpha = 0.4f), RoundedCornerShape(16.dp))
             .padding(horizontal = 12.dp, vertical = 6.dp)
     ) {
@@ -4971,7 +4985,7 @@ private fun CyberShadeSliderSection() {
                 colors = SliderDefaults.colors(
                     thumbColor = MikuCyan,
                     activeTrackColor = MikuCyan,
-                    inactiveTrackColor = Color(0xFF0D2C35)
+                    inactiveTrackColor = Mascot.color(0xFF0D2C35)
                 ),
                 modifier = Modifier.weight(1f)
             )
@@ -4993,7 +5007,7 @@ private fun CyberShadeSliderSection() {
             Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Icon(Icons.Default.VolumeUp, contentDescription = null, tint = Color(0xFFB388FF), modifier = Modifier.size(18.dp))
+            Icon(Icons.Default.VolumeUp, contentDescription = null, tint = Mascot.color(0xFFB388FF), modifier = Modifier.size(18.dp))
             Spacer(Modifier.width(8.dp))
             Slider(
                 value = streamVol.toFloat(),
@@ -5005,14 +5019,14 @@ private fun CyberShadeSliderSection() {
                 },
                 valueRange = 0f..maxVol.toFloat(),
                 colors = SliderDefaults.colors(
-                    thumbColor = Color(0xFFB388FF),
+                    thumbColor = Mascot.color(0xFFB388FF),
                     activeTrackColor = Color(0xFF7C4DFF),
                     inactiveTrackColor = Color(0xFF140D26)
                 ),
                 modifier = Modifier.weight(1f)
             )
             Spacer(Modifier.width(6.dp))
-            Text("${((streamVol.toFloat() / maxVol.toFloat()) * 100).toInt()}%", color = Color(0xFFB388FF), fontSize = 11.sp, fontFamily = AudiowideFont)
+            Text("${((streamVol.toFloat() / maxVol.toFloat()) * 100).toInt()}%", color = Mascot.color(0xFFB388FF), fontSize = 11.sp, fontFamily = AudiowideFont)
         }
     }
 }
@@ -5404,7 +5418,7 @@ private fun CyberShadeFooterSection(onClose: () -> Unit) {
         Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(16.dp))
-            .background(Color(0x3300E5FF))
+            .background(Mascot.color(0x3300E5FF))
             .border(1.dp, MikuCyan, RoundedCornerShape(16.dp))
             .padding(10.dp)
     ) {
@@ -5450,7 +5464,7 @@ private fun CyberShadeFooterSection(onClose: () -> Unit) {
                     Runtime.getRuntime().exec(arrayOf("su", "-c", "reboot")).waitFor()
                 }
             },
-            colors = ButtonDefaults.buttonColors(containerColor = Color(0x3300E5FF)),
+            colors = ButtonDefaults.buttonColors(containerColor = Mascot.color(0x3300E5FF)),
             border = BorderStroke(1.dp, MikuCyan),
             shape = RoundedCornerShape(12.dp),
             modifier = Modifier.weight(1f).height(42.dp)
@@ -5464,7 +5478,7 @@ private fun CyberShadeFooterSection(onClose: () -> Unit) {
                     Runtime.getRuntime().exec(arrayOf("su", "-c", "reboot -p")).waitFor()
                 }
             },
-            colors = ButtonDefaults.buttonColors(containerColor = Color(0x33FF4081)),
+            colors = ButtonDefaults.buttonColors(containerColor = Mascot.color(0x33FF4081)),
             border = BorderStroke(1.dp, MikuNeonPink),
             shape = RoundedCornerShape(12.dp),
             modifier = Modifier.weight(1f).height(42.dp)
@@ -5609,7 +5623,7 @@ private fun MikuLauncherQuiltSection(
             ) {
                 Box(Modifier.size(5.5.dp).clip(CircleShape).background(Color(0xFF7C4DFF)))
                 Spacer(Modifier.width(3.5.dp))
-                Text("CS43198", color = Color(0xFFB388FF), fontSize = 11.5.sp, fontWeight = FontWeight.Black, fontFamily = AudiowideFont, maxLines = 1)
+                Text("CS43198", color = Mascot.color(0xFFB388FF), fontSize = 11.5.sp, fontWeight = FontWeight.Black, fontFamily = AudiowideFont, maxLines = 1)
             }
         },
         QuiltBadge("ingest", "Network sync") {
@@ -5639,15 +5653,15 @@ private fun MikuLauncherQuiltSection(
         QuiltBadge("battery", "Battery") {
             MikuQuantumBatteryBadge(batteryPct = batteryPct, isCharging = isCharging, onClick = onOpenBattery)
         },
-        QuiltBadge("control", "MikuOS control") {
+        QuiltBadge("control", "${Mascot.osName} control") {
             Box(Modifier.width(96.dp)) {
                 CyberBespokeBadge(
                     onClick = onOpenQuickSettings,
                     accentColor = MikuCyan,
-                    gradient = listOf(Color(0x3300E5FF), Color(0xFF041015)),
+                    gradient = listOf(Mascot.color(0x3300E5FF), Mascot.color(0xFF041015)),
                     shape = IngressStreamShape
                 ) {
-                    Icon(Icons.Default.Tune, contentDescription = "MikuOS control", tint = MikuCyan, modifier = Modifier.size(14.dp))
+                    Icon(Icons.Default.Tune, contentDescription = "${Mascot.osName} control", tint = MikuCyan, modifier = Modifier.size(14.dp))
                     Spacer(Modifier.width(4.dp))
                     Text("CONTROL", color = MikuCyan, fontSize = 11.sp, fontWeight = FontWeight.Bold, fontFamily = AudiowideFont, maxLines = 1)
                 }
@@ -5744,12 +5758,12 @@ private fun MikuLauncherDivaDock(
 
     val rainbowStops = remember {
         listOf(
-            Color(0xFF00E5FF), // Cyan
+            Mascot.color(0xFF00E5FF), // Cyan
             Color(0xFF00FF88), // Mint
             com.miku.launcher.ui.MikuIdentity.Gold, // Gold
-            Color(0xFFFF4081), // Pink
-            Color(0xFFB388FF), // Purple
-            Color(0xFF00E5FF)  // Cyan
+            Mascot.color(0xFFFF4081), // Pink
+            Mascot.color(0xFFB388FF), // Purple
+            Mascot.color(0xFF00E5FF)  // Cyan
         )
     }
 
@@ -5786,7 +5800,7 @@ private fun MikuLauncherDivaDock(
                 .fillMaxWidth()
                 .align(Alignment.BottomCenter)
             .clip(RoundedCornerShape(MikuDimens.cornerL))
-            .background(Brush.verticalGradient(listOf(Color(0xEE0D2630), Color(0xFF06141B))))
+            .background(Brush.verticalGradient(listOf(Mascot.color(0xEE0D2630), Mascot.color(0xFF06141B))))
             .border(
                 BorderStroke(
                     1.dp,
@@ -5828,7 +5842,7 @@ private fun MikuLauncherDivaDock(
                 Spacer(Modifier.size(48.dp))
                 Spacer(Modifier.height(2.dp))
                 Text(
-                    text = "Miku Music",
+                    text = "${Mascot.musicAppName}",
                     color = if (isBpmAudioPlaying) MikuNeonPink else MikuCyan,
                     fontSize = MikuDimens.textXs,
                     fontWeight = FontWeight.Bold,
@@ -5865,7 +5879,7 @@ private fun MikuLauncherDivaDock(
                     .padding(bottom = 24.dp)
                     .mikuPressScale(
                         pressedScale = 0.86f,
-                        glowColor = Color(0xFFFF007F),
+                        glowColor = Mascot.color(0xFFFF007F),
                         interactionSource = mikuMusicInteraction
                     )
                     .clickable(
@@ -5893,7 +5907,7 @@ private fun MikuLauncherDivaDock(
                             Brush.radialGradient(
                                 listOf(
                                     if (isBpmAudioPlaying) Color(bpmState.dominantColor).copy(alpha = bpmAuraAlpha) else npAccent.full.copy(alpha = 0.20f),
-                                    Color(0xFFB388FF).copy(alpha = if (isBpmAudioPlaying) 0.25f else 0.08f),
+                                    Mascot.color(0xFFB388FF).copy(alpha = if (isBpmAudioPlaying) 0.25f else 0.08f),
                                     Color.Transparent
                                 )
                             ),
@@ -5910,8 +5924,8 @@ private fun MikuLauncherDivaDock(
                             .border(BorderStroke(2.5.dp, Brush.sweepGradient(colors = if (golden) GOLD_RING_STOPS else rainbowStops)), CircleShape)
                     )
                     Image(
-                        painter = painterResource(id = mikuMusicIconRes(golden)),
-                        contentDescription = "Miku Music",
+                        painter = mascotPainter(id = mikuMusicIconRes(golden)),
+                        contentDescription = "${Mascot.musicAppName}",
                         contentScale = ContentScale.Crop,
                         modifier = Modifier
                             .fillMaxSize()
@@ -6014,7 +6028,7 @@ private fun MikuLauncherShadeAndWallpaperModals(
     if (isWallpaperPickerOpen) {
         AlertDialog(
             onDismissRequest = onCloseWallpaperPicker,
-            containerColor = Color(0xF50A1E26),
+            containerColor = Mascot.color(0xF50A1E26),
             title = {
                 Row(
                     Modifier.fillMaxWidth(),
@@ -6100,7 +6114,7 @@ private fun MikuLauncherShadeAndWallpaperModals(
                                         .border(if (isSelected) 2.dp else 1.dp, if (isSelected) MikuCyan else Color.White.copy(alpha = 0.2f), RoundedCornerShape(12.dp))
                                 ) {
                                     Image(
-                                        painter = painterResource(id = wp.resId),
+                                        painter = mascotPainter(id = wp.resId),
                                         contentDescription = wp.name,
                                         modifier = Modifier.fillMaxSize(),
                                         contentScale = ContentScale.Crop,

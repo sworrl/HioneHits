@@ -37,11 +37,11 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-val HwMikuTeal = Color(0xFF00E5FF)
-val HwMikuPink = Color(0xFFFF4081)
-val HwBgDark = Color(0xFF04161A)
-val HwSurface1 = Color(0xFF0B242A)
-val HwSurface2 = Color(0xFF13363E)
+val HwMikuTeal get() = Mascot.color(0xFF00E5FF)
+val HwMikuPink get() = Mascot.color(0xFFFF4081)
+val HwBgDark get() = Mascot.color(0xFF04161A)
+val HwSurface1 get() = Mascot.color(0xFF0B242A)
+val HwSurface2 get() = Mascot.color(0xFF13363E)
 val HwMuted = Color(0xFF8BA7AB)
 
 class MainActivity : ComponentActivity() {
@@ -229,13 +229,13 @@ fun HardwareSettingsScreen(onBack: () -> Unit) {
                     // Status reflects what was actually probed: whether the bridge is installed,
                     // and the values the DAC was last told (persist.vendor.audio.miku.*).
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Box(Modifier.size(10.dp).clip(CircleShape).background(when (bridgeOk) { true -> Color(0xFF1ABC9C); false -> Color(0xFFF1C40F); null -> HwMuted }))
+                        Box(Modifier.size(10.dp).clip(CircleShape).background(when (bridgeOk) { true -> Mascot.color(0xFF1ABC9C); false -> Color(0xFFF1C40F); null -> HwMuted }))
                         Spacer(Modifier.width(8.dp))
                         Text(
                             when (bridgeOk) {
                                 null -> "Checking the DAC control path…"
-                                true -> "DAC settings go through the MikuOS system bridge"
-                                false -> "MikuOS system bridge not found"
+                                true -> "DAC settings go through the ${Mascot.osName} system bridge"
+                                false -> "${Mascot.osName} system bridge not found"
                             },
                             color = if (bridgeOk == true) dacSecondary else HwMuted,
                             fontSize = 13.sp,
@@ -598,7 +598,7 @@ fun HardwareSettingsScreen(onBack: () -> Unit) {
                     }
                     Spacer(Modifier.height(8.dp))
                     Text(
-                        "Miku Music picks a profile on its own when playback, the screen or the charger changes, so a choice here lasts until then. While charging, Audio only and Idle run as Balanced.",
+                        "${Mascot.musicAppName} picks a profile on its own when playback, the screen or the charger changes, so a choice here lasts until then. While charging, Audio only and Idle run as Balanced.",
                         color = HwMuted, fontSize = 11.sp, lineHeight = 14.sp
                     )
                 }

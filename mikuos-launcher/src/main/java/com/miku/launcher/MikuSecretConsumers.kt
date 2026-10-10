@@ -181,8 +181,8 @@ private fun DrawScope.drawNegiSnow(t: Long, speedMul: Float) {
     }
 }
 
-private val BEAM_PINK = Color(0xFFFF4FA3)
-private val BEAM_TEAL = Color(0xFF39C5BB)
+private val BEAM_PINK get() = Mascot.color(0xFFFF4FA3)
+private val BEAM_TEAL get() = Mascot.color(0xFF39C5BB)
 
 private fun DrawScope.drawConcert(t: Long, periodMs: Long, anchorMs: Long, hasTempo: Boolean, accent: Color) {
     val w = size.width
@@ -212,7 +212,7 @@ private fun DrawScope.drawConcert(t: Long, periodMs: Long, anchorMs: Long, hasTe
         val bx = w * (i + 0.5f) / n
         val by = h * 0.97f
         val lean = sin((beats + (i % 2) * 0.5) * PI).toFloat() * 22f
-        val col = if (i % 3 == 0) Color(0xFF39C5BB) else if (i % 3 == 1) Color(0xFFFF4FA3) else accent
+        val col = if (i % 3 == 0) Mascot.color(0xFF39C5BB) else if (i % 3 == 1) Mascot.color(0xFFFF4FA3) else accent
         rotate(lean, pivot = Offset(bx, by)) {
             drawCircle(col.copy(alpha = 0.16f + 0.18f * beatPulse), 16f, Offset(bx, by - 52f))
             drawLine(col.copy(alpha = 0.85f), Offset(bx, by), Offset(bx, by - 58f), strokeWidth = 5f, cap = StrokeCap.Round)

@@ -204,7 +204,7 @@ fun VideoPlayerScreen(video: VideoItem, musicPlayer: ExoPlayer, onClose: () -> U
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Box(
-                        Modifier.size(38.dp).clip(CircleShape).background(Color(0xCC041416))
+                        Modifier.size(38.dp).clip(CircleShape).background(Mascot.color(0xCC041416))
                             .pointerInput(Unit) { detectTapGestures(onTap = { onClose() }) },
                         contentAlignment = Alignment.Center
                     ) { Icon(Icons.Default.Close, "Close", tint = Color.White, modifier = Modifier.size(20.dp)) }
@@ -223,7 +223,7 @@ fun VideoPlayerScreen(video: VideoItem, musicPlayer: ExoPlayer, onClose: () -> U
             ) {
                 Column(
                     Modifier.fillMaxWidth()
-                        .background(Color(0xCC041416), RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp))
+                        .background(Mascot.color(0xCC041416), RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp))
                         .padding(horizontal = 16.dp, vertical = 10.dp)
                 ) {
                     Slider(
@@ -231,7 +231,7 @@ fun VideoPlayerScreen(video: VideoItem, musicPlayer: ExoPlayer, onClose: () -> U
                         onValueChange = { dragging = true; pos = it.toLong() },
                         onValueChangeFinished = { player.seekTo(pos); dragging = false },
                         valueRange = 0f..dur.toFloat().coerceAtLeast(1f),
-                        colors = SliderDefaults.colors(thumbColor = MikuTealBright, activeTrackColor = MikuTeal, inactiveTrackColor = Color(0xFF1A3A3D))
+                        colors = SliderDefaults.colors(thumbColor = MikuTealBright, activeTrackColor = MikuTeal, inactiveTrackColor = Mascot.color(0xFF1A3A3D))
                     )
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                         Text(formatMs(pos), color = Color.White.copy(alpha = 0.8f), fontSize = 11.sp)
@@ -249,7 +249,7 @@ fun VideoPlayerScreen(video: VideoItem, musicPlayer: ExoPlayer, onClose: () -> U
                                 .pointerInput(Unit) { detectTapGestures(onTap = { if (player.isPlaying) player.pause() else player.play() }) },
                             contentAlignment = Alignment.Center
                         ) {
-                            Icon(if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow, "Play/Pause", tint = Color(0xFF00201D), modifier = Modifier.size(34.dp))
+                            Icon(if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow, "Play/Pause", tint = Mascot.color(0xFF00201D), modifier = Modifier.size(34.dp))
                         }
                         Spacer(Modifier.width(28.dp))
                         Box(
@@ -301,12 +301,12 @@ fun VideoLibraryScreen(videos: List<VideoItem>, onOpen: (VideoItem) -> Unit, onC
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Box(
-                                Modifier.size(56.dp).clip(RoundedCornerShape(10.dp)).background(Color(0xFF123438)),
+                                Modifier.size(56.dp).clip(RoundedCornerShape(10.dp)).background(Mascot.color(0xFF123438)),
                                 contentAlignment = Alignment.Center
                             ) { Icon(Icons.Default.PlayArrow, null, tint = MikuTeal.copy(alpha = .8f), modifier = Modifier.size(28.dp)) }
                             Spacer(Modifier.width(12.dp))
                             Column(Modifier.weight(1f)) {
-                                Text(v.title, color = Color(0xFFE8F4F2), fontSize = 14.5.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                Text(v.title, color = Mascot.color(0xFFE8F4F2), fontSize = 14.5.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                                 val res = if (v.width > 0 && v.height > 0) "${v.width}×${v.height} · " else ""
                                 Text("$res${formatMs(v.durationMs)}", color = Muted, fontSize = 12.sp)
                             }

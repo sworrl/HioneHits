@@ -1,5 +1,6 @@
 package com.miku.tools.ui
 
+import com.miku.tools.Mascot
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
@@ -99,7 +100,7 @@ fun MikuBackground(modifier: Modifier = Modifier, content: @Composable BoxScope.
 fun Modifier.glass(
     shape: Shape = RoundedCornerShape(20.dp),
     accent: Color = Miku.Teal,
-    tint: Color = Color(0x990B1519),
+    tint: Color = Mascot.color(0x990B1519),
     rimAlpha: Float = 0.45f,
 ): Modifier = this
     .clip(shape)
@@ -199,7 +200,7 @@ fun GlassTextButton(
     enabled: Boolean = true,
 ) {
     GlassButton(onClick, modifier, accent, filled, enabled) {
-        val fg = if (filled) Color(0xFF041513) else if (enabled) Miku.Text else Miku.Faint
+        val fg = if (filled) Mascot.color(0xFF041513) else if (enabled) Miku.Text else Miku.Faint
         if (icon != null) {
             Icon(icon, null, tint = if (filled) fg else accent, modifier = Modifier.size(22.dp))
             Spacer(Modifier.width(8.dp))
@@ -398,7 +399,7 @@ fun GlassDialog(
                 .padding(horizontal = 16.dp, vertical = 24.dp)
                 .widthIn(max = 420.dp)
                 .fillMaxWidth()
-                .glass(RoundedCornerShape(26.dp), tint = Color(0xF00A1216))
+                .glass(RoundedCornerShape(26.dp), tint = Mascot.color(0xF00A1216))
                 .padding(18.dp)
         ) {
             if (title != null) {

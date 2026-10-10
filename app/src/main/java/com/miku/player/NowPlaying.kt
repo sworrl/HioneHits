@@ -89,17 +89,17 @@ import com.miku.player.visualizer.VizEngine
 
 data class ArtPalette(
     val color1: Color = MikuTeal,
-    val color2: Color = Color(0xFF0C2428),
+    val color2: Color = Mascot.color(0xFF0C2428),
     val color3: Color = MikuPink
 )
 
 fun extractArtPalette(bitmap: ImageBitmap?): ArtPalette {
-    if (bitmap == null) return ArtPalette(MikuTeal, Color(0xFF0A2528), MikuPink)
+    if (bitmap == null) return ArtPalette(MikuTeal, Mascot.color(0xFF0A2528), MikuPink)
     try {
         val bm = bitmap.asAndroidBitmap()
         val w = bm.width
         val h = bm.height
-        if (w <= 0 || h <= 0) return ArtPalette(MikuTeal, Color(0xFF0A2528), MikuPink)
+        if (w <= 0 || h <= 0) return ArtPalette(MikuTeal, Mascot.color(0xFF0A2528), MikuPink)
 
         val colors = ArrayList<Int>(64)
         val stepX = (w / 8).coerceAtLeast(1)
@@ -112,7 +112,7 @@ fun extractArtPalette(bitmap: ImageBitmap?): ArtPalette {
                 }
             }
         }
-        if (colors.isEmpty()) return ArtPalette(MikuTeal, Color(0xFF0A2528), MikuPink)
+        if (colors.isEmpty()) return ArtPalette(MikuTeal, Mascot.color(0xFF0A2528), MikuPink)
 
         val sortedBySat = colors.sortedByDescending { c ->
             val hsv = FloatArray(3)
@@ -141,7 +141,7 @@ fun extractArtPalette(bitmap: ImageBitmap?): ArtPalette {
             color3 = legibleAccent(Color(accentTone), MikuPink)
         )
     } catch (_: Throwable) {
-        return ArtPalette(MikuTeal, Color(0xFF0A2528), MikuPink)
+        return ArtPalette(MikuTeal, Mascot.color(0xFF0A2528), MikuPink)
     }
 }
 
@@ -403,7 +403,7 @@ fun NowPlayingScreen(
         )
         // Ambient Miku watermark: a different official wallpaper per track
         androidx.compose.foundation.Image(
-            painter = androidx.compose.ui.res.painterResource(remember(track.id) { MikuArt.forTrack(track.id) }),
+            painter = mascotPainter(remember(track.id) { MikuArt.forTrack(track.id) }),
             contentDescription = null,
             modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp).size(148.dp).alpha(0.07f)
         )
@@ -457,9 +457,9 @@ fun NowPlayingScreen(
                         .padding(horizontal = 18.dp, vertical = 9.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(Icons.Default.GraphicEq, null, tint = Color(0xFF04161A), modifier = Modifier.size(16.dp))
+                    Icon(Icons.Default.GraphicEq, null, tint = Mascot.color(0xFF04161A), modifier = Modifier.size(16.dp))
                     Spacer(Modifier.width(8.dp))
-                    Text(presetToast, color = Color(0xFF04161A), fontSize = 13.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(presetToast, color = Mascot.color(0xFF04161A), fontSize = 13.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
             }
 
@@ -507,7 +507,7 @@ fun NowPlayingScreen(
                 Column(
                     Modifier
                         .clip(RoundedCornerShape(22.dp))
-                        .background(Brush.verticalGradient(listOf(Color(0xC01A2E32), Color(0xE0071115))))
+                        .background(Brush.verticalGradient(listOf(Mascot.color(0xC01A2E32), Mascot.color(0xE0071115))))
                         .border(1.dp, Color.White.copy(alpha = 0.08f), RoundedCornerShape(22.dp))
                         .padding(horizontal = 16.dp, vertical = 12.dp)
                 ) {
@@ -575,7 +575,7 @@ fun NowPlayingScreen(
             Spacer(Modifier.weight(1f))
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 MikuBrandMark(tint = accent, fontSize = 11.sp, glyphSize = 18.dp, letterSpacing = 1.2.sp)
-                Text(track.album.ifBlank { "Now Playing" }, color = Color(0xFFE8F4F2), fontSize = 12.sp, fontWeight = FontWeight.Medium, fontFamily = Baloo2Font, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(track.album.ifBlank { "Now Playing" }, color = Mascot.color(0xFFE8F4F2), fontSize = 12.sp, fontWeight = FontWeight.Medium, fontFamily = Baloo2Font, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
             Spacer(Modifier.weight(1f))
             HapticIconButton(onClick = { InstantRandom.start(ctx) }, flat = true) {
@@ -587,7 +587,7 @@ fun NowPlayingScreen(
             }
             Spacer(Modifier.width(2.dp))
             HapticIconButton(onClick = { showConnectModal = !showConnectModal }, flat = true) {
-                Icon(Icons.Default.Tv, "Miku Connect (TV & Remote)", tint = if (showConnectModal) accent2 else accent, modifier = Modifier.size(24.dp))
+                Icon(Icons.Default.Tv, "${Mascot.name} Connect (TV & Remote)", tint = if (showConnectModal) accent2 else accent, modifier = Modifier.size(24.dp))
             }
             Spacer(Modifier.width(4.dp))
             HapticIconButton(onClick = { showQueue = !showQueue }, flat = true) {
@@ -617,7 +617,7 @@ fun NowPlayingScreen(
                     .fillMaxWidth()
                     .weight(1.45f)
                     .clip(RoundedCornerShape(22.dp))
-                    .background(Color(0xFF08181B))
+                    .background(Mascot.color(0xFF08181B))
                     .border(
                         1.2.dp,
                         Brush.horizontalGradient(
@@ -753,7 +753,7 @@ fun NowPlayingScreen(
                     Box(
                         Modifier
                             .fillMaxSize()
-                            .background(Color(0xFF0D2529)),
+                            .background(Mascot.color(0xFF0D2529)),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
@@ -772,9 +772,9 @@ fun NowPlayingScreen(
                         .background(
                             Brush.verticalGradient(
                                 0.0f to Color(0x80000000),
-                                0.35f to Color(0xA0020B0E),
-                                0.70f to Color(0xDD010709),
-                                1.0f to Color(0xF4010405)
+                                0.35f to Mascot.color(0xA0020B0E),
+                                0.70f to Mascot.color(0xDD010709),
+                                1.0f to Mascot.color(0xF4010405)
                             )
                         )
                 )
@@ -815,7 +815,7 @@ fun NowPlayingScreen(
                         val yearTag = if (displayYear != null) "  ·  $displayYear" else ""
                         Text(
                             text = "${track.artist}$yearTag",
-                            color = Color(0xFFF2FBF9),
+                            color = Mascot.color(0xFFF2FBF9),
                             fontSize = 12.5.sp,
                             fontWeight = FontWeight.SemiBold,
                             fontFamily = Baloo2Font,
@@ -866,8 +866,8 @@ fun NowPlayingScreen(
                         if (track.bitrateKbps > 0) DataChip("${track.bitrateKbps} kbps", bitrateColor(track.bitrateKbps))
                         DataChip(qualityTier(track), bitrateColor(track.bitrateKbps))
                         releaseTag(track.album)?.let { DataChip(it, ReleaseTagColor) }
-                        if (track.durationMs > 0) DataChip(fmtTime(track.durationMs), Color(0xFFD4ECE9))
-                        if (track.sizeBytes > 0) DataChip("${"%.1f".format(track.sizeBytes / 1e6)} MB", Color(0xFFD4ECE9))
+                        if (track.durationMs > 0) DataChip(fmtTime(track.durationMs), Mascot.color(0xFFD4ECE9))
+                        if (track.sizeBytes > 0) DataChip("${"%.1f".format(track.sizeBytes / 1e6)} MB", Mascot.color(0xFFD4ECE9))
                     }
                 }
             }
@@ -910,7 +910,7 @@ fun NowPlayingScreen(
                         Spacer(Modifier.width(5.dp))
                     }
                     Text(
-                        nextUp.second, color = Color(0xFFD4ECE9), fontSize = 10.5.sp, fontWeight = FontWeight.SemiBold, maxLines = 1,
+                        nextUp.second, color = Mascot.color(0xFFD4ECE9), fontSize = 10.5.sp, fontWeight = FontWeight.SemiBold, maxLines = 1,
                         modifier = Modifier.basicMarquee(iterations = Int.MAX_VALUE, repeatDelayMillis = 1200, initialDelayMillis = 900)
                     )
                 } else {
@@ -999,14 +999,14 @@ fun NowPlayingScreen(
 
         Box(
             Modifier.fillMaxSize()
-                .background(Color(0xF204100F))
+                .background(Mascot.color(0xF204100F))
                 .statusBarsPadding()
                 .navigationBarsPadding()
         ) {
             Column(
                 Modifier
                     .fillMaxSize()
-                    .background(Brush.verticalGradient(listOf(Color(0xFF0C2B2E), Color(0xFF04161A))))
+                    .background(Brush.verticalGradient(listOf(Mascot.color(0xFF0C2B2E), Mascot.color(0xFF04161A))))
                     .padding(horizontal = 16.dp, vertical = 12.dp)
             ) {
                 // Header Row
@@ -1038,7 +1038,7 @@ fun NowPlayingScreen(
                 Row(
                     Modifier.fillMaxWidth()
                         .clip(RoundedCornerShape(14.dp))
-                        .background(Brush.horizontalGradient(listOf(Color(0xFF14403D), Color(0xFF0F2B2E))))
+                        .background(Brush.horizontalGradient(listOf(Mascot.color(0xFF14403D), Mascot.color(0xFF0F2B2E))))
                         .border(1.dp, MikuTeal.copy(alpha = 0.5f), RoundedCornerShape(14.dp))
                         .padding(10.dp),
                     verticalAlignment = Alignment.CenterVertically
@@ -1097,7 +1097,7 @@ fun NowPlayingScreen(
 
                                 // Track Art Thumbnail
                                 Box(
-                                    Modifier.size(42.dp).clip(RoundedCornerShape(8.dp)).background(Color(0xFF0F2B2E)),
+                                    Modifier.size(42.dp).clip(RoundedCornerShape(8.dp)).background(Mascot.color(0xFF0F2B2E)),
                                     contentAlignment = Alignment.Center
                                 ) {
                                     if (item.id != null) {
@@ -1113,7 +1113,7 @@ fun NowPlayingScreen(
                                 Column(Modifier.weight(1f)) {
                                     Text(
                                         item.title,
-                                        color = Color(0xFFE8F4F2),
+                                        color = Mascot.color(0xFFE8F4F2),
                                         fontSize = 13.5.sp,
                                         fontWeight = FontWeight.SemiBold,
                                         maxLines = 1,
@@ -1227,7 +1227,7 @@ fun MikuConnectModal(context: android.content.Context, onClose: () -> Unit) {
             Modifier
                 .fillMaxWidth(0.92f)
                 .clip(RoundedCornerShape(20.dp))
-                .background(Color(0xFF041017))
+                .background(Mascot.color(0xFF041017))
                 .border(
                     1.5.dp,
                     Brush.horizontalGradient(listOf(MikuTeal, MikuPink)),
@@ -1252,7 +1252,7 @@ fun MikuConnectModal(context: android.content.Context, onClose: () -> Unit) {
                     )
                     Spacer(Modifier.width(8.dp))
                     Text(
-                        "MIKU CONNECT",
+                        "${Mascot.nameUpper} CONNECT",
                         color = Color.White,
                         fontSize = 15.sp,
                         fontWeight = FontWeight.Bold,
@@ -1334,7 +1334,7 @@ fun EmbossedScrubber(
         val fillW = (w * prog).coerceIn(0f, w)
 
         // Recessed groove (embossed inward): dark base + top inner shadow + bottom light edge.
-        drawRoundRect(Color(0xFF06201F), topLeft = Offset(0f, cy - r), size = Size(w, th), cornerRadius = CornerRadius(r, r))
+        drawRoundRect(Mascot.color(0xFF06201F), topLeft = Offset(0f, cy - r), size = Size(w, th), cornerRadius = CornerRadius(r, r))
         drawRoundRect(
             Brush.verticalGradient(listOf(Color(0x77000000), Color(0x00000000)), startY = cy - r, endY = cy + r * 0.4f),
             topLeft = Offset(0f, cy - r), size = Size(w, th), cornerRadius = CornerRadius(r, r)
@@ -1633,7 +1633,7 @@ fun TieredRainbowHeart(
                 // dark card (the old #1B2F33-on-#040D12 deboss was near-invisible until tapped).
                 drawCircle(
                     brush = Brush.radialGradient(
-                        listOf(Color(0xFF39C5BB).copy(alpha = 0.22f), Color.Transparent),
+                        listOf(Mascot.color(0xFF39C5BB).copy(alpha = 0.22f), Color.Transparent),
                         center = Offset(w * 0.5f, h * 0.48f),
                         radius = w * 0.72f
                     )
@@ -1642,8 +1642,8 @@ fun TieredRainbowHeart(
                 // Satin metallic fill - lifted a few stops so it separates from the background
                 val debossFill = Brush.verticalGradient(
                     listOf(
-                        Color(0xFF2E4F55),
-                        Color(0xFF16292E)
+                        Mascot.color(0xFF2E4F55),
+                        Mascot.color(0xFF16292E)
                     )
                 )
                 drawPath(p, debossFill)
@@ -1658,7 +1658,7 @@ fun TieredRainbowHeart(
                 drawPath(p, bottomChamfer, style = Stroke(width = 2.0f))
 
                 // Crisp Miku-teal outline - the main visibility cue
-                drawPath(p, Color(0xFF39C5BB).copy(alpha = 0.95f), style = Stroke(width = 2.8f))
+                drawPath(p, Mascot.color(0xFF39C5BB).copy(alpha = 0.95f), style = Stroke(width = 2.8f))
             }
         }
         // Cumulative heart-score badge — appears once a track has more than one heart (played
@@ -1670,7 +1670,7 @@ fun TieredRainbowHeart(
                     .offset(x = 3.dp, y = (-2).dp)
                     .size(16.dp)
                     .clip(CircleShape)
-                    .background(Color(0xFFFF2277)),
+                    .background(Mascot.color(0xFFFF2277)),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
@@ -1758,7 +1758,7 @@ private fun VisualizerView(sessionId: Int, modifier: Modifier = Modifier) {
         onDispose { try { viz?.enabled = false; viz?.release() } catch (_: Throwable) {} }
     }
     val brush = Brush.verticalGradient(listOf(MikuPink, MikuTealBright, MikuTeal))
-    Canvas(modifier.background(Color(0xFF06171A))) {
+    Canvas(modifier.background(Mascot.color(0xFF06171A))) {
         val n = bars.value.size
         val gap = 3.dp.toPx()
         val bw = (size.width - gap * (n - 1)) / n

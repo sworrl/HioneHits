@@ -1,5 +1,6 @@
 package com.miku.player.scrobble
 
+import com.miku.player.Mascot
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -53,19 +54,19 @@ fun ScrobbleSetupOffer(player: ExoPlayer, onOpenSettings: () -> Unit) {
         Column(
             Modifier
                 .clip(RoundedCornerShape(20.dp))
-                .background(Color(0xFF0B1F23))
+                .background(Mascot.color(0xFF0B1F23))
                 .padding(20.dp)
         ) {
             Text("Scrobble to Last.fm?", color = MikuTealBright, fontSize = 17.sp, fontWeight = FontWeight.Bold)
             Spacer(Modifier.height(8.dp))
             Text(
-                "Miku Music can send what you play to your Last.fm profile, and keep a queue so " +
+                "${Mascot.musicAppName} can send what you play to your Last.fm profile, and keep a queue so " +
                     "nothing is lost while you are offline.",
-                color = Color(0xFFE0F7FA), fontSize = 13.sp
+                color = Mascot.color(0xFFE0F7FA), fontSize = 13.sp
             )
             Spacer(Modifier.height(10.dp))
             Text(
-                "Sign-in happens on last.fm in your browser. MikuOS never sees your password, and " +
+                "Sign-in happens on last.fm in your browser. ${Mascot.osName} never sees your password, and " +
                     "the key it gets back is stored encrypted on this device only.",
                 color = Muted, fontSize = 11.sp
             )
@@ -93,7 +94,7 @@ fun ScrobbleSetupOffer(player: ExoPlayer, onOpenSettings: () -> Unit) {
                 Spacer(Modifier.width(4.dp))
                 Text(
                     "Set it up",
-                    color = Color(0xFF04161A),
+                    color = Mascot.color(0xFF04161A),
                     fontSize = 12.5.sp,
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier

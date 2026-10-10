@@ -1,5 +1,6 @@
 package com.miku.player.volume
 
+import com.miku.player.Mascot
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -54,7 +55,7 @@ fun MikuOutputVolumesPanel(modifier: Modifier = Modifier) {
         Column(
             Modifier
                 .width(176.dp)
-                .background(Color(0xF0061A24), CutCornerShape(10.dp))
+                .background(Mascot.color(0xF0061A24), CutCornerShape(10.dp))
                 .border(1.dp, MikuCyan.copy(alpha = 0.6f), CutCornerShape(10.dp))
                 .padding(horizontal = 8.dp, vertical = 6.dp)
         ) {
@@ -80,7 +81,7 @@ fun MikuOutputVolumesPanel(modifier: Modifier = Modifier) {
                         steps = (o.max - 1).coerceAtLeast(0),
                         colors = SliderDefaults.colors(
                             thumbColor = MikuCyan, activeTrackColor = MikuCyan,
-                            inactiveTrackColor = Color(0x334DD0E1),
+                            inactiveTrackColor = Mascot.color(0x334DD0E1),
                         ),
                         modifier = Modifier.height(22.dp),
                     )

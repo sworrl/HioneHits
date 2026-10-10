@@ -1,5 +1,6 @@
 package com.miku.update.ui
 
+import com.miku.update.Mascot
 import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
@@ -55,6 +56,7 @@ import com.miku.update.ota.AbUpdater
 import com.miku.update.ota.Installer
 import com.miku.update.ota.OtaConfig
 import com.miku.update.ota.OtaEngine
+import com.miku.update.ota.OtaEngine.PackPhase as Phase2
 import com.miku.update.ota.OtaEngine.Phase
 import com.miku.update.ota.Prefs
 import com.miku.update.ota.SignatureVerifier
@@ -116,13 +118,14 @@ fun UpdateScreen() {
         // happened to a system update that was pending before the last restart.
         AbUpdater.afterBoot(ctx)
         OtaEngine.refreshInstalled(ctx)
+        OtaEngine.refreshPacks(ctx)
         if (s.manifest == null && s.busy == null) MainActivity.appScope.launch { OtaEngine.check(ctx) }
     }
     LaunchedEffect(s.notice) {
         s.notice?.let { toast(ctx, it); OtaEngine.clearNotice() }
     }
 
-    Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color(0xFF0A1A1D), MikuDarkBg, MikuDarkBg)))) {
+    Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Mascot.color(0xFF0A1A1D), MikuDarkBg, MikuDarkBg)))) {
         LazyColumn(
             Modifier.fillMaxSize().statusBarsPadding().padding(horizontal = 14.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
@@ -135,6 +138,7 @@ fun UpdateScreen() {
             }
             if (s.items.isNotEmpty()) item { UpdatesCard(ctx, s) }
             if (s.installed.isNotEmpty()) item { InstalledCard(ctx, s) }
+            if (s.packs.isNotEmpty()) item { PacksCard(ctx, s) }
             item {
                 // settingsTick forces a re-read of prefs after a change.
                 SettingsCard(ctx, prefs, settingsTick) { settingsTick++ }
@@ -148,12 +152,12 @@ fun UpdateScreen() {
 private fun Header(s: OtaEngine.State) {
     Column(Modifier.fillMaxWidth().padding(vertical = 6.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text("MIKU", color = MikuTealBright, fontSize = 20.sp, fontWeight = FontWeight.Black, letterSpacing = 2.sp)
+            Text("${Mascot.nameUpper}", color = MikuTealBright, fontSize = 20.sp, fontWeight = FontWeight.Black, letterSpacing = 2.sp)
             Spacer(Modifier.width(6.dp))
             Text("UPDATE", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold, letterSpacing = 2.sp)
         }
         Spacer(Modifier.height(2.dp))
-        val build = s.deviceBuild?.let { "MikuOS $it" } ?: "MikuOS build unknown"
+        val build = s.deviceBuild?.let { "MikuOS $it" } ?: "${Mascot.osName} build unknown"
         Text("$build  ·  ${Prefs(LocalContext.current).channel} channel", color = MikuMuted, fontSize = 11.5.sp)
     }
 }
@@ -255,7 +259,7 @@ private fun SystemUpdateCard(
                 ButtonRow { ActionButton("Stop", danger = true) { AbUpdater.cancelOrUndo(ctx) } }
             }
             AbUpdater.Phase.NEED_REBOOT -> {
-                BodyText("MikuOS $build is written to the spare slot. Restart to switch to it. If it does not start, the M500 goes back to the system it runs now by itself.", Color.White)
+                BodyText("${Mascot.osName} $build is written to the spare slot. Restart to switch to it. If it does not start, the M500 goes back to the system it runs now by itself.", Color.White)
                 Spacer(Modifier.height(10.dp))
                 ButtonRow {
                     ActionButton("Restart now") { AbUpdater.restart(ctx) }
@@ -275,7 +279,7 @@ private fun SystemUpdateCard(
                 if (su != null) {
                     BodyText(
                         when {
-                            blocked -> "This device is on an older MikuOS than these app updates were built for. Put MikuOS ${su.build} on first, then app updates pick up again here."
+                            blocked -> "This device is on an older ${Mascot.osName} than these app updates were built for. Put ${Mascot.osName} ${su.build} on first, then app updates pick up again here."
                             payload != null -> "This one installs right here. Music, settings and apps stay. It takes a restart at the end."
                             else -> "Some changes, like the FM app, drivers and system settings, only come with a full image. That goes on from a computer, not from here."
                         },
@@ -313,7 +317,7 @@ private fun SystemUpdateCard(
     when (confirm) {
         "install" -> if (su != null && payload != null) {
             MikuAlert(
-            title = "Install MikuOS ${su.build}?",
+            title = "Install ${Mascot.osName} ${su.build}?",
             text = "This downloads ${size(ctx, payload.size)}" + (if (payload.isFull) "" else " (only what changed since your build)") +
                 " and writes the new system next to the one you run now. Music, settings and apps stay. When it is done, a restart switches over. If the new system does not start, the M500 comes back to this one.",
             confirm = "Install",
@@ -364,7 +368,7 @@ private fun WebInstallerBlock(ctx: Context, path: WebInstallerPath) {
 @Composable
 private fun UpdatesCard(ctx: Context, s: OtaEngine.State) {
     val m = s.manifest
-    Section(title = "App updates", note = m?.let { "From the ${it.channel} channel, MikuOS ${it.build}" }) {
+    Section(title = "App updates", note = m?.let { "From the ${it.channel} channel, ${Mascot.osName} ${it.build}" }) {
         if (m != null && m.changelog.isNotBlank()) {
             var open by remember { mutableStateOf(false) }
             Text(
@@ -441,11 +445,79 @@ private fun UpdateRow(ctx: Context, item: OtaEngine.Item, idle: Boolean) {
 }
 
 @Composable
+private fun PacksCard(ctx: Context, s: OtaEngine.State) {
+    Section(
+        title = "Content packs",
+        note = "Mascots and their art, names and voice. Pick the active one in Settings, Theme & mascot.",
+    ) {
+        s.packs.forEach { p -> PackRow(ctx, p, s.busy == null) }
+    }
+}
+
+@Composable
+private fun PackRow(ctx: Context, p: OtaEngine.PackItem, idle: Boolean) {
+    val e = p.offered
+    Column(
+        Modifier.fillMaxWidth().padding(vertical = 4.dp).clip(RoundedCornerShape(12.dp)).background(MikuSurface2).padding(10.dp)
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text(p.name, color = Color.White, fontSize = 13.5.sp, fontWeight = FontWeight.SemiBold)
+                val have = when {
+                    p.installedVersion != null -> "Downloaded, version ${p.installedVersion}"
+                    p.builtInVersion != null -> "Built in, version ${p.builtInVersion}"
+                    else -> "Not on this device"
+                }
+                val offer = e?.let { "  ·  version ${it.version} is available, ${size(ctx, it.size)}" }
+                    ?.takeIf { p.phase == Phase2.AVAILABLE || p.phase == Phase2.UPDATE || p.phase == Phase2.BLOCKED } ?: ""
+                Text(have + offer, color = MikuMuted, fontSize = 11.sp)
+            }
+            when (p.phase) {
+                Phase2.AVAILABLE, Phase2.UPDATE, Phase2.FAILED -> if (e != null) Text(
+                    if (p.phase == Phase2.UPDATE) "Update" else if (p.phase == Phase2.FAILED) "Try again" else "Download",
+                    color = MikuTealBright, fontSize = 12.sp, fontWeight = FontWeight.Bold,
+                    modifier = Modifier.clip(RoundedCornerShape(8.dp)).clickable(enabled = idle) {
+                        MainActivity.appScope.launch { OtaEngine.installPack(ctx, p.id) }
+                    }.padding(horizontal = 10.dp, vertical = 6.dp),
+                )
+                Phase2.DOWNLOADING -> Badge("Downloading", MikuTealBright)
+                Phase2.VERIFYING -> Badge("Checking", MikuTealBright)
+                Phase2.BLOCKED -> Badge("Waiting", MikuGold)
+                Phase2.INSTALLED -> Badge("Downloaded", MikuTealBright)
+                Phase2.BUILT_IN -> Badge("Built in", MikuMuted)
+            }
+        }
+        if (p.phase == Phase2.DOWNLOADING && e != null && e.size > 0) {
+            Spacer(Modifier.height(6.dp))
+            LinearProgressIndicator(
+                progress = { (p.done.toFloat() / e.size).coerceIn(0f, 1f) },
+                modifier = Modifier.fillMaxWidth().height(4.dp).clip(RoundedCornerShape(2.dp)),
+                color = MikuPink, trackColor = MikuSurface1,
+            )
+        }
+        if (p.message.isNotBlank()) {
+            Spacer(Modifier.height(4.dp))
+            Text(p.message, color = if (p.phase == Phase2.FAILED) MikuPinkBright else MikuMuted, fontSize = 11.sp, lineHeight = 14.sp)
+        }
+        if (p.installedVersion != null && idle && p.phase != Phase2.DOWNLOADING && p.phase != Phase2.VERIFYING) {
+            Text(
+                if (p.builtInVersion != null) "Remove the download (back to the built-in copy)" else "Remove",
+                color = MikuPinkBright, fontSize = 12.sp, fontWeight = FontWeight.Bold,
+                modifier = Modifier.clickable {
+                    val ok = OtaEngine.removePack(ctx, p.id)
+                    toast(ctx, if (ok) "Removed" else "Could not remove it")
+                }.padding(top = 6.dp),
+            )
+        }
+    }
+}
+
+@Composable
 private fun InstalledCard(ctx: Context, s: OtaEngine.State) {
     var confirm by remember { mutableStateOf<Pair<OtaEngine.InstalledApp, Boolean>?>(null) }
     Section(
-        title = "Installed MikuOS apps",
-        note = "Image means the copy that came with MikuOS. Updated means a newer copy is installed over it.",
+        title = "Installed ${Mascot.osName} apps",
+        note = "Image means the copy that came with ${Mascot.osName}. Updated means a newer copy is installed over it.",
     ) {
         s.installed.forEach { app ->
             Column(
@@ -481,7 +553,7 @@ private fun InstalledCard(ctx: Context, s: OtaEngine.State) {
         }
     }
     confirm?.let { (app, toImage) ->
-        val target = if (toImage) "the version that came with MikuOS" else "${app.kept?.versionName ?: "the previous version"}"
+        val target = if (toImage) "the version that came with ${Mascot.osName}" else "${app.kept?.versionName ?: "the previous version"}"
         MikuAlert(
             title = "Roll back ${app.name}?",
             text = "This puts ${app.name} back to $target. Its settings and data stay, but an older version may not understand everything a newer one saved. Automatic updates will skip ${app.versionName} from now on.",
@@ -545,7 +617,7 @@ private fun AboutCard(ctx: Context, s: OtaEngine.State, prefs: Prefs, tick: Int,
     val keys = remember { runCatching { SignatureVerifier.load(ctx).keyInfo() }.getOrDefault(emptyList()) }
     var showDev by remember { mutableStateOf(prefs.baseUrlOverride.isNotBlank()) }
     Section(title = "About") {
-        Text("Miku Update ${BuildConfig.VERSION_NAME}", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+        Text("${Mascot.updateName} ${BuildConfig.VERSION_NAME}", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
         Spacer(Modifier.height(4.dp))
         BodyText("Every update list is signed, and every app is checked against its signed hash and against the key the installed app was signed with before anything installs. The FM app is never updated here. It only comes with a system image.")
         Spacer(Modifier.height(6.dp))

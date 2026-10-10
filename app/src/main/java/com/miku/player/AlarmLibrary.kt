@@ -49,7 +49,7 @@ object AlarmLibrary {
 
     /** Human label for an alarm's sound, for the Settings list ("Liked Songs", "Album: X", ...). */
     fun describeSource(source: AlarmSource, sourceRef: String?, tracks: List<Track>? = null): String = when (source) {
-        AlarmSource.MIKU_CHIME -> "Miku Chime"
+        AlarmSource.MIKU_CHIME -> "${Mascot.name} Chime"
         AlarmSource.SHUFFLE_ALL -> "Shuffle library"
         AlarmSource.LIKED_SONGS -> "Liked Songs"
         AlarmSource.DAILY_MIX -> "Daily Mix"

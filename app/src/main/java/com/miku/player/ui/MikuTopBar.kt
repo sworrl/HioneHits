@@ -1,5 +1,7 @@
 package com.miku.player.ui
 
+import com.miku.player.Mascot
+import com.miku.player.mascotPainter
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
@@ -60,14 +62,14 @@ fun MikuBrandMark(
     fontSize: TextUnit = 15.sp,
     glyphSize: Dp = 24.dp,
     wordmark: Boolean = true,
-    text: String = "Miku Music",
+    text: String = "${Mascot.musicAppName}",
     letterSpacing: TextUnit = 0.5.sp,
     glyphAlpha: Float = 1f
 ) {
     Row(modifier, verticalAlignment = Alignment.CenterVertically) {
         Image(
-            painter = painterResource(MikuArt.chibiHearts),
-            contentDescription = "Miku Music",
+            painter = mascotPainter(MikuArt.chibiHearts),
+            contentDescription = "${Mascot.musicAppName}",
             modifier = Modifier.size(glyphSize).alpha(glyphAlpha)
         )
         if (wordmark) {

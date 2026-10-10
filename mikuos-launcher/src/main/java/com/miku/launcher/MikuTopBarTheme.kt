@@ -23,7 +23,7 @@ import androidx.compose.ui.unit.dp
  * gradient or photo. Selection persists in the launcher prefs and cycles on a top-bar long-press.
  */
 enum class MikuTopBarTheme(val displayName: String) {
-    MIKU("Miku"),
+    MIKU("${Mascot.name}"),
     AURORA("Aurora"),
     SUNSET("Sunset"),
     OCEAN("Ocean"),
@@ -75,10 +75,10 @@ fun MikuTopBarTheme.next(ctx: Context): MikuTopBarTheme {
 
 /** The gradient stops for the gradient-based themes (PHOTO/MINIMAL handled separately). */
 private fun MikuTopBarTheme.gradientColors(): List<Color> = when (this) {
-    MikuTopBarTheme.MIKU     -> listOf(Color(0xFF0EE7DD), Color(0xFF1B8FB0), Color(0xFFFF4FA3))
-    MikuTopBarTheme.AURORA   -> listOf(com.miku.launcher.ui.MikuIdentity.Leek, Color(0xFF00E5FF), Color(0xFFB388FF))
-    MikuTopBarTheme.SUNSET   -> listOf(Color(0xFFFFB74D), Color(0xFFFF5C8A), Color(0xFF7C4DFF))
-    MikuTopBarTheme.OCEAN    -> listOf(Color(0xFF0277BD), Color(0xFF00B8D4), Color(0xFF1DE9B6))
+    MikuTopBarTheme.MIKU     -> listOf(Mascot.color(0xFF0EE7DD), Color(0xFF1B8FB0), Mascot.color(0xFFFF4FA3))
+    MikuTopBarTheme.AURORA   -> listOf(com.miku.launcher.ui.MikuIdentity.Leek, Mascot.color(0xFF00E5FF), Mascot.color(0xFFB388FF))
+    MikuTopBarTheme.SUNSET   -> listOf(Color(0xFFFFB74D), Mascot.color(0xFFFF5C8A), Color(0xFF7C4DFF))
+    MikuTopBarTheme.OCEAN    -> listOf(Color(0xFF0277BD), Mascot.color(0xFF00B8D4), Mascot.color(0xFF1DE9B6))
     MikuTopBarTheme.MIDNIGHT -> listOf(Color(0xFF0A1024), Color(0xFF1A2350), Color(0xFF3B2E63))
     MikuTopBarTheme.MINIMAL  -> listOf(Color(0xFF0B0F14), Color(0xFF0B0F14))
     MikuTopBarTheme.PHOTO    -> listOf(Color(0xFF0B0F14), Color(0xFF0B0F14)) // scrim only; image drawn over
@@ -90,14 +90,14 @@ private fun MikuTopBarTheme.gradientColors(): List<Color> = when (this) {
  * bar you earned by climbing a season keeps changing with the seasons after you have it.
  */
 private fun seasonalColors(month: Int): List<Color> = when (month) {
-    0 -> listOf(Color(0xFF00E5FF), Color(0xFF1A2350), Color(0xFFB388FF))   // Digital Genesis
-    1 -> listOf(Color(0xFFFF4F8B), Color(0xFFFF9EC4), Color(0xFFB0004F))   // Cyber Valentine
-    2 -> listOf(Color(0xFFFFB7D5), Color(0xFFFFE3EE), Color(0xFF39C5BB))   // Sakura Miracle (and 3/9)
-    3 -> listOf(Color(0xFF9BE36A), Color(0xFFFFE680), Color(0xFFFF9EC4))   // Spring Bloom
-    4 -> listOf(Color(0xFF00B8D4), Color(0xFF39C5BB), Color(0xFF00E676))   // Electronic Wave
-    5 -> listOf(Color(0xFFFFD54F), Color(0xFF00E5FF), Color(0xFFFF6F61))   // Magical Summer
+    0 -> listOf(Mascot.color(0xFF00E5FF), Color(0xFF1A2350), Mascot.color(0xFFB388FF))   // Digital Genesis
+    1 -> listOf(Mascot.color(0xFFFF4F8B), Mascot.color(0xFFFF9EC4), Mascot.color(0xFFB0004F))   // Cyber Valentine
+    2 -> listOf(Mascot.color(0xFFFFB7D5), Mascot.color(0xFFFFE3EE), Mascot.color(0xFF39C5BB))   // Sakura Miracle (and 3/9)
+    3 -> listOf(Color(0xFF9BE36A), Color(0xFFFFE680), Mascot.color(0xFFFF9EC4))   // Spring Bloom
+    4 -> listOf(Mascot.color(0xFF00B8D4), Mascot.color(0xFF39C5BB), Color(0xFF00E676))   // Electronic Wave
+    5 -> listOf(Color(0xFFFFD54F), Mascot.color(0xFF00E5FF), Color(0xFFFF6F61))   // Magical Summer
     6 -> listOf(Color(0xFF1A237E), Color(0xFF7C4DFF), Color(0xFFFFF59D))   // Starlight Sonata
-    7 -> listOf(Color(0xFF39C5BB), Color(0xFF0EE7DD), Color(0xFFFF4FA3))   // Neon Mirai 39 (8/31)
+    7 -> listOf(Mascot.color(0xFF39C5BB), Mascot.color(0xFF0EE7DD), Mascot.color(0xFFFF4FA3))   // Neon Mirai 39 (8/31)
     8 -> listOf(Color(0xFFE65100), Color(0xFFFFB74D), Color(0xFF6D4C41))   // Autumn Symphony
     9 -> listOf(Color(0xFFFF6D00), Color(0xFF4A148C), Color(0xFF1B0B2E))   // Midnight Pumpkin
     10 -> listOf(Color(0xFFB3E5FC), Color(0xFF4FC3F7), Color(0xFF0D47A1))  // Frostbite Echo
@@ -115,7 +115,7 @@ fun MikuTopBarBackground(theme: MikuTopBarTheme, modifier: Modifier = Modifier, 
     Box(modifier.clip(shape)) {
         if (theme == MikuTopBarTheme.PHOTO) {
             Image(
-                painter = painterResource(R.drawable.miku_bg_wide),
+                painter = mascotPainter(R.drawable.miku_bg_wide),
                 contentDescription = null,
                 contentScale = ContentScale.Crop,
                 modifier = Modifier.fillMaxSize()

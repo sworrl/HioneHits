@@ -387,8 +387,8 @@ object TrackTech {
 
     /** Sample-rate badge color — Miku teal-mint baseline, radiant gold for 96k, violet-pink for 192k, electric magenta for DXD. */
     fun rateColor(hz: Int): Color = when {
-        hz >= 352_800 -> Color(0xFFFF3399) // DXD / extreme (352.8kHz+) — Miku Neon Magenta
-        hz >= 176_400 -> Color(0xFFB388FF) // ultra hi-res (176.4/192kHz) — Holographic Violet / Rainbow
+        hz >= 352_800 -> Mascot.color(0xFFFF3399) // DXD / extreme (352.8kHz+) — Miku Neon Magenta
+        hz >= 176_400 -> Mascot.color(0xFFB388FF) // ultra hi-res (176.4/192kHz) — Holographic Violet / Rainbow
         hz >= 88_200 -> MikuGold           // hi-res (88.2/96kHz) — Radiant Gold
         hz > 0 -> MikuTealBright           // CD-standard (44.1/48kHz) — Miku Bright Teal / Mint
         else -> Muted
@@ -745,13 +745,13 @@ object TrackTech {
  */
 object MikuBadgePalette {
     // Iridescent Rainbow for Pinnacle Tier (192kHz+, 32-bit, DSD, DXD)
-    val RainbowStops = listOf(
-        Color(0xFF00F5D4), // Miku Neon Cyan / Mint
-        Color(0xFF00B4D8), // Electric Sky Blue
+    val RainbowStops get() = listOf(
+        Mascot.color(0xFF00F5D4), // Miku Neon Cyan / Mint
+        Mascot.color(0xFF00B4D8), // Electric Sky Blue
         Color(0xFF9D4EDD), // Kawaii Holographic Violet
-        Color(0xFFFF3399), // Miku Electric Pink / Magenta
+        Mascot.color(0xFFFF3399), // Miku Electric Pink / Magenta
         Color(0xFFFFD166), // Luminous Gold
-        Color(0xFF00F5D4)  // Loop back
+        Mascot.color(0xFF00F5D4)  // Loop back
     )
     val RainbowBrush = Brush.linearGradient(RainbowStops)
 
@@ -761,27 +761,27 @@ object MikuBadgePalette {
     // history), and now that root gives full RGB control of the light, the causality runs the
     // OTHER way: the badges are the source of truth for "fancy," and PulsarLight reads ITS colors
     // from this palette (MikuBadgePalette), not the other way around. Reverted to the original.
-    val HiResGoldStops = listOf(
+    val HiResGoldStops get() = listOf(
         Color(0xFFFFD166), // Radiant Gold
         Color(0xFFFFA726), // Amber Glow
-        Color(0xFF7FE6DE), // Cyan Specular Glint
+        Mascot.color(0xFF7FE6DE), // Cyan Specular Glint
         Color(0xFFFFD166)
     )
     val HiResBrush = Brush.linearGradient(HiResGoldStops)
 
     // Miku Teal & Mint Glass for Standard Tier (44.1kHz, 48kHz, 16-bit)
-    val StandardCyanStops = listOf(
-        Color(0xFF39C5BB),
-        Color(0xFF7FE6DE),
-        Color(0xFF39C5BB)
+    val StandardCyanStops get() = listOf(
+        Mascot.color(0xFF39C5BB),
+        Mascot.color(0xFF7FE6DE),
+        Mascot.color(0xFF39C5BB)
     )
     val StandardBrush = Brush.linearGradient(StandardCyanStops)
 
     // Miku Twin-Tail Ribbon Gradient for Audio Format Tags (FLAC, WAV, ALAC)
-    val FormatRibbonStops = listOf(
-        Color(0xFF7FE6DE),
-        Color(0xFFFF5FA2),
-        Color(0xFF7FE6DE)
+    val FormatRibbonStops get() = listOf(
+        Mascot.color(0xFF7FE6DE),
+        Mascot.color(0xFFFF5FA2),
+        Mascot.color(0xFF7FE6DE)
     )
     val FormatBrush = Brush.linearGradient(FormatRibbonStops)
 }

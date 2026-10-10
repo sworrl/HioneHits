@@ -1,5 +1,6 @@
 package com.miku.player.api
 
+import com.miku.player.Mascot
 import android.content.Context
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -75,7 +76,7 @@ fun MikuApiSettingsCard(ctx: Context) {
         Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(16.dp))
-            .background(Brush.verticalGradient(listOf(Color(0xFF07272B), Color(0xFF041417))))
+            .background(Brush.verticalGradient(listOf(Mascot.color(0xFF07272B), Mascot.color(0xFF041417))))
             .border(1.dp, MikuTealBright.copy(alpha = if (server.running) 0.55f else 0.3f), RoundedCornerShape(16.dp))
             .padding(14.dp)
     ) {
@@ -157,7 +158,7 @@ fun MikuApiSettingsCard(ctx: Context) {
             Column(Modifier.weight(1f)) {
                 Text("Cast to a TV", color = Color.White, fontSize = 13.5.sp, fontWeight = FontWeight.Bold, fontFamily = AudiowideFont)
                 Text(
-                    "Sends the audio to the MikuOS TV app on the same Wi-Fi. Listens only while this is on, and turns off after 15 minutes with no TV.",
+                    "Sends the audio to the ${Mascot.osName} TV app on the same Wi-Fi. Listens only while this is on, and turns off after 15 minutes with no TV.",
                     color = Muted, fontSize = 10.5.sp
                 )
             }
@@ -229,7 +230,7 @@ private fun QrCanvas(qr: MikuQrEncoder.Matrix, modifier: Modifier) {
         val cell = minOf(size.width, size.height) / n
         val ox = (size.width - cell * n) / 2f
         val oy = (size.height - cell * n) / 2f
-        val dark = Color(0xFF0A1416)
+        val dark = Mascot.color(0xFF0A1416)
         for (y in 0 until n) for (x in 0 until n) {
             if (qr.get(x, y)) drawRect(dark, topLeft = Offset(ox + x * cell, oy + y * cell), size = Size(cell + 0.5f, cell + 0.5f))
         }

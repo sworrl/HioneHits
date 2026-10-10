@@ -1,5 +1,6 @@
 package com.miku.tools.calendar
 
+import com.miku.tools.Mascot
 import android.app.Activity
 import android.content.Context
 import android.content.Intent
@@ -250,7 +251,7 @@ fun MonthGrid(month: YearMonth, selected: LocalDate, cellHeight: Dp, onPick: (Lo
                 ) {
                     Text(
                         d.dayOfMonth.toString(),
-                        color = when { sel -> Color(0xFF02201D); d == today -> Miku.PinkSoft; inMonth -> Miku.Text; else -> Miku.Faint },
+                        color = when { sel -> Mascot.color(0xFF02201D); d == today -> Miku.PinkSoft; inMonth -> Miku.Text; else -> Miku.Faint },
                         fontSize = 15.sp, fontWeight = if (d == today || sel) FontWeight.Bold else FontWeight.Normal
                     )
                 }

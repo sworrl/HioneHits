@@ -1,5 +1,6 @@
 package com.miku.launcher.widget
 
+import com.miku.launcher.Mascot
 import android.appwidget.AppWidgetManager
 import android.appwidget.AppWidgetProvider
 import android.content.ComponentName
@@ -72,7 +73,7 @@ class MikuThermalWidget : AppWidgetProvider() {
                 !haveAny -> 0x80FFFFFF.toInt()
                 maxTemp >= 60f -> 0xFFFF5252.toInt()
                 maxTemp >= 45f -> 0xFFFFD600.toInt()
-                else -> 0xFF39C5BB.toInt()
+                else -> Mascot.argb(0xFF39C5BB.toInt())
             }
             v.setTextViewText(R.id.widget_thermal_cpu, if (cpu > 0f) "${cpu.toInt()}°C" else "—°C")
             v.setTextColor(R.id.widget_thermal_cpu, tint)

@@ -1,5 +1,6 @@
 package com.miku.launcher.usb
 
+import com.miku.launcher.Mascot
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -64,7 +65,7 @@ fun MikuUsbHostModal(
                 modifier = Modifier
                     .fillMaxWidth(0.92f)
                     .clip(RoundedCornerShape(22.dp))
-                    .background(Color(0xFF061418))
+                    .background(Mascot.color(0xFF061418))
                     .border(
                         1.2.dp,
                         Brush.verticalGradient(
@@ -242,8 +243,8 @@ fun MikuUsbHostModal(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clip(RoundedCornerShape(12.dp))
-                            .background(Color(0xFF030D10))
-                            .border(0.8.dp, Color(0xFF1E3A42), RoundedCornerShape(12.dp))
+                            .background(Mascot.color(0xFF030D10))
+                            .border(0.8.dp, Mascot.color(0xFF1E3A42), RoundedCornerShape(12.dp))
                             .padding(6.dp),
                         verticalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
@@ -302,7 +303,7 @@ private fun ModeButton(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(12.dp))
-            .background(Color(0xFF0A1F26))
+            .background(Mascot.color(0xFF0A1F26))
             .border(1.dp, accentColor.copy(alpha = 0.45f), RoundedCornerShape(12.dp))
             .clickable { onClick() }
             .padding(horizontal = 12.dp, vertical = 9.dp)

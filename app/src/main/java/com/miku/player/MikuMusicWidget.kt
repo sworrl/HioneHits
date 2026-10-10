@@ -56,7 +56,7 @@ class MikuMusicWidget : AppWidgetProvider() {
 
         private fun render(ctx: Context, mgr: AppWidgetManager, id: Int, snapshot: PlayerHolder.PlayerSnapshot?) {
             val v = RemoteViews(ctx.packageName, R.layout.widget_now_playing)
-            val title = snapshot?.title?.ifBlank { null } ?: "Miku Music"
+            val title = snapshot?.title?.ifBlank { null } ?: "${Mascot.musicAppName}"
             val artist = snapshot?.artist?.ifBlank { null } ?: "Nothing playing"
             val isPlaying = snapshot?.isPlaying == true
 

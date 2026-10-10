@@ -226,7 +226,7 @@ fun VerboseUsbDacScreen(onExit: () -> Unit) {
     Box(
         Modifier
             .fillMaxSize()
-            .background(Color(0xFF030D11))
+            .background(Mascot.color(0xFF030D11))
             .statusBarsPadding()
             .navigationBarsPadding()
     ) {
@@ -287,7 +287,7 @@ fun VerboseUsbDacScreen(onExit: () -> Unit) {
                         .clip(RoundedCornerShape(18.dp))
                         .background(
                             Brush.verticalGradient(
-                                listOf(Color(0xFF07242B), Color(0xFF05171C))
+                                listOf(Mascot.color(0xFF07242B), Mascot.color(0xFF05171C))
                             )
                         )
                         .border(1.dp, HwMikuTeal.copy(alpha = pulseAlpha), RoundedCornerShape(18.dp))
@@ -315,7 +315,7 @@ fun VerboseUsbDacScreen(onExit: () -> Unit) {
                             .clip(CircleShape)
                             .background(
                                 Brush.radialGradient(
-                                    listOf(HwMikuTeal.copy(alpha = 0.20f * pulseAlpha), Color(0xFF031114))
+                                    listOf(HwMikuTeal.copy(alpha = 0.20f * pulseAlpha), Mascot.color(0xFF031114))
                                 )
                             )
                             .border(2.dp, HwMikuTeal.copy(alpha = pulseAlpha), CircleShape),
@@ -379,7 +379,7 @@ fun VerboseUsbDacScreen(onExit: () -> Unit) {
 
                         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                             Text("L", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold, modifier = Modifier.width(16.dp))
-                            Box(Modifier.weight(1f).height(8.dp).clip(RoundedCornerShape(4.dp)).background(Color(0xFF030D10))) {
+                            Box(Modifier.weight(1f).height(8.dp).clip(RoundedCornerShape(4.dp)).background(Mascot.color(0xFF030D10))) {
                                 Box(Modifier.fillMaxWidth(activityFill).fillMaxHeight().background(Brush.horizontalGradient(listOf(HwMikuTeal, HwMikuPink))))
                             }
                         }
@@ -388,7 +388,7 @@ fun VerboseUsbDacScreen(onExit: () -> Unit) {
 
                         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                             Text("R", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold, modifier = Modifier.width(16.dp))
-                            Box(Modifier.weight(1f).height(8.dp).clip(RoundedCornerShape(4.dp)).background(Color(0xFF030D10))) {
+                            Box(Modifier.weight(1f).height(8.dp).clip(RoundedCornerShape(4.dp)).background(Mascot.color(0xFF030D10))) {
                                 Box(Modifier.fillMaxWidth(activityFill).fillMaxHeight().background(Brush.horizontalGradient(listOf(HwMikuTeal, HwMikuPink))))
                             }
                         }
@@ -503,7 +503,7 @@ fun VerboseUsbDacScreen(onExit: () -> Unit) {
                     }, if (outputMode != null) HwMikuPink else HwMuted)
                     VerboseDiagnosticRow("Dynamic Range Enhancement (DRE)", when (isDreActive) { true -> "Enabled"; false -> "Disabled"; null -> "unknown" }, if (isDreActive == true) HwMikuTeal else HwMuted)
                     VerboseDiagnosticRow("High power", when (highPower) { true -> "On"; false -> "Off"; null -> "unknown" }, if (highPower == true) HwMikuTeal else HwMuted)
-                    VerboseDiagnosticRow("DAC control path", when (bridgeOk) { true -> "MikuOS system bridge"; false -> "bridge not installed, settings cannot apply"; null -> NA }, if (bridgeOk == true) Color.White else HwMuted)
+                    VerboseDiagnosticRow("DAC control path", when (bridgeOk) { true -> "${Mascot.osName} system bridge"; false -> "bridge not installed, settings cannot apply"; null -> NA }, if (bridgeOk == true) Color.White else HwMuted)
                 }
             }
 
@@ -515,7 +515,7 @@ fun VerboseUsbDacScreen(onExit: () -> Unit) {
                         .fillMaxWidth()
                         .height(50.dp)
                         .clip(RoundedCornerShape(25.dp))
-                        .background(Brush.horizontalGradient(listOf(Color(0xFFFF4081), Color(0xFFFF6E40))))
+                        .background(Brush.horizontalGradient(listOf(Mascot.color(0xFFFF4081), Color(0xFFFF6E40))))
                         .clickable {
                             scope.launch {
                                 UsbDacManager.setUsbDacMode(ctx, false)

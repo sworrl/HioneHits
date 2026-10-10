@@ -1,5 +1,6 @@
 package com.miku.launcher.bpm
 
+import com.miku.launcher.Mascot
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
@@ -40,7 +41,7 @@ object MikuBpmEngine {
         val bpm: Float = 0f,
         val beatIntervalMs: Long = 500L,
         val isPlaying: Boolean = false,
-        val dominantColor: Int = 0xFF00E5FF.toInt(),
+        val dominantColor: Int = Mascot.argb(0xFF00E5FF.toInt()),
         val lastPulseEpochMs: Long = 0L
     )
 
@@ -185,7 +186,7 @@ object MikuBpmEngine {
             initBpm
         )
         val initPlaying = try { Settings.Global.getInt(cr, "miku_is_playing", 0) == 1 } catch (_: Throwable) { false }
-        val initColor = try { Settings.Global.getInt(cr, "miku_album_dominant_color", 0xFF00E5FF.toInt()) } catch (_: Throwable) { 0xFF00E5FF.toInt() }
+        val initColor = try { Settings.Global.getInt(cr, "miku_album_dominant_color", Mascot.argb(0xFF00E5FF.toInt())) } catch (_: Throwable) { Mascot.argb(0xFF00E5FF.toInt()) }
 
         _state.value = BpmState(
             bpm = initBpm,

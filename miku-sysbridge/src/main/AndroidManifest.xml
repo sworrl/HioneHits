@@ -13,6 +13,16 @@
     android:sharedUserId="android.uid.system"
     tools:ignore="SharedUserId">
 
+    <!-- Mascot pack voice clips come from Miku Update's provider (see SoundEvents.packClip). -->
+    <permission
+        android:name="com.miku.permission.MASCOT_PACKS"
+        android:protectionLevel="signature" />
+    <uses-permission android:name="com.miku.permission.MASCOT_PACKS" />
+    <queries>
+        <provider android:authorities="com.miku.update.mascot" />
+    </queries>
+
+
     <permission
         android:name="com.miku.permission.SYSTEM_BRIDGE"
         android:protectionLevel="signature" />

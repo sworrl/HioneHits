@@ -305,7 +305,7 @@ private fun RecentTaskCard(
     val haloA by androidx.compose.animation.animateColorAsState(
         if (isMusic && accentRaw != 0) Color(accentRaw) else MikuTealBright.copy(alpha = 0.85f), tween(400), label = "haloA")
     val haloB by androidx.compose.animation.animateColorAsState(
-        if (isMusic && accentRaw != 0) Color(MikuAccent.mix(0xFFFF4081.toInt(), accentRaw, 0.5f)) else MikuPinkBright.copy(alpha = 0.55f), tween(400), label = "haloB")
+        if (isMusic && accentRaw != 0) Color(MikuAccent.mix(Mascot.argb(0xFFFF4081.toInt()), accentRaw, 0.5f)) else MikuPinkBright.copy(alpha = 0.55f), tween(400), label = "haloB")
 
     Column(
         Modifier
@@ -384,7 +384,7 @@ private fun RecentTaskCard(
                 )
             } else {
                 // Themed placeholder: big app icon on glass
-                Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color(0xFF0D2630), Color(0xFF07171E), Color(0xFF030B0F)))), contentAlignment = Alignment.Center) {
+                Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Mascot.color(0xFF0D2630), Mascot.color(0xFF07171E), Mascot.color(0xFF030B0F)))), contentAlignment = Alignment.Center) {
                     if (iconBitmap != null) {
                         Image(iconBitmap, contentDescription = null, modifier = Modifier.size(64.dp).clip(RoundedCornerShape(16.dp)))
                     } else {

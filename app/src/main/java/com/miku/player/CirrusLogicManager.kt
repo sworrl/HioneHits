@@ -25,7 +25,7 @@ object CirrusLogicManager {
         FAST_MINIMUM("fast_rolloff_low_latency", "Fast Roll-off, Low Latency", "Minimum phase with a sharp cutoff and low delay"),
         SLOW_LINEAR("slow_rolloff_phase_compensated", "Slow Roll-off, Phase Compensated", "Linear phase with a gentle cutoff"),
         SLOW_MINIMUM("slow_rolloff_low_latency", "Slow Roll-off, Low Latency", "Minimum phase with a gentle cutoff and little pre-ringing"),
-        NOS("nos", "NOS (non-oversampling)", "Skips the DAC's oversampling filter. Softer top end, no pre-ringing. HiBy's driver masked this off through firmware 1.20. MikuOS ships HiBy's fixed 1.30 driver.")
+        NOS("nos", "NOS (non-oversampling)", "Skips the DAC's oversampling filter. Softer top end, no pre-ringing. HiBy's driver masked this off through firmware 1.20. ${Mascot.osName} ships HiBy's fixed 1.30 driver.")
     }
 
     enum class GainMode(val id: String, val label: String, val sysfsValue: String, val description: String) {

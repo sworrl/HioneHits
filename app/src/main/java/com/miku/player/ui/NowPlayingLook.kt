@@ -1,5 +1,6 @@
 package com.miku.player.ui
 
+import com.miku.player.Mascot
 import android.content.Context
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
@@ -50,4 +51,4 @@ fun rememberAnimatedPalette(target: ArtPalette, dynamic: Boolean, durationMs: In
 }
 
 /** Text/glyph color that stays readable on top of [accent] (dark ink on bright faces, white on deep ones). */
-fun onAccentColor(accent: Color): Color = if (accent.luminance() > 0.45f) Color(0xFF07201F) else Color.White
+fun onAccentColor(accent: Color): Color = if (accent.luminance() > 0.45f) Mascot.color(0xFF07201F) else Color.White

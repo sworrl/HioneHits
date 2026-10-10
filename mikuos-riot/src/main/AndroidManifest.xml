@@ -1,6 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
+    <!-- Mascot packs (Mascot.kt). Every MikuOS app declares the same signature permission, so it
+         exists whichever app is installed first. Miku Update's pack provider requires it. -->
+    <permission
+        android:name="com.miku.permission.MASCOT_PACKS"
+        android:protectionLevel="signature" />
+    <uses-permission android:name="com.miku.permission.MASCOT_PACKS" />
+    <queries>
+        <provider android:authorities="com.miku.update.mascot" />
+    </queries>
+
+
     <!-- Genres come from MediaStore directly; everything else is browsed through Miku Music. -->
     <uses-permission android:name="android.permission.READ_MEDIA_AUDIO" />
     <!-- Wheel detents and key presses. -->
@@ -28,6 +39,14 @@
         android:label="@string/app_name"
         android:supportsRtl="false"
         android:theme="@style/Theme.Riot">
+
+        <!-- Starts Mascot (the active mascot pack) at process start. -->
+        <provider
+            android:name="com.miku.riot.MascotInit"
+            android:authorities="${applicationId}.mascot-init"
+            android:exported="false"
+            android:initOrder="1000" />
+
 
         <!--
           The shell. HOME + DEFAULT so it can be picked as the launcher. No LAUNCHER category on

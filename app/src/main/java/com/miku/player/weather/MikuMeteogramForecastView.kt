@@ -1,5 +1,6 @@
 package com.miku.player.weather
 
+import com.miku.player.Mascot
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -67,8 +68,8 @@ fun MikuMeteogramForecastView(
             .background(
                 Brush.verticalGradient(
                     listOf(
-                        Color(0xF0061822),
-                        Color(0xFA030D14)
+                        Mascot.color(0xF0061822),
+                        Mascot.color(0xFA030D14)
                     )
                 )
             )
@@ -99,13 +100,13 @@ fun MikuMeteogramForecastView(
                         Box(
                             Modifier
                                 .clip(CutCornerShape(3.dp))
-                                .background(Color(0xFF00E5FF).copy(alpha = 0.25f))
-                                .border(0.6.dp, Color(0xFF00E5FF), CutCornerShape(3.dp))
+                                .background(Mascot.color(0xFF00E5FF).copy(alpha = 0.25f))
+                                .border(0.6.dp, Mascot.color(0xFF00E5FF), CutCornerShape(3.dp))
                                 .padding(horizontal = 4.dp, vertical = 1.dp)
                         ) {
                             Text(
                                 text = weather.nextPrecipLabel,
-                                color = Color(0xFF00E5FF),
+                                color = Mascot.color(0xFF00E5FF),
                                 fontSize = 7.sp,
                                 fontWeight = FontWeight.Black,
                                 fontFamily = AudiowideFont
@@ -142,7 +143,7 @@ fun MikuMeteogramForecastView(
                             Modifier
                                 .padding(horizontal = 2.dp)
                                 .clip(RoundedCornerShape(6.dp))
-                                .background(Color(0x4404141E))
+                                .background(Mascot.color(0x4404141E))
                                 .border(0.6.dp, CyberGlassBorder.copy(alpha = 0.4f), RoundedCornerShape(6.dp))
                         ) {
                             // Day Name Header
@@ -197,7 +198,7 @@ fun MikuMeteogramForecastView(
                                                 pt.tempF >= 85f -> Color(0xFFFF5252)
                                                 pt.tempF >= 70f -> Color(0xFFFFD600)
                                                 pt.tempF >= 55f -> Color(0xFF00E676)
-                                                else -> Color(0xFF00E5FF)
+                                                else -> Mascot.color(0xFF00E5FF)
                                             },
                                             fontSize = 8.5.sp,
                                             fontWeight = FontWeight.Black,
@@ -215,7 +216,7 @@ fun MikuMeteogramForecastView(
                                             Spacer(Modifier.width(1.dp))
                                             Text(
                                                 text = "${pt.precipProbPct}%",
-                                                color = if (pt.precipProbPct > 20) Color(0xFF00E5FF) else Color.White.copy(alpha = 0.6f),
+                                                color = if (pt.precipProbPct > 20) Mascot.color(0xFF00E5FF) else Color.White.copy(alpha = 0.6f),
                                                 fontSize = 7.sp,
                                                 fontWeight = FontWeight.Bold,
                                                 fontFamily = AudiowideFont
@@ -230,7 +231,7 @@ fun MikuMeteogramForecastView(
                                             windSpd >= 25 -> Color(0xFFFF1744) // Severe gale
                                             windSpd >= 15 -> Color(0xFFFF9100) // Moderate
                                             windSpd >= 8  -> Color(0xFF76FF03) // Light breeze
-                                            else          -> Color(0xFF00E5FF) // Gentle
+                                            else          -> Mascot.color(0xFF00E5FF) // Gentle
                                         }
                                         Box(
                                             Modifier
@@ -299,7 +300,7 @@ fun MikuSolarArcTrack(
         modifier = modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(6.dp))
-            .background(Color(0x33020A0F))
+            .background(Mascot.color(0x33020A0F))
             .padding(horizontal = 8.dp, vertical = 4.dp)
     ) {
         Column {
@@ -317,14 +318,14 @@ fun MikuSolarArcTrack(
                 )
                 Text(
                     text = if (isDay) "SOLAR TRANSIT · ${(solarFraction * 100).roundToInt()}%" else "LUNAR TRANSIT",
-                    color = if (isDay) MikuCyan else Color(0xFFB388FF),
+                    color = if (isDay) MikuCyan else Mascot.color(0xFFB388FF),
                     fontSize = 7.sp,
                     fontWeight = FontWeight.Black,
                     fontFamily = AudiowideFont
                 )
                 Text(
                     text = "SET: $sunset",
-                    color = Color(0xFFFF80AB),
+                    color = Mascot.color(0xFFFF80AB),
                     fontSize = 7.sp,
                     fontWeight = FontWeight.Bold,
                     fontFamily = AudiowideFont
@@ -345,7 +346,7 @@ fun MikuSolarArcTrack(
 
                 // Base Track Line
                 drawLine(
-                    color = Color(0x3300E5FF),
+                    color = Mascot.color(0x3300E5FF),
                     start = Offset(0f, trackY),
                     end = Offset(w, trackY),
                     strokeWidth = h,
@@ -357,8 +358,8 @@ fun MikuSolarArcTrack(
                     listOf(
                         Color(0xFFFF6D00),
                         Color(0xFFFFD600),
-                        Color(0xFF00E5FF),
-                        Color(0xFFFF80AB)
+                        Mascot.color(0xFF00E5FF),
+                        Mascot.color(0xFFFF80AB)
                     )
                 )
 
@@ -372,7 +373,7 @@ fun MikuSolarArcTrack(
 
                 // Sun / Moon Indicator Dot with Glow
                 val dotX = (w * solarFraction.coerceIn(0f, 1f)).coerceIn(h, w - h)
-                val dotColor = if (isDay) Color(0xFFFFD600) else Color(0xFFB388FF)
+                val dotColor = if (isDay) Color(0xFFFFD600) else Mascot.color(0xFFB388FF)
 
                 drawCircle(
                     color = dotColor.copy(alpha = 0.35f),

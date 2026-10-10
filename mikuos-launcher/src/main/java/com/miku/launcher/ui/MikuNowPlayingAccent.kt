@@ -1,5 +1,6 @@
 package com.miku.launcher.ui
 
+import com.miku.launcher.Mascot
 import android.content.Context
 import android.database.ContentObserver
 import android.os.Handler
@@ -109,7 +110,7 @@ fun rememberNpAccent(): NpAccent {
     val pair by MikuNowPlayingAccent.colors.collectAsState()
     val active = pair.first != 0
     val rawA = if (active) Color(pair.first).copy(alpha = 1f) else MikuCyan
-    val rawB = if (pair.second != 0) Color(pair.second).copy(alpha = 1f) else if (active) rawA else Color(0xFF7FE6DE)
+    val rawB = if (pair.second != 0) Color(pair.second).copy(alpha = 1f) else if (active) rawA else Mascot.color(0xFF7FE6DE)
     val full by animateColorAsState(rawA, NP_TWEEN, label = "npAccentFull")
     val second by animateColorAsState(rawB, NP_TWEEN, label = "npAccentSecond")
     val subtle by animateColorAsState(if (active) MikuNowPlayingAccent.blend(MikuCyan, rawA, 0.25f) else MikuCyan, NP_TWEEN, label = "npAccentSubtle")

@@ -1,5 +1,6 @@
 package com.miku.player.remote
 
+import com.miku.player.Mascot
 import android.Manifest
 import android.app.Notification
 import android.app.NotificationChannel
@@ -931,7 +932,7 @@ class MikuRemoteGattService : Service() {
         return JSONObject().apply {
             put("name", MikuRemoteProtocol.LOCAL_NAME)
             put("model", "HiBy M500")
-            put("app", "Miku Music $ver")
+            put("app", "${Mascot.musicAppName} $ver")
             put("battery", pct)
             put("charging", charging)
             put("auth", authorized)
@@ -1061,7 +1062,7 @@ class MikuRemoteGattService : Service() {
         )
         return NotificationCompat.Builder(this, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_miku_monitor_status)
-            .setContentTitle("Miku Remote · Bluetooth")
+            .setContentTitle("${Mascot.name} Remote · Bluetooth")
             .setContentText(text)
             .setStyle(NotificationCompat.BigTextStyle().bigText(text))
             .setOngoing(true)

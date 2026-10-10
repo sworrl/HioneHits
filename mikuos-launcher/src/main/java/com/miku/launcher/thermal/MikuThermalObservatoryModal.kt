@@ -1,5 +1,6 @@
 package com.miku.launcher.thermal
 
+import com.miku.launcher.Mascot
 import android.content.Context
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.*
@@ -188,7 +189,7 @@ fun MikuThermalObservatoryModal(
         peakForColor >= 58f -> com.miku.launcher.ui.MikuIdentity.Coral // Hot / Throttle Red
         peakForColor >= 48f -> Color(0xFFFF9100) // Warm Amber Orange
         peakForColor >= 38f -> com.miku.launcher.ui.MikuIdentity.Gold // Nominal Gold
-        peakForColor >= 30f -> Color(0xFF00E5FF) // Cool Cyan
+        peakForColor >= 30f -> Mascot.color(0xFF00E5FF) // Cool Cyan
         else -> com.miku.launcher.ui.MikuIdentity.Leek                // Low Ambient Mint Green
     }
 
@@ -197,7 +198,7 @@ fun MikuThermalObservatoryModal(
     Box(
         Modifier
             .fillMaxSize()
-            .background(Color(0xE6040D12))
+            .background(Mascot.color(0xE6040D12))
             .clickable { onClose() }
             // System-gesture-style dismiss: swipe up starting at the bottom edge of the modal.
             .swipeUpFromBottomToDismiss(onDismiss = onClose),
@@ -213,9 +214,9 @@ fun MikuThermalObservatoryModal(
                 .background(
                     Brush.verticalGradient(
                         listOf(
-                            Color(0xFF071922),
-                            Color(0xFF041017),
-                            Color(0xFA020A0E)
+                            Mascot.color(0xFF071922),
+                            Mascot.color(0xFF041017),
+                            Mascot.color(0xFA020A0E)
                         )
                     )
                 )
@@ -324,7 +325,7 @@ fun MikuThermalObservatoryModal(
                         .fillMaxWidth()
                         .height(115.dp)
                         .clip(RoundedCornerShape(12.dp))
-                        .background(Color(0xFF030D12))
+                        .background(Mascot.color(0xFF030D12))
                         .border(1.dp, CyberGlassBorder.copy(alpha = 0.6f), RoundedCornerShape(12.dp))
                         .padding(8.dp)
                 ) {
@@ -368,7 +369,7 @@ fun MikuThermalObservatoryModal(
 
                             drawLine(Color(0x22FF1744), Offset(0f, y60), Offset(w, y60), strokeWidth = 1f)
                             drawLine(Color(0x22FFD600), Offset(0f, y45), Offset(w, y45), strokeWidth = 1f)
-                            drawLine(Color(0x2200E5FF), Offset(0f, y30), Offset(w, y30), strokeWidth = 1f)
+                            drawLine(Mascot.color(0x2200E5FF), Offset(0f, y30), Offset(w, y30), strokeWidth = 1f)
 
                             if (pts.size >= 2) {
                                 val dx = w / 29f
@@ -463,7 +464,7 @@ fun MikuThermalObservatoryModal(
                     Modifier
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(12.dp))
-                        .background(Color(0xFF030D12))
+                        .background(Mascot.color(0xFF030D12))
                         .border(1.dp, CyberGlassBorder.copy(alpha = 0.5f), RoundedCornerShape(12.dp))
                         .padding(horizontal = 10.dp, vertical = 8.dp)
                 ) {
@@ -505,7 +506,7 @@ fun MikuThermalObservatoryModal(
                                     zone.tempC >= 55f -> com.miku.launcher.ui.MikuIdentity.Coral
                                     zone.tempC >= 48f -> Color(0xFFFF9100)
                                     zone.tempC >= 38f -> com.miku.launcher.ui.MikuIdentity.Gold
-                                    else -> Color(0xFF00E5FF)
+                                    else -> Mascot.color(0xFF00E5FF)
                                 }
                                 Box(
                                     Modifier
@@ -528,7 +529,7 @@ fun MikuThermalObservatoryModal(
                         ) {
                             Text("CPU ×${counts["CPU"] ?: 0}", color = Color(0xFFFF9100), fontSize = 6.5.sp, fontWeight = FontWeight.Bold)
                             Text("GPU/DSP ×${(counts["GPU"] ?: 0) + (counts["DSP"] ?: 0)}", color = MikuCyan, fontSize = 6.5.sp, fontWeight = FontWeight.Bold)
-                            Text("AUDIO ×${counts["AUDIO"] ?: 0}", color = Color(0xFFB388FF), fontSize = 6.5.sp, fontWeight = FontWeight.Bold)
+                            Text("AUDIO ×${counts["AUDIO"] ?: 0}", color = Mascot.color(0xFFB388FF), fontSize = 6.5.sp, fontWeight = FontWeight.Bold)
                             Text("BATTERY ×${counts["BATTERY"] ?: 0}", color = Color(0xFF00FF88), fontSize = 6.5.sp, fontWeight = FontWeight.Bold)
                             Text("RF ×${counts["RF"] ?: 0}", color = MikuNeonPink, fontSize = 6.5.sp, fontWeight = FontWeight.Bold)
                             Text("OTHER ×${(counts["SOC"] ?: 0) + (counts["DISPLAY"] ?: 0) + (counts["OTHER"] ?: 0)}", color = MikuTextSecondary, fontSize = 6.5.sp, fontWeight = FontWeight.Bold)
@@ -545,7 +546,7 @@ fun MikuThermalObservatoryModal(
                     Modifier
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(10.dp))
-                        .background(Color(0xFF05131A))
+                        .background(Mascot.color(0xFF05131A))
                         .border(1.dp, CyberGlassBorder.copy(alpha = 0.5f), RoundedCornerShape(10.dp))
                         .padding(8.dp)
                 ) {
@@ -562,7 +563,7 @@ fun MikuThermalObservatoryModal(
                                     Modifier
                                         .weight(1f)
                                         .clip(RoundedCornerShape(6.dp))
-                                        .background(Color(0xFF030A0E))
+                                        .background(Mascot.color(0xFF030A0E))
                                         .border(0.8.dp, MikuCyan.copy(alpha = 0.5f), RoundedCornerShape(6.dp))
                                         .padding(vertical = 4.dp),
                                     contentAlignment = Alignment.Center
@@ -604,7 +605,7 @@ fun MikuThermalObservatoryModal(
 
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     listOf(
-                        Triple("save", "Battery Saver", Color(0xFF00E5FF)),
+                        Triple("save", "Battery Saver", Mascot.color(0xFF00E5FF)),
                         Triple("auto", "Auto", com.miku.launcher.ui.MikuIdentity.Gold),
                         Triple("perf", "Performance", com.miku.launcher.ui.MikuIdentity.Coral)
                     ).forEach { (mode, label, color) ->
@@ -613,7 +614,7 @@ fun MikuThermalObservatoryModal(
                             Modifier
                                 .weight(1f)
                                 .clip(RoundedCornerShape(8.dp))
-                                .background(if (isSelected) color.copy(alpha = 0.22f) else Color(0xFF041017))
+                                .background(if (isSelected) color.copy(alpha = 0.22f) else Mascot.color(0xFF041017))
                                 .border(1.dp, if (isSelected) color else CyberGlassBorder.copy(alpha = 0.4f), RoundedCornerShape(8.dp))
                                 .clickable { MikuPowerProfile.setMode(ctx, mode) }
                                 .padding(vertical = 8.dp),

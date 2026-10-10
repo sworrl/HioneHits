@@ -1,5 +1,6 @@
 package com.miku.launcher.widget
 
+import com.miku.launcher.Mascot
 import android.appwidget.AppWidgetManager
 import android.appwidget.AppWidgetProvider
 import android.content.ComponentName
@@ -24,8 +25,8 @@ class MikuSignalWidget : AppWidgetProvider() {
     }
 
     companion object {
-        private const val TEAL = 0xFF39C5BB.toInt()
-        private const val TEAL_LIGHT = 0xFF9FF3EC.toInt()
+        private val TEAL get() = Mascot.argb(0xFF39C5BB.toInt())
+        private val TEAL_LIGHT get() = Mascot.argb(0xFF9FF3EC.toInt())
         private const val RED = 0xFFFF5252.toInt()
         private const val DIM = 0x80FFFFFF.toInt()
 

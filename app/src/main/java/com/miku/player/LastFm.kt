@@ -134,7 +134,7 @@ object LastFm {
             } else {
                 val code = json.optInt("error", -1)
                 val msg = when (code) {
-                    14 -> "Approve MikuOS on the Last.fm page first, then tap Finish"
+                    14 -> "Approve ${Mascot.osName} on the Last.fm page first, then tap Finish"
                     15 -> "That request expired. Start again."
                     else -> json.optString("message").ifBlank { "Could not finish sign-in" }
                 }

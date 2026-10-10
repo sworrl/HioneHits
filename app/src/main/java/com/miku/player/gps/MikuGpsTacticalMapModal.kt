@@ -1,5 +1,6 @@
 package com.miku.player.gps
 
+import com.miku.player.Mascot
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
@@ -187,7 +188,7 @@ fun MikuGpsTacticalMapModal(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Color(0xE6020A0E))
+                .background(Mascot.color(0xE6020A0E))
                 .clickable(
                     interactionSource = remember { MutableInteractionSource() },
                     indication = null
@@ -202,13 +203,13 @@ fun MikuGpsTacticalMapModal(
                     .clip(CutCornerShape(18.dp))
                     .background(
                         Brush.verticalGradient(
-                            listOf(Color(0xFF071922), Color(0xFF030D12))
+                            listOf(Mascot.color(0xFF071922), Mascot.color(0xFF030D12))
                         )
                     )
                     .border(
                         1.2.dp,
                         Brush.linearGradient(
-                            listOf(Color(0xFF00E5FF), Color(0xFFFF4081), Color(0xFF00E5FF))
+                            listOf(Mascot.color(0xFF00E5FF), Mascot.color(0xFFFF4081), Mascot.color(0xFF00E5FF))
                         ),
                         CutCornerShape(18.dp)
                     )
@@ -230,14 +231,14 @@ fun MikuGpsTacticalMapModal(
                                 modifier = Modifier
                                     .size(26.dp)
                                     .clip(CutCornerShape(6.dp))
-                                    .background(Color(0xFF00E5FF).copy(alpha = 0.2f))
-                                    .border(1.dp, Color(0xFF00E5FF), CutCornerShape(6.dp)),
+                                    .background(Mascot.color(0xFF00E5FF).copy(alpha = 0.2f))
+                                    .border(1.dp, Mascot.color(0xFF00E5FF), CutCornerShape(6.dp)),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.LocationOn,
                                     contentDescription = "GPS",
-                                    tint = Color(0xFF00E5FF),
+                                    tint = Mascot.color(0xFF00E5FF),
                                     modifier = Modifier.size(16.dp)
                                 )
                             }
@@ -245,7 +246,7 @@ fun MikuGpsTacticalMapModal(
                             Column {
                                 Text(
                                     text = "GPS",
-                                    color = Color(0xFF00E5FF),
+                                    color = Mascot.color(0xFF00E5FF),
                                     fontSize = 11.5.sp,
                                     fontWeight = FontWeight.Black,
                                     fontFamily = AudiowideFont,
@@ -266,7 +267,7 @@ fun MikuGpsTacticalMapModal(
                                 }
                                 Text(
                                     text = fixLabel,
-                                    color = if (gps.isLocked) Color(0xFF00FFCC) else Color(0xFFFFB300),
+                                    color = if (gps.isLocked) Mascot.color(0xFF00FFCC) else Color(0xFFFFB300),
                                     fontSize = 7.5.sp,
                                     fontWeight = FontWeight.Bold,
                                     fontFamily = OrbitronFont
@@ -282,7 +283,7 @@ fun MikuGpsTacticalMapModal(
                             Icon(
                                 imageVector = Icons.Default.Close,
                                 contentDescription = "Close",
-                                tint = Color(0xFFFF4081),
+                                tint = Mascot.color(0xFFFF4081),
                                 modifier = Modifier.size(16.dp)
                             )
                         }
@@ -296,8 +297,8 @@ fun MikuGpsTacticalMapModal(
                             .fillMaxWidth()
                             .height(28.dp)
                             .clip(CutCornerShape(8.dp))
-                            .background(Color(0xFF051218))
-                            .border(0.8.dp, Color(0xFF00E5FF).copy(alpha = 0.35f), CutCornerShape(8.dp))
+                            .background(Mascot.color(0xFF051218))
+                            .border(0.8.dp, Mascot.color(0xFF00E5FF).copy(alpha = 0.35f), CutCornerShape(8.dp))
                             .padding(2.dp)
                     ) {
                         TabButton(
@@ -346,15 +347,15 @@ fun MikuGpsTacticalMapModal(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clip(CutCornerShape(6.dp))
-                            .background(Color(0xFF040E14))
-                            .border(0.6.dp, Color(0xFF00E5FF).copy(alpha = 0.25f), CutCornerShape(6.dp))
+                            .background(Mascot.color(0xFF040E14))
+                            .border(0.6.dp, Mascot.color(0xFF00E5FF).copy(alpha = 0.25f), CutCornerShape(6.dp))
                             .padding(horizontal = 8.dp, vertical = 4.dp),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
                             text = "CACHE: ${MikuTopoTileCache.getTileCount(ctx)} TILES (${MikuTopoTileCache.getCacheSizeBytes(ctx) / 1024} KB)",
-                            color = Color(0xFF80DEEA),
+                            color = Mascot.color(0xFF80DEEA),
                             fontSize = 7.5.sp,
                             fontWeight = FontWeight.Bold,
                             fontFamily = OrbitronFont
@@ -363,7 +364,7 @@ fun MikuGpsTacticalMapModal(
                             // No reported accuracy = say so. "SEARCHING FIX" claimed an in-progress
                             // satellite search that nothing here actually observes.
                             text = if (gps.accuracyM > 0) "ACCURACY: ±${"%.1f".format(gps.accuracyM)}M" else "ACCURACY: —",
-                            color = if (gps.accuracyM in 0.1f..15f) Color(0xFF00FFCC) else Color(0xFFFFB300),
+                            color = if (gps.accuracyM in 0.1f..15f) Mascot.color(0xFF00FFCC) else Color(0xFFFFB300),
                             fontSize = 7.5.sp,
                             fontWeight = FontWeight.Bold,
                             fontFamily = OrbitronFont
@@ -402,8 +403,8 @@ private fun TacticalMapView(
         modifier = Modifier
             .fillMaxSize()
             .clip(CutCornerShape(10.dp))
-            .background(Color(0xFF02090D))
-            .border(1.dp, Color(0xFF00E5FF).copy(alpha = 0.4f), CutCornerShape(10.dp))
+            .background(Mascot.color(0xFF02090D))
+            .border(1.dp, Mascot.color(0xFF00E5FF).copy(alpha = 0.4f), CutCornerShape(10.dp))
             // Edge-safe: the map fills the modal, so a pan that starts in a window edge band
             // (side = back, bottom = home, top = shade) is the nav layer's — not a map pan.
             .edgeSafePointerInput(Unit) { guard ->
@@ -425,7 +426,7 @@ private fun TacticalMapView(
             for (gx in 0..(w.toInt() / gridSize.toInt() + 1)) {
                 val x = (gx * gridSize + (panX % gridSize))
                 drawLine(
-                    color = Color(0xFF00E5FF).copy(alpha = 0.08f),
+                    color = Mascot.color(0xFF00E5FF).copy(alpha = 0.08f),
                     start = Offset(x, 0f),
                     end = Offset(x, h),
                     strokeWidth = 0.8f
@@ -434,7 +435,7 @@ private fun TacticalMapView(
             for (gy in 0..(h.toInt() / gridSize.toInt() + 1)) {
                 val y = (gy * gridSize + (panY % gridSize))
                 drawLine(
-                    color = Color(0xFF00E5FF).copy(alpha = 0.08f),
+                    color = Mascot.color(0xFF00E5FF).copy(alpha = 0.08f),
                     start = Offset(0f, y),
                     end = Offset(w, y),
                     strokeWidth = 0.8f
@@ -466,7 +467,7 @@ private fun TacticalMapView(
             for (ring in 1..4) {
                 val r = ring * 60f
                 drawCircle(
-                    color = Color(0xFF00E5FF).copy(alpha = 0.12f),
+                    color = Mascot.color(0xFF00E5FF).copy(alpha = 0.12f),
                     radius = r,
                     center = Offset(cx, cy),
                     style = Stroke(width = 1f, pathEffect = PathEffect.dashPathEffect(floatArrayOf(6f, 6f)))
@@ -475,13 +476,13 @@ private fun TacticalMapView(
 
             // 4. Draw Crosshair Reticle
             drawLine(
-                color = Color(0xFF00E5FF).copy(alpha = 0.4f),
+                color = Mascot.color(0xFF00E5FF).copy(alpha = 0.4f),
                 start = Offset(cx - 20f, cy),
                 end = Offset(cx + 20f, cy),
                 strokeWidth = 1.2f
             )
             drawLine(
-                color = Color(0xFF00E5FF).copy(alpha = 0.4f),
+                color = Mascot.color(0xFF00E5FF).copy(alpha = 0.4f),
                 start = Offset(cx, cy - 20f),
                 end = Offset(cx, cy + 20f),
                 strokeWidth = 1.2f
@@ -489,12 +490,12 @@ private fun TacticalMapView(
 
             // 5. GPS Pulse Accuracy Disc & Hero Beacon
             drawCircle(
-                color = Color(0xFF00E5FF).copy(alpha = 0.25f * (1f - (pulseRadius - 12f) / 16f)),
+                color = Mascot.color(0xFF00E5FF).copy(alpha = 0.25f * (1f - (pulseRadius - 12f) / 16f)),
                 radius = pulseRadius,
                 center = Offset(cx, cy)
             )
             drawCircle(
-                color = Color(0xFFFF4081),
+                color = Mascot.color(0xFFFF4081),
                 radius = 6.5f,
                 center = Offset(cx, cy)
             )
@@ -511,8 +512,8 @@ private fun TacticalMapView(
                 .align(Alignment.TopCenter)
                 .padding(top = 6.dp)
                 .clip(CutCornerShape(6.dp))
-                .background(Color(0xCC05141C))
-                .border(0.6.dp, Color(0xFF00E5FF).copy(alpha = 0.5f), CutCornerShape(6.dp))
+                .background(Mascot.color(0xCC05141C))
+                .border(0.6.dp, Mascot.color(0xFF00E5FF).copy(alpha = 0.5f), CutCornerShape(6.dp))
                 .padding(horizontal = 8.dp, vertical = 3.dp)
         ) {
             Text(
@@ -532,13 +533,13 @@ private fun TacticalMapView(
             horizontalArrangement = Arrangement.spacedBy(6.dp)
         ) {
             TactileIconButton(onClick = onZoomIn, modifier = Modifier.size(30.dp)) {
-                Icon(Icons.Default.Add, "Zoom In", tint = Color(0xFF00E5FF), modifier = Modifier.size(16.dp))
+                Icon(Icons.Default.Add, "Zoom In", tint = Mascot.color(0xFF00E5FF), modifier = Modifier.size(16.dp))
             }
             TactileIconButton(onClick = onZoomOut, modifier = Modifier.size(30.dp)) {
-                Icon(Icons.Default.Remove, "Zoom Out", tint = Color(0xFF00E5FF), modifier = Modifier.size(16.dp))
+                Icon(Icons.Default.Remove, "Zoom Out", tint = Mascot.color(0xFF00E5FF), modifier = Modifier.size(16.dp))
             }
             TactileIconButton(onClick = onCenter, modifier = Modifier.size(30.dp)) {
-                Icon(Icons.Default.MyLocation, "Center", tint = Color(0xFFFF4081), modifier = Modifier.size(16.dp))
+                Icon(Icons.Default.MyLocation, "Center", tint = Mascot.color(0xFFFF4081), modifier = Modifier.size(16.dp))
             }
         }
     }
@@ -550,8 +551,8 @@ private fun GpsTelemetryHudView(gps: MikuWeatherService.GpsTelemetry) {
         modifier = Modifier
             .fillMaxSize()
             .clip(CutCornerShape(10.dp))
-            .background(Color(0xFF02090D))
-            .border(1.dp, Color(0xFF00E5FF).copy(alpha = 0.4f), CutCornerShape(10.dp))
+            .background(Mascot.color(0xFF02090D))
+            .border(1.dp, Mascot.color(0xFF00E5FF).copy(alpha = 0.4f), CutCornerShape(10.dp))
             .padding(8.dp),
         verticalArrangement = Arrangement.spacedBy(6.dp)
     ) {
@@ -561,13 +562,13 @@ private fun GpsTelemetryHudView(gps: MikuWeatherService.GpsTelemetry) {
             GpsMetricCard(
                 title = "LATITUDE",
                 value = if (gps.isLocked && gps.latitude != 0.0) "${"%.5f".format(kotlin.math.abs(gps.latitude))}° ${if (gps.latitude >= 0) "N" else "S"}" else "—",
-                color = Color(0xFF00E5FF),
+                color = Mascot.color(0xFF00E5FF),
                 modifier = Modifier.weight(1f)
             )
             GpsMetricCard(
                 title = "LONGITUDE",
                 value = if (gps.isLocked && gps.longitude != 0.0) "${"%.5f".format(kotlin.math.abs(gps.longitude))}° ${if (gps.longitude >= 0) "E" else "W"}" else "—",
-                color = Color(0xFF00E5FF),
+                color = Mascot.color(0xFF00E5FF),
                 modifier = Modifier.weight(1f)
             )
         }
@@ -577,13 +578,13 @@ private fun GpsTelemetryHudView(gps: MikuWeatherService.GpsTelemetry) {
             GpsMetricCard(
                 title = "ELEVATION / ALTITUDE",
                 value = if (gps.isLocked) "${gps.altitudeM.toInt()} m (${(gps.altitudeM * 3.28084).toInt()} ft)" else "—",
-                color = Color(0xFF00FFCC),
+                color = Mascot.color(0xFF00FFCC),
                 modifier = Modifier.weight(1f)
             )
             GpsMetricCard(
                 title = "GROUND SPEED",
                 value = if (gps.isLocked) "${"%.1f".format(gps.speedMph)} mph (${(gps.speedMph * 1.60934).toInt()} km/h)" else "—",
-                color = Color(0xFFFF4081),
+                color = Mascot.color(0xFFFF4081),
                 modifier = Modifier.weight(1f)
             )
         }
@@ -599,7 +600,7 @@ private fun GpsTelemetryHudView(gps: MikuWeatherService.GpsTelemetry) {
             GpsMetricCard(
                 title = "FIX ACCURACY",
                 value = if (gps.isLocked && gps.accuracyM > 0f) "±${"%.1f".format(gps.accuracyM)} meters" else "—",
-                color = Color(0xFF80DEEA),
+                color = Mascot.color(0xFF80DEEA),
                 modifier = Modifier.weight(1f)
             )
         }
@@ -609,14 +610,14 @@ private fun GpsTelemetryHudView(gps: MikuWeatherService.GpsTelemetry) {
             modifier = Modifier
                 .fillMaxWidth()
                 .clip(CutCornerShape(8.dp))
-                .background(Color(0xFF05141C))
-                .border(0.8.dp, Color(0xFF00E5FF).copy(alpha = 0.3f), CutCornerShape(8.dp))
+                .background(Mascot.color(0xFF05141C))
+                .border(0.8.dp, Mascot.color(0xFF00E5FF).copy(alpha = 0.3f), CutCornerShape(8.dp))
                 .padding(8.dp)
         ) {
             Column {
                 Text(
                     text = "LOCATION",
-                    color = Color(0xFF00E5FF),
+                    color = Mascot.color(0xFF00E5FF),
                     fontSize = 7.5.sp,
                     fontWeight = FontWeight.Bold,
                     fontFamily = AudiowideFont
@@ -646,7 +647,7 @@ private fun GpsMetricCard(
     Box(
         modifier = modifier
             .clip(CutCornerShape(8.dp))
-            .background(Color(0xFF05141C))
+            .background(Mascot.color(0xFF05141C))
             .border(0.8.dp, color.copy(alpha = 0.35f), CutCornerShape(8.dp))
             .padding(6.dp)
     ) {
@@ -683,10 +684,10 @@ private fun TabButton(
         modifier = modifier
             .fillMaxHeight()
             .clip(CutCornerShape(6.dp))
-            .background(if (isSelected) Color(0xFF00E5FF).copy(alpha = 0.25f) else Color.Transparent)
+            .background(if (isSelected) Mascot.color(0xFF00E5FF).copy(alpha = 0.25f) else Color.Transparent)
             .border(
                 0.8.dp,
-                if (isSelected) Color(0xFF00E5FF) else Color.Transparent,
+                if (isSelected) Mascot.color(0xFF00E5FF) else Color.Transparent,
                 CutCornerShape(6.dp)
             )
             .clickable(onClick = onClick),
@@ -694,7 +695,7 @@ private fun TabButton(
     ) {
         Text(
             text = title,
-            color = if (isSelected) Color(0xFF00E5FF) else Color.Gray,
+            color = if (isSelected) Mascot.color(0xFF00E5FF) else Color.Gray,
             fontSize = 8.5.sp,
             fontWeight = FontWeight.Bold,
             fontFamily = AudiowideFont
@@ -713,10 +714,10 @@ private fun TactileIconButton(
     Box(
         modifier = modifier
             .clip(CutCornerShape(6.dp))
-            .background(if (isPressed) Color(0xFF00E5FF).copy(alpha = 0.3f) else Color(0xDD041218))
+            .background(if (isPressed) Mascot.color(0xFF00E5FF).copy(alpha = 0.3f) else Mascot.color(0xDD041218))
             .border(
                 1.dp,
-                if (isPressed) Color(0xFF00E5FF) else Color(0xFF00E5FF).copy(alpha = 0.4f),
+                if (isPressed) Mascot.color(0xFF00E5FF) else Mascot.color(0xFF00E5FF).copy(alpha = 0.4f),
                 CutCornerShape(6.dp)
             )
             .pointerInput(Unit) {

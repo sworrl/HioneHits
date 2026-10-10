@@ -1,5 +1,6 @@
 package com.miku.player.taste
 
+import com.miku.player.Mascot
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
@@ -72,7 +73,7 @@ import kotlinx.coroutines.delay
  * StationFromTrackButton in the track long-press sheet).
  */
 
-private val CardText = Color(0xFFE8F4F2)
+private val CardText get() = Mascot.color(0xFFE8F4F2)
 
 // =============================================================================================
 // Home shelf
@@ -117,7 +118,7 @@ fun ForYouShelf(
                     Haptics.tick(ctx)
                     if (StationEngine.active) StationEngine.openSheet()
                     else if (StationEngine.start(ctx, StationEngine.Seed.MyTasteNow, tracks)) StationEngine.openSheet()
-                    else android.widget.Toast.makeText(ctx, StationEngine.lastMessage.ifBlank { "Listen more to unlock Miku Radio" }, android.widget.Toast.LENGTH_SHORT).show()
+                    else android.widget.Toast.makeText(ctx, StationEngine.lastMessage.ifBlank { "Listen more to unlock ${Mascot.name} Radio" }, android.widget.Toast.LENGTH_SHORT).show()
                 }
                 Spacer(Modifier.width(8.dp))
                 Pill(text = "Taste", icon = null, color = MikuTeal) { Haptics.tick(ctx); showProfile = true }
@@ -207,7 +208,7 @@ private fun LockedRow(row: TasteShelves.Row) {
 private fun HonestNote(text: String) {
     Box(
         Modifier.padding(horizontal = 14.dp, vertical = 6.dp).fillMaxWidth()
-            .clip(RoundedCornerShape(14.dp)).background(Color(0xFF092124))
+            .clip(RoundedCornerShape(14.dp)).background(Mascot.color(0xFF092124))
             .border(1.dp, MikuTeal.copy(alpha = 0.3f), RoundedCornerShape(14.dp)).padding(12.dp)
     ) {
         Text(text, color = Muted, fontSize = 11.5.sp, lineHeight = 15.sp)
@@ -232,7 +233,7 @@ private fun StationOnAirCard(modifier: Modifier = Modifier) {
     val seed = StationEngine.seed ?: return
     Row(
         modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp))
-            .background(Brush.horizontalGradient(listOf(Color(0xFF1C081A), Color(0xFF0C2B2E))))
+            .background(Brush.horizontalGradient(listOf(Mascot.color(0xFF1C081A), Mascot.color(0xFF0C2B2E))))
             .border(1.dp, MikuPink.copy(alpha = 0.5f), RoundedCornerShape(16.dp))
             .clickable { StationEngine.openSheet() }.padding(12.dp),
         verticalAlignment = Alignment.CenterVertically
@@ -240,7 +241,7 @@ private fun StationOnAirCard(modifier: Modifier = Modifier) {
         Icon(Icons.Default.Radio, null, tint = MikuPink, modifier = Modifier.size(22.dp))
         Spacer(Modifier.width(10.dp))
         Column(Modifier.weight(1f)) {
-            Text("MIKU RADIO · ON AIR", color = MikuPink, fontSize = 10.5.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.2.sp)
+            Text("${Mascot.nameUpper} RADIO · ON AIR", color = MikuPink, fontSize = 10.5.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.2.sp)
             Text("${seed.kind}: ${seed.label}", color = CardText, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
             if (StationEngine.nowWhy.isNotBlank()) Text(StationEngine.nowWhy, color = Muted, fontSize = 10.5.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
@@ -258,7 +259,7 @@ fun StationSeedButton(seed: () -> StationEngine.Seed, library: List<Track>? = nu
     val ctx = LocalContext.current
     Box(
         modifier = Modifier.size(size).clip(RoundedCornerShape(size / 2))
-            .background(Color(0xFF1C081A))
+            .background(Mascot.color(0xFF1C081A))
             .border(1.dp, MikuPink.copy(alpha = 0.5f), RoundedCornerShape(size / 2))
             .clickable {
                 Haptics.tick(ctx)
@@ -267,7 +268,7 @@ fun StationSeedButton(seed: () -> StationEngine.Seed, library: List<Track>? = nu
             },
         contentAlignment = Alignment.Center
     ) {
-        Icon(Icons.Default.Radio, "Miku Radio", tint = MikuPink, modifier = Modifier.size(size / 2))
+        Icon(Icons.Default.Radio, "${Mascot.name} Radio", tint = MikuPink, modifier = Modifier.size(size / 2))
     }
 }
 
@@ -277,7 +278,7 @@ fun StationFromTrackButton(track: Track, onStarted: () -> Unit) {
     val ctx = LocalContext.current
     Row(
         modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp))
-            .background(Color(0xFF1C081A)).border(1.2.dp, MikuPink.copy(alpha = 0.8f), RoundedCornerShape(14.dp))
+            .background(Mascot.color(0xFF1C081A)).border(1.2.dp, MikuPink.copy(alpha = 0.8f), RoundedCornerShape(14.dp))
             .clickable {
                 Haptics.tick(ctx)
                 if (StationEngine.start(ctx, StationEngine.Seed.FromTrack(track))) { StationEngine.openSheet(); onStarted() }
@@ -287,9 +288,9 @@ fun StationFromTrackButton(track: Track, onStarted: () -> Unit) {
         horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Icon(Icons.Default.Radio, "Miku Radio", tint = MikuPink, modifier = Modifier.size(20.dp))
+        Icon(Icons.Default.Radio, "${Mascot.name} Radio", tint = MikuPink, modifier = Modifier.size(20.dp))
         Spacer(Modifier.width(6.dp))
-        Text("Miku Radio from this song", color = MikuPink, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+        Text("${Mascot.name} Radio from this song", color = MikuPink, fontSize = 13.sp, fontWeight = FontWeight.Bold)
     }
 }
 
@@ -315,7 +316,7 @@ fun StationSheet(onDismiss: () -> Unit) {
                 Icon(Icons.Default.Radio, null, tint = MikuPink, modifier = Modifier.size(24.dp))
                 Spacer(Modifier.width(10.dp))
                 Column(Modifier.weight(1f)) {
-                    Text(if (active) "MIKU RADIO · ON AIR" else "MIKU RADIO · STOPPED", color = MikuPink, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.2.sp)
+                    Text(if (active) "${Mascot.nameUpper} RADIO · ON AIR" else "${Mascot.nameUpper} RADIO · STOPPED", color = MikuPink, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.2.sp)
                     Text(seed?.let { "${it.kind}: ${it.label}" } ?: "No station", color = MikuTealBright, fontSize = 17.sp, fontWeight = FontWeight.Bold, maxLines = 2, overflow = TextOverflow.Ellipsis)
                 }
             }

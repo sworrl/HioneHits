@@ -1053,12 +1053,12 @@ private fun mergeDuplicateAlbumCopies(groups: List<AlbumGroup>): List<AlbumGroup
 }
 
 // ---- Miku palette ----
-val MikuTeal = Color(0xFF39C5BB)
-val MikuTealBright = Color(0xFF7FE6DE)
-val MikuPink = Color(0xFFFF5FA2)
+val MikuTeal get() = Mascot.color(0xFF39C5BB)
+val MikuTealBright get() = Mascot.color(0xFF7FE6DE)
+val MikuPink get() = Mascot.color(0xFFFF5FA2)
 val MikuGold = Color(0xFFFFCF6B)
-val Ground = Color(0xFF04161A)
-val Surface1 = Color(0xFF0C2B2E)
+val Ground get() = Mascot.color(0xFF04161A)
+val Surface1 get() = Mascot.color(0xFF0C2B2E)
 val Muted = Color(0xFF89ACA7)
 
 /** Dynamic per-level metric color: hotter = better. */
@@ -1131,7 +1131,7 @@ fun trackMetaSpan(t: Track, resolvedYear: Int? = null): AnnotatedString {
             withStyle(SpanStyle(color = DiscImageColor, fontWeight = FontWeight.Bold)) { append(lbl) }
             sep()
         }
-        withStyle(SpanStyle(color = Color(0xFFD4E8E5), fontWeight = FontWeight.Normal)) { append(t.artist) }
+        withStyle(SpanStyle(color = Mascot.color(0xFFD4E8E5), fontWeight = FontWeight.Normal)) { append(t.artist) }
         if (t.album.isNotBlank()) { sep(); withStyle(SpanStyle(color = Muted)) { append(t.album) } }
         if (yr != null) { sep(); withStyle(SpanStyle(color = MikuGold, fontWeight = FontWeight.SemiBold)) { append("$yr") } }
     }

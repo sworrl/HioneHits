@@ -1,5 +1,6 @@
 package com.miku.player.wanted
 
+import com.miku.player.Mascot
 import android.content.Context
 import android.content.Intent
 import android.graphics.BitmapFactory
@@ -76,8 +77,8 @@ import java.security.MessageDigest
 /** libSel key MainActivity routes to [WantedScreen]. Leading space so it can never collide with a playlist name. */
 const val WANTED_LIB_KEY = " WANTED"
 
-private val TextMain = Color(0xFFE8F4F2)
-private val CardBg = Color(0xFF0C2629)
+private val TextMain get() = Mascot.color(0xFFE8F4F2)
+private val CardBg get() = Mascot.color(0xFF0C2629)
 
 private fun statusColor(s: WantedStatus): Color = when (s) {
     WantedStatus.WANTED -> MikuGold
@@ -104,7 +105,7 @@ fun WantedLibRow(onClick: () -> Unit) {
         Modifier.fillMaxWidth().clickable { onClick() }.padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Box(Modifier.size(46.dp).clip(RoundedCornerShape(10.dp)).background(Color(0xFF123438)), contentAlignment = Alignment.Center) {
+        Box(Modifier.size(46.dp).clip(RoundedCornerShape(10.dp)).background(Mascot.color(0xFF123438)), contentAlignment = Alignment.Center) {
             Icon(Icons.Default.Radio, null, tint = MikuGold)
         }
         Spacer(Modifier.width(12.dp))
@@ -235,8 +236,8 @@ fun WantedScreen(
                     val sel = f == effective
                     Box(
                         Modifier.clip(RoundedCornerShape(16.dp))
-                            .background(if (sel) MikuTeal.copy(alpha = 0.25f) else Color(0xFF0F2C30))
-                            .border(1.dp, if (sel) MikuTeal else Color(0xFF1E4A4F), RoundedCornerShape(16.dp))
+                            .background(if (sel) MikuTeal.copy(alpha = 0.25f) else Mascot.color(0xFF0F2C30))
+                            .border(1.dp, if (sel) MikuTeal else Mascot.color(0xFF1E4A4F), RoundedCornerShape(16.dp))
                             .clickable { filter = f }
                             .padding(horizontal = 12.dp, vertical = 6.dp)
                     ) { Text("${f.label} $n", color = if (sel) MikuTealBright else Muted, fontSize = 13.sp) }
@@ -404,7 +405,7 @@ fun WantedCover(url: String?, size: Dp) {
         if (url != null && bmp == null) bmp = withContext(Dispatchers.IO) { runCatching { WantedArt.load(ctx, url) }.getOrNull() }
     }
     Box(
-        Modifier.size(size).clip(RoundedCornerShape(8.dp)).background(Color(0xFF123438)),
+        Modifier.size(size).clip(RoundedCornerShape(8.dp)).background(Mascot.color(0xFF123438)),
         contentAlignment = Alignment.Center
     ) {
         val b = bmp

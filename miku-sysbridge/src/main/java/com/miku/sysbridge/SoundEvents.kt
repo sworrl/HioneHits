@@ -154,8 +154,10 @@ object SoundEvents {
             try {
                 if (!force && (!masterOn() || !allowedNow())) return@post
                 val c = catalog[cid] ?: return@post
-                val opt = c.options[optionId ?: choice(cid)] ?: return@post
-                if (!File(opt.path).canRead()) { Log.w(TAG, "missing ${opt.path}"); return@post }
+                var opt = c.options[optionId ?: choice(cid)] ?: return@post
+                // A mascot pack with its own voice replaces the voice options, never the plain sounds.
+                if (opt.voice && optionId == null) packClip(cid)?.let { opt = Option("pack", it, true) }
+                if (!opt.path.startsWith("content://") && !File(opt.path).canRead()) { Log.w(TAG, "missing ${opt.path}"); return@post }
                 startPlayer(opt, done)
                 done = null
             } catch (t: Throwable) {
@@ -181,12 +183,39 @@ object SoundEvents {
         val mp = MediaPlayer()
         player = mp
         mp.setAudioAttributes(attrs)
-        mp.setDataSource(opt.path)
+        if (opt.path.startsWith("content://")) mp.setDataSource(app, Uri.parse(opt.path)) else mp.setDataSource(opt.path)
         mp.setOnCompletionListener { handler.post { if (player === mp) stopPlayer(); onDone?.invoke() } }
         mp.setOnErrorListener { _, w, e -> Log.w(TAG, "player error $w/$e"); handler.post { if (player === mp) stopPlayer(); onDone?.invoke() }; true }
         mp.prepare()
         mp.start()
     }
+
+    // ── Mascot pack voice ────────────────────────────────────────────────
+    // Settings.Global miku_mascot_pack names the active pack (see Mascot.kt in the app modules).
+    // Its pack.json "sounds.clips" maps a category to a file in the pack, served by Miku Update's
+    // provider. The Miku pack has no clips, so the catalog's own voice plays.
+    private var clipsFor: String? = null
+    private var clips: Map<String, String> = emptyMap()
+
+    private fun packClip(cid: String): String? = runCatching {
+        val id = Settings.Global.getString(app.contentResolver, "miku_mascot_pack")?.trim()?.lowercase()
+        if (id.isNullOrEmpty() || id == "miku") return null
+        if (clipsFor != id) {
+            clips = emptyMap()
+            app.contentResolver.query(Uri.parse("content://com.miku.update.mascot/packs"), null, null, null, null)?.use { c ->
+                val ii = c.getColumnIndex("id")
+                val ij = c.getColumnIndex("json")
+                while (c.moveToNext()) {
+                    if (c.getString(ii) != id) continue
+                    val o = JSONObject(c.getString(ij)).optJSONObject("sounds")?.optJSONObject("clips") ?: continue
+                    clips = o.keys().asSequence().associateWith { o.getString(it) }
+                }
+            }
+            clipsFor = id
+        }
+        val path = clips[cid] ?: return null
+        "content://com.miku.update.mascot/file/$id/" + path.split('/').joinToString("/") { Uri.encode(it) }
+    }.onFailure { Log.w(TAG, "pack clip $cid: $it") }.getOrNull()
 
     private fun stopPlayer() {
         player?.let { runCatching { it.stop() }; it.release() }

@@ -1,5 +1,6 @@
 package com.miku.launcher.ui
 
+import com.miku.launcher.Mascot
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
@@ -76,17 +77,17 @@ private fun backdropFor(sky: Sky, solar: Float, isDay: Boolean): List<Color> {
             else -> listOf(Color(0xFF7FB3D5), Color(0xFF5A8AB8))
         }
         else -> when (phase) {
-            "dawn" -> listOf(Color(0xFFFFB3C6), Color(0xFFFFD6A5))
-            "dusk" -> listOf(Color(0xFFFF8FAB), Color(0xFF7B5EA7))
+            "dawn" -> listOf(Mascot.color(0xFFFFB3C6), Color(0xFFFFD6A5))
+            "dusk" -> listOf(Mascot.color(0xFFFF8FAB), Color(0xFF7B5EA7))
             "night" -> listOf(Color(0xFF2E2A5E), Color(0xFF141334))
-            else -> listOf(Color(0xFF6ED3F0), Color(0xFF39C5BB))
+            else -> listOf(Color(0xFF6ED3F0), Mascot.color(0xFF39C5BB))
         }
     }
 }
 
 private fun DrawScope.blush(cx: Float, cy: Float, r: Float) {
-    drawCircle(Color(0x88FF7BA9), r, Offset(cx - r * 3.2f, cy + r * 1.2f))
-    drawCircle(Color(0x88FF7BA9), r, Offset(cx + r * 3.2f, cy + r * 1.2f))
+    drawCircle(Mascot.color(0x88FF7BA9), r, Offset(cx - r * 3.2f, cy + r * 1.2f))
+    drawCircle(Mascot.color(0x88FF7BA9), r, Offset(cx + r * 3.2f, cy + r * 1.2f))
 }
 
 private fun DrawScope.eyes(cx: Float, cy: Float, r: Float) {
@@ -161,7 +162,7 @@ private fun KawaiiSkyGlyph(sky: Sky, modifier: Modifier = Modifier) {
                 eyes(cx - r * 0.15f, cy, r * 0.12f)
                 blush(cx - r * 0.15f, cy, r * 0.12f)
                 sparkle(cx + r * 1.6f, cy - r * 1.3f, r * 0.3f, Color.White.copy(alpha = twinkle))
-                sparkle(cx - r * 1.8f, cy + r * 1.1f, r * 0.2f, Color(0xFFB2EBF2).copy(alpha = 1f - twinkle * 0.6f))
+                sparkle(cx - r * 1.8f, cy + r * 1.1f, r * 0.2f, Mascot.color(0xFFB2EBF2).copy(alpha = 1f - twinkle * 0.6f))
             }
             Sky.CLOUD, Sky.FOG -> {
                 val cw = w * 0.78f
@@ -179,7 +180,7 @@ private fun KawaiiSkyGlyph(sky: Sky, modifier: Modifier = Modifier) {
                 for (i in -1..1) {
                     drawLine(Color(0xFF80D8FF), Offset(cx + i * cw * 0.22f, dropY), Offset(cx + i * cw * 0.22f - 2f, dropY + cw * 0.14f), 2.5.dp.toPx(), androidx.compose.ui.graphics.StrokeCap.Round)
                 }
-                heart(cx + cw * 0.42f, dropY + cw * 0.05f, cw * 0.05f, Color(0xFFFF80AB).copy(alpha = twinkle))
+                heart(cx + cw * 0.42f, dropY + cw * 0.05f, cw * 0.05f, Mascot.color(0xFFFF80AB).copy(alpha = twinkle))
                 if (sky == Sky.STORM) {
                     val bolt = Path().apply { moveTo(cx - 4f, dropY - 6f); lineTo(cx + 6f, dropY + 6f); lineTo(cx, dropY + 6f); lineTo(cx + 5f, dropY + 18f) }
                     drawPath(bolt, Color(0xFFFFF176), style = Stroke(2.dp.toPx()))
@@ -220,15 +221,15 @@ fun MikuKawaiiWeatherBadge(
             modifier
                 .width(236.dp)
                 .clip(RoundedCornerShape(24.dp))
-                .background(Color(0xFF0B1A1F))
+                .background(Mascot.color(0xFF0B1A1F))
                 .clickable(onClick = onClick)
                 .padding(horizontal = 14.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text("☁", fontSize = 22.sp, color = Color(0xFF39C5BB))
+            Text("☁", fontSize = 22.sp, color = Mascot.color(0xFF39C5BB))
             Spacer(Modifier.width(10.dp))
             Column {
-                Text("Weather", color = Color(0xFF39C5BB), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                Text("Weather", color = Mascot.color(0xFF39C5BB), fontSize = 12.sp, fontWeight = FontWeight.Bold)
                 Text("No data yet. Tap to fetch.", color = Color(0xB3FFFFFF), fontSize = 11.sp)
             }
         }

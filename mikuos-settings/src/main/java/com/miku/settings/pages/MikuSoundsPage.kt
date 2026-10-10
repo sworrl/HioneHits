@@ -1,5 +1,6 @@
 package com.miku.settings.pages
 
+import com.miku.settings.Mascot
 import android.app.Activity
 import android.content.Context
 import android.content.Intent
@@ -149,13 +150,13 @@ fun MikuSoundsPage() {
 
     PageList {
         if (cats.isEmpty()) {
-            item { Section { BodyText("This MikuOS image has no sound catalog. The sounds come with the image, so this page fills in after an update.") } }
+            item { Section { BodyText("This ${Mascot.osName} image has no sound catalog. The sounds come with the image, so this page fills in after an update.") } }
             return@PageList
         }
         item {
             key(refresh) {
                 Section {
-                    ToggleRow("MikuOS sounds", "Charger, battery, USB DAC, lock, screenshot and the rest. Silent mode and Do Not Disturb mute them.",
+                    ToggleRow("${Mascot.osName} sounds", "Charger, battery, USB DAC, lock, screenshot and the rest. Silent mode and Do Not Disturb mute them.",
                         runCatching { Settings.Global.getInt(ctx.contentResolver, SoundCatalog.MASTER, 1) }.getOrDefault(1) == 1) {
                         runCatching { Settings.Global.putInt(ctx.contentResolver, SoundCatalog.MASTER, if (it) 1 else 0) }
                         refresh++
@@ -174,12 +175,12 @@ fun MikuSoundsPage() {
         }
         item {
             key(refresh) {
-                Section("Ringtone, notification and alarm", note = "These use Android's picker. The MikuOS sounds start with Miku.") {
+                Section("Ringtone, notification and alarm", note = "These use Android's picker. The ${Mascot.osName} sounds start with ${Mascot.name}.") {
                     NavRow("Ringtone", currentName(RingtoneManager.TYPE_RINGTONE)) { androidPick(RingtoneManager.TYPE_RINGTONE, "Ringtone") }
                     NavRow("Notification sound", currentName(RingtoneManager.TYPE_NOTIFICATION)) { androidPick(RingtoneManager.TYPE_NOTIFICATION, "Notification sound") }
                     NavRow("Alarm sound", currentName(RingtoneManager.TYPE_ALARM)) { androidPick(RingtoneManager.TYPE_ALARM, "Alarm sound") }
                     Spacer(Modifier.height(6.dp))
-                    ActionButton("Use the MikuOS defaults for all three") {
+                    ActionButton("Use the ${Mascot.osName} defaults for all three") {
                         var ok = 0
                         listOf("ringtone" to RingtoneManager.TYPE_RINGTONE, "notification" to RingtoneManager.TYPE_NOTIFICATION,
                             "alarm" to RingtoneManager.TYPE_ALARM).forEach { (cid, type) ->
@@ -196,7 +197,7 @@ fun MikuSoundsPage() {
         }
         cats.firstOrNull { it.picker == "build" }?.let { c ->
             item {
-                Section(c.title, note = "The click pack is chosen when the MikuOS image is built. Tap one to hear it.") {
+                Section(c.title, note = "The click pack is chosen when the ${Mascot.osName} image is built. Tap one to hear it.") {
                     val inUse = sysProp("ro.miku.click_pack")
                     c.options.forEach { o ->
                         OptionRow(o.name, if (o.id == inUse) "In use" else null, selected = o.id == inUse, onPreview = { Preview.play(o.path) }) { Preview.play(o.path) }
@@ -213,7 +214,7 @@ fun MikuSoundCategoryPage(cid: String) {
     val c = remember { SoundCatalog.load().firstOrNull { it.id == cid } }
     var sel by remember { mutableStateOf(c?.let { SoundCatalog.choice(ctx, it) } ?: "off") }
     DisposableEffect(Unit) { onDispose { Preview.stop() } }
-    if (c == null) { PageList { item { Section { BodyText("This sound is not in this MikuOS image.") } } }; return }
+    if (c == null) { PageList { item { Section { BodyText("This sound is not in this ${Mascot.osName} image.") } } }; return }
     fun pick(v: String, path: String?) {
         if (SoundCatalog.set(ctx, c, v)) sel = v else toast(ctx, "That setting was refused")
         if (path != null) Preview.play(path) else Preview.stop()

@@ -1,5 +1,6 @@
 package com.miku.launcher.weather
 
+import com.miku.launcher.Mascot
 import org.json.JSONArray
 import org.json.JSONObject
 import java.text.SimpleDateFormat
@@ -289,7 +290,7 @@ object WxFmt {
 // ---------------------------------------------------------------------------------------------
 object MikuWeatherMood {
     fun line(s: WxSnapshot?): String {
-        if (s == null) return "No weather yet. Miku is still waiting on it."
+        if (s == null) return "No weather yet. ${Mascot.name} is still waiting on it."
         val c = s.current
         val code = c.wmoCode
         val next6 = s.hourly.take(6)
@@ -300,18 +301,18 @@ object MikuWeatherMood {
         val wind = c.windKmh ?: 0.0
         val uv = c.uvIndex
         return when {
-            MikuWmo.isStorm(code) -> "Thunderstorms. Miku says stay inside and turn the music up."
-            MikuWmo.isSnow(code) || next6.any { MikuWmo.isSnow(it.wmoCode) } -> "Snow. Miku says warm socks and a warm playlist."
-            rainSoon -> "Rain soon. Miku says bring an umbrella."
-            aqi != null && aqi > 100 -> "The air quality is poor today. Miku says mask up."
-            t != null && t >= 32.0 -> "It's hot. Miku says drink water and find some shade."
-            t != null && t <= 0.0 -> "It's below freezing. Miku says wrap up warm."
-            wind >= 40.0 -> "It's windy. Miku says hold on to your hat."
-            uv != null && uv >= 8.0 -> "High UV. Miku says wear sunscreen."
-            MikuWmo.isFog(code) -> "Foggy. Miku says walk slow."
-            c.isDay == false && code != null && code <= 1 -> "Clear night. Miku says look up at the stars."
-            code != null && code <= 1 -> "Nice out. Miku says take the M500 for a walk."
-            code != null -> "Miku says it's a good day for a playlist."
+            MikuWmo.isStorm(code) -> "Thunderstorms. ${Mascot.name} says stay inside and turn the music up."
+            MikuWmo.isSnow(code) || next6.any { MikuWmo.isSnow(it.wmoCode) } -> "Snow. ${Mascot.name} says warm socks and a warm playlist."
+            rainSoon -> "Rain soon. ${Mascot.name} says bring an umbrella."
+            aqi != null && aqi > 100 -> "The air quality is poor today. ${Mascot.name} says mask up."
+            t != null && t >= 32.0 -> "It's hot. ${Mascot.name} says drink water and find some shade."
+            t != null && t <= 0.0 -> "It's below freezing. ${Mascot.name} says wrap up warm."
+            wind >= 40.0 -> "It's windy. ${Mascot.name} says hold on to your hat."
+            uv != null && uv >= 8.0 -> "High UV. ${Mascot.name} says wear sunscreen."
+            MikuWmo.isFog(code) -> "Foggy. ${Mascot.name} says walk slow."
+            c.isDay == false && code != null && code <= 1 -> "Clear night. ${Mascot.name} says look up at the stars."
+            code != null && code <= 1 -> "Nice out. ${Mascot.name} says take the M500 for a walk."
+            code != null -> "${Mascot.name} says it's a good day for a playlist."
             else -> "Location found, no conditions yet."
         }
     }

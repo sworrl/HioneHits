@@ -1,5 +1,6 @@
 package com.miku.update.ota
 
+import com.miku.update.Mascot
 import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Build
@@ -10,6 +11,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.withContext
+import com.miku.update.BuildConfig
+import com.miku.update.mascot.PackStore
 import java.io.File
 import java.net.URL
 import java.util.concurrent.atomic.AtomicBoolean
@@ -63,9 +66,26 @@ object OtaEngine {
         val systemUpdate: OtaManifest.SystemUpdate? = null,
         val installed: List<InstalledApp> = emptyList(),
         val notice: String? = null,
+        val packs: List<PackItem> = emptyList(),
     ) {
         val installable get() = items.filter { it.phase == Phase.READY || it.phase == Phase.FAILED || it.phase == Phase.HELD }
     }
+
+    enum class PackPhase { BUILT_IN, AVAILABLE, INSTALLED, UPDATE, BLOCKED, DOWNLOADING, VERIFYING, FAILED }
+
+    /** One content pack: what the manifest offers, what is on the device, and where it stands. */
+    data class PackItem(
+        val id: String,
+        val name: String,
+        val offered: OtaManifest.ContentPack?,
+        /** Version of the downloaded copy, or null. */
+        val installedVersion: Int?,
+        /** Version that ships inside this app, or null. */
+        val builtInVersion: Int?,
+        val phase: PackPhase,
+        val done: Long = 0,
+        val message: String = "",
+    )
 
     private val _state = MutableStateFlow(State())
     val state: StateFlow<State> = _state
@@ -179,6 +199,7 @@ object OtaEngine {
                 it.copy(manifest = m, signedBy = signedBy, items = items, blockedByMinBuild = blocked, systemUpdate = su, error = null)
             }
             pruneCache(ctx, items)
+            refreshPacks(ctx)
             prefs.lastCheckMillis = System.currentTimeMillis()
             prefs.lastResult = when {
                 items.isEmpty() && su == null -> "Up to date"
@@ -204,7 +225,7 @@ object OtaEngine {
     private fun pruneCache(ctx: Context, items: List<Item>) {
         val keep = items.map { "${it.entry.packageName}-${it.entry.versionCode}.apk" }.toSet()
         File(ctx.cacheDir, "ota").listFiles()?.forEach { f ->
-            if (f.name.removeSuffix(".part") !in keep) f.delete()
+            if (f.isFile && f.name.removeSuffix(".part") !in keep) f.delete()
         }
     }
 
@@ -223,8 +244,8 @@ object OtaEngine {
             if (e.versionCode <= ivc) continue
             if (m.isRevoked(e.packageName, e.versionCode)) continue
             val (phase, why) = when {
-                blocked -> Phase.BLOCKED to "Needs MikuOS ${m.minBuild} first"
-                BuildInfo.isOlder(device, e.requiresBuild) -> Phase.BLOCKED to "Needs MikuOS ${e.requiresBuild} first"
+                blocked -> Phase.BLOCKED to "Needs ${Mascot.osName} ${m.minBuild} first"
+                BuildInfo.isOlder(device, e.requiresBuild) -> Phase.BLOCKED to "Needs ${Mascot.osName} ${e.requiresBuild} first"
                 e.minSdk > Build.VERSION.SDK_INT -> Phase.BLOCKED to "Needs a newer Android"
                 e.versionCode <= prefs.heldVersion(e.packageName) -> Phase.HELD to "Held back after a rollback"
                 else -> Phase.READY to ""
@@ -327,7 +348,7 @@ object OtaEngine {
         val prefs = Prefs(ctx)
         val store = RollbackStore(ctx)
         val info = ApkVerifier.installedInfo(ctx, pkg) ?: return "Not installed"
-        if (!OtaConfig.isUpdatable(pkg)) return "Not a MikuOS app"
+        if (!OtaConfig.isUpdatable(pkg)) return "Not a ${Mascot.osName} app"
         if (!ApkVerifier.isUpdatedSystemApp(info)) return "Already on the image version"
         val fromVc = ApkVerifier.longVersion(info)
         val kept = if (toImage || pkg == ctx.packageName) null else store.kept(pkg)
@@ -397,6 +418,88 @@ object OtaEngine {
         _state.update { it.copy(installed = apps) }
     }
 
+    // ---------------------------------------------------------------- content packs
+
+    /** Rebuilds the pack list from what is on the device and what the last manifest offers. */
+    fun refreshPacks(ctx: Context) {
+        PackStore.invalidate()
+        val built = PackStore.builtIns(ctx).associateBy { it.id }
+        val down = PackStore.downloads(ctx).associateBy { it.id }
+        val offered = (_state.value.manifest?.contentPacks ?: emptyList())
+            .groupBy { it.id }.mapValues { (_, v) -> v.maxBy { it.version } }
+        val ids = (built.keys + down.keys + offered.keys).toSortedSet()
+        val old = _state.value.packs.associateBy { it.id }
+        val list = ids.map { id ->
+            val o = offered[id]
+            val have = down[id]?.version
+            val builtV = built[id]?.version
+            val best = maxOf(have ?: 0, builtV ?: 0)
+            val name = o?.name ?: down[id]?.name ?: built[id]?.name ?: id
+            val phase = when {
+                o != null && o.version > best && (o.minUpdaterVersion ?: 0) > BuildConfig.VERSION_CODE -> PackPhase.BLOCKED
+                o != null && o.version > best && have != null -> PackPhase.UPDATE
+                o != null && o.version > best -> PackPhase.AVAILABLE
+                have != null -> PackPhase.INSTALLED
+                else -> PackPhase.BUILT_IN
+            }
+            val keepMsg = old[id]?.takeIf { it.phase == PackPhase.FAILED }?.message
+            PackItem(id, name, o, have, builtV, phase,
+                message = if (phase == PackPhase.BLOCKED) "Needs a newer ${Mascot.updateName}" else keepMsg ?: "")
+        }
+        _state.update { it.copy(packs = list) }
+    }
+
+    suspend fun installPack(ctx: Context, id: String): Boolean =
+        exclusive("Installing a content pack") { doInstallPack(ctx, id) } ?: false
+
+    private fun setPack(id: String, f: (PackItem) -> PackItem) {
+        _state.update { s -> s.copy(packs = s.packs.map { if (it.id == id) f(it) else it }) }
+    }
+
+    /**
+     * Download, check size and SHA-256 against the signed manifest, unpack (zip-slip safe, size
+     * capped), check pack.json carries the same id and version, swap it in. Other apps hear about
+     * it through the provider's change notification.
+     */
+    private fun doInstallPack(ctx: Context, id: String): Boolean {
+        val base = manifestUrl ?: return false
+        val item = _state.value.packs.firstOrNull { it.id == id } ?: return false
+        val e = item.offered ?: return false
+        if (item.phase == PackPhase.BLOCKED) return false
+        val dir = File(ctx.cacheDir, "ota/packs").apply { mkdirs() }
+        val zip = File(dir, "${e.id}-${e.version}.zip")
+        return try {
+            if (!(zip.isFile && zip.length() == e.size && Http.sha256(zip) == e.sha256)) {
+                setPack(id) { it.copy(phase = PackPhase.DOWNLOADING, done = 0, message = "") }
+                val sha = Http.download(
+                    URL(base, e.url), zip, e.size,
+                    onProgress = { d, _ -> setPack(id) { it.copy(done = d) } },
+                    isCancelled = { cancel.get() },
+                )
+                if (sha != e.sha256) {
+                    zip.delete()
+                    throw SecurityException("The download did not match its signed hash, so it was thrown away")
+                }
+            }
+            setPack(id) { it.copy(phase = PackPhase.VERIFYING, done = e.size) }
+            PackStore.install(ctx, zip, e.id, e.version)
+            zip.delete()
+            refreshPacks(ctx)
+            true
+        } catch (ex: Exception) {
+            Log.w(TAG, "pack $id failed", ex)
+            setPack(id) { it.copy(phase = PackPhase.FAILED, message = ex.message ?: ex.javaClass.simpleName) }
+            false
+        }
+    }
+
+    /** Removes a downloaded pack. The built-in copy of the same id, if any, takes over. */
+    fun removePack(ctx: Context, id: String): Boolean {
+        val ok = PackStore.remove(ctx, id)
+        refreshPacks(ctx)
+        return ok
+    }
+
     fun clearNotice() = _state.update { it.copy(notice = null) }
     fun setNotice(text: String) = _state.update { it.copy(notice = text) }
 
@@ -414,7 +517,11 @@ object OtaEngine {
                 prefs.notifiedSystemBuild = su.build
             }
         }
-        val ready = s.items.filter { it.phase == Phase.READY }
+        if (prefs.autoInstall) {
+            // Packs the user already chose to download stay current. New packs are never pulled in on their own.
+            for (p in s.packs.filter { it.phase == PackPhase.UPDATE }) installPack(ctx, p.id)
+        }
+        val ready = _state.value.items.filter { it.phase == Phase.READY }
         if (ready.isEmpty()) return true
         if (prefs.autoInstall) {
             installAll(ctx, includeHeld = false)

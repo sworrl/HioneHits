@@ -1,5 +1,6 @@
 package com.miku.launcher.widget
 
+import com.miku.launcher.Mascot
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -52,19 +53,19 @@ import kotlinx.coroutines.delay
  *
  * Every number comes from [MikuWeatherTileEngine]'s snapshot; a missing value renders "—".
  */
-private val Teal = Color(0xFF39C5BB)
-private val TealBright = Color(0xFF9FF3EC)
-private val Pink = Color(0xFFFF5C8A)
+private val Teal get() = Mascot.color(0xFF39C5BB)
+private val TealBright get() = Mascot.color(0xFF9FF3EC)
+private val Pink get() = Mascot.color(0xFFFF5C8A)
 private val Muted = Color(0xFF8BA6A9)
 
 private fun tileGradient(code: Int?, isDay: Boolean?): List<Color> = when {
-    code == null -> listOf(Color(0xFF10262B), Color(0xFF071417))
+    code == null -> listOf(Mascot.color(0xFF10262B), Mascot.color(0xFF071417))
     MikuWmo.isStorm(code) -> listOf(Color(0xFF2B1B4E), Color(0xFF0B0A1E))
     MikuWmo.isSnow(code) -> listOf(Color(0xFF3A4E6E), Color(0xFF14202E))
     MikuWmo.isPrecip(code) -> listOf(Color(0xFF1B3A5C), Color(0xFF0A1A2A))
-    MikuWmo.isFog(code) || code >= 2 -> listOf(Color(0xFF243640), Color(0xFF0E181D))
+    MikuWmo.isFog(code) || code >= 2 -> listOf(Mascot.color(0xFF243640), Mascot.color(0xFF0E181D))
     isDay == false -> listOf(Color(0xFF1E1B4A), Color(0xFF0A0921))
-    else -> listOf(Color(0xFF0F4F54), Color(0xFF06181C))
+    else -> listOf(Mascot.color(0xFF0F4F54), Mascot.color(0xFF06181C))
 }
 
 @Composable
@@ -94,7 +95,7 @@ fun MikuWeatherTile(modifier: Modifier = Modifier, onOpenObservatory: (() -> Uni
             .fillMaxWidth()
             .clip(shape)
             .background(Brush.linearGradient(gradient))
-            .quiltStitch(fillStart = Color(0x1A39C5BB), fillEnd = Color(0x14FF5C8A), seam = Color(0xB339C5BB), corner = 20.dp)
+            .quiltStitch(fillStart = Mascot.color(0x1A39C5BB), fillEnd = Mascot.color(0x14FF5C8A), seam = Mascot.color(0xB339C5BB), corner = 20.dp)
             .border(1.dp, if (stale) Pink.copy(alpha = 0.55f) else Teal.copy(alpha = 0.45f), shape)
             .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) { detailOpen = true }
             .padding(horizontal = 12.dp, vertical = 9.dp)

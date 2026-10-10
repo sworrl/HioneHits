@@ -1,5 +1,6 @@
 package com.miku.player.api
 
+import com.miku.player.Mascot
 import android.content.Context
 import android.net.ConnectivityManager
 import android.net.nsd.NsdManager
@@ -272,7 +273,7 @@ object MikuApiServer {
             if (!ok) {
                 MikuApiSecurity.recordFailure(ip)
                 Log.w(TAG, "401 $method $path from $ip")
-                send(output, ApiResponse.error(401, "Not paired. Pair this browser in Miku Music Settings."))
+                send(output, ApiResponse.error(401, "Not paired. Pair this browser in ${Mascot.musicAppName} Settings."))
                 return
             }
         }

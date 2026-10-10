@@ -1,5 +1,6 @@
 package com.miku.player.stats
 
+import com.miku.player.Mascot
 import android.content.Context
 import com.miku.player.PlayerPreferences
 import com.miku.player.taste.GenreIndex
@@ -210,7 +211,7 @@ class RewindBuilder(context: Context) {
             }
         }
         if (listens < Threshold.DECK) {
-            return@withContext RewindDeck(p, listens, listOf(RewindStory.NotEnough("Miku Rewind ${p.inWords}", listens, Threshold.DECK, "listens")))
+            return@withContext RewindDeck(p, listens, listOf(RewindStory.NotEnough("${Mascot.name} Rewind ${p.inWords}", listens, Threshold.DECK, "listens")))
         }
 
         // ---- 1. total time + "albums back to back" ----

@@ -6,6 +6,14 @@ plugins {
     id("org.jetbrains.kotlin.plugin.compose")
 }
 
+// The holiday list for the Theme & mascot page (custom holiday checklist). Only calendar.json is
+// copied: holiday art in the same folder belongs to the mascot packs, not to this APK. A build
+// without the file still works, the page then says there is no list.
+val holidayAssetsDir = layout.buildDirectory.dir("generated/holidayCalendar")
+val copyHolidayCalendar = tasks.register<Copy>("copyHolidayCalendar") {
+    from(rootProject.file("../mikuos/mascot/holidays")) { include("calendar.json") }
+    into(holidayAssetsDir)
+}
 android {
     namespace = "com.miku.settings"
     compileSdk = 34
@@ -17,6 +25,8 @@ android {
         versionCode = 14
         versionName = "0.3.0"
     }
+
+    sourceSets["main"].assets.srcDir(holidayAssetsDir)
 
     val signingProps = Properties().apply {
         val candidates = listOf(
@@ -114,3 +124,5 @@ dependencies {
     implementation("androidx.core:core-ktx:1.13.1")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.6")
 }
+
+tasks.named("preBuild") { dependsOn(copyHolidayCalendar) }

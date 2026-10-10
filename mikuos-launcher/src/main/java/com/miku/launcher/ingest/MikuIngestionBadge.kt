@@ -1,5 +1,6 @@
 package com.miku.launcher.ingest
 
+import com.miku.launcher.Mascot
 import com.miku.launcher.ui.gatedFloat
 import com.miku.launcher.ui.gatedColor
 import androidx.compose.runtime.getValue
@@ -71,7 +72,7 @@ fun MikuIngestionBadge(
         shape = badgeShape,
         gradient = listOf(
             if (isScanning) Color(0x33FFD54F) else Color(0x2800FF88),
-            Color(0xFF031410)
+            Mascot.color(0xFF031410)
         ),
         borderAlphaBase = if (isScanning) pulseAlpha else 0.85f
     ) {

@@ -1,5 +1,7 @@
 package com.miku.update.ota
 
+import com.miku.update.Mascot
+
 /**
  * Fixed facts about the OTA system. The server layout and the manifest format are documented in
  * mikuos/ota/README.md; keep the two in step.
@@ -42,16 +44,16 @@ object OtaConfig {
 
     /** Friendly names for the list. Unknown packages fall back to the package name. */
     fun displayName(pkg: String): String = when (pkg) {
-        "com.miku.player" -> "Miku Music"
-        "com.miku.launcher" -> "Miku Launcher"
-        "com.miku.settings" -> "MikuOS Settings"
-        "com.miku.systemui" -> "MikuOS System UI"
+        "com.miku.player" -> "${Mascot.musicAppName}"
+        "com.miku.launcher" -> "${Mascot.name} Launcher"
+        "com.miku.settings" -> "${Mascot.settingsName}"
+        "com.miku.systemui" -> "${Mascot.osName} System UI"
         "com.m500.hardware" -> "Hardware Settings"
         "com.miku.sysbridge" -> "System Bridge"
-        "com.miku.tools" -> "Miku Tools"
-        "com.miku.media" -> "Miku Media"
-        "com.miku.update" -> "Miku Update"
-        "com.miku.tv" -> "Miku TV"
+        "com.miku.tools" -> "${Mascot.name} Tools"
+        "com.miku.media" -> "${Mascot.name} Media"
+        "com.miku.update" -> "${Mascot.updateName}"
+        "com.miku.tv" -> "${Mascot.name} TV"
         else -> pkg
     }
 }

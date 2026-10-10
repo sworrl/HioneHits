@@ -1,5 +1,7 @@
 package com.miku.player.weather
 
+import com.miku.player.Mascot
+import com.miku.player.mascotPainter
 import android.content.Context
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
@@ -77,7 +79,7 @@ fun MikuWeatherObservatoryModal(
     Box(
         Modifier
             .fillMaxSize()
-            .background(Color(0xEB040D12))
+            .background(Mascot.color(0xEB040D12))
             .clickable { onDismissRequest() }
             .swipeUpFromBottomToDismiss(onDismiss = onDismissRequest)
     ) {
@@ -107,9 +109,9 @@ fun MikuWeatherObservatoryModal(
                     .background(
                         Brush.verticalGradient(
                             listOf(
-                                Color(0xFA09222E),
-                                Color(0xFF04121A),
-                                Color(0xFF02090D)
+                                Mascot.color(0xFA09222E),
+                                Mascot.color(0xFF04121A),
+                                Mascot.color(0xFF02090D)
                             )
                         )
                     )
@@ -130,8 +132,8 @@ fun MikuWeatherObservatoryModal(
             ) {
                 // Full Modal-Sized Transparent Miku Inlay Background
                 Image(
-                    painter = painterResource(R.drawable.miku_pose_dance),
-                    contentDescription = "Miku artwork",
+                    painter = mascotPainter(R.drawable.miku_pose_dance),
+                    contentDescription = "${Mascot.name} artwork",
                     modifier = Modifier
                         .fillMaxSize()
                         .align(Alignment.Center),
@@ -153,12 +155,12 @@ fun MikuWeatherObservatoryModal(
                                 Modifier
                                     .size(34.dp)
                                     .clip(CutCornerShape(8.dp))
-                                    .background(Color(0x3300E5FF))
+                                    .background(Mascot.color(0x3300E5FF))
                                     .border(1.dp, MikuCyan, CutCornerShape(8.dp)),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Image(
-                                    painter = painterResource(R.drawable.miku_pose_dance),
+                                    painter = mascotPainter(R.drawable.miku_pose_dance),
                                     contentDescription = null,
                                     modifier = Modifier.size(28.dp)
                                 )
@@ -249,7 +251,7 @@ fun MikuWeatherObservatoryModal(
                                     Modifier
                                         .fillMaxWidth()
                                         .clip(CutCornerShape(4.dp))
-                                        .background(Color(0x2200E5FF))
+                                        .background(Mascot.color(0x2200E5FF))
                                         .padding(horizontal = 6.dp, vertical = 2.dp),
                                     horizontalArrangement = Arrangement.SpaceBetween,
                                     verticalAlignment = Alignment.CenterVertically
@@ -280,16 +282,16 @@ fun MikuWeatherObservatoryModal(
                                         .background(
                                             Brush.verticalGradient(
                                                 listOf(
-                                                    Color(0x4400E5FF),
-                                                    Color(0x22041D28),
-                                                    Color(0xFF031016)
+                                                    Mascot.color(0x4400E5FF),
+                                                    Mascot.color(0x22041D28),
+                                                    Mascot.color(0xFF031016)
                                                 )
                                             )
                                         )
                                         .border(
                                             BorderStroke(
                                                 1.dp,
-                                                Brush.linearGradient(listOf(MikuCyan, Color(0x3300E5FF), MikuNeonPink))
+                                                Brush.linearGradient(listOf(MikuCyan, Mascot.color(0x3300E5FF), MikuNeonPink))
                                             ),
                                             CutCornerShape(12.dp)
                                         )
@@ -339,7 +341,7 @@ fun MikuWeatherObservatoryModal(
                                                 Modifier
                                                     .size(48.dp)
                                                     .clip(CircleShape)
-                                                    .background(Color(0x3300E5FF))
+                                                    .background(Mascot.color(0x3300E5FF))
                                                     .border(1.2.dp, MikuCyan, CircleShape),
                                                 contentAlignment = Alignment.Center
                                             ) {
@@ -351,7 +353,7 @@ fun MikuWeatherObservatoryModal(
                                             Spacer(Modifier.height(2.dp))
                                             Text(
                                                 text = "${weather.moonPhase.phaseName}",
-                                                color = Color(0xFF80DEEA),
+                                                color = Mascot.color(0xFF80DEEA),
                                                 fontSize = 7.5.sp,
                                                 fontWeight = FontWeight.Bold,
                                                 fontFamily = AudiowideFont
@@ -378,7 +380,7 @@ fun MikuWeatherObservatoryModal(
                                     Modifier
                                         .fillMaxWidth()
                                         .clip(CutCornerShape(10.dp))
-                                        .background(Color(0xFF03141C))
+                                        .background(Mascot.color(0xFF03141C))
                                         .border(0.8.dp, MikuCyan.copy(alpha = 0.4f), CutCornerShape(10.dp))
                                         .padding(8.dp)
                                 ) {
@@ -397,7 +399,7 @@ fun MikuWeatherObservatoryModal(
                                             )
                                             Text(
                                                 text = if (weather.isDay) "DAYTIME" else "NIGHT",
-                                                color = if (weather.isDay) Color(0xFFFFD600) else Color(0xFF80DEEA),
+                                                color = if (weather.isDay) Color(0xFFFFD600) else Mascot.color(0xFF80DEEA),
                                                 fontSize = 7.5.sp,
                                                 fontWeight = FontWeight.Black,
                                                 fontFamily = AudiowideFont
@@ -416,7 +418,7 @@ fun MikuWeatherObservatoryModal(
                                                 .fillMaxWidth()
                                                 .height(6.dp)
                                                 .clip(RoundedCornerShape(3.dp))
-                                                .background(Color(0xFF0A222C))
+                                                .background(Mascot.color(0xFF0A222C))
                                         ) {
                                             Box(
                                                 Modifier
@@ -504,7 +506,7 @@ fun MikuWeatherObservatoryModal(
                                         Modifier
                                             .fillMaxWidth()
                                             .clip(CutCornerShape(8.dp))
-                                            .background(Color(0x220A222C))
+                                            .background(Mascot.color(0x220A222C))
                                             .border(1.dp, CyberGlassBorder, CutCornerShape(8.dp))
                                             .padding(10.dp),
                                         contentAlignment = Alignment.Center
@@ -526,7 +528,7 @@ fun MikuWeatherObservatoryModal(
                                                 Modifier
                                                     .width(78.dp)
                                                     .clip(CutCornerShape(8.dp))
-                                                    .background(Color(0x3300E5FF))
+                                                    .background(Mascot.color(0x3300E5FF))
                                                     .border(1.dp, MikuCyan.copy(alpha = 0.5f), CutCornerShape(8.dp))
                                                     .padding(6.dp),
                                                 contentAlignment = Alignment.Center
@@ -582,7 +584,7 @@ fun TabButton(
         modifier = modifier
             .height(30.dp)
             .clip(RoundedCornerShape(6.dp))
-            .background(if (isSelected) Color(0x4400E5FF) else Color(0x1104121A))
+            .background(if (isSelected) Mascot.color(0x4400E5FF) else Mascot.color(0x1104121A))
             .border(
                 1.dp,
                 if (isSelected) MikuCyan else CyberGlassBorder.copy(alpha = 0.4f),
@@ -605,7 +607,7 @@ fun getWeatherTempColor(tempF: Int): Color {
     return when {
         tempF < 32 -> Color(0xFF7C4DFF) // Freezing (Deep Purple)
         tempF < 50 -> Color(0xFF2979FF) // Cold (Sky Blue)
-        tempF < 65 -> Color(0xFF00E5FF) // Cool (Cyan)
+        tempF < 65 -> Mascot.color(0xFF00E5FF) // Cool (Cyan)
         tempF < 75 -> Color(0xFF00E676) // Mild (Green)
         tempF < 85 -> Color(0xFFFFD600) // Warm (Electric Yellow)
         tempF < 95 -> Color(0xFFFF6D00) // Hot (Orange)
@@ -631,7 +633,7 @@ fun MikuTemperatureSparkline(
         modifier = modifier
             .fillMaxWidth()
             .clip(CutCornerShape(8.dp))
-            .background(Color(0x33020A0F))
+            .background(Mascot.color(0x33020A0F))
             .border(0.6.dp, MikuCyan.copy(alpha = 0.4f), CutCornerShape(8.dp))
             .padding(8.dp)
     ) {
@@ -734,7 +736,7 @@ fun WeatherMetricBadge(
     Box(
         modifier = modifier
             .clip(CutCornerShape(8.dp))
-            .background(Color(0x3300E5FF))
+            .background(Mascot.color(0x3300E5FF))
             .border(1.dp, color.copy(alpha = 0.45f), CutCornerShape(8.dp))
             .padding(8.dp)
     ) {
@@ -920,7 +922,7 @@ fun MikuLiveDopplerRadarTab(
                 Box(
                     Modifier
                         .clip(CutCornerShape(4.dp))
-                        .background(Color(0x3300E5FF))
+                        .background(Mascot.color(0x3300E5FF))
                         .border(1.dp, MikuCyan, CutCornerShape(4.dp))
                         .padding(horizontal = 6.dp, vertical = 2.dp)
                 ) {
@@ -1067,7 +1069,7 @@ fun MikuLiveDopplerRadarTab(
         ) {
             Button(
                 onClick = { isPlaying = !isPlaying },
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0x3300E5FF)),
+                colors = ButtonDefaults.buttonColors(containerColor = Mascot.color(0x3300E5FF)),
                 border = BorderStroke(1.dp, MikuCyan),
                 shape = RoundedCornerShape(6.dp),
                 contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
@@ -1089,7 +1091,7 @@ fun MikuLiveDopplerRadarTab(
                     colors = SliderDefaults.colors(
                         thumbColor = MikuCyan,
                         activeTrackColor = MikuCyan,
-                        inactiveTrackColor = Color(0x3300E5FF)
+                        inactiveTrackColor = Mascot.color(0x3300E5FF)
                     )
                 )
             }
@@ -1102,7 +1104,7 @@ fun MikuLiveDopplerRadarTab(
             Modifier
                 .fillMaxWidth()
                 .clip(CutCornerShape(6.dp))
-                .background(Color(0x9904121A))
+                .background(Mascot.color(0x9904121A))
                 .border(0.8.dp, CyberGlassBorder.copy(alpha = 0.5f), CutCornerShape(6.dp))
                 .padding(6.dp)
         ) {
@@ -1122,12 +1124,12 @@ fun MikuLiveDopplerRadarTab(
                     .background(
                         Brush.horizontalGradient(
                             listOf(
-                                Color(0xFF00E5FF),
+                                Mascot.color(0xFF00E5FF),
                                 Color(0xFF00E676),
                                 Color(0xFFFFD600),
                                 Color(0xFFFF9100),
                                 Color(0xFFFF1744),
-                                Color(0xFFFF007F)
+                                Mascot.color(0xFFFF007F)
                             )
                         )
                     )

@@ -1,5 +1,6 @@
 package com.miku.launcher.ingest
 
+import com.miku.launcher.Mascot
 import android.content.Context
 import android.content.Intent
 import android.provider.Settings
@@ -650,7 +651,7 @@ object MikuIngestEngine {
      */
     fun triggerForceScan(context: Context) {
         val appContext = context.applicationContext
-        log("Force scan · SD card and internal storage through MediaScanner, then a Miku Music library rescan")
+        log("Force scan · SD card and internal storage through MediaScanner, then a ${Mascot.musicAppName} library rescan")
         // triggerRescan() nudges Miku Music itself once MediaScanner has finished — nudging here
         // too made the player rescan a still-stale MediaStore and then rescan again seconds later.
         triggerRescan(appContext)

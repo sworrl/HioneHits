@@ -1,5 +1,6 @@
 package com.miku.player.visualizer
 
+import com.miku.player.Mascot
 import android.content.Context
 import android.opengl.GLES20
 import android.opengl.GLSurfaceView
@@ -59,7 +60,7 @@ import javax.microedition.khronos.opengles.GL10
 /** Which backend is drawing the stage. Persisted by PlayerPreferences.saveVizEngine as its `key`. */
 enum class VizEngine(val key: String, val title: String) {
     PROJECTM("projectm", "projectM"),
-    SHADER("shader", "Miku Shaders");
+    SHADER("shader", "${Mascot.name} Shaders");
 
     companion object {
         fun fromKey(k: String): VizEngine = entries.firstOrNull { it.key == k } ?: PROJECTM
@@ -91,7 +92,7 @@ fun MikuShaderVisualizerView(
         onDispose { MikuPowerGovernor.noteVisualizerVisible(false) }
     }
     if (!IdleController.screenActive) {
-        Box(modifier.background(Color(0xFF0A2528)))
+        Box(modifier.background(Mascot.color(0xFF0A2528)))
         return
     }
     if (ShaderVizState.glFailed || VisualizerMemoryGuard.suppressed) {
@@ -148,7 +149,7 @@ fun ShaderFallbackCanvas(sessionId: Int, accent: Color, accent2: Color, modifier
         }
     }
     val brush = remember(accent, accent2) { Brush.verticalGradient(listOf(accent2, accent, accent2)) }
-    Canvas(modifier.background(Color(0xFF06171A))) {
+    Canvas(modifier.background(Mascot.color(0xFF06171A))) {
         val tick = frame
         if (tick < 0) return@Canvas
         val fft = AudioCapture.fft

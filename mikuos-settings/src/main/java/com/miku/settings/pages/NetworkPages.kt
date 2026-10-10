@@ -1,5 +1,6 @@
 package com.miku.settings.pages
 
+import com.miku.settings.Mascot
 import android.annotation.SuppressLint
 import android.app.usage.NetworkStatsManager
 import android.bluetooth.BluetoothManager
@@ -418,7 +419,7 @@ fun ConnectedPrefsPage() {
         }
         if (autoInstalled) item {
             Section("Android Auto") {
-                BodyText("Android Auto hides Miku Music and Miku FM until its \"Unknown sources\" setting is on. Only you can turn it on.")
+                BodyText("Android Auto hides ${Mascot.musicAppName} and ${Mascot.name} FM until its \"Unknown sources\" setting is on. Only you can turn it on.")
                 Spacer(Modifier.height(8.dp))
                 BodyText("1. Open Android Auto settings.\n2. Tap Version about 10 times until developer settings unlock.\n3. Open the menu and pick Developer settings.\n4. Turn on Unknown sources.")
                 Spacer(Modifier.height(10.dp))

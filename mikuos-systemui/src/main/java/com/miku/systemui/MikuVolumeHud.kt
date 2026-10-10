@@ -444,9 +444,9 @@ class MikuVolumeHud(
             if (muted) return 0xFFFF5252.toInt()
             return when {
                 pct >= 85 -> 0xFFFF1744.toInt() // Danger Red / Coral
-                pct >= 70 -> 0xFFFF4081.toInt() // Neon Pink
-                pct >= 50 -> 0xFFB388FF.toInt() // Electric Purple
-                pct >= 25 -> 0xFF00E5FF.toInt() // Miku Cyan
+                pct >= 70 -> Mascot.argb(0xFFFF4081.toInt()) // Neon Pink
+                pct >= 50 -> Mascot.argb(0xFFB388FF.toInt()) // Electric Purple
+                pct >= 25 -> Mascot.argb(0xFF00E5FF.toInt()) // Miku Cyan
                 else -> 0xFF00FF88.toInt()      // Cyber Emerald
             }
         }
@@ -494,8 +494,8 @@ class MikuVolumeHud(
             cardPath.close()
 
             // Card background
-            val bgStart = if (isDanger) 0xF5240810.toInt() else 0xF008202D.toInt()
-            val bgEnd = if (isDanger) 0xFA140205.toInt() else 0xFA030D14.toInt()
+            val bgStart = if (isDanger) Mascot.argb(0xF5240810.toInt()) else Mascot.argb(0xF008202D.toInt())
+            val bgEnd = if (isDanger) 0xFA140205.toInt() else Mascot.argb(0xFA030D14.toInt())
             bgPaint.shader = LinearGradient(0f, top, 0f, bottom, bgStart, bgEnd, Shader.TileMode.CLAMP)
             canvas.drawPath(cardPath, bgPaint)
 
@@ -504,9 +504,9 @@ class MikuVolumeHud(
             val glowBrightness = (pct / 100f).coerceIn(0.4f, 1.0f)
             borderPaint.strokeWidth = dp(1.0f + glowBrightness * 0.8f)
             val borderColors = if (isDanger) {
-                intArrayOf(0xFFFF1744.toInt(), 0xFFFF007F.toInt(), 0xFFFF5252.toInt())
+                intArrayOf(0xFFFF1744.toInt(), Mascot.argb(0xFFFF007F.toInt()), 0xFFFF5252.toInt())
             } else {
-                intArrayOf(dynColor, 0xFF00E5FF.toInt(), 0xFF7C4DFF.toInt())
+                intArrayOf(dynColor, Mascot.argb(0xFF00E5FF.toInt()), 0xFF7C4DFF.toInt())
             }
             borderPaint.shader = LinearGradient(0f, top, 0f, bottom, borderColors, null, Shader.TileMode.CLAMP)
             canvas.drawPath(cardPath, borderPaint)
@@ -556,10 +556,10 @@ class MikuVolumeHud(
                     intArrayOf(
                         0xFFFF1744.toInt(),
                         0xFFFF5252.toInt(),
-                        0xFFFF3399.toInt(),
+                        Mascot.argb(0xFFFF3399.toInt()),
                         0xFF9D4EDD.toInt(),
-                        0xFF00F5D4.toInt(),
-                        0xFF00E5FF.toInt()
+                        Mascot.argb(0xFF00F5D4.toInt()),
+                        Mascot.argb(0xFF00E5FF.toInt())
                     )
                 }
                 val fillPositions = if (isMuted) null else floatArrayOf(0.00f, 0.12f, 0.25f, 0.50f, 0.75f, 1.00f)
@@ -618,7 +618,7 @@ class MikuVolumeHud(
                 badgeRect.set(bx, by, bx + bw, by + bh)
 
                 badgeBgPaint.shader = LinearGradient(bx, by, bx + bw, by,
-                    0xFFFF1744.toInt(), 0xFFFF007F.toInt(), Shader.TileMode.CLAMP)
+                    0xFFFF1744.toInt(), Mascot.argb(0xFFFF007F.toInt()), Shader.TileMode.CLAMP)
                 canvas.drawRoundRect(badgeRect, dp(3f), dp(3f), badgeBgPaint)
                 canvas.drawRoundRect(badgeRect, dp(3f), dp(3f), badgeBorderPaint)
 
@@ -643,8 +643,8 @@ class MikuVolumeHud(
             val cornerR = dp(20f)
 
             // Background
-            val bgStart = if (isDanger) 0xF033050C.toInt() else 0xE6081A24.toInt()
-            val bgEnd = if (isDanger) 0xF5180004.toInt() else 0xF2030D13.toInt()
+            val bgStart = if (isDanger) 0xF033050C.toInt() else Mascot.argb(0xE6081A24.toInt())
+            val bgEnd = if (isDanger) 0xF5180004.toInt() else Mascot.argb(0xF2030D13.toInt())
             bgPaint.shader = LinearGradient(0f, top, 0f, bottom, bgStart, bgEnd, Shader.TileMode.CLAMP)
             bgPaint.alpha = alpha
             canvas.drawRoundRect(cardRect, cornerR, cornerR, bgPaint)
@@ -652,25 +652,25 @@ class MikuVolumeHud(
             // Border
             borderPaint.strokeWidth = dp(1.5f)
             val borderColors = if (isDanger) {
-                intArrayOf(0xFFFF0044.toInt(), Color.argb((hazardGlow * 255).toInt(), 255, 85, 0))
+                intArrayOf(Mascot.argb(0xFFFF0044.toInt()), Color.argb((hazardGlow * 255).toInt(), 255, 85, 0))
             } else {
-                intArrayOf(0xFF39C5BB.toInt(), 0xFFFF4FA3.toInt())
+                intArrayOf(Mascot.argb(0xFF39C5BB.toInt()), Mascot.argb(0xFFFF4FA3.toInt()))
             }
             borderPaint.shader = LinearGradient(left, top, right, top, borderColors, null, Shader.TileMode.CLAMP)
             borderPaint.alpha = alpha
             canvas.drawRoundRect(cardRect, cornerR, cornerR, borderPaint)
-            glassFx.drawOver(canvas, cardRect, cornerR, 0xFF39C5BB.toInt(), 0xFFFF4FA3.toInt(), alpha, withRim = false)
+            glassFx.drawOver(canvas, cardRect, cornerR, Mascot.argb(0xFF39C5BB.toInt()), Mascot.argb(0xFFFF4FA3.toInt()), alpha, withRim = false)
 
             // Left: Speaker Circle (34dp)
             val iconCx = left + dp(28f)
             val iconCy = cardRect.centerY()
             val iconR = dp(17f)
-            buttonBgPaint.color = if (isDanger) 0x44FF0044.toInt() else 0x3339C5BB.toInt()
+            buttonBgPaint.color = if (isDanger) Mascot.argb(0x44FF0044.toInt()) else Mascot.argb(0x3339C5BB.toInt())
             buttonBgPaint.alpha = (alpha * 0.7f).toInt()
             canvas.drawCircle(iconCx, iconCy, iconR, buttonBgPaint)
 
             // Speaker Icon
-            iconPaint.color = if (isDanger) 0xFFFF2255.toInt() else 0xFF39C5BB.toInt()
+            iconPaint.color = if (isDanger) 0xFFFF2255.toInt() else Mascot.argb(0xFF39C5BB.toInt())
             iconPaint.alpha = alpha
             val sArm = dp(5f)
             canvas.drawLine(iconCx - sArm, iconCy - sArm, iconCx - sArm, iconCy + sArm, iconPaint)
@@ -686,7 +686,7 @@ class MikuVolumeHud(
             // Large Volume Text
             textPaint.textAlign = Paint.Align.LEFT
             textPaint.textSize = dp(18f)
-            textPaint.color = if (isDanger) 0xFFFF3366.toInt() else Color.WHITE
+            textPaint.color = if (isDanger) Mascot.argb(0xFFFF3366.toInt()) else Color.WHITE
             textPaint.alpha = alpha
             val numStr = String.format(Locale.US, "%d", pct)
             val numW = textPaint.measureText(numStr)
@@ -695,7 +695,7 @@ class MikuVolumeHud(
 
             // Subtext "/ 100" or "/ 100 [HIGH]"
             textPaint.textSize = dp(10.5f)
-            textPaint.color = if (isDanger) 0xFFFF88AA.toInt() else 0xFF9FF3EC.toInt()
+            textPaint.color = if (isDanger) Mascot.argb(0xFFFF88AA.toInt()) else Mascot.argb(0xFF9FF3EC.toInt())
             textPaint.alpha = alpha
             val subText = if (isDanger) " / 100 [HIGH]" else " / 100"
             canvas.drawText(subText, textLeft + numW + dp(4f), baselineY - dp(1f), textPaint)
@@ -713,15 +713,15 @@ class MikuVolumeHud(
             if (fillW > 0f) {
                 fillRect.set(textLeft, barTop, textLeft + fillW, barTop + trackH)
                 val fillColors = if (isDanger) {
-                    intArrayOf(0xFFFF0055.toInt(), 0xFFFF8800.toInt())
+                    intArrayOf(Mascot.argb(0xFFFF0055.toInt()), 0xFFFF8800.toInt())
                 } else {
-                    intArrayOf(0xFF39C5BB.toInt(), 0xFFFF4FA3.toInt())
+                    intArrayOf(Mascot.argb(0xFF39C5BB.toInt()), Mascot.argb(0xFFFF4FA3.toInt()))
                 }
                 fillPaint.shader = LinearGradient(textLeft, barTop, textLeft + trackW, barTop, fillColors, null, Shader.TileMode.CLAMP)
                 fillPaint.alpha = alpha
                 canvas.drawRoundRect(fillRect, dp(3f), dp(3f), fillPaint)
                 glassFx.drawBead(canvas, textLeft + fillW, barTop + trackH / 2f, dp(7f), dp(5f),
-                    if (isDanger) 0xFFFF0055.toInt() else 0xFFFF4FA3.toInt(), alpha)
+                    if (isDanger) Mascot.argb(0xFFFF0055.toInt()) else Mascot.argb(0xFFFF4FA3.toInt()), alpha)
             }
         }
 

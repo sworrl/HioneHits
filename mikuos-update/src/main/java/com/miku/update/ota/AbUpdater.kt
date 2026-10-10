@@ -1,5 +1,6 @@
 package com.miku.update.ota
 
+import com.miku.update.Mascot
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
@@ -365,10 +366,10 @@ object AbUpdater {
             now == pending -> {
                 Notifier.systemInstalled(app, pending)
                 clearPending(app, deleteFile = true)
-                _state.update { it.copy(message = "MikuOS $pending is installed.") }
+                _state.update { it.copy(message = "${Mascot.osName} $pending is installed.") }
             }
             restarted && prefs.abApplied -> {
-                val msg = "MikuOS $pending did not start, so the M500 went back to MikuOS ${now ?: "it had"}. Your data is as it was."
+                val msg = "${Mascot.osName} $pending did not start, so the M500 went back to ${Mascot.osName} ${now ?: "it had"}. Your data is as it was."
                 Notifier.systemFailed(app, msg)
                 clearPending(app, deleteFile = false)
                 _state.update { it.copy(phase = Phase.FAILED, message = msg) }

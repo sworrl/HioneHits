@@ -592,7 +592,7 @@ fun MikuNotificationShadeView(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        "MikuOS", color = MikuTeal.copy(alpha = 0.8f), fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp,
+                        "${Mascot.osName}", color = MikuTeal.copy(alpha = 0.8f), fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp,
                         modifier = Modifier.padding(start = 8.dp)
                     )
                     Spacer(Modifier.weight(1f))

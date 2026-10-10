@@ -1,5 +1,6 @@
 package com.miku.settings.pages
 
+import com.miku.settings.Mascot
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
@@ -133,9 +134,10 @@ fun pageTitle(route: String): String = when (route.substringBefore('/')) {
     "notifications" -> "Notifications"
     "dnd" -> "Do Not Disturb"
     "sound" -> "Sound & vibration"
-    "miku_sounds" -> "MikuOS sounds"
+    "miku_sounds" -> "${Mascot.osName} sounds"
     "miku_sound" -> soundCategoryTitle(seg(route, 1))
     "display_more" -> "More display settings"
+    "mascot" -> "Theme & mascot"
     "storage" -> "Storage"
     "location" -> "Location"
     "security" -> "Security & privacy"
@@ -183,6 +185,7 @@ private fun PageContent(route: String) {
         "miku_sounds" -> MikuSoundsPage()
         "miku_sound" -> MikuSoundCategoryPage(seg(route, 1) ?: "")
         "display_more" -> DisplayMorePage()
+        "mascot" -> MascotPage()
         "storage" -> StoragePage()
         "location" -> LocationPage()
         "security" -> SecurityPage()
@@ -211,14 +214,14 @@ private fun UnavailablePage() {
     PageList {
         item {
             Section("Not available") {
-                BodyText(why ?: "This screen is not built into MikuOS yet.")
+                BodyText(why ?: "This screen is not built into ${Mascot.osName} yet.")
                 Spacer(Modifier.height(8.dp))
                 InfoRow("Requested", src?.action ?: UNKNOWN)
                 src?.data?.let { InfoRow("Data", it.toString()) }
             }
         }
         item {
-            NavRow("Open MikuOS Settings", "Go to the main settings list") {
+            NavRow("Open ${Mascot.settingsName}", "Go to the main settings list") {
                 ctx.startActivity(Intent(ctx, MikuSettingsActivity::class.java))
             }
         }

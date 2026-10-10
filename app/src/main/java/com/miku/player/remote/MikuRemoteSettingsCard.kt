@@ -1,5 +1,6 @@
 package com.miku.player.remote
 
+import com.miku.player.Mascot
 import android.content.Context
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -105,7 +106,7 @@ fun MikuRemoteSettingsCard(ctx: Context) {
         Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(16.dp))
-            .background(Brush.verticalGradient(listOf(Color(0xFF07272B), Color(0xFF041417))))
+            .background(Brush.verticalGradient(listOf(Mascot.color(0xFF07272B), Mascot.color(0xFF041417))))
             .border(1.dp, if (status.advertising) MikuTealBright.copy(alpha = 0.55f) else MikuTealBright.copy(alpha = 0.3f), RoundedCornerShape(16.dp))
             .padding(14.dp)
     ) {
@@ -159,7 +160,7 @@ fun MikuRemoteSettingsCard(ctx: Context) {
                     Modifier
                         .weight(1f)
                         .clip(RoundedCornerShape(10.dp))
-                        .background(Color(0xFF04131A))
+                        .background(Mascot.color(0xFF04131A))
                         .border(1.dp, if (locked) MikuPink.copy(alpha = 0.5f) else MikuTeal.copy(alpha = 0.5f), RoundedCornerShape(10.dp))
                         .padding(vertical = 8.dp),
                     contentAlignment = Alignment.Center
@@ -204,7 +205,7 @@ fun MikuRemoteSettingsCard(ctx: Context) {
                 }
                 Spacer(Modifier.width(12.dp))
                 Column(Modifier.weight(1f)) {
-                    Text("Opens the Miku Remote web page with this code pre-filled, then tap Connect and pick \"${MikuRemoteProtocol.LOCAL_NAME}\".", color = Color.White, fontSize = 11.sp)
+                    Text("Opens the ${Mascot.name} Remote web page with this code pre-filled, then tap Connect and pick \"${MikuRemoteProtocol.LOCAL_NAME}\".", color = Color.White, fontSize = 11.sp)
                     Spacer(Modifier.height(6.dp))
                     Text(pwaUrl, color = MikuTealBright, fontSize = 10.sp, fontFamily = AudiowideFont, maxLines = 2, overflow = TextOverflow.Ellipsis)
                     Spacer(Modifier.height(6.dp))
@@ -229,7 +230,7 @@ fun MikuRemoteSettingsCard(ctx: Context) {
                         onValueChange = { pwaUrl = it; MikuRemotePreferences.setPwaUrl(ctx, it) },
                         modifier = Modifier.weight(1f),
                         singleLine = true,
-                        textStyle = TextStyle(color = Color(0xFFE8F4F2), fontSize = 12.5.sp),
+                        textStyle = TextStyle(color = Mascot.color(0xFFE8F4F2), fontSize = 12.5.sp),
                         cursorBrush = SolidColor(MikuTeal),
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri, autoCorrect = false),
                         decorationBox = { inner ->
@@ -295,7 +296,7 @@ fun MikuRemoteSettingsCard(ctx: Context) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
                 Text("Bluetooth name \"${MikuRemoteProtocol.LOCAL_NAME}\" while on", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                Text("Renames the adapter so the phone's picker reads Miku M500; the original name is restored when the remote is turned off. Takes effect on next start.", color = Muted, fontSize = 10.sp)
+                Text("Renames the adapter so the phone's picker reads ${Mascot.bluetoothName}; the original name is restored when the remote is turned off. Takes effect on next start.", color = Muted, fontSize = 10.sp)
             }
             Switch(
                 checked = brandedName,
@@ -334,7 +335,7 @@ private fun QrCanvas(qr: MikuQrEncoder.Matrix, modifier: Modifier) {
         val cell = minOf(size.width, size.height) / n
         val ox = (size.width - cell * n) / 2f
         val oy = (size.height - cell * n) / 2f
-        val dark = Color(0xFF0A1416)
+        val dark = Mascot.color(0xFF0A1416)
         for (y in 0 until n) for (x in 0 until n) {
             if (qr.get(x, y)) {
                 // Overdraw a hair to avoid anti-aliasing seams between adjacent modules.

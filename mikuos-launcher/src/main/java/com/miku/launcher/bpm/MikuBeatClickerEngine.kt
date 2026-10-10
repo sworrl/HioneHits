@@ -1,5 +1,6 @@
 package com.miku.launcher.bpm
 
+import com.miku.launcher.Mascot
 import android.content.Context
 import android.content.SharedPreferences
 import android.os.SystemClock
@@ -286,14 +287,14 @@ object MikuBeatClickerEngine {
         }
     }
 
-    private val initialBuildings = listOf(
-        Building("chibi", "Chibi Miku", "🎤", 15.0, 0.3, 0, "Little chibi Miku humming along"),
+    private val initialBuildings get() = listOf(
+        Building("chibi", "Chibi ${Mascot.name}", "🎤", 15.0, 0.3, 0, "Little chibi ${Mascot.name} humming along"),
         Building("farm", "Leek Farm", "🌱", 100.0, 1.8, 0, "Hydroponic cyber leeks growing under LEDs"),
         Building("synth", "Yamaha DX7", "🎹", 1100.0, 14.0, 0, "Classic 1983 6-operator FM synthesizer"),
         Building("arcade", "DIVA Arcade", "🕹️", 12000.0, 75.0, 0, "Sanwa arcade buttons and coin drops"),
         Building("stage", "Hologram Stage", "🌟", 130000.0, 420.0, 0, "A 3D projection with stadium sound"),
         Building("mirai", "Mirai Stadium", "🏟️", 1400000.0, 2600.0, 0, "50,000 glowing penlights in unison"),
-        Building("satellite", "Orbital Station", "🛰️", 20000000.0, 18000.0, 0, "Broadcasting Miku's voice across deep space")
+        Building("satellite", "Orbital Station", "🛰️", 20000000.0, 18000.0, 0, "Broadcasting ${Mascot.name}'s voice across deep space")
     )
 
     // Every one of these is READ by the game loop below (see the skill accessors). They used to
@@ -884,7 +885,7 @@ object MikuBeatClickerEngine {
             roll < 96 -> {
                 encoreTapsLeft = 8
                 MikuStagePerformance.say("wait, i know this one. (next 8 hits pay triple)")
-                "Lucky note: Miku sings along, 3x for 8 hits"
+                "Lucky note: ${Mascot.name} sings along, 3x for 8 hits"
             }
             else -> {
                 _goldenLeekVisible.value = true

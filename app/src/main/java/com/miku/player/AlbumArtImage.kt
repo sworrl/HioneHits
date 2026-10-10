@@ -145,8 +145,8 @@ fun AlbumArtImage(
     contentScale: ContentScale = ContentScale.Crop,
     fallbackIcon: @Composable () -> Unit = {
         androidx.compose.foundation.Image(
-            painter = androidx.compose.ui.res.painterResource(MikuArt.audiophile),
-            contentDescription = "Miku Art",
+            painter = mascotPainter(MikuArt.audiophile),
+            contentDescription = "${Mascot.name} Art",
             contentScale = ContentScale.Crop,
             modifier = Modifier.fillMaxSize()
         )
@@ -177,7 +177,7 @@ fun AlbumArtImage(
             if (art != null) {
                 Image(bitmap = art!!, contentDescription = "Album art", modifier = artMod, contentScale = contentScale)
             } else {
-                Box(modifier = artMod.background(Color(0xFF0A2022)), contentAlignment = Alignment.Center) { fallbackIcon() }
+                Box(modifier = artMod.background(Mascot.color(0xFF0A2022)), contentAlignment = Alignment.Center) { fallbackIcon() }
             }
         }
         if (year in 1000..2999) AlbumArtYearBadge(year, Modifier.align(Alignment.BottomStart))
@@ -191,7 +191,7 @@ private fun AlbumArtYearBadge(year: Int, modifier: Modifier = Modifier) {
         modifier
             .padding(4.dp)
             .clip(androidx.compose.foundation.shape.RoundedCornerShape(4.dp))
-            .background(Color(0xCC04161A))
+            .background(Mascot.color(0xCC04161A))
             .padding(horizontal = 4.dp, vertical = 1.dp)
     ) {
         androidx.compose.material3.Text(

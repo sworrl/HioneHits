@@ -2,6 +2,7 @@
 
 package com.miku.launcher.ui
 
+import com.miku.launcher.Mascot
 import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothProfile
 import android.content.Intent
@@ -235,7 +236,7 @@ fun MikuStatusBar(
     val np = rememberNpAccent()
     val seam = np.subtle.copy(alpha = 0.55f)
     val chipColor = np.subtle
-    val textColor = Color(0xFFE0FFFC)
+    val textColor = Mascot.color(0xFFE0FFFC)
     val profile by rememberPowerProfile()
     val profileGlyph = MikuPowerProfile.glyph(profile)
     // Colour crossfade only. The NUMBERS are printed raw: tweening them meant that on every
@@ -252,7 +253,7 @@ fun MikuStatusBar(
             .height(MikuDimens.statusBarHeight)
             .then(if (onOpenShade != null) Modifier.clickable(interactionSource = remember { MutableInteractionSource() }, indication = null, onClick = onOpenShade) else Modifier)
             .drawBehind {
-                drawRect(Brush.verticalGradient(listOf(Color(0x66040D12), Color(0x22040D12))))
+                drawRect(Brush.verticalGradient(listOf(Mascot.color(0x66040D12), Mascot.color(0x22040D12))))
                 val stitch = PathEffect.dashPathEffect(floatArrayOf(6f, 5f), 0f)
                 val y = size.height - 1.dp.toPx()
                 drawLine(seam, Offset(8.dp.toPx(), y), Offset(size.width - 8.dp.toPx(), y), 1.2.dp.toPx(), pathEffect = stitch)
@@ -335,7 +336,7 @@ fun MikuStatusBar(
                             }
                             .padding(horizontal = 4.dp, vertical = 1.dp)
                     ) {
-                        Text(state.quality, color = MikuNowPlayingAccent.tintText(MikuCyan, np.full, Color(0xFF07131A)), fontSize = 10.sp, fontWeight = FontWeight.Black, maxLines = 1, softWrap = false)
+                        Text(state.quality, color = MikuNowPlayingAccent.tintText(MikuCyan, np.full, Mascot.color(0xFF07131A)), fontSize = 10.sp, fontWeight = FontWeight.Black, maxLines = 1, softWrap = false)
                     }
                 }
             }

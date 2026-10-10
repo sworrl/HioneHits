@@ -38,8 +38,8 @@ class MikuCompositingMenuActivity : ComponentActivity() {
     }
 }
 
-private val MikuTeal = Color(0xFF00E5FF)
-private val MikuPink = Color(0xFFFF80AB)
+private val MikuTeal get() = Mascot.color(0xFF00E5FF)
+private val MikuPink get() = Mascot.color(0xFFFF80AB)
 private val PanelBg = Color(0xFF0A0F1A)
 
 @androidx.compose.runtime.Composable
@@ -118,7 +118,7 @@ private fun Chip(label: String, selected: Boolean, onClick: () -> Unit) {
             .clickable(onClick = onClick)
             .padding(horizontal = 12.dp, vertical = 6.dp)
     ) {
-        Text(label, color = if (selected) Color(0xFF10040A) else Color.White.copy(alpha = 0.8f),
+        Text(label, color = if (selected) Mascot.color(0xFF10040A) else Color.White.copy(alpha = 0.8f),
             fontSize = 11.sp, fontWeight = FontWeight.Bold)
     }
 }

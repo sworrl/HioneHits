@@ -1,5 +1,6 @@
 package com.miku.player.scrobble
 
+import com.miku.player.Mascot
 import android.content.Context
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -120,10 +121,10 @@ fun ScrobbleSettingsCard(ctx: Context) {
             Text(
                 if (ScrobblePreferences.hasBuildCredentials() && !ScrobblePreferences.hasUserCredentials(ctx))
                     "API credentials (optional)" else "API credentials",
-                color = Color(0xFFE8F4F2), fontSize = 12.5.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f)
+                color = Mascot.color(0xFFE8F4F2), fontSize = 12.5.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f)
             )
             Text(
-                when (state.credentialSource) { "user" -> "your key"; "build" -> "MikuOS key"; else -> "missing" },
+                when (state.credentialSource) { "user" -> "your key"; "build" -> "${Mascot.osName} key"; else -> "missing" },
                 color = if (state.credentialSource == "none") Color(0xFFFF6B6B) else Muted, fontSize = 11.sp
             )
             Spacer(Modifier.width(6.dp))
@@ -148,7 +149,7 @@ fun ScrobbleSettingsCard(ctx: Context) {
             }
             Text(
                 if (ScrobblePreferences.hasBuildCredentials())
-                    "MikuOS ships its own Last.fm API key, so you do not need these. Fill them in only " +
+                    "${Mascot.osName} ships its own Last.fm API key, so you do not need these. Fill them in only " +
                         "if you would rather scrobble through your OWN API account. Free at " +
                         "last.fm/api/account/create. Stored encrypted on this device only."
                 else
@@ -182,7 +183,7 @@ fun ScrobbleSettingsCard(ctx: Context) {
                 // there, but it takes the account password into this process; the browser flow
                 // never shows it to us at all. Two taps: approve on last.fm, then Finish.
                 Text(
-                    "Sign in on last.fm in your browser. MikuOS never sees your password.",
+                    "Sign in on last.fm in your browser. ${Mascot.osName} never sees your password.",
                     color = Muted, fontSize = 11.sp, modifier = Modifier.padding(bottom = 8.dp)
                 )
                 Row(
@@ -244,7 +245,7 @@ fun ScrobbleSettingsCard(ctx: Context) {
                     ) {
                         Text(
                             if (loading) "Finishing…" else "I approved it — finish",
-                            color = Color(0xFF04161A), fontSize = 13.sp, fontWeight = FontWeight.Bold
+                            color = Mascot.color(0xFF04161A), fontSize = 13.sp, fontWeight = FontWeight.Bold
                         )
                     }
                 }
@@ -291,7 +292,7 @@ fun ScrobbleSettingsCard(ctx: Context) {
 }
 
 @Composable
-private fun StatusLine(label: String, value: String, color: Color = Color(0xFFE8F4F2)) {
+private fun StatusLine(label: String, value: String, color: Color = Mascot.color(0xFFE8F4F2)) {
     Row(Modifier.fillMaxWidth().padding(vertical = 1.dp)) {
         Text(label, color = Muted, fontSize = 11.5.sp, modifier = Modifier.width(118.dp))
         Text(value, color = color, fontSize = 11.5.sp, modifier = Modifier.weight(1f))
@@ -315,7 +316,7 @@ private fun Pill(checked: Boolean, accent: Color, onChange: (Boolean) -> Unit) {
         Modifier
             .width(44.dp).height(24.dp)
             .clip(RoundedCornerShape(12.dp))
-            .background(if (checked) accent.copy(alpha = 0.35f) else Color(0xFF2A1A1E))
+            .background(if (checked) accent.copy(alpha = 0.35f) else Mascot.color(0xFF2A1A1E))
             .border(1.dp, if (checked) accent.copy(alpha = 0.8f) else Color.White.copy(alpha = 0.12f), RoundedCornerShape(12.dp))
             .clickable { onChange(!checked) }
     ) {
@@ -345,7 +346,7 @@ private fun Field(value: String, onValueChange: (String) -> Unit, placeholder: S
             onValueChange = onValueChange,
             modifier = Modifier.weight(1f),
             singleLine = true,
-            textStyle = TextStyle(color = Color(0xFFE8F4F2), fontSize = 13.5.sp, fontWeight = FontWeight.Medium),
+            textStyle = TextStyle(color = Mascot.color(0xFFE8F4F2), fontSize = 13.5.sp, fontWeight = FontWeight.Medium),
             cursorBrush = SolidColor(LastFmRed),
             visualTransformation = if (isPassword) PasswordVisualTransformation() else VisualTransformation.None,
             keyboardOptions = KeyboardOptions(keyboardType = if (isPassword) KeyboardType.Password else KeyboardType.Text, autoCorrect = false),

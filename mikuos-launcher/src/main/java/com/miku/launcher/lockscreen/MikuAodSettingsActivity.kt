@@ -1,5 +1,6 @@
 package com.miku.launcher.lockscreen
 
+import com.miku.launcher.Mascot
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -35,7 +36,7 @@ class MikuAodSettingsActivity : ComponentActivity() {
             var showWeather by remember { mutableStateOf(MikuLockscreenPrefs.getAodShowWeather(ctx)) }
             var showNp by remember { mutableStateOf(MikuLockscreenPrefs.getAodShowNowPlaying(ctx)) }
 
-            Box(Modifier.fillMaxSize().background(Color(0xFF040D12))) {
+            Box(Modifier.fillMaxSize().background(Mascot.color(0xFF040D12))) {
                 Column(Modifier.fillMaxSize().padding(18.dp)) {
                     Text(
                         "ALWAYS-ON DISPLAY",
@@ -59,7 +60,7 @@ class MikuAodSettingsActivity : ComponentActivity() {
                                 .fillMaxWidth()
                                 .padding(vertical = 3.dp)
                                 .clip(RoundedCornerShape(12.dp))
-                                .background(if (selected) Color(0x3300E5FF) else Color(0xCC07131A))
+                                .background(if (selected) Mascot.color(0x3300E5FF) else Mascot.color(0xCC07131A))
                                 .border(
                                     1.dp,
                                     if (selected) MikuCyan else Color(0x33FFFFFF),
@@ -94,7 +95,7 @@ class MikuAodSettingsActivity : ComponentActivity() {
                         Switch(
                             checked = showWeather,
                             onCheckedChange = { showWeather = it; MikuLockscreenPrefs.setAodShowWeather(ctx, it) },
-                            colors = SwitchDefaults.colors(checkedThumbColor = MikuCyan, checkedTrackColor = Color(0xFF00695C))
+                            colors = SwitchDefaults.colors(checkedThumbColor = MikuCyan, checkedTrackColor = Mascot.color(0xFF00695C))
                         )
                     }
                     Row(
@@ -106,7 +107,7 @@ class MikuAodSettingsActivity : ComponentActivity() {
                         Switch(
                             checked = showNp,
                             onCheckedChange = { showNp = it; MikuLockscreenPrefs.setAodShowNowPlaying(ctx, it) },
-                            colors = SwitchDefaults.colors(checkedThumbColor = MikuNeonPink, checkedTrackColor = Color(0xFF880E4F))
+                            colors = SwitchDefaults.colors(checkedThumbColor = MikuNeonPink, checkedTrackColor = Mascot.color(0xFF880E4F))
                         )
                     }
                 }

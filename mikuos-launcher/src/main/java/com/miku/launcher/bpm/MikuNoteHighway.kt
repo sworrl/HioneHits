@@ -1,5 +1,6 @@
 package com.miku.launcher.bpm
 
+import com.miku.launcher.Mascot
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -231,9 +232,9 @@ fun MikuNoteHighway(
 private val LUCKY_GOLD = Color(0xFFFFD700)
 
 private fun sparkColor(a: HitAccuracy?, accent: Color): Color = when (a) {
-    HitAccuracy.PERFECT -> Color(0xFFFF3385)
+    HitAccuracy.PERFECT -> Mascot.color(0xFFFF3385)
     HitAccuracy.GREAT -> accent
-    HitAccuracy.GOOD -> Color(0xFF66E0D8)
+    HitAccuracy.GOOD -> Mascot.color(0xFF66E0D8)
     HitAccuracy.OK -> Color(0xFFFFD166)
     HitAccuracy.MISS -> Color(0xFFFF4D5E)
     null -> accent
