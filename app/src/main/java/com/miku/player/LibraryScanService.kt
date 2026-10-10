@@ -55,7 +55,10 @@ class LibraryScanService : Service() {
         android.os.Environment.getExternalStorageDirectory()?.absolutePath?.let { roots.add(it) }
         externalCacheDirs.forEach { d -> d?.absolutePath?.substringBefore("/Android")?.let { roots.add(it) } }
         File("/storage").listFiles()?.forEach { if (it.isDirectory && it.name != "self" && it.name != "emulated") roots.add(it.absolutePath) }
-        File("/mnt/media_rw").listFiles()?.forEach { if (it.isDirectory) roots.add(it.absolutePath) }
+        // No /mnt/media_rw roots. That is the same card again under its raw mount, and MediaStore
+        // keys rows by the /storage path, so every file there misses the `known` check below and
+        // goes to MediaScanner (or the jaudiotagger fallback insert) a second time under a path
+        // nothing else uses.
         ScanProgress.reset()
 
         Thread {
@@ -145,7 +148,7 @@ class LibraryScanService : Service() {
                 roots.forEach { r ->
                     val rootFile = File(r)
                     rootFile.listFiles()?.forEach { entry ->
-                        if (entry.isDirectory) jobDirs.add(entry)
+                        if (entry.isDirectory) { if (!entry.name.startsWith(".")) jobDirs.add(entry) }
                         else if (entry.isFile) {
                             val ext = entry.extension.lowercase()
                             if (ext in mediaExts) {
@@ -172,7 +175,10 @@ class LibraryScanService : Service() {
                     walkPool.submit {
                         try {
                             android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_BACKGROUND + android.os.Process.THREAD_PRIORITY_LESS_FAVORABLE)
-                            for (f in dir.walkTopDown().maxDepth(12)) {
+                            // Hidden folders are skipped: .m500staging holds albums m500d has not
+                            // committed yet, and indexing them leaves a row behind for a path that
+                            // is deleted seconds later, next to the row for the committed copy.
+                            for (f in dir.walkTopDown().maxDepth(12).onEnter { it == dir || !it.name.startsWith(".") }) {
                                 if (f.isFile) {
                                     val ext = f.extension.lowercase()
                                     // ONLY count and process genuine Audio & Video files (ignore all images/artwork)

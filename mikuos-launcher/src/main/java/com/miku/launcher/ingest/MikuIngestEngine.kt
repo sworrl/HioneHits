@@ -517,9 +517,23 @@ object MikuIngestEngine {
         }
     }
 
+    /**
+     * Single-flight guard for [triggerRescan]. Four callers can start a scan: the Force scan
+     * button, m500d's INGEST_SCAN broadcast at the end of every pass, the storage-mounted receiver
+     * and the daily catch-up. Only the automatic path looked at isScanning, so a button press
+     * during a relay-triggered scan started a second full walk of the same trees and submitted
+     * every file to MediaScanner twice.
+     */
+    private val rescanRunning = java.util.concurrent.atomic.AtomicBoolean(false)
+
     fun triggerRescan(context: Context) {
         val appContext = context.applicationContext
+        if (!rescanRunning.compareAndSet(false, true)) {
+            log("Scan already running · this request was skipped")
+            return
+        }
         scope.launch {
+          try {
             _state.value = _state.value.copy(
                 isScanning = true,
                 scanProgress = 0.05f,
@@ -538,8 +552,15 @@ object MikuIngestEngine {
             if (storageDir.exists() && storageDir.isDirectory) {
                 storageDir.listFiles()?.forEach { file ->
                     if (file.isDirectory && file.name != "emulated" && file.name != "self") {
-                        val sdMusic = File(file, "Music")
-                        if (sdMusic.exists()) scanPaths.add(sdMusic.absolutePath)
+                        // Use the folder's real name. The card is exFAT, so File(card, "Music")
+                        // answers for a folder named MUSIC and the scan would submit
+                        // /storage/X/Music/... while MediaStore already holds /storage/X/MUSIC/...
+                        // MediaStore compares paths case-sensitively, so that is a second row
+                        // for every track on the card.
+                        val sdMusic = file.listFiles()?.firstOrNull {
+                            it.isDirectory && it.name.equals("music", ignoreCase = true)
+                        }
+                        if (sdMusic != null) scanPaths.add(sdMusic.absolutePath)
                         else scanPaths.add(file.absolutePath)
                     }
                 }
@@ -551,7 +572,12 @@ object MikuIngestEngine {
             scanPaths.forEach { rootPath ->
                 log("Scanning folder: $rootPath")
                 try {
-                    File(rootPath).walkTopDown().maxDepth(8).forEach { f ->
+                    // Skip hidden folders. m500d stages in-flight albums in .m500staging at the
+                    // card root, and a scan that runs mid-transfer would hand MediaScanner files
+                    // that are about to move, leaving a second row per track for the old path.
+                    File(rootPath).walkTopDown().maxDepth(8)
+                        .onEnter { it.absolutePath == rootPath || !it.name.startsWith(".") }
+                        .forEach { f ->
                         if (f.isFile && extensions.contains(f.extension.lowercase(Locale.ROOT))) {
                             audioFiles.add(f.absolutePath)
                         }
@@ -612,6 +638,10 @@ object MikuIngestEngine {
 
             delay(1000)
             refresh(appContext)
+          } finally {
+            rescanRunning.set(false)
+            if (_state.value.isScanning) _state.value = _state.value.copy(isScanning = false)
+          }
         }
     }
 

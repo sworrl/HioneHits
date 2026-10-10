@@ -52,10 +52,13 @@ fun HardwareSettingsScreen(onBack: () -> Unit) {
     val scope = rememberCoroutineScope()
 
     var isRooted by remember { mutableStateOf(false) }
-    // null = not probed yet; true/false = real result of reading the DAC sysfs directory
-    var sysfsReachable by remember { mutableStateOf<Boolean?>(null) }
+    // null = not probed yet; true/false = whether com.miku.sysbridge is installed
+    var bridgeOk by remember { mutableStateOf<Boolean?>(null) }
+    // What the DAC was last told (persist.vendor.audio.miku.*), and the last failed set, if any
+    var dacApplied by remember { mutableStateOf("") }
+    var dacProblem by remember { mutableStateOf<String?>(null) }
 
-    // Cirrus Logic CS43198 DAC States — null until READ from sysfs / Settings.Global. Nothing is
+    // Cirrus Logic CS43198 DAC States — null until READ from the persist props / Settings.Global. Nothing is
     // pre-selected from a local default (the old NOS / LOW / +6 dB defaults were shown as if real).
     var csFilter by remember { mutableStateOf<CirrusLogicManager.DigitalFilter?>(null) }
     var csGain by remember { mutableStateOf<CirrusLogicManager.GainMode?>(null) }
@@ -86,6 +89,24 @@ fun HardwareSettingsScreen(onBack: () -> Unit) {
     // CPU Performance
     var cpuGovernorOn by remember { mutableStateOf(CpuPerformance.isEnabled(ctx)) }
 
+    // Re-read the four live knobs. Runs after every set, so a control that did not apply snaps
+    // back to what the DAC actually has.
+    suspend fun reloadDac() = withContext(Dispatchers.IO) {
+        bridgeOk = DacBridge.available(ctx)
+        csFilter = CirrusLogicManager.getDigitalFilter(ctx)
+        csGain = CirrusLogicManager.getGainMode(ctx)
+        csDre = CirrusLogicManager.isDreEnabled(ctx)
+        csTurbo = CirrusLogicManager.isHighPowerEnabled(ctx)
+        dacApplied = CirrusLogicManager.appliedSummary()
+    }
+    fun applyDac(block: suspend () -> DacBridge.Result) {
+        scope.launch {
+            val r = block()
+            dacProblem = DacBridge.lastProblem.takeIf { r != DacBridge.Result.CONFIRMED }
+            reloadDac()
+        }
+    }
+
     LaunchedEffect(Unit) {
         withContext(Dispatchers.IO) {
             isRooted = android.os.Process.myUid() == 1000 || RootShell.isAvailable() || ctx.checkSelfPermission(android.Manifest.permission.WRITE_SECURE_SETTINGS) == android.content.pm.PackageManager.PERMISSION_GRANTED
@@ -100,10 +121,7 @@ fun HardwareSettingsScreen(onBack: () -> Unit) {
             } catch (e: Throwable) {
                 Log.e("SettingsOverlayCheck", "Failed to query settings resources", e)
             }
-            sysfsReachable = CirrusLogicManager.isSysfsReachable()
-            csFilter = CirrusLogicManager.getDigitalFilter(ctx)
-            csGain = CirrusLogicManager.getGainMode(ctx)
-            csTurbo = CirrusLogicManager.isHighPowerEnabled(ctx)
+            reloadDac()
             csDsdComp = CirrusLogicManager.getDsdGainCompensate(ctx)
             csOutput = CirrusLogicManager.getOutputMode(ctx)
             // getBalance() substitutes 0 when nothing is readable, which the UI then printed as
@@ -150,33 +168,37 @@ fun HardwareSettingsScreen(onBack: () -> Unit) {
                         .border(1.dp, HwMikuTeal.copy(alpha = 0.4f), RoundedCornerShape(16.dp))
                         .padding(16.dp)
                 ) {
-                    // Status reflects what was ACTUALLY probed: the DAC sysfs directory and the
-                    // process's privilege. No unconditional "online / active" claims.
+                    // Status reflects what was actually probed: whether the bridge is installed,
+                    // and the values the DAC was last told (persist.vendor.audio.miku.*).
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Box(Modifier.size(10.dp).clip(CircleShape).background(when (sysfsReachable) { true -> Color(0xFF1ABC9C); false -> Color(0xFFF1C40F); null -> HwMuted }))
+                        Box(Modifier.size(10.dp).clip(CircleShape).background(when (bridgeOk) { true -> Color(0xFF1ABC9C); false -> Color(0xFFF1C40F); null -> HwMuted }))
                         Spacer(Modifier.width(8.dp))
                         Text(
-                            when (sysfsReachable) {
-                                null -> "Probing DAC control path…"
-                                true -> if (isRooted) "CS43198 DAC sysfs reachable (privileged)" else "CS43198 DAC sysfs reachable"
-                                false -> "DAC sysfs not readable, using Settings.Global"
+                            when (bridgeOk) {
+                                null -> "Checking the DAC control path…"
+                                true -> "DAC settings go through the MikuOS system bridge"
+                                false -> "MikuOS system bridge not found"
                             },
-                            color = if (sysfsReachable == true) HwMikuTeal else HwMuted,
+                            color = if (bridgeOk == true) HwMikuTeal else HwMuted,
                             fontSize = 14.sp,
                             fontWeight = FontWeight.Bold
                         )
                     }
                     Spacer(Modifier.height(6.dp))
                     Text(
-                        when (sysfsReachable) {
-                            true -> "Filter, gain, DRE, output and balance are read from and written to ${CirrusLogicManager.SYSFS_BASE}. Controls below show the value the kernel reports. \"unknown\" means neither the kernel nor Settings.Global answered."
-                            false -> "${CirrusLogicManager.SYSFS_BASE} is not readable by this process. Controls show the last value persisted in Settings.Global (vendor.audio.hiby.*) and writes go through the shell path. \"unknown\" means no value has been set."
-                            null -> "Reading kernel DAC nodes and HiBy audio settings…"
+                        when (bridgeOk) {
+                            true -> "Applied now. $dacApplied"
+                            false -> "com.miku.sysbridge is not installed, so filter, gain, DRE and high power cannot change. Controls show the last saved choice."
+                            null -> "Reading the DAC settings…"
                         },
                         color = HwMuted,
                         fontSize = 12.sp,
                         lineHeight = 16.sp
                     )
+                    dacProblem?.let {
+                        Spacer(Modifier.height(6.dp))
+                        Text(it, color = Color(0xFFF1C40F), fontSize = 12.sp, lineHeight = 16.sp)
+                    }
                 }
             }
 
@@ -201,7 +223,7 @@ fun HardwareSettingsScreen(onBack: () -> Unit) {
                                 .fillMaxWidth()
                                 .clickable {
                                     csFilter = filter
-                                    scope.launch { CirrusLogicManager.setDigitalFilter(ctx, filter) }
+                                    applyDac { CirrusLogicManager.setDigitalFilter(ctx, filter) }
                                 }
                                 .padding(vertical = 6.dp),
                             verticalAlignment = Alignment.CenterVertically
@@ -210,7 +232,7 @@ fun HardwareSettingsScreen(onBack: () -> Unit) {
                                 selected = csFilter == filter,
                                 onClick = {
                                     csFilter = filter
-                                    scope.launch { CirrusLogicManager.setDigitalFilter(ctx, filter) }
+                                    applyDac { CirrusLogicManager.setDigitalFilter(ctx, filter) }
                                 },
                                 colors = RadioButtonDefaults.colors(selectedColor = HwMikuTeal, unselectedColor = HwMuted)
                             )
@@ -236,7 +258,7 @@ fun HardwareSettingsScreen(onBack: () -> Unit) {
                                     .background(if (csGain == gain) HwMikuTeal else HwSurface2)
                                     .clickable {
                                         csGain = gain
-                                        scope.launch { CirrusLogicManager.setGainMode(ctx, gain) }
+                                        applyDac { CirrusLogicManager.setGainMode(ctx, gain) }
                                     },
                                 contentAlignment = Alignment.Center
                             ) {
@@ -272,20 +294,20 @@ fun HardwareSettingsScreen(onBack: () -> Unit) {
 
                     HwSettingsToggleRow(
                         title = "Dynamic Range Enhancement (DRE)",
-                        subtitle = if (csDre == null) "Reading state…" else "Lowers the noise floor at low volume",
+                        subtitle = if (csDre == null) "Not set yet" else "Lowers the noise floor at low volume",
                         checked = csDre == true
                     ) { enabled ->
                         csDre = enabled
-                        scope.launch { CirrusLogicManager.setDreEnabled(ctx, enabled) }
+                        applyDac { CirrusLogicManager.setDreEnabled(ctx, enabled) }
                     }
 
                     HwSettingsToggleRow(
                         title = "High power mode",
-                        subtitle = if (csTurbo == null) "Reading state…" else "More current for hard-to-drive headphones",
+                        subtitle = if (csTurbo == null) "Not set yet" else "Switches in the external amp stage. The same volume step gets louder, so music volume is lowered to 30% when you turn it on",
                         checked = csTurbo == true
                     ) { enabled ->
                         csTurbo = enabled
-                        scope.launch { CirrusLogicManager.setHighPowerEnabled(ctx, enabled) }
+                        applyDac { CirrusLogicManager.setHighPowerEnabled(ctx, enabled) }
                     }
 
                     Spacer(Modifier.height(10.dp))

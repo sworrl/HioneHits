@@ -202,8 +202,17 @@ object QuickSettingsModel {
             )
         )
 
-        // 3. Cirrus CS43198 Filter — state comes from sysfs / Settings.Global; "unknown" when neither
-        //    answers (the tile used to be hard-wired isActive = true and defaulted to Fast Linear).
+        // 3-6. DAC tiles. State is what the DAC was last told (persist.vendor.audio.miku.*, the same
+        //    values Miku Music and the Hardware app show). Writes go through com.miku.sysbridge.
+        //    A tile is dimmed when the bridge is missing, and a failed set says so in a toast.
+        val dacBridgeOk = DacBridge.available(ctx)
+        fun dacResult(r: DacBridge.Result) {
+            if (r == DacBridge.Result.CONFIRMED) return
+            val msg = DacBridge.lastProblem ?: return
+            android.os.Handler(android.os.Looper.getMainLooper()).post {
+                android.widget.Toast.makeText(ctx.applicationContext, msg, android.widget.Toast.LENGTH_LONG).show()
+            }
+        }
         val currentFilter = CirrusLogicManager.getDigitalFilter(ctx)
         list.add(
             QsTile(
@@ -215,17 +224,17 @@ object QuickSettingsModel {
                     CirrusLogicManager.DigitalFilter.SLOW_LINEAR -> "Slow Linear"
                     CirrusLogicManager.DigitalFilter.SLOW_MINIMUM -> "Slow Min"
                     CirrusLogicManager.DigitalFilter.NOS -> "NOS"
-                    null -> "Unknown, tap to set"
+                    null -> "Not set, tap to set"
                 },
                 icon = Icons.Default.GraphicEq,
                 isActive = currentFilter != null,
-                isAvailable = currentFilter != null,
+                isAvailable = dacBridgeOk,
                 onClick = {
                     val all = CirrusLogicManager.DigitalFilter.values()
                     val nextIdx = if (currentFilter == null) 0 else (currentFilter.ordinal + 1) % all.size
                     val nextFilter = all[nextIdx]
                     scope.launch {
-                        CirrusLogicManager.setDigitalFilter(ctx, nextFilter)
+                        dacResult(CirrusLogicManager.setDigitalFilter(ctx, nextFilter))
                         onRefresh()
                     }
                 },
@@ -241,17 +250,17 @@ object QuickSettingsModel {
                 id = "cs43198_gain",
                 label = "PO Gain",
                 subtitle = when (currentGain) {
-                    CirrusLogicManager.GainMode.HIGH -> "High (+6 dB)"
-                    CirrusLogicManager.GainMode.LOW -> "Low (0 dB)"
-                    null -> "Unknown, tap to set"
+                    CirrusLogicManager.GainMode.HIGH -> "High (0 dB)"
+                    CirrusLogicManager.GainMode.LOW -> "Low (-12 dB)"
+                    null -> "Not set, tap to set"
                 },
                 icon = Icons.Default.VolumeUp,
                 isActive = isHighGain,
-                isAvailable = currentGain != null,
+                isAvailable = dacBridgeOk,
                 onClick = {
                     val next = if (isHighGain) CirrusLogicManager.GainMode.LOW else CirrusLogicManager.GainMode.HIGH
                     scope.launch {
-                        CirrusLogicManager.setGainMode(ctx, next)
+                        dacResult(CirrusLogicManager.setGainMode(ctx, next))
                         onRefresh()
                     }
                 },
@@ -265,12 +274,13 @@ object QuickSettingsModel {
             QsTile(
                 id = "audio_turbo",
                 label = "High power",
-                subtitle = if (isTurbo) "On" else "Standard",
+                subtitle = if (isTurbo) "On" else "Off",
                 icon = Icons.Default.FlashOn,
                 isActive = isTurbo,
+                isAvailable = dacBridgeOk,
                 onClick = {
                     scope.launch {
-                        CirrusLogicManager.setHighPowerEnabled(ctx, !isTurbo)
+                        dacResult(CirrusLogicManager.setHighPowerEnabled(ctx, !isTurbo))
                         onRefresh()
                     }
                 },
@@ -287,9 +297,10 @@ object QuickSettingsModel {
                 subtitle = if (isDre) "On" else "Off",
                 icon = Icons.Default.Tune,
                 isActive = isDre,
+                isAvailable = dacBridgeOk,
                 onClick = {
                     scope.launch {
-                        CirrusLogicManager.setDreEnabled(ctx, !isDre)
+                        dacResult(CirrusLogicManager.setDreEnabled(ctx, !isDre))
                         onRefresh()
                     }
                 },

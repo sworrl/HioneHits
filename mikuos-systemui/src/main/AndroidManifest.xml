@@ -1,6 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:tools="http://schemas.android.com/tools" xmlns:android="http://schemas.android.com/apk/res/android">
 
+    <!-- DAC filter, gain, DRE and high power tiles go through com.miku.sysbridge. See DacBridge. -->
+    <uses-permission android:name="com.miku.permission.SYSTEM_BRIDGE" />
     <uses-permission android:name="android.permission.STATUS_BAR" tools:ignore="ProtectedPermissions" />
     <uses-permission android:name="android.permission.REBOOT" />
     <uses-permission android:name="android.permission.SHUTDOWN" />

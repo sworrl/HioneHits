@@ -167,7 +167,8 @@ fun VerboseUsbDacScreen(onExit: () -> Unit) {
     var gain by remember { mutableStateOf<CirrusLogicManager.GainMode?>(null) }
     var outputMode by remember { mutableStateOf<CirrusLogicManager.OutputMode?>(null) }
     var isDreActive by remember { mutableStateOf<Boolean?>(null) }
-    var sysfsOk by remember { mutableStateOf<Boolean?>(null) }
+    var bridgeOk by remember { mutableStateOf<Boolean?>(null) }
+    var highPower by remember { mutableStateOf<Boolean?>(null) }
     var snap by remember { mutableStateOf<UacSnapshot?>(null) }   // null until the first real probe
 
     // Refresh live stats — REAL: kernel UDC + UAC2 gadget ALSA card; nothing is simulated.
@@ -178,7 +179,8 @@ fun VerboseUsbDacScreen(onExit: () -> Unit) {
                 gain = CirrusLogicManager.getGainMode(ctx)
                 outputMode = CirrusLogicManager.getOutputMode(ctx)
                 isDreActive = CirrusLogicManager.isDreEnabled(ctx)
-                sysfsOk = CirrusLogicManager.isSysfsReachable()
+                highPower = CirrusLogicManager.isHighPowerEnabled(ctx)
+                bridgeOk = DacBridge.available(ctx)
                 cfgRate = UsbDacManager.getSampleRate(ctx); cfgBits = UsbDacManager.getBitDepth(ctx)
                 snap = UsbDacProbe.snapshot()
                 delay(1000)
@@ -471,7 +473,7 @@ fun VerboseUsbDacScreen(onExit: () -> Unit) {
                 }
             }
 
-            // Section 3: Hardware Output Stage (kernel sysfs / HiBy Settings; "unknown" when neither answers)
+            // Section 3: Hardware Output Stage (persist.vendor.audio.miku.* / Settings.Global; "unknown" when neither answers)
             item {
                 Text(
                     "CIRRUS LOGIC DUAL CS43198 DAC",
@@ -493,14 +495,15 @@ fun VerboseUsbDacScreen(onExit: () -> Unit) {
                 ) {
                     VerboseDiagnosticRow("DAC Architecture", "Dual CS43198 MasterHIFI, parallel", HwMikuTeal)
                     VerboseDiagnosticRow("Reconstruction Filter", filter?.label ?: "unknown", if (filter != null) Color.White else HwMuted)
-                    VerboseDiagnosticRow("Analog Gain Mode", gain?.label ?: "unknown", if (gain != null) Color.White else HwMuted)
+                    VerboseDiagnosticRow("Gain (digital offset)", gain?.label ?: "unknown", if (gain != null) Color.White else HwMuted)
                     VerboseDiagnosticRow("Physical Output Port", when (outputMode) {
                         CirrusLogicManager.OutputMode.LINE_OUT -> "Line Out (LO)"
                         CirrusLogicManager.OutputMode.HEADPHONE_OUT -> "Headphone Out (PO)"
                         null -> "unknown"
                     }, if (outputMode != null) HwMikuPink else HwMuted)
                     VerboseDiagnosticRow("Dynamic Range Enhancement (DRE)", when (isDreActive) { true -> "Enabled"; false -> "Disabled"; null -> "unknown" }, if (isDreActive == true) HwMikuTeal else HwMuted)
-                    VerboseDiagnosticRow("Kernel DAC sysfs", when (sysfsOk) { true -> "reachable (${CirrusLogicManager.SYSFS_BASE})"; false -> "NOT readable, using Settings.Global"; null -> NA }, if (sysfsOk == true) Color.White else HwMuted)
+                    VerboseDiagnosticRow("High power", when (highPower) { true -> "On"; false -> "Off"; null -> "unknown" }, if (highPower == true) HwMikuTeal else HwMuted)
+                    VerboseDiagnosticRow("DAC control path", when (bridgeOk) { true -> "MikuOS system bridge"; false -> "bridge not installed, settings cannot apply"; null -> NA }, if (bridgeOk == true) Color.White else HwMuted)
                 }
             }
 
