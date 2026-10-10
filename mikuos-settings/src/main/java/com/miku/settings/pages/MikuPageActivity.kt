@@ -137,6 +137,7 @@ fun pageTitle(route: String): String = when (route.substringBefore('/')) {
     "storage" -> "Storage"
     "location" -> "Location"
     "security" -> "Security & privacy"
+    "screenlock" -> "Screen lock"
     "device_admins" -> "Device admin apps"
     "a11y" -> "Accessibility"
     "datetime" -> "Date & time"
@@ -181,6 +182,7 @@ private fun PageContent(route: String) {
         "storage" -> StoragePage()
         "location" -> LocationPage()
         "security" -> SecurityPage()
+        "screenlock" -> ScreenLockPage()
         "device_admins" -> DeviceAdminsPage()
         "a11y" -> seg(route, 1)?.let { A11yServicePage(it) } ?: AccessibilityPage()
         "datetime" -> DateTimePage()

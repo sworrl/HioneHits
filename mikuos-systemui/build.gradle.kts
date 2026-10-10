@@ -105,6 +105,9 @@ android {
 }
 
 dependencies {
+    // @SystemApi TrustAgentService is not in the public android.jar. Compile against a stub,
+    // the framework class is used at run time. See stubs/build.sh.
+    compileOnly(files("stubs/trust-agent-stubs.jar"))
     implementation(platform("androidx.compose:compose-bom:2024.09.02"))
     implementation("androidx.compose.material3:material3")
     implementation("androidx.compose.ui:ui")

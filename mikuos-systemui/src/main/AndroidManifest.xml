@@ -48,6 +48,9 @@
     <uses-permission android:name="android.permission.VIBRATE" />
     <!-- Media sessions for the shade media card / recents chip / Now-Playing HUD (signature-level; granted to this platform-signed app). -->
     <uses-permission android:name="android.permission.MEDIA_CONTENT_CONTROL" />
+    <!-- Trust agent (trust/MikuTrustAgent). signature|privileged, granted here by the platform
+         signature. This app is not a priv-app, so no privapp-permissions entry is involved. -->
+    <uses-permission android:name="android.permission.PROVIDE_TRUST_AGENT" tools:ignore="ProtectedPermissions" />
 
     <application
         android:allowBackup="true"
@@ -141,6 +144,21 @@
             <meta-data
                 android:name="android.accessibilityservice"
                 android:resource="@xml/accessibility_service_config" />
+        </service>
+
+        <!-- MikuOS trust agent: after the first credential unlock since restart, keeps the device
+             openable with a swipe until the next restart. Only the system can bind it. -->
+        <service
+            android:name=".trust.MikuTrustAgent"
+            android:exported="true"
+            android:label="MikuOS unlock until restart"
+            android:permission="android.permission.BIND_TRUST_AGENT">
+            <intent-filter>
+                <action android:name="android.service.trust.TrustAgentService" />
+            </intent-filter>
+            <meta-data
+                android:name="android.service.trust.trustagent"
+                android:resource="@xml/miku_trust_agent" />
         </service>
 
         <service

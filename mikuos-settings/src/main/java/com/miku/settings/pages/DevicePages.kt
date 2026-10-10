@@ -348,7 +348,6 @@ fun LocationPage() {
 fun SecurityPage() {
     val ctx = LocalContext.current
     val nav = LocalNav.current
-    val km = remember { ctx.getSystemService(KeyguardManager::class.java) }
     var refresh by remember { mutableIntStateOf(0) }
     LifecycleResumeTick { refresh++ }
     val p = remember { Prefs(ctx) { refresh++ } }
@@ -356,13 +355,11 @@ fun SecurityPage() {
         item {
             key(refresh) {
                 Section("Device security") {
-                    InfoRow("Screen lock", try { if (km.isDeviceSecure) "Set" else "None" } catch (_: Throwable) { null })
+                    NavRow("Screen lock", com.miku.settings.lock.MikuLock.typeName(com.miku.settings.lock.MikuLock.credentialType(ctx)).let {
+                        if (it == "None") "None. Set a PIN or password" else "$it. Change it, remove it, or choose when it is asked"
+                    }, Icons.Default.Lock) { nav.push("screenlock") }
                     InfoRow("Encryption", Hidden.sysprop("ro.crypto.state")?.let { s -> s.replaceFirstChar { it.uppercase() } + (Hidden.sysprop("ro.crypto.type")?.let { " ($it)" } ?: "") })
                     InfoRow("Security update", android.os.Build.VERSION.SECURITY_PATCH)
-                    // ChooseLockGeneric is not exported; SET_NEW_PASSWORD is the public door to it.
-                    NavRow("Set screen lock", "PIN, pattern or password. Uses the stock lock setup flow.", Icons.Default.Lock) {
-                        try { ctx.startActivity(Intent(android.app.admin.DevicePolicyManager.ACTION_SET_NEW_PASSWORD)) } catch (_: Throwable) { toast(ctx, "Lock setup not available") }
-                    }
                 }
             }
         }

@@ -244,9 +244,12 @@ class MikuLauncherActivity : ComponentActivity() {
             try {
                 android.provider.Settings.Secure.putInt(contentResolver, "user_setup_complete", 1)
                 android.provider.Settings.Global.putInt(contentResolver, "device_provisioned", 1)
-                android.provider.Settings.Global.putInt(contentResolver, android.provider.Settings.Global.ADB_ENABLED, 1)
-                android.provider.Settings.Global.putInt(contentResolver, android.provider.Settings.Global.DEVELOPMENT_SETTINGS_ENABLED, 1)
-                android.provider.Settings.Global.putInt(contentResolver, "adb_wifi_enabled", 1)
+                // Dev builds only: a release build (ro.miku.release=1) leaves adb to the user.
+                if (!MikuSystemTuning.isReleaseBuild()) {
+                    android.provider.Settings.Global.putInt(contentResolver, android.provider.Settings.Global.ADB_ENABLED, 1)
+                    android.provider.Settings.Global.putInt(contentResolver, android.provider.Settings.Global.DEVELOPMENT_SETTINGS_ENABLED, 1)
+                    android.provider.Settings.Global.putInt(contentResolver, "adb_wifi_enabled", 1)
+                }
             } catch (_: Throwable) {}
 
             // The high-perf Wi-Fi lock moved into MikuSystemTuning. It used to be acquired here

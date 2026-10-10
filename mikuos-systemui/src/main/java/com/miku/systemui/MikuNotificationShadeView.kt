@@ -89,6 +89,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.unit.Density
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -188,6 +189,13 @@ fun MikuNotificationShadeView(
     LaunchedEffect(editing) { editAnim.animateTo(if (editing) 1f else 0f, MikuMotion.settle()) }
     val blur by MikuGlass.backdropBlur.collectAsState()
     val notifs by MikuNotificationStore.items.collectAsState()
+    // Screen lock privacy: while the PIN is needed the list shows only app names (or nothing),
+    // unless the user allowed content. See MikuLockPrivacy.
+    val lockMode by MikuLockPrivacy.mode.collectAsState()
+    DisposableEffect(Unit) {
+        val r = MikuLockPrivacy.watch(ctx)
+        onDispose { runCatching { ctx.unregisterReceiver(r) } }
+    }
     val listenerOk by MikuNotificationStore.connected.collectAsState()
     // Album accent (Miku Music → Settings.Global miku_np_accent), ≈30% into teal, animated 400ms.
     LaunchedEffect(Unit) {
@@ -199,7 +207,7 @@ fun MikuNotificationShadeView(
     LaunchedEffect(Unit) { MikuBeatWatch.intervalMs.drop(1).collect { tick++ } }
     // The window host keeps this composition alive between pulls, so tile state read on the last
     // pull would otherwise still be showing. Every open resumes the lifecycle: re-read then.
-    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { tick++ }
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { MikuLockPrivacy.refresh(ctx); tick++ }
     val powerProfile by MikuPowerProfile.profile.collectAsState()
     val quiet = powerProfile == "audio_only" || powerProfile == "idle"
     val accentRaw by MikuAccent.accent.collectAsState()
@@ -232,6 +240,7 @@ fun MikuNotificationShadeView(
                 isCharging = st == BatteryManager.BATTERY_STATUS_CHARGING || st == BatteryManager.BATTERY_STATUS_FULL
             }
             media = withContext(Dispatchers.IO) { runCatching { MikuMediaHub.now(ctx) }.getOrNull() }
+            withContext(Dispatchers.IO) { MikuLockPrivacy.refresh(ctx) }
             delay(MikuPowerProfile.pollMs(1000L))
         }
     }
@@ -483,8 +492,14 @@ fun MikuNotificationShadeView(
                 Spacer(Modifier.height(8.dp))
 
                 // ---------------------------------------------------- media + notifications
-                val visibleNotifs = remember(notifs, media) {
-                    notifs.filter { !(it.hasMediaSession && media != null && it.pkg == media?.pkg) }
+                val visibleNotifs = remember(notifs, media, lockMode) {
+                    val l = notifs.filter { !(it.hasMediaSession && media != null && it.pkg == media?.pkg) }
+                    when (lockMode) {
+                        MikuLockPrivacy.Mode.FULL -> l
+                        MikuLockPrivacy.Mode.HIDDEN -> emptyList()
+                        // Ongoing media rows keep their own card above, everything else is the app name only.
+                        MikuLockPrivacy.Mode.REDACTED -> l.map { MikuLockPrivacy.redact(it) }
+                    }
                 }
                 var openGroups by remember { mutableStateOf(setOf<String>()) }
                 LazyColumn(
@@ -500,7 +515,10 @@ fun MikuNotificationShadeView(
                     // with one notification is a plain row. More than one gets a header with the
                     // count. Past two rows the group folds until the header is tapped.
                     notifGroups(visibleNotifs).forEach { (pkg, group) ->
-                        val openN: (MikuNotif) -> Unit = { n -> if (MikuNotificationStore.open(ctx, n)) onDismiss() }
+                        val openN: (MikuNotif) -> Unit = { n ->
+                            if (lockMode != MikuLockPrivacy.Mode.FULL) { onDismiss(); MikuLockPrivacy.requestUnlock(ctx) }
+                            else if (MikuNotificationStore.open(ctx, n)) onDismiss()
+                        }
                         val replyN: (MikuNotif) -> Unit = { n -> onDismiss(); MikuReplyActivity.start(ctx, n.key) }
                         if (group.size == 1) {
                             val n = group[0]

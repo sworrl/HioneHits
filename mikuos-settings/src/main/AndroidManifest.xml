@@ -105,6 +105,12 @@
     <uses-permission android:name="android.permission.LOCAL_MAC_ADDRESS" />
     <uses-permission android:name="android.permission.VIBRATE" />
     <uses-permission android:name="android.permission.NFC" />
+    <!-- Screen lock (lock/MikuLock). Both are signature level, granted by the platform key, so
+         neither needs a privapp-permissions entry. ACCESS_KEYGUARD_SECURE_STORAGE covers
+         LockSettingsService and TrustManager reports. BIND_DEVICE_ADMIN covers the
+         DevicePolicyManager half of the unlock attempt report. -->
+    <uses-permission android:name="android.permission.ACCESS_KEYGUARD_SECURE_STORAGE" />
+    <uses-permission android:name="android.permission.BIND_DEVICE_ADMIN" />
 
     <application
         android:allowBackup="true"
@@ -1249,6 +1255,39 @@
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </activity>
+
+        <!-- MikuOS unlock pad. Shown over the stock keyguard when the PIN or password is needed.
+             Direct boot aware so it also serves the first unlock after a restart. -->
+        <activity
+            android:name="com.miku.settings.lock.MikuUnlockActivity"
+            android:directBootAware="true"
+            android:exported="true"
+            android:permission="android.permission.STATUS_BAR"
+            android:excludeFromRecents="true"
+            android:launchMode="singleTask"
+            android:taskAffinity="com.miku.settings.unlock"
+            android:showWhenLocked="true"
+            android:screenOrientation="portrait"
+            android:windowSoftInputMode="adjustResize"
+            android:theme="@style/Theme.M500Hardware" />
+
+        <!-- Set, change or remove the screen lock. -->
+        <activity
+            android:name="com.miku.settings.lock.MikuCredentialActivity"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:screenOrientation="portrait"
+            android:windowSoftInputMode="adjustResize"
+            android:theme="@style/Theme.M500Hardware" />
+
+        <receiver
+            android:name="com.miku.settings.lock.LockBootReceiver"
+            android:directBootAware="true"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.LOCKED_BOOT_COMPLETED" />
+            </intent-filter>
+        </receiver>
 
         <!-- Bluetooth pairing requests arrive as an ordered implicit broadcast; 1000 beats stock's 0. -->
         <receiver
