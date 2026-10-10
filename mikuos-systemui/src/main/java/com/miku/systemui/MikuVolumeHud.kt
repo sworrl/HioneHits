@@ -624,7 +624,7 @@ class MikuVolumeHud(
 
                 textPaint.textSize = dp(6.5f)
                 textPaint.color = Color.WHITE
-                canvas.drawText("⚠️ >80dB", cx, by + dp(9f), textPaint)
+                canvas.drawText(">80dB", cx, by + dp(9f), textPaint)
             }
         }
 

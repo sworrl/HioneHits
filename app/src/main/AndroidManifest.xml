@@ -161,7 +161,7 @@
         <activity
             android:name=".HardwareSettingsActivity"
             android:exported="true"
-            android:label="Miku Cyber Audio Controller"
+            android:label="Miku Audio Settings"
             android:icon="@mipmap/ic_launcher"
             android:roundIcon="@mipmap/ic_launcher_round"
             android:theme="@style/Theme.MikuLauncher"
@@ -202,7 +202,7 @@
         <activity
             android:name=".FnLockSettingsActivity"
             android:exported="true"
-            android:label="Miku Fn Key &amp; Pocket Guard"
+            android:label="Miku Fn Key &amp; Pocket Lock"
             android:icon="@mipmap/ic_launcher"
             android:roundIcon="@mipmap/ic_launcher_round"
             android:theme="@style/Theme.MikuLauncher"
@@ -243,7 +243,7 @@
         <service
             android:name=".sentinel.MikuNotificationSentinelService"
             android:exported="true"
-            android:label="Miku Notification Sentinel"
+            android:label="Miku Notification Filter"
             android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE">
             <intent-filter>
                 <action android:name="android.service.notification.NotificationListenerService" />
@@ -318,7 +318,7 @@
 
         <service
             android:name=".launcher.MikuLiveWallpaperService"
-            android:label="Miku Cyber Hologram Live Wallpaper"
+            android:label="Miku Live Wallpaper"
             android:icon="@drawable/ic_search_head_miku"
             android:permission="android.permission.BIND_WALLPAPER"
             android:exported="true">
@@ -332,7 +332,7 @@
         <receiver
             android:name=".MikuMusicWidget"
             android:exported="true"
-            android:label="Miku Music — Now Playing">
+            android:label="Miku Music Now Playing">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
             </intent-filter>
@@ -344,7 +344,7 @@
         <receiver
             android:name=".MikuTapeWidget"
             android:exported="true"
-            android:label="Miku Music — Tape Deck">
+            android:label="Miku Music Tape Deck">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
             </intent-filter>
@@ -475,7 +475,7 @@
         <receiver
             android:name=".MikuClockWidget"
             android:exported="true"
-            android:label="Miku Music — Clock">
+            android:label="Miku Music Clock">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
             </intent-filter>

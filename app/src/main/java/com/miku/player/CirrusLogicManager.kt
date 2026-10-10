@@ -21,10 +21,10 @@ object CirrusLogicManager {
     const val SYSFS_BASE = "/sys/devices/platform/sa_sound_setting"
 
     enum class DigitalFilter(val id: String, val label: String, val description: String) {
-        FAST_LINEAR("fast_rolloff_phase_compensated", "Fast Roll-off, Phase Compensated", "Reference linear phase, wide soundstage and precise imaging"),
-        FAST_MINIMUM("fast_rolloff_low_latency", "Fast Roll-off, Low Latency", "Minimum phase with ultra-low group delay and punchy dynamics"),
-        SLOW_LINEAR("slow_rolloff_phase_compensated", "Slow Roll-off, Phase Compensated", "Smooth linear decay with zero phase distortion"),
-        SLOW_MINIMUM("slow_rolloff_low_latency", "Slow Roll-off, Low Latency", "Warm acoustic roll-off with minimal pre-ringing"),
+        FAST_LINEAR("fast_rolloff_phase_compensated", "Fast Roll-off, Phase Compensated", "Linear phase with a sharp cutoff"),
+        FAST_MINIMUM("fast_rolloff_low_latency", "Fast Roll-off, Low Latency", "Minimum phase with a sharp cutoff and low delay"),
+        SLOW_LINEAR("slow_rolloff_phase_compensated", "Slow Roll-off, Phase Compensated", "Linear phase with a gentle cutoff"),
+        SLOW_MINIMUM("slow_rolloff_low_latency", "Slow Roll-off, Low Latency", "Minimum phase with a gentle cutoff and little pre-ringing"),
         NOS("nos", "NOS (non-oversampling)", "Skips the DAC's oversampling filter. Softer top end, no pre-ringing. HiBy's stock driver masked this off; MikuOS 0.2.0 patches it in.")
     }
 
@@ -34,19 +34,19 @@ object CirrusLogicManager {
     }
 
     enum class OutputMode(val id: String, val label: String, val sysfsValue: String, val icon: String, val description: String) {
-        AUTO("auto", "Auto-Detect Physical / BT", "auto", "⚡", "Intelligently routes audio to whatever physical port or Bluetooth gear is connected"),
-        BAL_HEADPHONE_OUT("bal_po", "4.4mm Balanced (BAL PO)", "bal_po", "🎧", "Force dual differential 4.4mm balanced output stage"),
-        HEADPHONE_OUT("po", "3.5mm Single-Ended (PO)", "po", "🎧", "Force dedicated 3.5mm unbalanced headphone amplifier stage"),
-        BLUETOOTH("bt", "Bluetooth Audio (A2DP / Speaker)", "bt", "🔊", "Force wireless stream to connected Bluetooth speaker or headphones"),
-        LINE_OUT("lo", "Line Out (LO / BAL LO)", "lo", "📻", "Fixed reference voltage line output for external desktop amplifiers"),
-        USB_DAC("usb", "USB-C Audio / UAC2 DAC", "usb", "💻", "Route audio stream to external Type-C audio hardware")
+        AUTO("auto", "Auto (wired or Bluetooth)", "auto", "⚡", "Plays to whatever is plugged in or paired"),
+        BAL_HEADPHONE_OUT("bal_po", "4.4mm Balanced (BAL PO)", "bal_po", "🎧", "Always use the 4.4mm balanced output"),
+        HEADPHONE_OUT("po", "3.5mm Single-Ended (PO)", "po", "🎧", "Always use the 3.5mm headphone output"),
+        BLUETOOTH("bt", "Bluetooth Audio (A2DP / Speaker)", "bt", "🔊", "Always play to the connected Bluetooth speaker or headphones"),
+        LINE_OUT("lo", "Line Out (LO / BAL LO)", "lo", "📻", "Fixed-level line out for an external amp"),
+        USB_DAC("usb", "USB-C Audio / UAC2 DAC", "usb", "💻", "Play to a USB-C DAC or audio device")
     }
 
     enum class AudioShareTarget(val id: String, val label: String, val description: String) {
-        DUAL_44_AND_BT("dual_44_bt", "4.4mm Balanced DAC + Bluetooth Speaker", "Simultaneously powers 4.4mm balanced IEMs while streaming to Bluetooth speaker/gear"),
-        DUAL_35_AND_BT("dual_35_bt", "3.5mm Single-Ended DAC + Bluetooth Speaker", "Simultaneously powers 3.5mm IEMs while streaming to Bluetooth speaker/gear"),
-        DUAL_PHYSICAL("dual_phy", "Both Physical Ports (3.5mm + 4.4mm Balanced)", "Simultaneously powers both 3.5mm and 4.4mm ports for dual wired IEMs"),
-        WIRED_AND_USB("wired_usb", "Wired DAC + USB-C External DAC", "Mirrors real-time audio across internal CS43198 DAC and external Type-C DAC")
+        DUAL_44_AND_BT("dual_44_bt", "4.4mm Balanced DAC + Bluetooth Speaker", "Plays on 4.4mm and a Bluetooth device at the same time"),
+        DUAL_35_AND_BT("dual_35_bt", "3.5mm Single-Ended DAC + Bluetooth Speaker", "Plays on 3.5mm and a Bluetooth device at the same time"),
+        DUAL_PHYSICAL("dual_phy", "Both Physical Ports (3.5mm + 4.4mm Balanced)", "Plays on the 3.5mm and 4.4mm jacks at the same time"),
+        WIRED_AND_USB("wired_usb", "Wired DAC + USB-C External DAC", "Plays on the internal CS43198 DAC and a USB-C DAC at the same time")
     }
 
     /**

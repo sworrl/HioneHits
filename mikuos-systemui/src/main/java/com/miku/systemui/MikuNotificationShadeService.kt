@@ -57,6 +57,8 @@ class MikuNotificationShadeService : AccessibilityService() {
 
     companion object {
         private const val TAG = "MikuNav"
+        /** Draws its own status row on home, the lockscreen and AOD. */
+        private const val LAUNCHER_PKG = "com.miku.launcher"
         const val ACTION_TRIGGER_BACK = "com.miku.systemui.action.TRIGGER_BACK"
         const val ACTION_DEBUG_QUICK_SWITCH = "com.miku.systemui.action.DEBUG_QUICK_SWITCH"
         const val ACTION_DEBUG_RECENTS = "com.miku.systemui.action.DEBUG_RECENTS"
@@ -246,6 +248,7 @@ class MikuNotificationShadeService : AccessibilityService() {
         addOverlays()
         MikuNotificationStore.ensureEnabled(this)
         suppressStockShade()
+        mainHandler.post(checkOwnBar)
         Log.i(TAG, "MikuNav connected; overlays=$overlaysAdded canGestures=" +
             (serviceInfo?.capabilities?.and(android.accessibilityservice.AccessibilityServiceInfo.CAPABILITY_CAN_PERFORM_GESTURES) != 0))
     }
@@ -269,6 +272,23 @@ class MikuNotificationShadeService : AccessibilityService() {
      * expansion and its home/recents via StatusBarManager so only the Miku top strip opens a
      * shade. Our shade is a separate overlay, unaffected by DISABLE_EXPAND.
      */
+    /**
+     * True while a Miku screen that draws its own status row (home, lockscreen, AOD) is in front.
+     * Those screens hide the stock bar, but Android still reveals it for about 3 seconds on every
+     * wake, and re-hiding does not cancel that reveal. Blanking the stock icons while they are in
+     * front means the reveal shows nothing, so there is never a second clock.
+     */
+    private var ownBarInFront = false
+
+    private val checkOwnBar = Runnable {
+        val pkg = MikuTaskStack.topTask(this)?.second?.packageName
+        val own = pkg == LAUNCHER_PKG
+        if (own != ownBarInFront) {
+            ownBarInFront = own
+            suppressStockShade()
+        }
+    }
+
     private fun suppressStockShade() {
         runCatching {
             val sb = getSystemService(Context.STATUS_BAR_SERVICE)
@@ -288,9 +308,14 @@ class MikuNotificationShadeService : AccessibilityService() {
             val DISABLE_EXPAND = 0x00010000
             val DISABLE_HOME = 0x00200000
             val DISABLE_RECENT = 0x01000000
-            val flags = DISABLE_EXPAND or DISABLE_HOME or DISABLE_RECENT
+            // While a Miku screen with its own status row is in front, the stock icons go too.
+            val DISABLE_NOTIFICATION_ICONS = 0x00020000
+            val DISABLE_SYSTEM_INFO = 0x00100000
+            val DISABLE_CLOCK = 0x00800000
+            val icons = if (ownBarInFront) DISABLE_NOTIFICATION_ICONS or DISABLE_SYSTEM_INFO or DISABLE_CLOCK else 0
+            val flags = DISABLE_EXPAND or DISABLE_HOME or DISABLE_RECENT or icons
             sb.javaClass.getMethod("disable", Int::class.javaPrimitiveType).invoke(sb, flags)
-            Log.i(TAG, "stock shade blocked, stock home/recents disabled; status bar and back left to AOSP")
+            Log.i(TAG, "stock shade blocked, stock home/recents disabled, stock icons ${if (ownBarInFront) "hidden (Miku screen in front)" else "shown"}")
         }.onFailure { Log.w(TAG, "suppressStockShade failed: $it") }
     }
 
@@ -669,6 +694,10 @@ class MikuNotificationShadeService : AccessibilityService() {
             // Hand the ladder the new foreground app so it can stand down for the apps that run
             // their own brightness lifecycle (Miku Music, the MikuOS lockscreen/AOD).
             idleDim?.setForeground(event.packageName?.toString(), event.className?.toString())
+            // Read the real top task a moment later: this event also fires for dialogs, toasts
+            // and the keyboard, which are not what owns the screen.
+            mainHandler.removeCallbacks(checkOwnBar)
+            mainHandler.postDelayed(checkOwnBar, 150)
             volumeHud?.setForeground(event.packageName?.toString(), event.className?.toString())
             val cls = event.className?.toString() ?: ""
             val pkg = event.packageName?.toString() ?: ""

@@ -981,7 +981,7 @@ fun TapeScreen(track: Track, player: ExoPlayer, onExit: () -> Unit) {
                         Spacer(Modifier.height(7.dp))
                         if (upNext.isEmpty()) {
                             Text(
-                                "End of the programme.",
+                                "End of the program.",
                                 color = paperInk.copy(alpha = 0.55f), fontSize = 12.sp,
                                 fontStyle = androidx.compose.ui.text.font.FontStyle.Italic,
                                 fontFamily = Baloo2Font
@@ -1109,7 +1109,7 @@ fun TapeScreen(track: Track, player: ExoPlayer, onExit: () -> Unit) {
                                                 modifier = Modifier.fillMaxWidth()
                                             ) {
                                                 Text(
-                                                    if (isLocked) t.name + "  \uD83D\uDD12" else t.name,
+                                                    if (isLocked) t.name + "  (locked)" else t.name,
                                                     color = if (isSelected) MikuTealBright else Color(0xFFE8F4F2),
                                                     fontSize = 12.sp,
                                                     fontWeight = FontWeight.Bold,

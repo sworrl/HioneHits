@@ -291,7 +291,7 @@ object MikuBeatClickerEngine {
         Building("farm", "Leek Farm", "🌱", 100.0, 1.8, 0, "Hydroponic cyber leeks growing under LEDs"),
         Building("synth", "Yamaha DX7", "🎹", 1100.0, 14.0, 0, "Classic 1983 6-operator FM synthesizer"),
         Building("arcade", "DIVA Arcade", "🕹️", 12000.0, 75.0, 0, "Sanwa arcade buttons and coin drops"),
-        Building("stage", "Hologram Stage", "🌟", 130000.0, 420.0, 0, "3D Cyber projection with stadium sound"),
+        Building("stage", "Hologram Stage", "🌟", 130000.0, 420.0, 0, "A 3D projection with stadium sound"),
         Building("mirai", "Mirai Stadium", "🏟️", 1400000.0, 2600.0, 0, "50,000 glowing penlights in unison"),
         Building("satellite", "Orbital Station", "🛰️", 20000000.0, 18000.0, 0, "Broadcasting Miku's voice across deep space")
     )
@@ -300,21 +300,21 @@ object MikuBeatClickerEngine {
     // be decorative: you could spend hundreds of thousands of leeks on a skill tree that changed
     // nothing at all, which is the least legible progression a game can have.
     private val initialSkills = listOf(
-        SkillUpgrade("magnet", "★ Golden Leek Magnet", "🧲", 250.0, 0, 10, "Golden Leeks appear 12% sooner per tier"),
-        SkillUpgrade("window", "★ Timing Window Expander", "🎯", 600.0, 0, 8, "+6ms wider hit windows per tier"),
-        SkillUpgrade("overdrive", "★ Fever Rush Overdrive", "⚡", 2000.0, 0, 5, "+3s Fever & +15x Fever multiplier per tier"),
-        SkillUpgrade("pentatonic", "★ Pentatonic Mastery", "🎼", 5000.0, 0, 5, "+25% combo multiplier bonus per tier"),
+        SkillUpgrade("magnet", "Golden Leek Magnet", "🧲", 250.0, 0, 10, "Golden leeks show up 12% sooner per tier"),
+        SkillUpgrade("window", "Wider Timing Window", "🎯", 600.0, 0, 8, "+6ms wider hit windows per tier"),
+        SkillUpgrade("overdrive", "Longer Fever", "⚡", 2000.0, 0, 5, "+3s fever and +15x fever multiplier per tier"),
+        SkillUpgrade("pentatonic", "Combo Bonus", "🎼", 5000.0, 0, 5, "+25% combo multiplier bonus per tier"),
         // NOT an auto-tapper: a machine tap has no player timing in it, so scoring one would be
         // fabricating accuracy. Chibi Miku farms in the background instead.
-        SkillUpgrade("autopilot", "★ Chibi Vocaloid Autopilot", "🤖", 15000.0, 0, 5, "Chibi Miku farms while you rest: +12% passive leeks/s per tier")
+        SkillUpgrade("autopilot", "Chibi Miku Farmer", "🤖", 15000.0, 0, 5, "Chibi Miku earns leeks while you rest, +12% leeks/s per tier")
     )
 
     private val initialAchievements = listOf(
-        Achievement("first_beat", "First Beat Match", "Hit 10 Perfect beats in a row", "🌸", 500.0, false),
-        Achievement("fever_queen", "Fever Queen", "Trigger 100% Super Fever Frenzy", "🔥", 2500.0, false),
-        Achievement("diva_50", "Diva Transcendence", "Reach 50x Combo Streak", "👑", 10000.0, false),
+        Achievement("first_beat", "First Beat Match", "Hit 10 PERFECTs in a row", "🌸", 500.0, false),
+        Achievement("fever_queen", "Fever Queen", "Fill the fever meter to 100%", "🔥", 2500.0, false),
+        Achievement("diva_50", "Combo 50", "Reach a 50x combo", "👑", 10000.0, false),
         Achievement("audio_arch", "Master Calibrator", "Judge 25 taps against a real beat", "🎧", 5000.0, false),
-        Achievement("leek_tycoon", "Cyber Leek Tycoon", "Accumulate over 1,000,000 Leeks", "💰", 50000.0, false)
+        Achievement("leek_tycoon", "Leek Tycoon", "Earn 1,000,000 leeks", "💰", 50000.0, false)
     )
 
     private val _leeks = MutableStateFlow(0.0)
@@ -414,11 +414,11 @@ object MikuBeatClickerEngine {
             // a top grade over an empty set. No JUDGED taps = no grade; under 5 = provisional.
             _sessionTaps.value == 0 -> "—"
             _sessionTaps.value < 5 -> "— (${_sessionTaps.value}/5)"
-            sessionAccuracyPct >= 96f -> "💖 SSS+"
-            sessionAccuracyPct >= 90f -> "✨ SS"
-            sessionAccuracyPct >= 80f -> "⭐ S"
-            sessionAccuracyPct >= 70f -> "🎵 A"
-            else -> "🥬 B"
+            sessionAccuracyPct >= 96f -> "SSS+"
+            sessionAccuracyPct >= 90f -> "SS"
+            sessionAccuracyPct >= 80f -> "S"
+            sessionAccuracyPct >= 70f -> "A"
+            else -> "B"
         }
 
     private var prefs: SharedPreferences? = null
@@ -646,7 +646,7 @@ object MikuBeatClickerEngine {
                 if (shieldProgress >= SHIELD_EARN_STREAK && _comboShields.value < MAX_COMBO_SHIELDS) {
                     shieldProgress = 0
                     _comboShields.value += 1
-                    pushFloatingText("🛡️ COMBO SHIELD +1", isCrit = false)
+                    pushFloatingText("COMBO SHIELD +1", isCrit = false)
                     com.miku.launcher.audio.MikuSeasonalAudioEngine.playLevelUpFanfare()
                 }
             }
@@ -657,11 +657,11 @@ object MikuBeatClickerEngine {
             _combo.value >= SHIELD_MIN_COMBO && _comboShields.value > 0 -> {
                 _comboShields.value -= 1
                 shieldSaved = true
-                pushFloatingText("🛡️ SAVED! x${_combo.value}", isCrit = true)
+                pushFloatingText("SHIELD SAVED x${_combo.value}", isCrit = true)
                 com.miku.launcher.audio.MikuSeasonalAudioEngine.playCritChime()
             }
             else -> {
-                if (_combo.value >= 10) pushFloatingText("💔 COMBO BROKEN (x${_combo.value})", isCrit = false)
+                if (_combo.value >= 10) pushFloatingText("COMBO BROKEN (x${_combo.value})", isCrit = false)
                 // Near-miss on the ladder: losing a run two taps short of the next rung is the
                 // single most "one more go" moment there is, so name it.
                 val rung = nextComboRung(_combo.value)
@@ -710,9 +710,9 @@ object MikuBeatClickerEngine {
 
         // Judgment word comes straight off the tier, so screen and economy can't disagree.
         val textStr = when {
-            isCrit -> "+${formatNumber(totalTapYield)} [CRIT! ✨]"
+            isCrit -> "+${formatNumber(totalTapYield)} CRIT"
             accuracy == HitAccuracy.MISS -> "+${formatNumber(totalTapYield)}"
-            else -> "+${formatNumber(totalTapYield)} [${accuracy.label}! ${accuracy.emoji}]"
+            else -> "+${formatNumber(totalTapYield)} ${accuracy.label}"
         }
         pushFloatingText(textStr, isCrit)
 
@@ -818,7 +818,7 @@ object MikuBeatClickerEngine {
         if (reward > 0.0) {
             _leeks.value += reward
             _totalEarned.value += reward
-            pushFloatingText("🎯 SETLIST GOAL +${formatNumber(reward)}", isCrit = true)
+            pushFloatingText("SETLIST GOAL +${formatNumber(reward)}", isCrit = true)
             com.miku.launcher.audio.MikuSeasonalAudioEngine.playLevelUpFanfare()
             saveState()
         }

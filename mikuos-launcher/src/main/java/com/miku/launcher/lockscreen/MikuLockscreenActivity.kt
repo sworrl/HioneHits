@@ -1706,7 +1706,7 @@ private fun LockscreenNowPlayingWidget(
                         ) {
                             Icon(
                                 imageVector = if (localLikedState) Icons.Filled.Favorite else Icons.Default.FavoriteBorder,
-                                contentDescription = "Like Song",
+                                contentDescription = "Like song",
                                 tint = if (localLikedState) Color(0xFFFF1774) else Color(0xFF00E5FF),
                                 modifier = Modifier.size(16.dp)
                             )
@@ -1872,12 +1872,12 @@ private fun LockscreenNowPlayingWidget(
                                     }
                                     miniJudgment = if (accuracy == null) {
                                         // No beat to judge against — the tap still counts as a tap.
-                                        "🎵 FREE TAP"
+                                        "FREE TAP"
                                     } else if (shownOffsetMs == 0) {
-                                        "${accuracy.emoji} ${accuracy.label}"
+                                        "${accuracy.label}"
                                     } else {
                                         // Teach the correction, not just the grade.
-                                        "${accuracy.emoji} ${accuracy.label} ${if ((shownOffsetMs ?: 0) < 0) "◀" else "▶"}"
+                                        "${accuracy.label} ${if ((shownOffsetMs ?: 0) < 0) "◀" else "▶"}"
                                     }
 
                                     coroutineScope.launch {
@@ -1918,8 +1918,8 @@ private fun LockscreenNowPlayingWidget(
                                     // fabricated deviationMs/accuracy into the table that backs the
                                     // displayed lifetime "ACCURACY %".
                                     coroutineScope.launch(kotlinx.coroutines.Dispatchers.IO) {
-                                        val trackArt = nowPlaying.artist ?: "Unknown Artist"
-                                        val trackTit = nowPlaying.title ?: "Unknown Track"
+                                        val trackArt = nowPlaying.artist ?: "Unknown artist"
+                                        val trackTit = nowPlaying.title ?: "Unknown track"
                                         if (offsetMs != null && accuracy != null) {
                                             bpmDb.logTapTelemetry(
                                                 com.miku.launcher.bpm.MikuBpmDatabase.TapTelemetryRecord(
@@ -1986,7 +1986,7 @@ private fun LockscreenNowPlayingWidget(
                         ) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Text(
-                                    if (miniTapCount > 1) "🔥 x$miniTapCount $miniJudgment" else if (hasTempo) "⚡ ${nowPlaying.bpm.toInt()} BPM" else "⚡ — BPM",
+                                    if (miniTapCount > 1) "x$miniTapCount $miniJudgment" else if (hasTempo) "${nowPlaying.bpm.toInt()} BPM" else "— BPM",
                                     color = if (miniTapCount > 5) Color(0xFFFFD700) else MikuNeonPink,
                                     fontSize = 9.dampedSp(),
                                     fontWeight = FontWeight.Black,

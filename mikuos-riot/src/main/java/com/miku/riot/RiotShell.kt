@@ -480,7 +480,7 @@ class RiotShell(private val activity: RiotActivity, unlocked: Boolean) {
         c.hline(0, W - 1, 62)
         val presets = prefs.presets()
         val labels = presets.mapIndexed { i, f ->
-            "Preset ${i + 1} – " + if (f > 0) String.format(Locale.US, "%.1f FM", f / 1000.0) else "empty"
+            "Preset ${i + 1} - " + if (f > 0) String.format(Locale.US, "%.1f FM", f / 1000.0) else "empty"
         }
         val rows = 6
         c.list(1, 66, W - 2, rows, 15, labels, presetSel, RiotUi.follow(presetSel, 0, rows, 8), f = RiotAssets.medium)
@@ -751,7 +751,7 @@ class RiotShell(private val activity: RiotActivity, unlocked: Boolean) {
         if (v != null) {
             prefs.bass = v[0]; prefs.treble = v[1]
             pop()
-            flash("Saved. Miku Music's own EQ shapes the sound; this setting is for the look.", ms = 2600)
+            flash("Saved. Miku Music's own EQ shapes the sound. This one is only for the look.", ms = 2600)
         } else pop()
     }
 
@@ -774,7 +774,7 @@ class RiotShell(private val activity: RiotActivity, unlocked: Boolean) {
 
     private fun presetList(title: String, onPick: (Int) -> Unit): ListPage = ListPage("Organize", title, { "Radio Presets" }, {
         prefs.presets().mapIndexed { i, f ->
-            Row("Preset ${i + 1} – " + if (f > 0) String.format(Locale.US, "%.1f FM", f / 1000.0) else "empty") { onPick(i) }
+            Row("Preset ${i + 1} - " + if (f > 0) String.format(Locale.US, "%.1f FM", f / 1000.0) else "empty") { onPick(i) }
         }
     })
 

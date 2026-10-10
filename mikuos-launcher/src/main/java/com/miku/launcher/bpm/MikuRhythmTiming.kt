@@ -422,6 +422,6 @@ object MikuRhythmCalibration {
                 return "≥${oneBuffer}ms buffer (lower bound only)"
             }
         } catch (_: Throwable) {}
-        return "output latency unknown — calibrate by tapping"
+        return "output latency unknown, calibrate by tapping"
     }
 }

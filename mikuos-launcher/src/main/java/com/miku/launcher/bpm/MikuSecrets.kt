@@ -2,6 +2,7 @@ package com.miku.launcher.bpm
 
 import android.content.Context
 import android.content.SharedPreferences
+import android.provider.MediaStore
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -55,6 +56,13 @@ object MikuSecrets {
     const val HOLO_SKIN = "secret.game.skin.hologram"
     /** A top-bar theme that changes with the month. */
     const val SEASONAL_TOPBAR = "secret.os.topbar.seasonal"
+    /** Riot mode: the whole player becomes a 2002 Rio Riot (com.miku.riot). */
+    const val RIOT_MODE = "secret.os.riot"
+    /** MikuPod (com.miku.wheel): one click-wheel era skin each. Ids match com.miku.wheel Eras.kt. */
+    const val WHEEL_2001 = "secret.os.wheel.2001"
+    const val WHEEL_2004 = "secret.os.wheel.2004"
+    const val WHEEL_2005 = "secret.os.wheel.2005"
+    const val WHEEL_2007 = "secret.os.wheel.2007"
 
     data class Secret(
         val id: String,
@@ -105,7 +113,23 @@ object MikuSecrets {
             "Gold falls from the sky sometimes. Catch ten pieces.", false),
         Secret(SEASONAL_TOPBAR, "Seasonal top bar", "Top bar themes",
             "A top bar that changes colors every month. Long-press the top bar to cycle to it.",
-            "Climb to gold before the month turns.", false)
+            "Climb to gold before the month turns.", false),
+        Secret(RIOT_MODE, "Riot mode", "Your whole player",
+            "Your M500 can turn into a 2002 Rio Riot. Tap OPEN on this card. To leave, go to Preferences, then Exit Riot Mode.",
+            "Twenty oh two on the clock. Twenty clean notes.", false),
+        // The MikuPod hints must match com.miku.wheel Eras.kt, which shows them for locked eras.
+        Secret(WHEEL_2001, "MikuPod 2001", "MikuPod app, era picker",
+            "A 160 x 128 mono screen and a wheel. Tap OPEN, or open MikuPod and pick 2001.",
+            "Play along to something from the year the wheel first turned.", false),
+        Secret(WHEEL_2004, "MikuPod 2004", "MikuPod app, era picker",
+            "Color, album art, and a gray mode for purists. Tap OPEN, or open MikuPod and pick 2004.",
+            "A whole album from 2004, beat by beat.", false),
+        Secret(WHEEL_2005, "MikuPod 2005", "MikuPod app, era picker",
+            "The big glossy 320 x 240 screen. Tap OPEN, or open MikuPod and pick 2005.",
+            "Five thousand taps. Keep your rhythm.", false),
+        Secret(WHEEL_2007, "MikuPod 2007", "MikuPod app, era picker",
+            "Split-screen menus and Cover Flow. Tap OPEN, or open MikuPod and pick 2007.",
+            "Flip through seven years of music in one sitting.", false)
     )
 
     fun byId(id: String): Secret? = ALL.firstOrNull { it.id == id }
@@ -124,6 +148,15 @@ object MikuSecrets {
     private const val GOLD_GRADE_TAPS = 100
     private const val GOLD_GRADE_PCT = 96f
     private const val GOLDEN_PICKUPS = 10
+    private const val RIOT_HOUR = 20
+    private const val RIOT_MINUTE = 2
+    private const val RIOT_TAPS = 20
+    private const val WHEEL_2001_TAPS = 30
+    private const val WHEEL_2004_TRACKS = 5
+    private const val WHEEL_2004_TAPS_EACH = 10
+    private const val WHEEL_2005_LIFETIME = 5_000L
+    private const val WHEEL_2007_YEARS = 7
+    private const val WHEEL_2007_TAPS_EACH = 10
 
     // ---- persisted progress ------------------------------------------------------------------
 
@@ -133,6 +166,8 @@ object MikuSecrets {
     private val artistTaps = HashMap<String, Int>()
     private var goldenPickups = 0
     private var dirtyTaps = 0
+    /** 2004 album (lower-cased) -> track title (lower-cased) -> judged taps, lifetime. */
+    private val album2004 = HashMap<String, HashMap<String, Int>>()
 
     // ---- session progress (reset each time the stage opens) ---------------------------------
 
@@ -144,6 +179,15 @@ object MikuSecrets {
     private var fastRun = 0
     private var tempo39Run = 0
     private var runKey: String? = null
+    private var riotTaps = 0
+    /** Non-miss judged taps on the current track, counted only while it is a 2001 release. */
+    private var wheel2001Run = 0
+    /** Release year -> judged taps this session. */
+    private val sessionYears = HashMap<Int, Int>()
+
+    /** Release year and album from MediaStore, cached per artist + title. year 0 = unknown. */
+    private class TrackMeta(val year: Int, val album: String)
+    private val metaCache = HashMap<String, TrackMeta>()
 
     private val _foundCount = MutableStateFlow(0)
     /** How many secrets are earned. The UI shows "N remain", never the list. */
@@ -160,6 +204,18 @@ object MikuSecrets {
                 val it = o.keys()
                 while (it.hasNext()) { val k = it.next(); artistTaps[k] = o.optInt(k) }
             }
+            runCatching {
+                val o = JSONObject(p.getString("w2004", "{}") ?: "{}")
+                val albums = o.keys()
+                while (albums.hasNext()) {
+                    val a = albums.next()
+                    val t = o.getJSONObject(a)
+                    val m = HashMap<String, Int>()
+                    val titles = t.keys()
+                    while (titles.hasNext()) { val k = titles.next(); m[k] = t.optInt(k) }
+                    album2004[a] = m
+                }
+            }
         }
         refreshFound(ctx)
     }
@@ -175,6 +231,7 @@ object MikuSecrets {
         nightTaps = 0; cleanStreak = 0; sessionFevers = 0
         sessionTaps = 0; sessionGreat = 0
         fastRun = 0; tempo39Run = 0; runKey = null
+        riotTaps = 0; wheel2001Run = 0; sessionYears.clear()
     }
 
     /** The track changed: runs that are "on one track" restart. */
@@ -182,7 +239,7 @@ object MikuSecrets {
     fun onTrackChanged(key: String?) {
         if (key == runKey) return
         runKey = key
-        fastRun = 0; tempo39Run = 0
+        fastRun = 0; tempo39Run = 0; wheel2001Run = 0
     }
 
     /** Fever started from judged hits (see MikuBeatClickerEngine.tap). */
@@ -203,9 +260,10 @@ object MikuSecrets {
     /**
      * One JUDGED tap. [bpm] is the detected tempo (0 when none is locked — then no tempo-based
      * condition can advance). Returns the secrets this tap earned. Call off the main thread: a
-     * grant writes Settings.Global.
+     * grant writes Settings.Global, and the first tap on a track looks up its release year.
      */
-    fun onJudgedTap(ctx: Context, accuracy: HitAccuracy, bpm: Float, artist: String?): List<Secret> {
+    fun onJudgedTap(ctx: Context, accuracy: HitAccuracy, bpm: Float, artist: String?, title: String? = null): List<Secret> {
+        val meta = trackMeta(ctx, artist, title)
         val earned = ArrayList<String>()
         synchronized(this) {
             sessionTaps++
@@ -223,6 +281,31 @@ object MikuSecrets {
             if (sessionFevers >= FEVERS_PER_SESSION) earned.add(LEEK_SPIN)
 
             if (accuracy == HitAccuracy.PERFECT && minute == 39) earned.add(HOLO_LOCK_CLOCK)
+
+            // Riot mode: 20:02, the year the Riot came out. Twenty GREAT-or-better taps in that
+            // one minute. Any tap outside the minute starts the count over.
+            if (hour == RIOT_HOUR && minute == RIOT_MINUTE) {
+                if (accuracy.isGreatOrBetter) riotTaps++
+                if (riotTaps >= RIOT_TAPS) earned.add(RIOT_MODE)
+            } else riotTaps = 0
+
+            // MikuPod eras. All of them need the track's release year from MediaStore.
+            val year = meta?.year ?: 0
+            if (year == 2001 && accuracy != HitAccuracy.MISS) wheel2001Run++
+            if (wheel2001Run >= WHEEL_2001_TAPS) earned.add(WHEEL_2001)
+            if (year == 2004 && meta != null && meta.album.isNotBlank() && !title.isNullOrBlank()) {
+                val tracks = album2004.getOrPut(meta.album.trim().lowercase()) { HashMap() }
+                val t = title.trim().lowercase()
+                val n = (tracks[t] ?: 0) + 1
+                tracks[t] = n
+                if (n == WHEEL_2004_TAPS_EACH) persistAlbums2004()
+                if (tracks.values.count { it >= WHEEL_2004_TAPS_EACH } >= WHEEL_2004_TRACKS) earned.add(WHEEL_2004)
+            }
+            if (MikuBpmSeasonsEngine.lifetime.value.totalTaps >= WHEEL_2005_LIFETIME) earned.add(WHEEL_2005)
+            if (year in 1900..2100) {
+                sessionYears[year] = (sessionYears[year] ?: 0) + 1
+                if (sessionYears.values.count { it >= WHEEL_2007_TAPS_EACH } >= WHEEL_2007_YEARS) earned.add(WHEEL_2007)
+            }
 
             // No-miss run on a fast track. A slower stretch (or no tempo) restarts it, so the
             // whole fifty were played against a fast beat.
@@ -254,6 +337,39 @@ object MikuSecrets {
         val out = ArrayList<Secret>()
         for (id in earned) out.addAll(grant(ctx, id))
         return out
+    }
+
+    /**
+     * Release year and album of the playing track, looked up once per artist + title. Needs
+     * READ_MEDIA_AUDIO. Anything that fails (no permission, not in MediaStore, a stream) caches
+     * as year 0, which no year condition accepts.
+     */
+    @Synchronized
+    private fun trackMeta(ctx: Context, artist: String?, title: String?): TrackMeta? {
+        if (artist.isNullOrBlank() || title.isNullOrBlank()) return null
+        val key = artist.trim().lowercase() + "\u0000" + title.trim().lowercase()
+        metaCache[key]?.let { return it }
+        val m = try {
+            ctx.contentResolver.query(
+                MediaStore.Audio.Media.EXTERNAL_CONTENT_URI,
+                arrayOf(MediaStore.Audio.Media.YEAR, MediaStore.Audio.Media.ALBUM),
+                "${MediaStore.Audio.Media.ARTIST}=? AND ${MediaStore.Audio.Media.TITLE}=?",
+                arrayOf(artist.trim(), title.trim()), null
+            )?.use { c -> if (c.moveToFirst()) TrackMeta(c.getInt(0), c.getString(1) ?: "") else null }
+        } catch (_: Throwable) { null } ?: TrackMeta(0, "")
+        if (metaCache.size > 500) metaCache.clear()
+        metaCache[key] = m
+        return m
+    }
+
+    private fun persistAlbums2004() {
+        val o = JSONObject()
+        for ((a, m) in album2004) {
+            val t = JSONObject()
+            for ((k, v) in m) t.put(k, v)
+            o.put(a, t)
+        }
+        prefs?.edit()?.putString("w2004", o.toString())?.apply()
     }
 
     private fun persistArtists() {

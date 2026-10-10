@@ -184,7 +184,7 @@ object MikuNwsAlerts {
         lastFetchMs = now; lastLat = p.lat; lastLon = p.lon
         if (fetched == null) {
             // Keep what we had; it is still the best we know until it expires.
-            _state.value = _state.value.copy(radios = radios, error = "Could not reach the Weather Service", hasLocation = true)
+            _state.value = _state.value.copy(radios = radios, error = "Couldn't reach the Weather Service", hasLocation = true)
             pruneExpired(ctx)
             return
         }

@@ -405,7 +405,7 @@ fun MikuHeartGestureHudOverlay(modifier: Modifier = Modifier) {
 
                     Column(modifier = Modifier.widthIn(max = 240.dp)) {
                         Text(
-                            text = if (toastState.isLiked) "♥ ADDED TO FAVORITES" else "REMOVED FROM FAVORITES",
+                            text = if (toastState.isLiked) "ADDED TO LIKED SONGS" else "REMOVED FROM LIKED SONGS",
                             color = if (toastState.isLiked) Color(0xFFFF5599) else Color(0xFF9FF3EC),
                             fontSize = 9.sp,
                             fontWeight = FontWeight.Black,

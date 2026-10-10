@@ -423,7 +423,7 @@ private fun AboutCard(ctx: Context, s: OtaEngine.State, prefs: Prefs, tick: Int,
     Section(title = "About") {
         Text("Miku Update ${BuildConfig.VERSION_NAME}", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
         Spacer(Modifier.height(4.dp))
-        BodyText("Every update list is signed, and every app is checked against its signed hash and against the key the installed app was signed with before anything installs. The FM app is never updated here; it only comes with a system image.")
+        BodyText("Every update list is signed, and every app is checked against its signed hash and against the key the installed app was signed with before anything installs. The FM app is never updated here. It only comes with a system image.")
         Spacer(Modifier.height(6.dp))
         s.manifest?.let { m ->
             val fmt = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm").withZone(ZoneId.systemDefault())

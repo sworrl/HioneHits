@@ -49,7 +49,7 @@ class MikuBpmWidget : AppWidgetProvider() {
             val bpm = if (intervalMs > 0) 60_000 / intervalMs else 0
 
             val line1 = when {
-                title.isNotEmpty() && artist.isNotEmpty() -> "$title — $artist"
+                title.isNotEmpty() && artist.isNotEmpty() -> "$title · $artist"
                 title.isNotEmpty() -> title
                 else -> "MIKU MUSIC"
             }

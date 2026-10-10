@@ -328,7 +328,7 @@ object QueueManager {
             val nextIndex = (player.currentMediaItemIndex + 1).coerceAtMost(player.mediaItemCount)
             player.addMediaItems(nextIndex, items)
         }
-        val msg = if (tracks.size == 1) "✓ Playing next: ${tracks[0].title}" else "✓ ${tracks.size} tracks added to play next"
+        val msg = if (tracks.size == 1) "Playing next: ${tracks[0].title}" else "${tracks.size} tracks will play next"
         android.widget.Toast.makeText(context, msg, android.widget.Toast.LENGTH_SHORT).show()
         Haptics.tick(context)
         UpdateManager.saveQueueSnapshot(context, player)
@@ -344,7 +344,7 @@ object QueueManager {
         } else {
             player.addMediaItems(items)
         }
-        val msg = if (tracks.size == 1) "✓ Added to queue: ${tracks[0].title}" else "✓ ${tracks.size} tracks added to queue"
+        val msg = if (tracks.size == 1) "Added to queue: ${tracks[0].title}" else "Added ${tracks.size} tracks to the queue"
         android.widget.Toast.makeText(context, msg, android.widget.Toast.LENGTH_SHORT).show()
         Haptics.tick(context)
         UpdateManager.saveQueueSnapshot(context, player)
@@ -1055,7 +1055,7 @@ private fun App(tracks: List<Track>, player: ExoPlayer, loading: Boolean = false
     val startRandom: () -> Unit = {
         Haptics.tick(ctx)
         val ok = InstantRandom.start(ctx) { t -> currentTrack = t }
-        if (!ok) android.widget.Toast.makeText(ctx, "Library index is empty — run a scan first", android.widget.Toast.LENGTH_SHORT).show()
+        if (!ok) android.widget.Toast.makeText(ctx, "The library is empty. Run a scan first.", android.widget.Toast.LENGTH_SHORT).show()
     }
     // Views are sticky: relaunching drops you back into whatever you were looking at last
     // (tape deck / full now playing / the lists), as soon as the track restores.
@@ -1771,7 +1771,7 @@ private fun MikuAnimatedBootSplash(onFinished: () -> Unit) {
                         )
                         Spacer(Modifier.height(3.dp))
                         Text(
-                            text = if (currentPose == 1) "初音ミク · AUDIO ENGINE ACTIVE" else "✌️ KAWAII MODE MAX · READY! ✌️",
+                            text = if (currentPose == 1) "初音ミク · STARTING" else "STARTING UP",
                             color = if (currentPose == 1) MikuTealBright else MikuPink,
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Bold,
@@ -1921,7 +1921,7 @@ private fun MikuAnimatedBootSplash(onFinished: () -> Unit) {
                 Icon(if (fnLocked) Icons.Default.Lock else Icons.Default.LockOpen, null, tint = glowColor, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(8.dp))
                 Text(
-                    if (fnLocked) "Fn LOCK ENGAGED" else "Fn LOCK RELEASED",
+                    if (fnLocked) "Fn LOCK ON" else "Fn LOCK OFF",
                     color = glowColor, fontSize = 13.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp
                 )
             }
@@ -2060,7 +2060,7 @@ private fun MikuAnimatedBootSplash(onFinished: () -> Unit) {
         else -> n.toString()
     }
     val statusText = when {
-        syncState.isTransferring -> "⚡ ${String.format(java.util.Locale.US, "%.1f", syncState.transferRateMBs)}M/s"
+        syncState.isTransferring -> "${String.format(java.util.Locale.US, "%.1f", syncState.transferRateMBs)} MB/s"
         !isScanning -> abbrev(count)
         phase == "Reading tags…" && tagsTotal > 0 -> "${abbrev(tagsScanned)}/${abbrev(tagsTotal)}"
         else -> abbrev(visited)
@@ -2214,7 +2214,7 @@ private fun MikuAnimatedBootSplash(onFinished: () -> Unit) {
                         .padding(horizontal = 8.dp, vertical = 3.dp)
                 ) {
                     Text(
-                        if (syncState.isTransferring) "⚡ INGRESS ACTIVE" else "🟢 DAEMON LIVE",
+                        if (syncState.isTransferring) "SYNCING" else "DAEMON ONLINE",
                         color = if (syncState.isTransferring) MikuPink else MikuTealBright,
                         fontSize = 9.5.sp,
                         fontWeight = FontWeight.Black
@@ -2286,9 +2286,9 @@ private fun MikuAnimatedBootSplash(onFinished: () -> Unit) {
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text("PC MEDIA ENGINE", color = Muted, fontSize = 10.sp, fontWeight = FontWeight.Bold, fontFamily = AudiowideFont)
+                        Text("PC SYNC", color = Muted, fontSize = 10.sp, fontWeight = FontWeight.Bold, fontFamily = AudiowideFont)
                         Text(
-                            if (syncState.daemon.online) "🟢 CONNECTED (${syncState.daemon.host})" else "🔴 OFFLINE",
+                            if (syncState.daemon.online) "CONNECTED (${syncState.daemon.host})" else "OFFLINE",
                             color = if (syncState.daemon.online) MikuTealBright else Color.Gray,
                             fontSize = 9.sp,
                             fontWeight = FontWeight.Bold
@@ -2311,7 +2311,7 @@ private fun MikuAnimatedBootSplash(onFinished: () -> Unit) {
                         if (syncState.daemon.stagingAudioCount > 0) {
                             Spacer(Modifier.height(2.dp))
                             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                                Text("In-Flight Staged", color = Muted, fontSize = 11.sp)
+                                Text("Staged", color = Muted, fontSize = 11.sp)
                                 Text("${syncState.daemon.stagingAudioCount} files", color = MikuPink, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                             }
                         }
@@ -2319,7 +2319,7 @@ private fun MikuAnimatedBootSplash(onFinished: () -> Unit) {
                         if (syncState.daemon.isTransferring) {
                             Spacer(Modifier.height(4.dp))
                             Text(
-                                "⚡ Pushing: ${syncState.daemon.currentArtist} - ${syncState.daemon.currentAlbum}",
+                                "Sending: ${syncState.daemon.currentArtist} - ${syncState.daemon.currentAlbum}",
                                 color = MikuPink,
                                 fontSize = 10.5.sp,
                                 fontWeight = FontWeight.Bold,
@@ -2341,19 +2341,19 @@ private fun MikuAnimatedBootSplash(onFinished: () -> Unit) {
 
             // Transport & rsyncd Information
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                Text("Transport Link", color = Muted, fontSize = 12.sp)
+                Text("Connection", color = Muted, fontSize = 12.sp)
                 Text(syncState.transport.badge, color = MikuTealBright, fontSize = 12.sp, fontWeight = FontWeight.Bold)
             }
             Spacer(Modifier.height(4.dp))
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                Text("Target Module", color = Muted, fontSize = 12.sp)
+                Text("Rsync target", color = Muted, fontSize = 12.sp)
                 Text("rsync://${syncState.ipAddress}:${MikuSyncTransceiver.RSYNC_PORT}/music", color = Color.White, fontSize = 11.5.sp, fontFamily = AudiowideFont)
             }
 
             if (syncState.isTransferring) {
                 Spacer(Modifier.height(6.dp))
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    Text("Live Ingress Rate", color = MikuPink, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    Text("Transfer rate", color = MikuPink, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                     Text("${String.format("%.1f", syncState.transferRateMBs)} MB/s", color = MikuPink, fontSize = 13.sp, fontWeight = FontWeight.Black)
                 }
             }
@@ -2376,7 +2376,7 @@ private fun MikuAnimatedBootSplash(onFinished: () -> Unit) {
                     shape = RoundedCornerShape(10.dp)
                 ) {
                     Text(
-                        if (syncState.daemon.isTransferring) "⏹ Stop Sync" else "⚡ Start Sync",
+                        if (syncState.daemon.isTransferring) "Stop sync" else "Start sync",
                         color = if (syncState.daemon.isTransferring) MikuPink else MikuTealBright,
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold
@@ -2388,7 +2388,7 @@ private fun MikuAnimatedBootSplash(onFinished: () -> Unit) {
                         MikuSyncTransceiver.runSpeedTest { res ->
                             android.widget.Toast.makeText(
                                 ctx,
-                                "${res.transportTier}\n⚡ ${String.format("%.1f", res.speedMBs)} MB/s (Latency: ${res.latencyMs}ms)",
+                                "${res.transportTier}\n${String.format("%.1f", res.speedMBs)} MB/s, ${res.latencyMs} ms latency",
                                 android.widget.Toast.LENGTH_LONG
                             ).show()
                         }
@@ -2400,7 +2400,7 @@ private fun MikuAnimatedBootSplash(onFinished: () -> Unit) {
                     shape = RoundedCornerShape(10.dp)
                 ) {
                     Text(
-                        "🚀 Speedtest",
+                        "Speed test",
                         color = Color.White,
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold
@@ -2445,16 +2445,16 @@ private fun MikuAnimatedBootSplash(onFinished: () -> Unit) {
                         flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK or android.content.Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED
                     }
                     if (launch == null) {
-                        android.widget.Toast.makeText(ctx, "MikuOS launcher not installed — ingress screen unavailable", android.widget.Toast.LENGTH_SHORT).show()
+                        android.widget.Toast.makeText(ctx, "The MikuOS launcher isn't installed, so the sync screen can't open", android.widget.Toast.LENGTH_SHORT).show()
                     } else try { ctx.startActivity(launch) } catch (t: Throwable) {
-                        android.widget.Toast.makeText(ctx, "Couldn't open ingress screen: ${t.message}", android.widget.Toast.LENGTH_SHORT).show()
+                        android.widget.Toast.makeText(ctx, "Couldn't open the sync screen: ${t.message}", android.widget.Toast.LENGTH_SHORT).show()
                     }
                 },
                 modifier = Modifier.fillMaxWidth(),
                 colors = ButtonDefaults.buttonColors(containerColor = Color.White.copy(alpha = 0.08f)),
                 shape = RoundedCornerShape(10.dp)
             ) {
-                Text("🛰 Open Ingress Engine (SD scan)", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Medium)
+                Text("Open network sync (SD scan)", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Medium)
             }
 
             Spacer(Modifier.height(6.dp))
@@ -2468,7 +2468,7 @@ private fun MikuAnimatedBootSplash(onFinished: () -> Unit) {
                 colors = ButtonDefaults.buttonColors(containerColor = MikuPink.copy(alpha = 0.16f)),
                 shape = RoundedCornerShape(10.dp)
             ) {
-                Text("BPM Rhythm Game", color = MikuPink, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                Text("BPM Game", color = MikuPink, fontSize = 11.sp, fontWeight = FontWeight.Bold)
             }
         }
     }
@@ -2564,7 +2564,7 @@ private fun MikuAnimatedBootSplash(onFinished: () -> Unit) {
                         )
                         Spacer(Modifier.width(8.dp))
                         Text(
-                            if (active) "Ingesting Audio Library" else "Library Ingestion Complete",
+                            if (active) "Scanning library" else "Scan finished",
                             color = Color.White,
                             fontSize = 15.5.sp,
                             fontWeight = FontWeight.Bold,
@@ -2580,7 +2580,7 @@ private fun MikuAnimatedBootSplash(onFinished: () -> Unit) {
 
                     if (!active) {
                         Text(
-                            if (resultDelta > 0) "✓ Added $resultDelta new track${if (resultDelta == 1) "" else "s"}" else "✓ Library fully synchronized",
+                            if (resultDelta > 0) "Added $resultDelta new track${if (resultDelta == 1) "" else "s"}" else "The library is up to date",
                             color = MikuCyan,
                             fontSize = 14.5.sp,
                             fontWeight = FontWeight.ExtraBold,
@@ -2588,7 +2588,7 @@ private fun MikuAnimatedBootSplash(onFinished: () -> Unit) {
                         )
                         Spacer(Modifier.height(6.dp))
                         Text(
-                            "📊 $resultTotal total tracks · $resultAlbums albums · $resultArtists artists",
+                            "$resultTotal total tracks · $resultAlbums albums · $resultArtists artists",
                             color = Color.White.copy(alpha = 0.9f),
                             fontSize = 12.5.sp,
                             fontWeight = FontWeight.Medium
@@ -2596,7 +2596,7 @@ private fun MikuAnimatedBootSplash(onFinished: () -> Unit) {
                         if (formatSummary.isNotBlank()) {
                             Spacer(Modifier.height(4.dp))
                             Text(
-                                "🎵 $formatSummary",
+                                "$formatSummary",
                                 color = Color(0xFF80D8FF),
                                 fontSize = 11.5.sp,
                                 fontWeight = FontWeight.SemiBold
@@ -2608,7 +2608,7 @@ private fun MikuAnimatedBootSplash(onFinished: () -> Unit) {
                         val pct = (progressFraction * 100f).toInt()
 
                         Text(
-                            if (isIndexing) "Indexing audio tags & metadata ($pct%)" else phase,
+                            if (isIndexing) "Reading tags ($pct%)" else phase,
                             color = MikuCyan,
                             fontSize = 12.5.sp,
                             fontWeight = FontWeight.Bold,
@@ -2636,7 +2636,7 @@ private fun MikuAnimatedBootSplash(onFinished: () -> Unit) {
                                 )
                                 if (speed > 0) {
                                     Text(
-                                        "⚡ ${String.format(java.util.Locale.US, "%.0f", speed)} trk/s",
+                                        "${String.format(java.util.Locale.US, "%.0f", speed)} trk/s",
                                         color = MikuNeonPink,
                                         fontSize = 12.sp,
                                         fontWeight = FontWeight.ExtraBold,
@@ -2652,7 +2652,7 @@ private fun MikuAnimatedBootSplash(onFinished: () -> Unit) {
                             )
                             Spacer(Modifier.height(8.dp))
                             Text(
-                                "🔍 Walked $visited files · Discovered $newFound new files",
+                                "Checked $visited files · $newFound new",
                                 color = Color.White.copy(alpha = 0.9f),
                                 fontSize = 12.5.sp,
                                 fontWeight = FontWeight.Medium
@@ -2662,7 +2662,7 @@ private fun MikuAnimatedBootSplash(onFinished: () -> Unit) {
                         if (currentFile.isNotBlank()) {
                             Spacer(Modifier.height(6.dp))
                             Text(
-                                "📄 $currentFile",
+                                "$currentFile",
                                 color = Color.White.copy(alpha = 0.65f),
                                 fontSize = 10.5.sp,
                                 maxLines = 1,
@@ -2672,7 +2672,7 @@ private fun MikuAnimatedBootSplash(onFinished: () -> Unit) {
 
                         Spacer(Modifier.height(8.dp))
                         Text(
-                            "Background ingestion running · Zero audio playback stutter.",
+                            "Scanning in the background. You can keep listening.",
                             color = Color.White.copy(alpha = 0.5f),
                             fontSize = 10.sp
                         )
@@ -2780,7 +2780,7 @@ fun expandNotificationShade(ctx: Context) {
             // Instant RANDOM — always one tap away from anything in the library.
             HapticIconButton(
                 onClick = onRandom,
-                modifier = Modifier.size(38.dp).semantics { contentDescription = "Random — play anything" }
+                modifier = Modifier.size(38.dp).semantics { contentDescription = "Random: play anything" }
             ) {
                 Icon(
                     Icons.Default.Casino, null,
@@ -2978,7 +2978,7 @@ private fun tabColor(t: Tab): Color = when (t) {
                     val subText = if (highlight.favCount > 0 || highlight.gemCount > 0) {
                         "${highlight.tracks.size} tracks · ${highlight.favCount} Favs · ${highlight.discCount} Fresh · ${highlight.gemCount} Gems"
                     } else {
-                        "${highlight.tracks.size} tracks · Daily Curated Discovery"
+                        "${highlight.tracks.size} tracks · picked for today"
                     }
                     Text(subText, color = Color.White.copy(alpha = 0.92f), fontSize = 11.5.sp, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
@@ -2991,7 +2991,7 @@ private fun tabColor(t: Tab): Color = when (t) {
             }
         }
 
-        // 1.5. "What vibe are you feeling?" / Vibe Alchemist Prompt Bar & Randomizer
+        // 1.5. "What do you want to hear?" / Vibe Alchemist Prompt Bar & Randomizer
         item { RandomModePill(count = tracks.size, onRandom = onRandom) }
         item {
             MikuVibePromptCard(tracks = tracks, onPlay = onPlay)
@@ -3005,7 +3005,7 @@ private fun tabColor(t: Tab): Color = when (t) {
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("Today's Highlight Mix (${highlight.tracks.size})", color = MikuTealBright, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                    Text("Today's mix (${highlight.tracks.size})", color = MikuTealBright, fontSize = 16.sp, fontWeight = FontWeight.Bold)
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         // Play Next Mix Button
                         Text(
@@ -3064,7 +3064,7 @@ private fun tabColor(t: Tab): Color = when (t) {
         // the library is that fresh.
         if (hasNewSection) {
             item {
-                Text("✨ Newly Added", color = MikuTealBright, fontSize = 16.sp, fontWeight = FontWeight.Bold,
+                Text("Newly added", color = MikuTealBright, fontSize = 16.sp, fontWeight = FontWeight.Bold,
                     modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 14.dp, bottom = 4.dp))
             }
             if (newArtists.isNotEmpty()) {
@@ -3138,7 +3138,7 @@ private fun tabColor(t: Tab): Color = when (t) {
                 }
                 if (likedTracks.isNotEmpty()) {
                     Text(
-                        "Play All ▸",
+                        "Play all",
                         color = MikuPink,
 modifier = Modifier.clickable { onPlay(likedTracks, 0) }
                     )
@@ -3183,10 +3183,10 @@ modifier = Modifier.clickable { onPlay(likedTracks, 0) }
                     }
                     Spacer(Modifier.width(12.dp))
                     Column(Modifier.weight(1f)) {
-                        Text("NO FAVORITES YET", color = MikuTealBright, fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+                        Text("NO LIKED SONGS YET", color = MikuTealBright, fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
                         Spacer(Modifier.height(2.dp))
                         Text(
-                            "Tap ♥ on any song to collect your favorite tracks and build your personalized Miku mix!",
+                            "Tap the heart on a song to add it here.",
                             color = Muted,
                             fontSize = 11.5.sp,
                             fontWeight = FontWeight.Medium
@@ -3767,7 +3767,7 @@ fun MikuEmptyState(
                                     .padding(horizontal = 10.dp, vertical = 5.dp),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Icon(Icons.Default.Tune, "Rule Options", tint = MikuTealBright, modifier = Modifier.size(14.dp))
+                                Icon(Icons.Default.Tune, "Sort options", tint = MikuTealBright, modifier = Modifier.size(14.dp))
                                 Spacer(Modifier.width(6.dp))
                                 Text(
                                     if (sortIgnoreThe) "Sorted under 'C' (Ignore 'The')" else "Sorted under 'T' (Include 'The')",
@@ -3938,7 +3938,7 @@ private fun ArtistSortSettingsModal(
         ) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                 Text(
-                    "Artist 'The' Prefix Rules",
+                    "Artists starting with 'The\'",
                     color = MikuTealBright,
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold,
@@ -3951,7 +3951,7 @@ private fun ArtistSortSettingsModal(
 
             Spacer(Modifier.height(14.dp))
 
-            Text("ALPHABETICAL SORTING RULE", color = Muted, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.2.sp)
+            Text("SORTING", color = Muted, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.2.sp)
             Spacer(Modifier.height(8.dp))
 
             // Option 1: Ignore "The" (Default)
@@ -4405,7 +4405,7 @@ private fun ArtistSortSettingsModal(
                             releaseTag(al.name)?.let { tag ->
                                 DataChip(tag, ReleaseTagColor)
                             }
-                            if (al.hasDiscImage) DataChip(if (al.unsplitImageCount > 0) "💿 FULL-CD RIP" else "💿 CD RIP · CUE SPLIT", DiscImageColor)
+                            if (al.hasDiscImage) DataChip(if (al.unsplitImageCount > 0) "FULL-CD RIP" else "CD RIP · CUE SPLIT", DiscImageColor)
                             // Guarded — see the artist row: the breakdown resolves asynchronously.
                             if (alQuality.totalTracks > 0) Text(
                                 alQuality.specTag,
@@ -4540,9 +4540,9 @@ private fun ArtistSortSettingsModal(
                                 Spacer(Modifier.height(3.dp))
                                 Text(
                                     when {
-                                        unsplitImages > 0 && sortedTracks.size == unsplitImages && unsplitImages == 1 -> "💿 This is a single-file CD rip — the whole disc plays as one track"
-                                        unsplitImages > 0 -> "💿 Single-file CD rip · $unsplitImages disc image${if (unsplitImages > 1) "s" else ""} play as whole-disc tracks"
-                                        else -> "💿 Single-file CD rip · $virtualFromCue tracks split from its cue sheet"
+                                        unsplitImages > 0 && sortedTracks.size == unsplitImages && unsplitImages == 1 -> "This is a single-file CD rip. The whole disc plays as one track."
+                                        unsplitImages > 0 -> "Single-file CD rip · $unsplitImages disc image${if (unsplitImages > 1) "s" else ""} play as whole-disc tracks"
+                                        else -> "Single-file CD rip · $virtualFromCue tracks split from its cue sheet"
                                     },
                                     color = DiscImageColor, fontSize = 11.5.sp, fontWeight = FontWeight.SemiBold, lineHeight = 15.sp
                                 )
@@ -5412,7 +5412,7 @@ private fun MikuVibePromptCard(
             focusManager.clearFocus()
             isSynthesizing = true
             vibeProgress = 0f
-            vibeStatus = "Initiating Vibe Alchemy Engine..."
+            vibeStatus = "Building a mix…"
 
             scope.launch {
                 val result = if (query.isBlank()) {
@@ -5429,7 +5429,7 @@ private fun MikuVibePromptCard(
 
                 isSynthesizing = false
                 if (result.playlist.isNotEmpty()) {
-                    android.widget.Toast.makeText(ctx, "✨ ${result.vibeTitle} (${result.playlist.size} tracks)", android.widget.Toast.LENGTH_SHORT).show()
+                    android.widget.Toast.makeText(ctx, "${result.vibeTitle} (${result.playlist.size} tracks)", android.widget.Toast.LENGTH_SHORT).show()
                     onPlay(result.playlist, 0)
                 } else {
                     android.widget.Toast.makeText(ctx, "No matching tracks found in library", android.widget.Toast.LENGTH_SHORT).show()
@@ -5462,7 +5462,7 @@ private fun MikuVibePromptCard(
                     )
                     Spacer(Modifier.width(6.dp))
                     Text(
-                        text = if (isSynthesizing) "Synthesizing Vibe Mix..." else "What vibe are you feeling?",
+                        text = if (isSynthesizing) "Building your mix…" else "What do you want to hear?",
                         color = Color.White,
                         fontSize = 13.5.sp,
                         fontWeight = FontWeight.Bold,
@@ -5479,7 +5479,7 @@ private fun MikuVibePromptCard(
                     shape = RoundedCornerShape(12.dp),
                     modifier = Modifier.height(28.dp)
                 ) {
-                    Text("🎲 Random", color = Color(0xFFFF80AB), fontSize = 11.sp, fontWeight = FontWeight.ExtraBold)
+                    Text("Random", color = Color(0xFFFF80AB), fontSize = 11.sp, fontWeight = FontWeight.ExtraBold)
                 }
             }
 
@@ -5589,15 +5589,15 @@ private fun MikuVibePromptCard(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 val chips = listOf(
-                    "🤘 Heavy Metal" to "metal heavy thrash progressive guitar solo breakdown",
-                    "⚡ Cyber Hype" to "cyberpunk edm fast electronic hype",
-                    "🌙 Midnight Lo-Fi" to "night chill lofi ambient slow calm",
-                    "🎧 Master Hi-Res" to "audiophile dsd flac lossless acoustic",
-                    "🌸 Kawaii Anime" to "miku vocaloid anime cute jpop",
-                    "🏃 Cardio 140+" to "workout running gym rhythm pump 140 bpm",
-                    "📻 80s City Pop" to "city pop 80s retro synthwave vintage",
-                    "🌧️ Rainy Melancholy" to "sad slow acoustic tears emotional rain",
-                    "☕ Deep Focus" to "study focus coffee lofi jazz instrumental"
+                    "Heavy metal" to "metal heavy thrash progressive guitar solo breakdown",
+                    "Cyberpunk" to "cyberpunk edm fast electronic hype",
+                    "Late-night lo-fi" to "night chill lofi ambient slow calm",
+                    "Hi-res" to "audiophile dsd flac lossless acoustic",
+                    "Anime" to "miku vocaloid anime cute jpop",
+                    "Workout 140+" to "workout running gym rhythm pump 140 bpm",
+                    "80s city pop" to "city pop 80s retro synthwave vintage",
+                    "Rainy day" to "sad slow acoustic tears emotional rain",
+                    "Focus" to "study focus coffee lofi jazz instrumental"
                 )
                 items(chips) { (label, query) ->
                     Box(
@@ -5797,7 +5797,7 @@ internal val settingsCategoryRequest = androidx.compose.runtime.mutableStateOf<S
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
-                            text = "${cat.icon} ${cat.title}",
+                            text = "${cat.title}",
                             color = if (isSel) Color.White else Muted,
                             fontSize = 11.sp,
                             fontWeight = if (isSel) FontWeight.Bold else FontWeight.Medium,
@@ -5828,7 +5828,7 @@ internal val settingsCategoryRequest = androidx.compose.runtime.mutableStateOf<S
                                 Spacer(Modifier.width(12.dp))
                                 Column(Modifier.weight(1f)) {
                                     Text("M500 Hardware & DAC Settings", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
-                                    Text("Dual CS43198 DAC, Filters, Gain, Fn Switch, USB DAC", color = MikuTealBright, fontSize = 11.5.sp)
+                                    Text("Dual CS43198 DAC, filters, gain, Fn switch, USB DAC", color = MikuTealBright, fontSize = 11.5.sp)
                                 }
                                 Icon(Icons.AutoMirrored.Filled.ArrowBack, null, tint = MikuTealBright, modifier = Modifier.size(18.dp).rotate(180f))
                             }
@@ -5848,7 +5848,7 @@ internal val settingsCategoryRequest = androidx.compose.runtime.mutableStateOf<S
                             var hudOn by remember { mutableStateOf(MikuTrackHud.isEnabled(ctx)) }
                             SettingsToggleRow(
                                 title = "Now-playing HUD over apps",
-                                subtitle = "MikuOS shows a quick, dismissable card whenever the track changes — even outside the player",
+                                subtitle = "Shows a small card when the track changes, even outside the player",
                                 checked = hudOn
                             ) { hudOn = it; MikuTrackHud.setEnabled(ctx, it) }
                         }
@@ -5895,18 +5895,18 @@ internal val settingsCategoryRequest = androidx.compose.runtime.mutableStateOf<S
                         item { com.miku.player.discsplit.DiscSplitSettingsCard(ctx) }
                     }
                     SettingsCategory.DISPLAY -> {
-                        item { SettingsSection("Idle Screen Pipeline") }
+                        item { SettingsSection("Idle screen") }
                         item {
                             SettingsToggleRow(
                                 title = "Dim when idle",
-                                subtitle = "Runs the whole stage pipeline below; off = always full brightness",
+                                subtitle = "Runs the stages below. Off keeps the screen at full brightness.",
                                 checked = idleDim
                             ) { idleDim = it; IdleController.enabled = it; PlayerPreferences.saveIdleDimEnabled(ctx, it) }
                         }
                         item {
                             SettingsToggleRow(
                                 title = "Ambient display (AOD)",
-                                subtitle = "Minimal clock + track screen as its own stage before sleep",
+                                subtitle = "A simple clock and track screen before the display sleeps",
                                 checked = ambient
                             ) { ambient = it; IdleController.ambientEnabled = it; PlayerPreferences.saveAmbientEnabled(ctx, it) }
                         }
@@ -5916,7 +5916,7 @@ internal val settingsCategoryRequest = androidx.compose.runtime.mutableStateOf<S
                             }
                         }
                         item {
-                            IdleTimingRow("Dimmed", "How long dimmed-but-visible lasts before ambient", idleDimSec, 10f..300f) {
+                            IdleTimingRow("Dimmed", "How long the screen stays dimmed before ambient", idleDimSec, 10f..300f) {
                                 idleDimSec = it; IdleController.dimSec = it; PlayerPreferences.saveIdleDimSec(ctx, it)
                             }
                         }
@@ -5961,7 +5961,7 @@ internal val settingsCategoryRequest = androidx.compose.runtime.mutableStateOf<S
         Spacer(Modifier.height(16.dp))
         androidx.compose.foundation.Image(
             painter = androidx.compose.ui.res.painterResource(MikuArt.falconTechnixLogo),
-            contentDescription = "Falcon Technix — opens falcontechnix.com",
+            contentDescription = "Falcon Technix (opens falcontechnix.com)",
             modifier = Modifier
                 .height(56.dp)
                 .clickable {
@@ -6031,7 +6031,7 @@ internal val settingsCategoryRequest = androidx.compose.runtime.mutableStateOf<S
         Icon(Icons.Default.Warning, "Warning", tint = Color(0xFFFF6B6B), modifier = Modifier.size(18.dp))
         Spacer(Modifier.width(10.dp))
         Text(
-            "Grant \"All files access\" for a 100% accurate scan on SD cards — tap to open Settings.",
+            "Allow \"All files access\" so scans find everything on the SD card. Tap to open Settings.",
             color = Color(0xFFFF6B6B), fontSize = 11.5.sp, lineHeight = 15.sp
         )
     }
@@ -6083,7 +6083,7 @@ internal val settingsCategoryRequest = androidx.compose.runtime.mutableStateOf<S
         Icon(Icons.Default.Warning, "Warning", tint = Color(0xFFFF6B6B), modifier = Modifier.size(18.dp))
         Spacer(Modifier.width(10.dp))
         Text(
-            "Grant \"Modify system settings\" so the idle screen can actually sleep after Ambient, not just stop there — tap to open Settings.",
+            "Allow \"Modify system settings\" so the screen can sleep after ambient. Tap to open Settings.",
             color = Color(0xFFFF6B6B), fontSize = 11.5.sp, lineHeight = 15.sp
         )
     }
@@ -6151,7 +6151,7 @@ private fun gracefulAppRestart(ctx: android.content.Context) {
         ) { cpuPerfOn = it; scope.launch { CpuPerformance.setEnabled(ctx, it) } }
     } else if (cpuSupported == false) {
         Column(Modifier.fillMaxWidth().padding(vertical = 10.dp)) {
-            Text("Performance Governor — unavailable", color = Color(0xFFFFD166), fontSize = 14.5.sp, fontWeight = FontWeight.SemiBold)
+            Text("Performance governor (unavailable)", color = Color(0xFFFFD166), fontSize = 14.5.sp, fontWeight = FontWeight.SemiBold)
             Text(
                 "This kernel does not let the player write cpufreq scaling_governor, so the clock pin cannot be applied. Sustained-performance mode (an Android hint) is still used while playing.",
                 color = Muted,
@@ -6179,7 +6179,7 @@ private fun gracefulAppRestart(ctx: android.content.Context) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text("🎵", fontSize = 16.sp)
                 Spacer(Modifier.width(8.dp))
-                Text("Miku Media & Rsync Monitor", color = Color.White, fontSize = 13.5.sp, fontWeight = FontWeight.Bold, fontFamily = AudiowideFont)
+                Text("Sync monitor", color = Color.White, fontSize = 13.5.sp, fontWeight = FontWeight.Bold, fontFamily = AudiowideFont)
             }
             Box(
                 Modifier
@@ -6189,9 +6189,9 @@ private fun gracefulAppRestart(ctx: android.content.Context) {
             ) {
                 Text(
                     when {
-                        syncState.isTransferring -> "⚡ SYNCING"
-                        syncState.daemon.online -> "🟢 DAEMON LIVE"
-                        else -> "⚪ DAEMON OFFLINE"
+                        syncState.isTransferring -> "SYNCING"
+                        syncState.daemon.online -> "DAEMON ONLINE"
+                        else -> "DAEMON OFFLINE"
                     },
                     color = if (syncState.isTransferring) MikuPink else if (syncState.daemon.online) MikuTealBright else Muted,
                     fontSize = 9.5.sp,
@@ -6202,20 +6202,20 @@ private fun gracefulAppRestart(ctx: android.content.Context) {
 
         Spacer(Modifier.height(10.dp))
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            Text("Transport Link", color = Muted, fontSize = 12.sp)
+            Text("Connection", color = Muted, fontSize = 12.sp)
             Text(syncState.transport.badge, color = MikuTealBright, fontSize = 12.sp, fontWeight = FontWeight.Bold)
         }
 
         Spacer(Modifier.height(4.dp))
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            Text("Target Ingress", color = Muted, fontSize = 12.sp)
+            Text("Rsync target", color = Muted, fontSize = 12.sp)
             Text("rsync://${syncState.ipAddress}:${MikuSyncTransceiver.RSYNC_PORT}/music", color = Color.White, fontSize = 11.5.sp, fontFamily = AudiowideFont)
         }
 
         if (syncState.isTransferring) {
             Spacer(Modifier.height(8.dp))
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                Text("Live Transfer Speed", color = MikuPink, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                Text("Transfer speed", color = MikuPink, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
                 Text("${String.format("%.1f", syncState.transferRateMBs)} MB/s", color = MikuPink, fontSize = 13.sp, fontWeight = FontWeight.Black)
             }
         }
@@ -6231,14 +6231,14 @@ private fun gracefulAppRestart(ctx: android.content.Context) {
                     isManualScanning = true
                     MikuSyncTransceiver.scanAndIntegrateDirectory(ctx, MikuSyncTransceiver.getSdMusicPath(ctx)) { count ->
                         isManualScanning = false
-                        android.widget.Toast.makeText(ctx, "✓ Ingested $count audio files into library", android.widget.Toast.LENGTH_SHORT).show()
+                        android.widget.Toast.makeText(ctx, "Added $count audio files to the library", android.widget.Toast.LENGTH_SHORT).show()
                     }
                 }
                 .padding(vertical = 9.dp),
             horizontalArrangement = Arrangement.Center,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(if (isManualScanning) "Scanning SD Ingress..." else "⚡ Rescan SD Staging & MUSIC", color = MikuTealBright, fontSize = 11.5.sp, fontWeight = FontWeight.Bold)
+            Text(if (isManualScanning) "Scanning SD card…" else "Rescan SD staging and MUSIC", color = MikuTealBright, fontSize = 11.5.sp, fontWeight = FontWeight.Bold)
         }
     }
 }
@@ -6277,7 +6277,7 @@ private fun gracefulAppRestart(ctx: android.content.Context) {
             Text(if (hasInputLock) "🟢" else "🟡", fontSize = 14.sp)
             Spacer(Modifier.width(8.dp))
             Text(
-                if (hasInputLock) "Platform Input Lock Ready" else "Input Lock Permission Missing",
+                if (hasInputLock) "Input lock ready" else "Input lock permission missing",
                 color = if (hasInputLock) MikuTealBright else Color(0xFFFFD166),
                 fontSize = 13.sp,
                 fontWeight = FontWeight.Bold
@@ -6300,7 +6300,7 @@ private fun gracefulAppRestart(ctx: android.content.Context) {
 
     SettingsToggleRow(
         title = "Pocket Lock (Touch & Key Lock)",
-        subtitle = if (isPocket) "Locks touchscreen digitizer and side buttons simultaneously" else "Disabled · Standard key lock only",
+        subtitle = if (isPocket) "Locks the touchscreen and side buttons together" else "Off · normal key lock only",
         checked = isPocket
     ) { enabled ->
         val newMode = if (enabled) "touch_and_key_lock" else "key_lock"
@@ -6311,7 +6311,7 @@ private fun gracefulAppRestart(ctx: android.content.Context) {
     if (isPocket) {
         SettingsToggleRow(
             title = "Allow Volume Wheel during Lock",
-            subtitle = "Keep physical rotary volume knob active while touch/buttons are locked",
+            subtitle = "The volume wheel keeps working while touch and buttons are locked",
             checked = allowVolume
         ) { enabled ->
             allowVolume = enabled
@@ -6320,7 +6320,7 @@ private fun gracefulAppRestart(ctx: android.content.Context) {
 
         SettingsToggleRow(
             title = "Lock Power Button in Pocket",
-            subtitle = "Prevent screen from waking up when power button is bumped",
+            subtitle = "The screen won't wake if the power button gets bumped",
             checked = lockPower
         ) { enabled ->
             lockPower = enabled
@@ -6352,7 +6352,7 @@ private fun gracefulAppRestart(ctx: android.content.Context) {
             Text("DISABLE PRIVILEGED ACCESS?", color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.Black, fontFamily = AudiowideFont)
             Spacer(Modifier.height(10.dp))
             Text(
-                "Direct hardware LED sync, CPU scaling, and kernel touchlocks will be deactivated and return to standard unprivileged mode.",
+                "LED sync, CPU scaling and the kernel touch lock turn off and go back to normal mode.",
                 color = Muted,
                 fontSize = 12.5.sp,
                 lineHeight = 17.sp,
@@ -6414,11 +6414,11 @@ private fun gracefulAppRestart(ctx: android.content.Context) {
                         .border(1.dp, MikuPink, RoundedCornerShape(8.dp))
                         .padding(horizontal = 12.dp, vertical = 4.dp)
                 ) {
-                    Text("01 · ELEVATED HARDWARE ACCESS", color = MikuPink, fontSize = 11.sp, fontWeight = FontWeight.Black, letterSpacing = 1.sp)
+                    Text("01 · ROOT ACCESS", color = MikuPink, fontSize = 11.sp, fontWeight = FontWeight.Black, letterSpacing = 1.sp)
                 }
 
                 Spacer(Modifier.height(16.dp))
-                Text("SUPERUSER GATEWAY", color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Black, fontFamily = AudiowideFont)
+                Text("ROOT (SU)", color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Black, fontFamily = AudiowideFont)
                 Spacer(Modifier.height(6.dp))
                 Text("HiBy M500 Hatsune Miku Edition", color = MikuTealBright, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
 
@@ -6433,9 +6433,9 @@ private fun gracefulAppRestart(ctx: android.content.Context) {
                         .border(1.dp, MikuTealBright.copy(alpha = 0.25f), RoundedCornerShape(16.dp))
                         .padding(18.dp)
                 ) {
-                    ConsentFeatureRow("🏎️", "Qualcomm High-Performance Governor", "Pins Snapdragon 680 performance cores to eliminate buffer underruns during bit-perfect DSD256 decoding.")
+                    ConsentFeatureRow("🏎️", "Performance governor", "Pins the Snapdragon 680 cores at full clock to avoid buffer underruns on DSD256.")
                     Spacer(Modifier.height(14.dp))
-                    ConsentFeatureRow("🛡️", "Hardware Pocket Lock Controls", "Controls touchscreen digitizer inhibition and button routing when the Fn physical switch is toggled.")
+                    ConsentFeatureRow("🛡️", "Pocket lock", "Locks the touchscreen and buttons when the Fn switch is flipped.")
                 }
 
                 Spacer(Modifier.height(20.dp))
@@ -6449,7 +6449,7 @@ private fun gracefulAppRestart(ctx: android.content.Context) {
                         .padding(14.dp)
                 ) {
                     Text(
-                        "Music playback operates normally with standard permissions. Enabling this option connects to Magisk / KernelSU for direct hardware control.",
+                        "Playback works fine without this. Turning it on uses Magisk or KernelSU for direct hardware control.",
                         color = Muted,
                         fontSize = 11.5.sp,
                         lineHeight = 16.sp
@@ -6560,13 +6560,13 @@ private fun alarmSummary(a: Alarm): String {
             ) {
                 Icon(Icons.Default.Warning, "Warning", tint = Color(0xFFFF6B6B), modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(10.dp))
-                Text("Exact alarms aren't permitted — alarms won't fire reliably. Tap to fix in Settings.", color = Color(0xFFFF6B6B), fontSize = 11.5.sp, lineHeight = 15.sp)
+                Text("Exact alarms aren't allowed, so alarms may not go off on time. Tap to fix in Settings.", color = Color(0xFFFF6B6B), fontSize = 11.5.sp, lineHeight = 15.sp)
             }
             Spacer(Modifier.height(12.dp))
         }
 
         if (alarms.isEmpty()) {
-            Text("No alarms yet — music-based, fade-in, snooze, and sunrise/sunset triggers all live here.", color = Muted, fontSize = 12.sp, lineHeight = 16.sp)
+            Text("No alarms yet. Alarms can play music, fade in, snooze, and follow sunrise or sunset.", color = Muted, fontSize = 12.sp, lineHeight = 16.sp)
             Spacer(Modifier.height(12.dp))
         } else {
             alarms.sortedBy { it.hour * 60 + it.minute }.forEachIndexed { idx, a ->
@@ -6702,7 +6702,7 @@ private fun alarmSummary(a: Alarm): String {
                 }
             } else {
                 Spacer(Modifier.height(8.dp))
-                Text("Needs a coarse location fix (opportunistic, low-power) to compute — falls back silently if none is available yet.", color = Muted, fontSize = 10.5.sp, lineHeight = 14.sp)
+                Text("Uses a rough, low-power location fix. If there isn't one yet, it quietly falls back.", color = Muted, fontSize = 10.5.sp, lineHeight = 14.sp)
             }
 
             Spacer(Modifier.height(16.dp))
@@ -6872,7 +6872,7 @@ private fun alarmSummary(a: Alarm): String {
         Spacer(Modifier.height(6.dp))
         Text(
             when {
-                !LastFm.isConfigured -> "Not configured on this build — no API key set."
+                !LastFm.isConfigured -> "Not set up on this build (no API key)."
                 connected -> "Connected as ${connectedAs ?: username}. Every track scrobbles automatically."
                 else -> "Sign in to scrobble every track you play to your Last.fm profile."
             },
@@ -7460,7 +7460,7 @@ object TransportShapes {
             LibRow(Icons.Default.QueueMusic, name, "${playlists[name]?.size ?: 0} songs", MikuTeal) { onOpen(name) }
         }
         if (playlists.isEmpty()) item {
-            Text("  No playlists yet — add songs to a playlist from any track.", color = Muted, fontSize = 13.sp,
+            Text("  No playlists yet. Add songs to a playlist from any track.", color = Muted, fontSize = 13.sp,
                 modifier = Modifier.padding(16.dp, 8.dp))
         }
     }
@@ -7723,7 +7723,7 @@ private fun fmtDurationLong(ms: Long): String {
         Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f)) {
             Text(
-                if (active) "RANDOM MODE — ON" else "RANDOM",
+                if (active) "RANDOM MODE ON" else "RANDOM",
                 color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Black, fontFamily = AudiowideFont, letterSpacing = 1.sp
             )
             Text(
@@ -7769,8 +7769,8 @@ private fun fmtDurationLong(ms: Long): String {
             when (profile) {
                 MikuPowerGovernor.Profile.PERF -> "Sustained clocks + render hints: visualizer and Now Playing at full speed."
                 MikuPowerGovernor.Profile.BALANCED -> "Normal clocks, normal background work."
-                MikuPowerGovernor.Profile.AUDIO_ONLY -> "Screen off — everything but the DAC path is starved; battery saver ${if (MikuPowerGovernor.saverInAudioOnly) "ON" else "off"}."
-                MikuPowerGovernor.Profile.IDLE -> "Nothing playing — engines idle, saver while the screen is off."
+                MikuPowerGovernor.Profile.AUDIO_ONLY -> "Screen off. Everything but the DAC path is held back. Battery saver ${if (MikuPowerGovernor.saverInAudioOnly) "ON" else "off"}."
+                MikuPowerGovernor.Profile.IDLE -> "Nothing playing. Background work is idle and battery saver runs while the screen is off."
             },
             color = Muted, fontSize = 10.5.sp, lineHeight = 14.sp, modifier = Modifier.padding(top = 4.dp)
         )
@@ -7797,7 +7797,7 @@ private fun fmtDurationLong(ms: Long): String {
         Spacer(Modifier.height(4.dp))
         SettingsToggleRow(
             title = "Battery saver in Audio-Only",
-            subtitle = "Screen off + playing → system battery saver ON (restored on exit); the DAC path is never touched",
+            subtitle = "With the screen off and music playing, battery saver turns on and goes back when you leave. The DAC path is never touched.",
             checked = MikuPowerGovernor.saverInAudioOnly
         ) { MikuPowerGovernor.setSaverInAudioOnly(ctx, it) }
         SettingsToggleRow(

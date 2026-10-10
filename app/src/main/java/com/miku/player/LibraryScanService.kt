@@ -106,8 +106,8 @@ class LibraryScanService : Service() {
                     ScanProgress.phase = "Finalizing library…"
                     val after = runCatching { LibraryCounts.countTracks(app) }.getOrDefault(before)
                     val delta = after - before
-                    val msg = if (delta > 0) "✓ Found $delta new track${if (delta == 1) "" else "s"} · Total $after"
-                              else "✓ Library up to date · $after tracks"
+                    val msg = if (delta > 0) "Found $delta new track${if (delta == 1) "" else "s"} · Total $after"
+                              else "Library up to date · $after tracks"
                     val albums = runCatching { LibraryCounts.countDistinct(app, MediaStore.Audio.Media.ALBUM) }.getOrDefault(0)
                     val artists = runCatching { LibraryCounts.countDistinct(app, MediaStore.Audio.Media.ARTIST) }.getOrDefault(0)
                     val formats = runCatching {
@@ -138,7 +138,7 @@ class LibraryScanService : Service() {
                 }
             }
 
-            ScanProgress.phase = "Discovering audio & video files…"
+            ScanProgress.phase = "Looking for audio and video files…"
             val newFiles = mutableListOf<DiscoveredItem>()
             val jobDirs = mutableListOf<File>()
             try {
@@ -267,7 +267,7 @@ class LibraryScanService : Service() {
                 try { Thread.sleep(200) } catch (_: InterruptedException) { break }
             }
 
-            MikuBrain.heartbeat(MikuBrain.BoneType.LIBRARY_SCANNER, MikuBrain.BoneState.IDLE, "Scan Complete")
+            MikuBrain.heartbeat(MikuBrain.BoneType.LIBRARY_SCANNER, MikuBrain.BoneState.IDLE, "Scan finished")
             reportFinish(completed = true)
             main.postDelayed({ reportFinish(completed = false) }, 30 * 60_000L)
         }.start()
@@ -278,13 +278,13 @@ class LibraryScanService : Service() {
         if (nm.getNotificationChannel(CHANNEL_ID) == null) {
             nm.createNotificationChannel(
                 NotificationChannel(CHANNEL_ID, "Library Scan", NotificationManager.IMPORTANCE_LOW).apply {
-                    description = "Miku Music is indexing your library"
+                    description = "Shows while Miku Music scans your library"
                 }
             )
         }
         return NotificationCompat.Builder(this, CHANNEL_ID)
             .setSmallIcon(android.R.drawable.ic_popup_sync)
-            .setContentTitle("Miku Music — Scanning library")
+            .setContentTitle("Miku Music: scanning library")
             .setContentText(status)
             .setOngoing(true)
             .setSilent(true)

@@ -1145,7 +1145,7 @@ private fun BpmHeroRhythmMatchCard(
                     // player's analysis because it is one number per file. Say which one it is.
                     text = when {
                         !isPlaying -> "PAUSED"
-                        tempoLock.isLocked && tempoSource == MikuBpmEngine.TempoSource.LIVE_LOCK -> "🔒 LOCKED"
+                        tempoLock.isLocked && tempoSource == MikuBpmEngine.TempoSource.LIVE_LOCK -> "LOCKED"
                         hasLiveTempo && tempoSource == MikuBpmEngine.TempoSource.PLAYER_ANALYSIS -> "ANALYZED"
                         else -> "LISTENING…"
                     },
@@ -1159,7 +1159,7 @@ private fun BpmHeroRhythmMatchCard(
                     // between neighbouring BPMs while a track plays at one tempo. Before a lock
                     // exists it says so, rather than showing a per-onset estimate as fact.
                     text = when {
-                        !isPlaying -> "ALSA Standby"
+                        !isPlaying -> "Nothing playing"
                         isPlaying && hasLiveTempo -> "${liveBpm.toInt()} BPM · ${beatIntervalMs}ms"
                         else -> tempoLock.label
                     },
@@ -1190,10 +1190,10 @@ private fun BpmHeroRhythmMatchCard(
                 Column(Modifier.weight(1f)) {
                     Text(
                         text = when {
-                            !isPlaying && trackTitle == null -> "🌸 MikuOS Player"
-                            !isPlaying && trackTitle != null -> "♪ $trackTitle (Paused)"
-                            trackTitle != null -> "♪ $trackTitle"
-                            else -> "♪ Unknown track"
+                            !isPlaying && trackTitle == null -> "MikuOS Player"
+                            !isPlaying && trackTitle != null -> "$trackTitle (paused)"
+                            trackTitle != null -> "$trackTitle"
+                            else -> "Unknown track"
                         },
                         color = Color.White,
                         fontSize = 15.sp,
@@ -1205,7 +1205,7 @@ private fun BpmHeroRhythmMatchCard(
                         text = when {
                             !isPlaying && trackArtist == null -> "Nothing playing"
                             trackArtist != null -> trackArtist
-                            else -> "External audio source · no metadata published"
+                            else -> "Another app is playing, no track info"
                         },
                         color = KawaiiMikuMint,
                         fontSize = 12.5.sp,
@@ -1316,7 +1316,7 @@ private fun BpmComboLadderLine() {
             fontWeight = FontWeight.Black
         )
         Text(
-            if (next != null) "${next.first} more → ${String.format(Locale.US, "%.1f", next.second)}×" else "★ TOP RUNG",
+            if (next != null) "${next.first} more → ${String.format(Locale.US, "%.1f", next.second)}×" else "TOP RUNG",
             color = KawaiiSakuraPink,
             fontSize = 9.5.sp,
             fontWeight = FontWeight.Bold
@@ -1383,7 +1383,7 @@ private fun BpmTempoMatchLine(hasLiveTempo: Boolean, liveBpm: Float, tappedBpm: 
             text = "✓ matches detected ${liveBpm.toInt()} BPM (${MikuRhythmTiming.octaveLabel(m)}, ±${MikuRhythmTiming.bpmTolerance(liveBpm).toInt()} BPM)"
             color = KawaiiMikuMint
         } else {
-            text = "✕ ${tappedBpm.toInt()} vs detected ${liveBpm.toInt()} BPM — try /2 or x2"
+            text = "✕ ${tappedBpm.toInt()} vs detected ${liveBpm.toInt()} BPM. Try /2 or x2"
             color = KawaiiPeach
         }
     }
@@ -1489,7 +1489,7 @@ private fun BpmNextUnlockLine() {
     val next = remember(lifetime) { MikuUnlocks.nextLocked(ctx) }
     if (next == null) {
         Text(
-            "🏆 Every reward earned — all ${MikuUnlocks.ALL.size} unlocked",
+            "Every reward earned. All ${MikuUnlocks.ALL.size} unlocked",
             color = KawaiiGoldenHoney,
             fontSize = 10.sp,
             fontWeight = FontWeight.Black,
@@ -1556,7 +1556,7 @@ private fun BpmRewardCard(reward: MikuUnlocks.Reward, earned: Boolean) {
                     maxLines = 1, overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.weight(1f, fill = false)
                 )
-                Text(if (earned) "✅" else "🔒", fontSize = 11.sp)
+                Text(if (earned) "✓" else "○", fontSize = 11.sp)
             }
             // Where it lands, verbatim — a reward you cannot find is not a reward.
             Text(
@@ -1591,7 +1591,7 @@ private fun BpmSetlistChip(label: String, value: String, done: Boolean) {
             .padding(horizontal = 6.dp, vertical = 2.dp)
     ) {
         Text(
-            "${if (done) "✅" else "🎯"} $label $value",
+            "${if (done) "✓" else "○"} $label $value",
             color = if (done) KawaiiGoldenHoney else KawaiiTextMuted,
             fontSize = 9.5.sp,
             fontWeight = FontWeight.Bold
@@ -1676,7 +1676,7 @@ private fun BpmTimingCalibrationRow() {
                     .padding(horizontal = 7.dp, vertical = 2.dp)
             ) {
                 Text(
-                    "🎯 CALIBRATE ${if ((suggestion ?: 0) >= 0) "+" else ""}${suggestion}ms",
+                    "CALIBRATE ${if ((suggestion ?: 0) >= 0) "+" else ""}${suggestion}ms",
                     color = Color.White,
                     fontSize = 10.sp,
                     fontWeight = FontWeight.Black,
@@ -1718,7 +1718,7 @@ private fun BpmHeroHarvestCard(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column {
-                Text("SWEET LEEK HARVEST 🥬", color = KawaiiMikuMint, fontSize = 11.5.sp, fontWeight = FontWeight.Black)
+                Text("LEEK HARVEST", color = KawaiiMikuMint, fontSize = 11.5.sp, fontWeight = FontWeight.Black)
                 Text(
                     MikuBeatClickerEngine.formatNumber(leekCount),
                     color = if (feverSeconds > 0) KawaiiGoldenHoney else Color.White,
@@ -1737,7 +1737,7 @@ private fun BpmHeroHarvestCard(
                     fontFamily = AudiowideFont
                 )
                 Text(
-                    if (feverSeconds > 0) "🔥 77x FEVER (${feverSeconds}s)" else "⚡ BPM Boost Active",
+                    if (feverSeconds > 0) "FEVER 77x (${feverSeconds}s)" else "BPM boost on",
                     color = if (feverSeconds > 0) KawaiiGoldenHoney else KawaiiSakuraPink,
                     fontSize = 11.5.sp,
                     fontWeight = FontWeight.Bold
@@ -1747,10 +1747,10 @@ private fun BpmHeroHarvestCard(
         Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
             if (clickerCombo > 0) {
                 val comboTier = when {
-                    clickerCombo >= 50 -> "🌟 MAX OVERDRIVE"
-                    clickerCombo >= 25 -> "✨ FEVER FRENZY"
-                    clickerCombo >= 10 -> "💖 SWEET RHYTHM"
-                    else -> "★ COMBO"
+                    clickerCombo >= 50 -> "MAX COMBO"
+                    clickerCombo >= 25 -> "BIG COMBO"
+                    clickerCombo >= 10 -> "GOOD COMBO"
+                    else -> "COMBO"
                 }
                 Box(
                     Modifier
@@ -1763,7 +1763,7 @@ private fun BpmHeroHarvestCard(
                 }
             }
             Text(
-                "Total Earned: ${MikuBeatClickerEngine.formatNumber(MikuBeatClickerEngine.totalEarned.collectAsState().value)} 🥬",
+                "Total earned: ${MikuBeatClickerEngine.formatNumber(MikuBeatClickerEngine.totalEarned.collectAsState().value)} leeks",
                 color = KawaiiTextMuted,
                 fontSize = 11.sp
             )
@@ -1795,13 +1795,13 @@ private fun BpmHeroSkillsCard(
     ) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
             Column {
-                Text("🧲 PRODUCER SKILL TREE", color = KawaiiSoftTeal, fontSize = 11.5.sp, fontWeight = FontWeight.Black)
-                Text("Rhythm Master Perks", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Black, fontFamily = AudiowideFont)
+                Text("SKILLS", color = KawaiiSoftTeal, fontSize = 11.5.sp, fontWeight = FontWeight.Black)
+                Text("Upgrades", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Black, fontFamily = AudiowideFont)
             }
             Text("${clickerSkills.sumOf { it.level }} Upgrades Active", color = KawaiiGoldenHoney, fontSize = 12.sp, fontWeight = FontWeight.Bold)
         }
         Text(
-            "Upgrade your timing window, magnetize Golden Leeks, overclock Fever duration, and summon Chibi Miku autopilot!",
+            "Upgrades widen the timing window, pull in golden leeks, make fever last longer, and add an auto-tapper.",
             color = KawaiiTextMuted,
             fontSize = 11.sp,
             maxLines = 2,
@@ -1835,7 +1835,7 @@ private fun BpmHeroSkinsCard(
     ) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
             Column {
-                Text("🎨 AESTHETIC SKINS & TEXTURES", color = activeSkinPrimary, fontSize = 11.5.sp, fontWeight = FontWeight.Black)
+                Text("SKINS", color = activeSkinPrimary, fontSize = 11.5.sp, fontWeight = FontWeight.Black)
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(currentSkin.icon, fontSize = 20.sp)
                     Spacer(Modifier.width(6.dp))
@@ -1852,7 +1852,7 @@ private fun BpmHeroSkinsCard(
                 Text("ACTIVE SKIN", color = Color.White, fontSize = 10.5.sp, fontWeight = FontWeight.Bold)
             }
         }
-        Text("Custom palette, ambient floating particles, and tactile shaders.", color = KawaiiTextMuted, fontSize = 11.sp)
+        Text("Each skin changes the colors, particles and effects.", color = KawaiiTextMuted, fontSize = 11.sp)
     }
 }
 
@@ -1881,10 +1881,10 @@ private fun BpmHeroQuestsCard(
     ) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
             Column {
-                Text("🏆 QUESTS & CALIBRATION DB", color = Color(0xFFFFD700), fontSize = 11.5.sp, fontWeight = FontWeight.Black)
+                Text("QUESTS AND CALIBRATION", color = Color(0xFFFFD700), fontSize = 11.5.sp, fontWeight = FontWeight.Black)
                 Text("Calibration Stats", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Black, fontFamily = AudiowideFont)
             }
-            Text("${achievements.count { it.isUnlocked }} of ${achievements.size} Done", color = KawaiiMikuMint, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+            Text("${achievements.count { it.isUnlocked }} of ${achievements.size} done", color = KawaiiMikuMint, fontSize = 12.sp, fontWeight = FontWeight.Bold)
         }
         // What the player is working toward RIGHT NOW, with the exact requirement. Progression
         // that cannot be seen coming does not motivate anyone.
@@ -2210,7 +2210,7 @@ private fun ColumnScope.BpmBeatNodeStage(
                         // judged-tap branch, so nothing a free tap did can ever pay one out. Both
                         // tiers announce themselves through MikuCelebrations (the overlay).
                         MikuUnlocks.evaluate(ctx)
-                        MikuSecrets.onJudgedTap(ctx, accuracy, if (hasLiveTempo) liveBpm else 0f, trackArtist)
+                        MikuSecrets.onJudgedTap(ctx, accuracy, if (hasLiveTempo) liveBpm else 0f, trackArtist, trackTitle)
                         dbStats = bpmDb.getCalibrationStats()
                     }
 
@@ -2220,7 +2220,7 @@ private fun ColumnScope.BpmBeatNodeStage(
                     if (nearMs != null) MikuStagePerformance.onNearPerfect()
                     val coach = MikuRhythmTiming.nudgeHint(if (chaosNow.mirrorsBar) -timingOffsetMs else timingOffsetMs, windows)
                     judgmentTitle = if (nearMs != null) "SO CLOSE · ${nearMs}ms off PERFECT"
-                        else "${accuracy.emoji} ${accuracy.label} · $coach"
+                        else "${accuracy.label} · $coach"
                     judgmentColor = when (accuracy) {
                         HitAccuracy.PERFECT -> KawaiiHotPink
                         HitAccuracy.GREAT -> KawaiiSakuraPink
@@ -2331,7 +2331,7 @@ private fun BpmGameDockCards(
                         }
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.Bottom) {
                             Text("+${MikuBeatClickerEngine.formatNumber(b.baseBps)}/s", color = KawaiiSoftTeal, fontSize = 11.sp)
-                            Text("${MikuBeatClickerEngine.formatNumber(b.currentCost)} 🥬", color = if (canAfford) KawaiiGoldenHoney else KawaiiTextMuted, fontSize = 11.5.sp, fontWeight = FontWeight.Black)
+                            Text("${MikuBeatClickerEngine.formatNumber(b.currentCost)} leeks", color = if (canAfford) KawaiiGoldenHoney else KawaiiTextMuted, fontSize = 11.5.sp, fontWeight = FontWeight.Black)
                         }
                     }
                 }
@@ -2367,7 +2367,7 @@ private fun BpmGameDockCards(
                             Text("Lv.${s.level}", color = KawaiiSoftTeal, fontSize = 11.5.sp, fontWeight = FontWeight.Black)
                         }
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.Bottom) {
-                            Text(if (s.level >= s.maxLevel) "MAX" else "${MikuBeatClickerEngine.formatNumber(s.currentCost)} 🥬", color = if (canAfford) KawaiiGoldenHoney else KawaiiTextMuted, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                            Text(if (s.level >= s.maxLevel) "MAX" else "${MikuBeatClickerEngine.formatNumber(s.currentCost)} leeks", color = if (canAfford) KawaiiGoldenHoney else KawaiiTextMuted, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                             Text(if (canAfford) "UPGRADE" else (if (s.level >= s.maxLevel) "MASTERED" else "LOCKED"), color = if (canAfford) KawaiiSoftTeal else KawaiiTextMuted, fontSize = 10.sp, fontWeight = FontWeight.Black)
                         }
                     }
@@ -2411,8 +2411,8 @@ private fun BpmGameDockCards(
                                 com.miku.launcher.haptics.MikuHaptics.reject(ctx)
                                 android.widget.Toast.makeText(
                                     ctx,
-                                    lockReq?.let { "🔒 ${it.title}: ${MikuUnlocks.progressLabel(it)}" }
-                                        ?: "🔒 Locked",
+                                    lockReq?.let { "Locked. ${it.title}: ${MikuUnlocks.progressLabel(it)}" }
+                                        ?: "Locked",
                                     android.widget.Toast.LENGTH_SHORT
                                 ).show()
                             }
@@ -2442,8 +2442,8 @@ private fun BpmGameDockCards(
                             )
                             Text(
                                 when {
-                                    !available && lockReq != null -> "🔒 ${MikuUnlocks.progressLabel(lockReq)}"
-                                    isCurrent -> "✨ ACTIVE"
+                                    !available && lockReq != null -> "Locked: ${MikuUnlocks.progressLabel(lockReq)}"
+                                    isCurrent -> "ACTIVE"
                                     else -> "TAP TO APPLY"
                                 },
                                 color = if (isCurrent) Color(skin.primaryColor) else if (available) KawaiiSoftTeal else KawaiiGoldenHoney,
@@ -2482,12 +2482,12 @@ private fun BpmGameDockCards(
                     Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.SpaceBetween) {
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                             Text("${a.icon} ${a.title}", color = Color.White, fontSize = 11.5.sp, fontWeight = FontWeight.Bold, maxLines = 1)
-                            Text(if (a.isUnlocked) "✅" else "🔒", fontSize = 12.sp)
+                            Text(if (a.isUnlocked) "✓" else "○", fontSize = 12.sp)
                         }
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.Bottom) {
                             Text(a.desc, color = KawaiiTextMuted, fontSize = 9.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
                             Spacer(Modifier.width(4.dp))
-                            Text("+${MikuBeatClickerEngine.formatNumber(a.rewardLeeks)} 🥬", color = Color(0xFFFFD700), fontSize = 10.5.sp, fontWeight = FontWeight.Bold)
+                            Text("+${MikuBeatClickerEngine.formatNumber(a.rewardLeeks)} leeks", color = Color(0xFFFFD700), fontSize = 10.5.sp, fontWeight = FontWeight.Bold)
                         }
                     }
                 }
@@ -2618,7 +2618,7 @@ private fun BpmCalibrationFooter(
                         }
                         .padding(horizontal = 8.dp, vertical = 4.dp)
                 ) {
-                    Text("🔒 LOCK BPM: ${tapVal.toInt()}", color = Color.White, fontSize = 11.5.sp, fontWeight = FontWeight.Black, fontFamily = AudiowideFont)
+                    Text("LOCK BPM: ${tapVal.toInt()}", color = Color.White, fontSize = 11.5.sp, fontWeight = FontWeight.Black, fontFamily = AudiowideFont)
                 }
                 Spacer(Modifier.width(5.dp))
                 Box(
@@ -2632,7 +2632,7 @@ private fun BpmCalibrationFooter(
                         }
                         .padding(horizontal = 6.dp, vertical = 4.dp)
                 ) {
-                    Text("➗ /2 (${halfVal.toInt()})", color = KawaiiMikuMint, fontSize = 11.sp, fontWeight = FontWeight.Bold, fontFamily = AudiowideFont)
+                    Text("/2 (${halfVal.toInt()})", color = KawaiiMikuMint, fontSize = 11.sp, fontWeight = FontWeight.Bold, fontFamily = AudiowideFont)
                 }
                 Spacer(Modifier.width(4.dp))
                 Box(
@@ -2646,7 +2646,7 @@ private fun BpmCalibrationFooter(
                         }
                         .padding(horizontal = 6.dp, vertical = 4.dp)
                 ) {
-                    Text("✖️ x2 (${doubleVal.toInt()})", color = KawaiiLavender, fontSize = 11.sp, fontWeight = FontWeight.Bold, fontFamily = AudiowideFont)
+                    Text("x2 (${doubleVal.toInt()})", color = KawaiiLavender, fontSize = 11.sp, fontWeight = FontWeight.Bold, fontFamily = AudiowideFont)
                 }
                 Spacer(Modifier.width(4.dp))
                 Box(
@@ -2658,13 +2658,13 @@ private fun BpmCalibrationFooter(
                             com.miku.launcher.haptics.MikuHaptics.tick(ctx)
                             coroutineScope.launch {
                                 if (trackArtist == null || trackTitle == null) {
-                                    android.widget.Toast.makeText(ctx, "No track metadata published — nothing to look up", android.widget.Toast.LENGTH_SHORT).show()
+                                    android.widget.Toast.makeText(ctx, "No track info, so nothing to look up", android.widget.Toast.LENGTH_SHORT).show()
                                     return@launch
                                 }
                                 val online = bpmDb.resolveCanonicalBpm(trackArtist, trackTitle)
                                 if (online != null && online.canonicalBpm > 0f) {
                                     calculatedTapBpm = online.canonicalBpm
-                                    android.widget.Toast.makeText(ctx, "🌐 DB Resolved: ${online.canonicalBpm.toInt()} BPM (${online.source})", android.widget.Toast.LENGTH_SHORT).show()
+                                    android.widget.Toast.makeText(ctx, "Found: ${online.canonicalBpm.toInt()} BPM (${online.source})", android.widget.Toast.LENGTH_SHORT).show()
                                 } else {
                                     // There is no DSP analyser to fall back to; don't claim one.
                                     android.widget.Toast.makeText(ctx, "No BPM found in the local DB or dictionary", android.widget.Toast.LENGTH_SHORT).show()
@@ -2673,7 +2673,7 @@ private fun BpmCalibrationFooter(
                         }
                         .padding(horizontal = 6.dp, vertical = 4.dp)
                 ) {
-                    Text("🌐 DB", color = Color(0xFF00E5FF), fontSize = 11.sp, fontWeight = FontWeight.Bold, fontFamily = AudiowideFont)
+                    Text("LOOK UP", color = Color(0xFF00E5FF), fontSize = 11.sp, fontWeight = FontWeight.Bold, fontFamily = AudiowideFont)
                 }
             }
         }
@@ -2744,19 +2744,19 @@ private fun BpmObservatoryHeader(
                 horizontalArrangement = Arrangement.spacedBy(4.dp)
             ) {
                 item {
-                    KawaiiModeTabPill("🌸 RHYTHM", selectedMode == 0, activeSkinPrimary) { selectedMode = 0 }
+                    KawaiiModeTabPill("RHYTHM", selectedMode == 0, activeSkinPrimary) { selectedMode = 0 }
                 }
                 item {
-                    KawaiiModeTabPill("🥬 HARVEST", selectedMode == 1, KawaiiGoldenHoney) { selectedMode = 1 }
+                    KawaiiModeTabPill("HARVEST", selectedMode == 1, KawaiiGoldenHoney) { selectedMode = 1 }
                 }
                 item {
-                    KawaiiModeTabPill("🧲 SKILLS", selectedMode == 2, KawaiiSoftTeal) { selectedMode = 2 }
+                    KawaiiModeTabPill("SKILLS", selectedMode == 2, KawaiiSoftTeal) { selectedMode = 2 }
                 }
                 item {
-                    KawaiiModeTabPill("🎨 SKINS", selectedMode == 3, KawaiiLavender) { selectedMode = 3 }
+                    KawaiiModeTabPill("SKINS", selectedMode == 3, KawaiiLavender) { selectedMode = 3 }
                 }
                 item {
-                    KawaiiModeTabPill("🏆 QUESTS", selectedMode == 4, Color(0xFFFFD700)) { selectedMode = 4 }
+                    KawaiiModeTabPill("QUESTS", selectedMode == 4, Color(0xFFFFD700)) { selectedMode = 4 }
                 }
                 item {
                     KawaiiModeTabPill("${currentSeason.rank.badge} SEASONS", selectedMode == 5, Color(currentSeason.rank.colorHex)) { selectedMode = 5 }

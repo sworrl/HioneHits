@@ -408,9 +408,9 @@ fun AudioDacScreen(ctx: Context) {
                 Spacer(Modifier.height(6.dp))
                 Text(
                     when {
-                        sysfsReachable -> "Filter, gain, DRE, power rails and balance are read from /sys/devices/platform/sa_sound_setting/. Selections below are what the kernel reports; nothing is pre-selected from a default."
-                        hasPersisted -> "/sys/devices/platform/sa_sound_setting/ is not readable by this process. Selections below are the last values persisted in Settings.Global (vendor.audio.hiby.*); writes go through the shell path. Nothing selected means it was never set."
-                        else -> "Neither the kernel DAC nodes nor the HiBy audio settings report a value yet. Pick a setting to write one; until then nothing is selected."
+                        sysfsReachable -> "Filter, gain, DRE, power rails and balance are read from /sys/devices/platform/sa_sound_setting/. Selections below are what the kernel reports. Nothing is pre-selected from a default."
+                        hasPersisted -> "/sys/devices/platform/sa_sound_setting/ is not readable by this process. Selections below are the last values saved in Settings.Global (vendor.audio.hiby.*). Writes go through the shell path. Nothing selected means it was never set."
+                        else -> "Neither the kernel DAC nodes nor the HiBy audio settings report a value yet. Pick a setting to write one. Until then nothing is selected."
                     },
                     color = MikuMuted,
                     fontSize = 12.sp,
@@ -1967,7 +1967,7 @@ fun DisplayScreen(ctx: Context) {
             Column(Modifier.mikuCard().padding(14.dp)) {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                     Text("SCREEN BRIGHTNESS", color = MikuTealBright, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                    Text("${brightness ?: "—"} / 255", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    Text("${brightness ?: "--"} / 255", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                 }
                 Spacer(Modifier.height(8.dp))
                 Slider(
@@ -2421,6 +2421,45 @@ private fun BatteryControls(ctx: Context, tick: Int) {
             com.miku.settings.pages.MikuPageActivity.open(ctx, "access/battery")
         }
         com.miku.settings.pages.StockRow("Battery usage history", ".Settings\$PowerUsageSummaryActivity")
+    }
+    Spacer(Modifier.height(12.dp))
+    ChargeLimitControls(ctx, tick)
+}
+
+/**
+ * Charge limit. Stored in Settings.Global miku_charge_limit (0 = off, 80, 85, 90). The MikuOS
+ * system bridge (com.miku.sysbridge, persistent) watches it and the battery, and reports whether
+ * it is holding in miku_charge_hold. See miku-sysbridge ChargeLimiter.kt for what a hold does.
+ */
+@Composable
+private fun ChargeLimitControls(ctx: Context, tick: Int) {
+    val cr = ctx.contentResolver
+    var refresh by remember { mutableIntStateOf(0) }
+    val limit = remember(tick, refresh) {
+        try { Settings.Global.getInt(cr, "miku_charge_limit", 0) } catch (_: Throwable) { 0 }
+    }
+    val holding = remember(tick, refresh) {
+        try { Settings.Global.getInt(cr, "miku_charge_hold", 0) == 1 } catch (_: Throwable) { false }
+    }
+    com.miku.settings.ui.Section(
+        "Charge limit",
+        "Stops topping up the battery at the level you pick and starts again 5% below it. " +
+            "Good for a player that lives on a charger."
+    ) {
+        for ((value, label) in listOf(0 to "Off", 80 to "80%", 85 to "85%", 90 to "90%")) {
+            com.miku.settings.ui.RadioRow(label, selected = limit == value) {
+                val ok = try { Settings.Global.putInt(cr, "miku_charge_limit", value) } catch (_: Throwable) { false }
+                if (!ok) com.miku.settings.ui.toast(ctx, "Charge limit was not changed")
+                refresh++
+            }
+        }
+        if (limit != 0) {
+            Spacer(Modifier.height(6.dp))
+            com.miku.settings.ui.BodyText(
+                if (holding) "Holding now. The charger is cut to its lowest setting (100 mA), so the level stays about where it is with the screen off and may drop slowly with it on."
+                else "Charging normally. It holds once the battery reaches $limit%."
+            )
+        }
     }
 }
 

@@ -267,6 +267,22 @@ fun BpmSecretCard(secret: MikuSecrets.Secret) {
                     fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.weight(1f)
                 )
+                val openIntent = remember(secret.id) { com.miku.launcher.secretOpenIntent(ctx, secret.id) }
+                if (openIntent != null) {
+                    Text(
+                        "OPEN",
+                        color = Color(0xFF04161A),
+                        fontSize = 9.sp, fontWeight = FontWeight.Black,
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(6.dp))
+                            .background(Mint)
+                            .clickable {
+                                com.miku.launcher.haptics.MikuHaptics.tick(ctx)
+                                runCatching { ctx.startActivity(openIntent) }
+                            }
+                            .padding(horizontal = 7.dp, vertical = 2.dp)
+                    )
+                }
                 if (secret.toggleable) {
                     Text(
                         if (enabled) "ON" else "OFF",

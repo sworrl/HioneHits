@@ -171,7 +171,7 @@ fun MikuAnatomicalObservatoryModal(
                     Spacer(Modifier.width(8.dp))
                     Column {
                         Text(
-                            "VOCALOID ANATOMY",
+                            "HARDWARE",
                             color = MikuCyan,
                             fontSize = 12.5.sp,
                             fontWeight = FontWeight.Black,
@@ -1063,7 +1063,7 @@ private fun readAnatomyFacts(ctx: Context): AnatomyFacts {
     // the player is not holding an output. That is reported as such, never as "idle".
     val nowPlayingFormat = runCatching {
         android.provider.Settings.Global.getString(ctx.contentResolver, "miku_now_playing_format")?.takeIf { it.isNotBlank() }
-    }.getOrNull() ?: "— (not published)"
+    }.getOrNull() ?: "Not published"
 
     val ledDriver = runCatching {
         val nodes = listOf("/sys/class/leds/sgm31324-leds", "/sys/class/leds/red", "/sys/class/leds/blue")

@@ -70,6 +70,9 @@ class MikuFmService : Service() {
     override fun onCreate() {
         super.onCreate()
         createChannel()
+        // The radio is a media source whenever the tuner is on, not only while Android Auto is
+        // connected, so the session exists from the moment the service does.
+        FmMediaSession.ensure(applicationContext)
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {

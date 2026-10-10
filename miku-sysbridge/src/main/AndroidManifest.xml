@@ -3,8 +3,10 @@
   MikuOS system bridge. The one MikuOS package that runs as the system UID, so it gets the
   system_app SELinux domain: HiBy's policy lets system_app set vendor_usb_prop, usb_control_prop
   and vendor_audio_prop, and lets platform_app (every other Miku app) set almost nothing.
-  It has no UI and does exactly what the receiver below lists, only for callers holding the
+  It has no UI and does exactly what the receivers below list, only for callers holding the
   signature permission, i.e. other apps signed with the platform key.
+  It is persistent so the charge limit (ChargeLimiter) can follow the battery: the system starts
+  it at boot and restarts it if it dies.
 -->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
@@ -16,11 +18,13 @@
         android:protectionLevel="signature" />
     <uses-permission android:name="com.miku.permission.SYSTEM_BRIDGE" />
     <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.WRITE_SECURE_SETTINGS" />
 
     <application
+        android:name=".BridgeApp"
         android:label="MikuOS system bridge"
         android:allowBackup="false"
-        android:persistent="false">
+        android:persistent="true">
         <receiver
             android:name=".BridgeReceiver"
             android:exported="true"

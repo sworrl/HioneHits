@@ -524,7 +524,7 @@ fun MikuNotificationShadeView(
                             ) {
                                 Text("♥", color = MikuTeal.copy(alpha = 0.55f), fontSize = 28.sp)
                                 Text(
-                                    if (listenerOk) "No notifications" else "Notification access is off — tap to enable",
+                                    if (listenerOk) "No notifications" else "Notification access is off. Tap to turn it on.",
                                     color = MikuTextSecondary, fontSize = 12.sp
                                 )
                             }
@@ -543,7 +543,7 @@ fun MikuNotificationShadeView(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        "MikuOS ♥", color = MikuTeal.copy(alpha = 0.8f), fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp,
+                        "MikuOS", color = MikuTeal.copy(alpha = 0.8f), fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp,
                         modifier = Modifier.padding(start = 8.dp)
                     )
                     Spacer(Modifier.weight(1f))
@@ -698,14 +698,14 @@ private fun extraTiles(ctx: Context, onRefresh: () -> Unit): List<QsTile> {
         runCatching { Settings.Global.putInt(cr, k, v) }.onFailure { RootShell.execFast("settings put global $k $v") }
     }
     return listOf(
-        QsTile("ingest", "Ingress Engine", if (ingest) "Rsync ingest on" else "Local SD only", Icons.Default.CloudSync, ingest,
+        QsTile("ingest", "Network sync", if (ingest) "Rsync on" else "SD card only", Icons.Default.CloudSync, ingest,
             onClick = {
                 putGlobal("miku_ingest_enabled", if (ingest) 0 else 1)
                 ctx.sendBroadcast(Intent("com.miku.launcher.action.INGEST_ENABLED").setPackage("com.miku.launcher").putExtra("enabled", !ingest))
                 onRefresh()
             },
             onLongClick = { runCatching { ctx.startActivity(Intent().setClassName("com.miku.launcher", "com.miku.launcher.MikuLauncherActivity").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) } }),
-        QsTile("pause_unplug", "Unplug Pause", if (pause) "Stock behaviour" else "Keep playing", Icons.Default.HeadsetOff, pause,
+        QsTile("pause_unplug", "Pause on unplug", if (pause) "Pauses when unplugged" else "Keeps playing", Icons.Default.HeadsetOff, pause,
             onClick = {
                 putGlobal("miku_pause_on_unplug", if (pause) 0 else 1)
                 ctx.sendBroadcast(Intent("com.miku.player.SET_PAUSE_ON_UNPLUG").setPackage("com.miku.player").putExtra("enabled", !pause))
@@ -717,7 +717,7 @@ private fun extraTiles(ctx: Context, onRefresh: () -> Unit): List<QsTile> {
             "idle_dim", "Idle Dim",
             if (idleDimOn) MikuIdleDimSettings.presetName(idleActiveSec, idleDimSec, idleAmbientSec) +
                 " \u00b7 dim " + idleActiveSec + "s \u00b7 sleep " + (idleActiveSec + idleDimSec + idleAmbientSec) + "s"
-            else "Off - screen cuts straight to black",
+            else "Off, screen goes straight to black",
             Icons.Default.BrightnessMedium, idleDimOn,
             longPressOpensUi = false,
             onClick = {
@@ -868,7 +868,7 @@ private fun NotifRow(n: MikuNotif, onOpen: () -> Unit, onDismiss: () -> Unit, mo
         enableDismissFromEndToStart = n.isClearable,
         backgroundContent = {
             Box(Modifier.fillMaxSize().clip(RoundedCornerShape(20.dp)).background(MikuPink.copy(alpha = 0.25f)), contentAlignment = Alignment.Center) {
-                Text("♥ bye", color = MikuPinkBright, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                Text("Dismiss", color = MikuPinkBright, fontSize = 12.sp, fontWeight = FontWeight.Bold)
             }
         }
     ) {

@@ -189,7 +189,7 @@ object QuickSettingsModel {
             QsTile(
                 id = "bluetooth",
                 label = if (isBtOn) btLabel else "Bluetooth",
-                subtitle = if (isBtOn) "Active" else "Off",
+                subtitle = if (isBtOn) "On" else "Off",
                 icon = if (isBtOn) Icons.Default.Bluetooth else Icons.Default.BluetoothDisabled,
                 isActive = isBtOn,
                 isAvailable = (ctx.getSystemService(Context.BLUETOOTH_SERVICE) as? android.bluetooth.BluetoothManager)?.adapter != null,
@@ -214,8 +214,8 @@ object QuickSettingsModel {
                     CirrusLogicManager.DigitalFilter.FAST_MINIMUM -> "Fast Min"
                     CirrusLogicManager.DigitalFilter.SLOW_LINEAR -> "Slow Linear"
                     CirrusLogicManager.DigitalFilter.SLOW_MINIMUM -> "Slow Min"
-                    CirrusLogicManager.DigitalFilter.NOS -> "NOS (Raw)"
-                    null -> "Unknown — tap to set"
+                    CirrusLogicManager.DigitalFilter.NOS -> "NOS"
+                    null -> "Unknown, tap to set"
                 },
                 icon = Icons.Default.GraphicEq,
                 isActive = currentFilter != null,
@@ -243,7 +243,7 @@ object QuickSettingsModel {
                 subtitle = when (currentGain) {
                     CirrusLogicManager.GainMode.HIGH -> "High (+6 dB)"
                     CirrusLogicManager.GainMode.LOW -> "Low (0 dB)"
-                    null -> "Unknown — tap to set"
+                    null -> "Unknown, tap to set"
                 },
                 icon = Icons.Default.VolumeUp,
                 isActive = isHighGain,
@@ -264,8 +264,8 @@ object QuickSettingsModel {
         list.add(
             QsTile(
                 id = "audio_turbo",
-                label = "Audio Turbo",
-                subtitle = if (isTurbo) "High Rails" else "Standard",
+                label = "High power",
+                subtitle = if (isTurbo) "On" else "Standard",
                 icon = Icons.Default.FlashOn,
                 isActive = isTurbo,
                 onClick = {
@@ -283,8 +283,8 @@ object QuickSettingsModel {
         list.add(
             QsTile(
                 id = "dre_mode",
-                label = "DRE 130dB+",
-                subtitle = if (isDre) "Active" else "Off",
+                label = "DRE",
+                subtitle = if (isDre) "On" else "Off",
                 icon = Icons.Default.Tune,
                 isActive = isDre,
                 onClick = {

@@ -150,7 +150,7 @@ fun MikuWeatherAlertsPanel(modifier: Modifier = Modifier) {
                     }
                     Spacer(Modifier.height(3.dp))
                     Text(
-                        "For a weather radio, scanner or ham handheld. The FM radio in this player cannot tune 162 MHz; the alerts above are the same ones these stations broadcast.",
+                        "For a weather radio, scanner or ham handheld. The FM radio in this player can't tune 162 MHz. The alerts above are the same ones these stations broadcast.",
                         color = WxMuted, fontSize = 7.5.sp
                     )
                     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 2.dp)) {

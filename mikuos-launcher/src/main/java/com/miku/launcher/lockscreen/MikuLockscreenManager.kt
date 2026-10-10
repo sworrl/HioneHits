@@ -271,8 +271,7 @@ object MikuLockscreenManager {
                 CoroutineScope(Dispatchers.IO).launch {
                     RootShell.execFast("cmd lock_settings set-disabled true")
                     RootShell.execFast("settings put secure camera_double_tap_power_gesture_disabled 0")
-                    // Re-enable notification shade (undo previous over-aggressive disable)
-                    RootShell.execFast("cmd statusbar send-disable-flag none")
+                    // No statusbar disable flags here: MikuSystemUI owns them (MikuNotificationShadeService).
                 }
             } catch (_: Throwable) {}
         } else {

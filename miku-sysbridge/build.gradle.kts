@@ -13,7 +13,7 @@ android {
         applicationId = "com.miku.sysbridge"
         minSdk = 26
         targetSdk = 34
-        versionCode = 2
+        versionCode = 3
         versionName = "0.2.0"
     }
 

@@ -1,5 +1,7 @@
 package com.miku.launcher
 
+import android.content.Context
+import android.content.Intent
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.size
@@ -40,6 +42,23 @@ fun rememberUnlockEnabled(id: String): Boolean {
     val ctx = LocalContext.current
     val v by MikuUnlocks.version.collectAsState()
     return remember(id, v) { MikuUnlocks.isEnabled(ctx, id) }
+}
+
+/**
+ * The secrets that are whole apps (Riot mode, the MikuPod eras) open from their card in the
+ * Secrets list. This is the intent for that, or null when the secret is not an app or the app is
+ * not installed. The app checks the unlock itself, so this never bypasses anything.
+ */
+fun secretOpenIntent(ctx: Context, id: String): Intent? {
+    val i = when (id) {
+        MikuSecrets.RIOT_MODE ->
+            Intent("com.miku.riot.action.ENTER").setPackage("com.miku.riot")
+        MikuSecrets.WHEEL_2001, MikuSecrets.WHEEL_2004, MikuSecrets.WHEEL_2005, MikuSecrets.WHEEL_2007 ->
+            Intent("com.miku.wheel.action.ENTER").setPackage("com.miku.wheel")
+                .putExtra("era", id.substringAfterLast('.'))
+        else -> return null
+    }.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+    return if (i.resolveActivity(ctx.packageManager) != null) i else null
 }
 
 /** The Miku Music icon to draw: gold once [MikuSecrets.GOLDEN_ICON] is earned and on. */

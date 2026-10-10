@@ -87,10 +87,10 @@ fun HardwareSettingsScreen(onBack: () -> Unit) {
             containerColor = Color(0xFF0A1E26),
             titleContentColor = Color(0xFFFF6B6B),
             textContentColor = Color.White,
-            title = { Text("⚠ LOW QUALITY MODE", fontWeight = FontWeight.Black, fontFamily = AudiowideFont, fontSize = 14.sp) },
+            title = { Text("TURN OFF DRE?", fontWeight = FontWeight.Black, fontFamily = AudiowideFont, fontSize = 14.sp) },
             text = {
                 Text(
-                    "Turning Dynamic Range Enhancement OFF drops the CS43198 dynamic range (~130 dB → stock) and audibly reduces micro-detail. This is a deliberate downgrade — the player will keep every other hi-fi setting, but DRE stays off until you re-enable it here.",
+                    "Turning Dynamic Range Enhancement off drops the CS43198 dynamic range from about 130 dB back to stock. Every other setting stays as it is, and DRE stays off until you turn it back on here.",
                     fontSize = 12.sp, lineHeight = 16.sp
                 )
             },
@@ -102,10 +102,10 @@ fun HardwareSettingsScreen(onBack: () -> Unit) {
                         CirrusLogicManager.setDreEnabled(ctx, false)
                         refreshAudit()
                     }
-                }) { Text("DISABLE DRE ANYWAY", color = Color(0xFFFF6B6B), fontWeight = FontWeight.Bold) }
+                }) { Text("TURN OFF DRE", color = Color(0xFFFF6B6B), fontWeight = FontWeight.Bold) }
             },
             dismissButton = {
-                TextButton(onClick = { showDreOffConfirm = false }) { Text("KEEP HI-FI", color = MikuCyan, fontWeight = FontWeight.Bold) }
+                TextButton(onClick = { showDreOffConfirm = false }) { Text("KEEP DRE ON", color = MikuCyan, fontWeight = FontWeight.Bold) }
             }
         )
     }
@@ -142,7 +142,7 @@ fun HardwareSettingsScreen(onBack: () -> Unit) {
         // Bespoke Hatsune Miku Audiophile Stage Artwork Backdrop
         Image(
             painter = painterResource(id = R.drawable.miku_audiophile_art),
-            contentDescription = "Miku Audio Controller Artwork",
+            contentDescription = "Miku artwork",
             modifier = Modifier.fillMaxSize(),
             contentScale = ContentScale.Crop
         )
@@ -178,7 +178,7 @@ fun HardwareSettingsScreen(onBack: () -> Unit) {
                 com.miku.player.ui.MikuBackButton(onClick = onBack)
 
                 Text(
-                    "MIKU CYBER AUDIO CONTROLLER",
+                    "MIKU AUDIO SETTINGS",
                     color = MikuCyan,
                     fontSize = 13.5.sp,
                     fontWeight = FontWeight.Black,
@@ -277,7 +277,7 @@ fun HardwareSettingsScreen(onBack: () -> Unit) {
                                 )
                                 Spacer(Modifier.width(8.dp))
                                 Text(
-                                    "CIRRUS LOGIC MASTERHIFI™ DIRECT HAL",
+                                    "CIRRUS LOGIC DAC",
                                     color = Color.White,
                                     fontSize = 11.5.sp,
                                     fontWeight = FontWeight.Bold,
@@ -290,7 +290,7 @@ fun HardwareSettingsScreen(onBack: () -> Unit) {
                             ) {
                                 Icon(
                                     painterResource(id = R.drawable.ic_settings_miku),
-                                    contentDescription = "Refresh Audit",
+                                    contentDescription = "Refresh",
                                     tint = MikuCyan,
                                     modifier = Modifier.size(16.dp)
                                 )
@@ -298,7 +298,7 @@ fun HardwareSettingsScreen(onBack: () -> Unit) {
                         }
                         Spacer(Modifier.height(6.dp))
                         Text(
-                            "Direct register orchestration for dual CS43198 DACs, NOS analog interpolation, hardware gain stages, and bit-perfect UAC2 USB audio.",
+                            "Settings for the dual CS43198 DACs: filter, gain, DRE, high power and USB audio.",
                             color = MikuTextSecondary,
                             fontSize = 10.5.sp,
                             lineHeight = 14.5.sp
@@ -364,7 +364,7 @@ fun HardwareSettingsScreen(onBack: () -> Unit) {
                             .padding(14.dp)
                     ) {
                         Text(
-                            "DIGITAL INTERPOLATION FILTER",
+                            "DIGITAL FILTER",
                             color = MikuCyan,
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Bold,
@@ -372,7 +372,7 @@ fun HardwareSettingsScreen(onBack: () -> Unit) {
                         )
                         Spacer(Modifier.height(4.dp))
                         Text(
-                            "Best Practice: Use NOS (Non-Oversampling) for zero pre/post-ringing analog warmth. Use Fast Roll-off for pristine studio master accuracy.",
+                            "NOS (non-oversampling) has no pre or post-ringing. Fast roll-off has the flattest frequency response.",
                             color = MikuTextSecondary,
                             fontSize = 10.sp,
                             lineHeight = 13.5.sp
@@ -420,7 +420,7 @@ fun HardwareSettingsScreen(onBack: () -> Unit) {
                         Spacer(Modifier.height(14.dp))
 
                         Text(
-                            "ANALOG HEADPHONE GAIN STAGE",
+                            "HEADPHONE GAIN",
                             color = MikuCyan,
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Bold,
@@ -428,7 +428,7 @@ fun HardwareSettingsScreen(onBack: () -> Unit) {
                         )
                         Spacer(Modifier.height(4.dp))
                         Text(
-                            "Best Practice: Use Low Gain (0 dB) for sensitive IEMs to eliminate hiss. Use High Gain (+6 dB) for high-impedance planar and dynamic headphones.",
+                            "Use low gain (0 dB) for sensitive IEMs to keep hiss down. Use high gain (+6 dB) for high-impedance and planar headphones.",
                             color = MikuTextSecondary,
                             fontSize = 10.sp,
                             lineHeight = 13.5.sp
@@ -488,7 +488,7 @@ fun HardwareSettingsScreen(onBack: () -> Unit) {
                         ) {
                             Column(Modifier.weight(1f)) {
                                 Text("Dynamic Range Enhancement (DRE)", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                                Text("Expands CS43198 dynamic range (DRE) for extreme micro-detail extraction.", color = MikuTextSecondary, fontSize = 10.sp)
+                                Text("Raises the CS43198 dynamic range.", color = MikuTextSecondary, fontSize = 10.sp)
                             }
                             Switch(
                                 checked = csDre,
@@ -516,8 +516,8 @@ fun HardwareSettingsScreen(onBack: () -> Unit) {
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Column(Modifier.weight(1f)) {
-                                Text("High-Power Output Turbo (+2 dBV)", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                                Text("Unlocks extra analog voltage swing on 4.4mm balanced output (4.0 Vrms max).", color = MikuTextSecondary, fontSize = 10.sp)
+                                Text("High power (+2 dBV)", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                Text("More output voltage on the 4.4mm balanced jack (4.0 Vrms max).", color = MikuTextSecondary, fontSize = 10.sp)
                             }
                             Switch(
                                 checked = csTurbo,
@@ -552,8 +552,8 @@ fun HardwareSettingsScreen(onBack: () -> Unit) {
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Column(Modifier.weight(1f)) {
-                                Text("AUDIO OUTPUT ROUTING MATRIX", color = MikuCyan, fontSize = 12.sp, fontWeight = FontWeight.Bold, fontFamily = AudiowideFont)
-                                Text("Select primary DAC route or wireless Bluetooth audio stream", color = MikuTextSecondary, fontSize = 10.sp)
+                                Text("AUDIO OUTPUT", color = MikuCyan, fontSize = 12.sp, fontWeight = FontWeight.Bold, fontFamily = AudiowideFont)
+                                Text("Pick the wired DAC output or Bluetooth", color = MikuTextSecondary, fontSize = 10.sp)
                             }
 
                             // Quick Swap Button
@@ -570,7 +570,7 @@ fun HardwareSettingsScreen(onBack: () -> Unit) {
                                 shape = RoundedCornerShape(8.dp),
                                 modifier = Modifier.height(28.dp)
                             ) {
-                                Text("⇄ Swap 4.4mm/BT", color = MikuCyan, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                                Text("Swap 4.4mm/BT", color = MikuCyan, fontSize = 10.sp, fontWeight = FontWeight.Bold)
                             }
                         }
 
@@ -649,8 +649,8 @@ fun HardwareSettingsScreen(onBack: () -> Unit) {
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Column(Modifier.weight(1f)) {
-                                Text("CAR & ANDROID AUTO AUDIO ROUTING", color = MikuCyan, fontSize = 12.sp, fontWeight = FontWeight.Bold, fontFamily = AudiowideFont)
-                                Text("Enforce Hi-Res 3.5mm/4.4mm AUX output in car mode. Blocks USB audio degradation.", color = MikuTextSecondary, fontSize = 10.sp)
+                                Text("CAR AND ANDROID AUTO", color = MikuCyan, fontSize = 12.sp, fontWeight = FontWeight.Bold, fontFamily = AudiowideFont)
+                                Text("Keeps audio on the 3.5mm/4.4mm AUX output in car mode instead of USB.", color = MikuTextSecondary, fontSize = 10.sp)
                             }
                         }
 
@@ -664,8 +664,8 @@ fun HardwareSettingsScreen(onBack: () -> Unit) {
                             Column(Modifier.weight(1f)) {
                                 Text("Block USB Audio in Car / Android Auto", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                                 Text(
-                                    if (!allowUsbAudio) "LOCKED: Audio strictly routes to 3.5mm/4.4mm AUX DAC jack for maximum sound quality (Recommended)."
-                                    else "WARNING: USB Audio enabled (Audio will route to car head unit via USB).",
+                                    if (!allowUsbAudio) "On: audio stays on the 3.5mm/4.4mm AUX jack (recommended)."
+                                    else "Off: audio goes to the car head unit over USB.",
                                     color = if (!allowUsbAudio) MikuCyan else Color(0xFFFF9100),
                                     fontSize = 10.sp
                                 )
@@ -698,7 +698,7 @@ fun HardwareSettingsScreen(onBack: () -> Unit) {
                     ) {
                         Text("DIRECT TRANSPORT AUDIO (DTA)", color = MikuCyan, fontSize = 13.sp, fontWeight = FontWeight.Black, fontFamily = AudiowideFont)
                         Text(
-                            "Bit-perfect route: native sample rate straight to the dual CS43198 DACs, bypassing the Android 48 kHz mixer entirely. Read back live from the audio HAL — this is measured truth, not a claim.",
+                            "Bit-perfect route: the native sample rate goes straight to the dual CS43198 DACs and skips the Android 48 kHz mixer. The state below is read back live from the audio HAL.",
                             color = MikuTextSecondary, fontSize = 10.sp
                         )
                         Spacer(Modifier.height(10.dp))
@@ -715,7 +715,7 @@ fun HardwareSettingsScreen(onBack: () -> Unit) {
                                     st == null -> "Reading HAL…"
                                     direct -> "DIRECT ● bit-perfect to DAC (this app holds the route)"
                                     st.directFlagEnabled -> "DIRECT held by: ${st.holderProcess.ifBlank { "unknown" }}"
-                                    else -> "MIXED — Android 48 kHz pipeline (no direct route active)"
+                                    else -> "MIXED: Android 48 kHz pipeline (no direct route active)"
                                 },
                                 color = if (direct) Color(0xFF00E676) else Color.White,
                                 fontSize = 11.sp, fontWeight = FontWeight.Bold
@@ -757,7 +757,7 @@ fun HardwareSettingsScreen(onBack: () -> Unit) {
                         ) {
                             Column(Modifier.weight(1f)) {
                                 Text("Pause on headphone unplug", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                                Text("Stock HiBy behavior: pulling the jack pauses playback instead of blasting the speaker path.", color = MikuTextSecondary, fontSize = 10.sp)
+                                Text("Stock HiBy behavior: pulling the jack pauses playback instead of switching to the speaker.", color = MikuTextSecondary, fontSize = 10.sp)
                             }
                             Switch(
                                 checked = pauseOnUnplug,
@@ -788,7 +788,7 @@ fun HardwareSettingsScreen(onBack: () -> Unit) {
                             .padding(14.dp)
                     ) {
                         Text(
-                            "AUDIO PLAYBACK CORE — LOCKED HI-FI",
+                            "PLAYBACK ENGINE",
                             color = MikuCyan,
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Bold,
@@ -801,7 +801,7 @@ fun HardwareSettingsScreen(onBack: () -> Unit) {
                             Column {
                                 Text("DirectPCM Bit-Perfect DTA (ExoPlayer)", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                                 Text(
-                                    "Direct hardware sink to the dual CS43198 DACs: 24/32-bit integer passthrough, float → 24-bit, no resampling, DTA DIRECT route when granted. There is no low-quality engine to fall into.",
+                                    "Plays straight to the dual CS43198 DACs: 24/32-bit integer passthrough, float to 24-bit, no resampling, and the DTA direct route when granted. There is no fallback engine.",
                                     color = MikuTextSecondary, fontSize = 10.sp, lineHeight = 13.5.sp
                                 )
                             }
@@ -896,7 +896,7 @@ fun HardwareSettingsScreen(onBack: () -> Unit) {
                         ) {
                             Column(Modifier.weight(1f)) {
                                 Text("USB DAC MODE (UAC2 · M500 as a DAC)", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                                Text("Turns the M500 into a USB sound card for a PC / Mac / phone: host → CS43198 ×2, bit-perfect up to 32-bit/768 kHz. Uses HiBy's OS work-mode switch (its DAC screen opens).", color = MikuTextSecondary, fontSize = 10.sp)
+                                Text("Turns the M500 into a USB sound card for a PC, Mac or phone, bit-perfect up to 32-bit/768 kHz. Uses HiBy's work-mode switch (its DAC screen opens).", color = MikuTextSecondary, fontSize = 10.sp)
                             }
                             Switch(
                                 checked = usbDacActive,
@@ -921,7 +921,7 @@ fun HardwareSettingsScreen(onBack: () -> Unit) {
                                 Text(if (usbDacRate > 0) "${usbDacRate / 1000} kHz / ${usbDacBits}-bit" else "waiting for host audio…", color = MikuCyan, fontSize = 11.sp, fontWeight = FontWeight.Bold, fontFamily = AudiowideFont)
                             }
                             Spacer(Modifier.height(6.dp))
-                            Text("Leaving: this switch puts the gadget back on MTP/ADB. The vendor UAC2 daemon is only fully released by \"Android mode\" on HiBy's DAC screen — open it if the host still sees a sound card.", color = MikuTextSecondary, fontSize = 9.5.sp, lineHeight = 12.sp)
+                            Text("Turning this off puts USB back on MTP/ADB. The vendor UAC2 daemon is only fully released by \"Android mode\" on HiBy's DAC screen. Open it if the host still sees a sound card.", color = MikuTextSecondary, fontSize = 9.5.sp, lineHeight = 12.sp)
                             Spacer(Modifier.height(4.dp))
                             Text("OPEN HIBY DAC SCREEN", color = MikuPink, fontSize = 10.5.sp, fontWeight = FontWeight.Black, fontFamily = AudiowideFont,
                                 modifier = Modifier.clickable { UsbDacManager.openHibyDacScreen(ctx) }.padding(vertical = 6.dp))

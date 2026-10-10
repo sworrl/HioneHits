@@ -580,7 +580,7 @@ fun NowPlayingScreen(
             Spacer(Modifier.weight(1f))
             HapticIconButton(onClick = { InstantRandom.start(ctx) }, flat = true) {
                 Icon(
-                    Icons.Default.Casino, "Random — play anything",
+                    Icons.Default.Casino, "Random: play anything",
                     tint = if (InstantRandom.active) accent2 else accent,
                     modifier = Modifier.size(24.dp)
                 )
@@ -1234,8 +1234,8 @@ fun MikuConnectModal(context: android.content.Context, onClose: () -> Unit) {
     var serverUp by remember { mutableStateOf(com.miku.player.api.MikuApiServer.isServerRunning()) }
     LaunchedEffect(Unit) { while (true) { serverUp = com.miku.player.api.MikuApiServer.isServerRunning(); delay(1500) } }
 
-    val remoteUrl = if (ip != null) "http://$ip:$port" else "No Wi-Fi address — connect to Wi-Fi first"
-    val tvUrl = if (ip != null) "http://$ip:$port/tv" else "No Wi-Fi address — connect to Wi-Fi first"
+    val remoteUrl = if (ip != null) "http://$ip:$port" else "No Wi-Fi address. Connect to Wi-Fi first."
+    val tvUrl = if (ip != null) "http://$ip:$port/tv" else "No Wi-Fi address. Connect to Wi-Fi first."
 
     Box(
         Modifier
@@ -1287,7 +1287,7 @@ fun MikuConnectModal(context: android.content.Context, onClose: () -> Unit) {
             }
 
             Text(
-                "Spotify-Connect style wireless control & TV playback.",
+                "Control playback from a phone or play on a TV.",
                 color = Muted,
                 fontSize = 11.5.sp,
                 modifier = Modifier.padding(vertical = 4.dp)
@@ -1328,11 +1328,11 @@ fun MikuConnectModal(context: android.content.Context, onClose: () -> Unit) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Default.Tv, null, tint = MikuPink, modifier = Modifier.size(18.dp))
                     Spacer(Modifier.width(8.dp))
-                    Text("TV BIG SCREEN STAGE", color = MikuPink, fontSize = 12.sp, fontWeight = FontWeight.Bold, fontFamily = AudiowideFont)
+                    Text("TV", color = MikuPink, fontSize = 12.sp, fontWeight = FontWeight.Bold, fontFamily = AudiowideFont)
                 }
                 Spacer(Modifier.height(4.dp))
                 Text(tvUrl, color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
-                Text("Open on your Smart TV browser to see giant album art, live spectrum, and stream audio to TV sound system.", color = Muted, fontSize = 11.sp)
+                Text("Open this in your TV's browser to show album art and a live spectrum, and to play audio through the TV.", color = Muted, fontSize = 11.sp)
             }
 
             Spacer(Modifier.height(14.dp))

@@ -116,13 +116,15 @@ fun SkinShell(
                     .padding(9.dp)
             ) {
                 Box(Modifier.size(pw, ph)) {
+                    // Reused every frame: the panel redraws on each wheel detent and clock tick.
+                    val dst = remember { Rect() }
                     Canvas(Modifier.size(pw, ph)) {
                         frame.intValue
                         Power.let { renderer.batteryPct = it.pct; renderer.charging = it.charging }
                         renderer.render(skin, System.currentTimeMillis())
                         drawIntoCanvas {
-                            it.nativeCanvas.drawBitmap(renderer.bitmap, null,
-                                Rect(0, 0, size.width.toInt(), size.height.toInt()), noFilter)
+                            dst.set(0, 0, size.width.toInt(), size.height.toInt())
+                            it.nativeCanvas.drawBitmap(renderer.bitmap, null, dst, noFilter)
                         }
                     }
                     skin.stackVersion.intValue
@@ -367,6 +369,9 @@ private fun CoverFlowLayer(skin: Skin, s: CoverFlowScreen, renderer: Renderer, s
     val fade = remember(reflPx) {
         Brush.verticalGradient(listOf(Color(0x8C000000), Color.Black), startY = coverPx.toFloat(), endY = (coverPx + reflPx).toFloat())
     }
+    val noArtFill = remember(coverPx) {
+        Brush.verticalGradient(listOf(Color(0xFF8E959D), Color(0xFF4A5057)), 0f, coverPx.toFloat())
+    }
     val window = 6
     for (k in -window..window) {
         val idx = s.sel + k
@@ -417,7 +422,7 @@ private fun CoverFlowLayer(skin: Skin, s: CoverFlowScreen, renderer: Renderer, s
                             dstOffset = IntOffset(0, coverPx), dstSize = IntSize(coverPx, reflPx))
                     }
                 } else {
-                    drawRect(Brush.verticalGradient(listOf(Color(0xFF8E959D), Color(0xFF4A5057)), 0f, coverPx.toFloat()),
+                    drawRect(noArtFill,
                         size = androidx.compose.ui.geometry.Size(coverPx.toFloat(), coverPx.toFloat()))
                     drawRect(Color(0xFF3A3F45), topLeft = Offset(0f, coverPx.toFloat()),
                         size = androidx.compose.ui.geometry.Size(coverPx.toFloat(), reflPx.toFloat()))

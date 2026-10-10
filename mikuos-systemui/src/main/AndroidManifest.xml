@@ -85,7 +85,7 @@
         <activity
             android:name=".MikuPowerMenuActivity"
             android:exported="true"
-            android:label="Power Core"
+            android:label="Power menu"
             android:launchMode="singleInstance"
             android:excludeFromRecents="true"
             android:noHistory="true"
