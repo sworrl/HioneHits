@@ -28,8 +28,10 @@ import kotlinx.coroutines.withContext
  * How unlocking works, in order:
  *  1. The typed credential goes to LockSettingsService (LockPatternUtils.checkCredential). That is
  *     the system verify path: after a restart it unlocks credential encrypted storage.
- *  2. The success is reported to TrustManager like the stock keyguard does. The MikuOS trust agent
- *     (MikuSystemUI) answers that with a trust grant, which makes the keyguard dismissible.
+ *  2. Like the stock keyguard after a correct entry, it tells LockSettingsService the user is
+ *     present (clears "strong auth required") and reports the successful attempt to TrustManager.
+ *     The MikuOS trust agent (MikuSystemUI) answers with a trust grant, which makes the keyguard
+ *     dismissible.
  *  3. Once the keyguard reports it is no longer locked, this asks it to dismiss. No stock bouncer.
  *
  * Direct boot aware, so it also works before the first unlock after a restart, when only
@@ -133,7 +135,10 @@ class MikuUnlockActivity : ComponentActivity() {
             val result = withContext(Dispatchers.IO) { MikuLock.check(this@MikuUnlockActivity, type, value) }
             when (result) {
                 is MikuLock.Check.Ok -> {
-                    withContext(Dispatchers.IO) { MikuLock.reportAttempt(this@MikuUnlockActivity, true) }
+                    withContext(Dispatchers.IO) {
+                        MikuLock.userPresent(this@MikuUnlockActivity)
+                        MikuLock.reportAttempt(this@MikuUnlockActivity, true)
+                    }
                     waitForTrustThenDismiss()
                 }
                 is MikuLock.Check.Wrong -> {

@@ -202,6 +202,16 @@ object MikuLock {
         if (!dpmOk) reportTrust(ctx, success)
     }
 
+    /**
+     * What the stock keyguard does once a credential was accepted: LockSettingsService clears
+     * the "strong auth required" flags (after restart, lockdown, timeout). Until that happens the
+     * system does not allow trust, so the keyguard could not be dismissed by the trust grant.
+     * Only call this after [check] returned [Check.Ok].
+     */
+    fun userPresent(ctx: Context) {
+        Hidden.call(lpu(ctx), "userPresent", userId())
+    }
+
     /** TrustManager.reportUnlockAttempt only. Needs ACCESS_KEYGUARD_SECURE_STORAGE. */
     fun reportTrust(ctx: Context, success: Boolean) {
         try {

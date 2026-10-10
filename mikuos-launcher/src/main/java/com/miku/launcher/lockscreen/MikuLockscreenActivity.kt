@@ -250,9 +250,22 @@ class MikuLockscreenActivity : ComponentActivity() {
         }
     }
 
+    /**
+     * Tells com.miku.sysbridge (SecurityGuard) whether the lockscreen is up. See
+     * mikuos/docs/security-plan.md, "Requirements for the lockscreen work" item 4.
+     */
+    private fun sendLockState(locked: Boolean) {
+        try {
+            sendBroadcast(
+                Intent("com.miku.sysbridge.LOCK_STATE").setPackage("com.miku.sysbridge").putExtra("locked", locked)
+            )
+        } catch (_: Throwable) {}
+    }
+
     private fun vacate() {
         if (vacated || isFinishing) return
         vacated = true
+        sendLockState(false)
         finishAndRemoveTask()
         @Suppress("DEPRECATION")
         overridePendingTransition(0, com.miku.launcher.R.anim.lockscreen_curtain_up)
@@ -325,6 +338,7 @@ class MikuLockscreenActivity : ComponentActivity() {
             curtainResetState++
         }
         MikuLockscreenManager.setLocked(true)
+        sendLockState(true)
         hideSystemBars()
         @Suppress("DEPRECATION")
         overridePendingTransition(com.miku.launcher.R.anim.lockscreen_curtain_down, 0)

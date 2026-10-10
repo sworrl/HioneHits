@@ -108,6 +108,8 @@ fun CredentialEntry(
         }
     }
     val canType = !busy && !locked
+    // An old error goes away as soon as the next entry starts.
+    val shownError = if (value.isNotEmpty() && !locked) null else error
     fun submit() {
         if (!canType || value.isEmpty()) return
         view.performHapticFeedback(HapticFeedbackConstants.CONFIRM)
@@ -136,14 +138,14 @@ fun CredentialEntry(
             if (type == MikuLock.TYPE_PASSWORD) {
                 PasswordBox(value, enabled = canType, onChange = { if (it.length <= MikuLock.MAX_LENGTH) value = it }, onDone = { submit() })
             } else {
-                PinDots(value.length, error != null)
+                PinDots(value.length, shownError != null)
             }
         }
         Spacer(Modifier.height(10.dp))
         Box(Modifier.height(36.dp), contentAlignment = Alignment.Center) {
             when {
                 busy -> CircularProgressIndicator(color = MikuTealBright, strokeWidth = 2.dp, modifier = Modifier.size(22.dp))
-                error != null -> Text(error, color = MikuPinkBright, fontSize = 12.5.sp, textAlign = TextAlign.Center, lineHeight = 16.sp)
+                shownError != null -> Text(shownError, color = MikuPinkBright, fontSize = 12.5.sp, textAlign = TextAlign.Center, lineHeight = 16.sp)
             }
         }
         Spacer(Modifier.weight(0.4f))
