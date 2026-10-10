@@ -100,7 +100,8 @@ class EditEventActivity : ComponentActivity() {
         }
         val i = intent
         val editId = if (i.action == Intent.ACTION_EDIT) i.data?.let { runCatching { ContentUris.parseId(it) }.getOrNull() } else null
-        setContent { MikuTheme { MikuBackground { EditEventScreen(this, i, editId?.takeIf { it > 0 }) } } }
+        val self = this
+        setContent { MikuTheme { MikuBackground { EditEventScreen(self, i, editId?.takeIf { it > 0 }) } } }
     }
 }
 

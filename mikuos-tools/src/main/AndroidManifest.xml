@@ -79,13 +79,16 @@
             </intent-filter>
         </activity>
 
-        <!-- Same split as stock DeskClock: the non-SET actions on the activity, SET_ALARM and
-             SET_TIMER on an alias, both behind the framework's SET_ALARM permission (a normal
-             permission any assistant or app that wants to set alarms already declares). -->
+        <!-- AlarmClock API. Stock DeskClock put every action behind the framework's SET_ALARM
+             permission (a normal permission that assistants and alarm-setting apps declare).
+             Here the two that only open a screen, SHOW_ALARMS and SHOW_TIMERS, are left open:
+             the MikuOS launcher falls back to SHOW_ALARMS when its clock is tapped and does not
+             hold SET_ALARM, so behind the permission that tap would fail. Everything that
+             changes state (set, dismiss, snooze) stays behind SET_ALARM on the two aliases.
+             HandleApiCalls ignores state-changing actions that arrive through the open entry. -->
         <activity
             android:name=".clock.HandleApiCalls"
             android:exported="true"
-            android:permission="com.android.alarm.permission.SET_ALARM"
             android:directBootAware="true"
             android:excludeFromRecents="true"
             android:launchMode="singleInstance"
@@ -93,15 +96,26 @@
             android:taskAffinity=""
             android:theme="@android:style/Theme.NoDisplay">
             <intent-filter>
-                <action android:name="android.intent.action.DISMISS_ALARM" />
-                <action android:name="android.intent.action.DISMISS_TIMER" />
                 <action android:name="android.intent.action.SHOW_ALARMS" />
                 <action android:name="android.intent.action.SHOW_TIMERS" />
-                <action android:name="android.intent.action.SNOOZE_ALARM" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.VOICE" />
             </intent-filter>
         </activity>
+
+        <activity-alias
+            android:name=".clock.HandleApiCallsProtected"
+            android:exported="true"
+            android:permission="com.android.alarm.permission.SET_ALARM"
+            android:targetActivity=".clock.HandleApiCalls">
+            <intent-filter>
+                <action android:name="android.intent.action.DISMISS_ALARM" />
+                <action android:name="android.intent.action.DISMISS_TIMER" />
+                <action android:name="android.intent.action.SNOOZE_ALARM" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.VOICE" />
+            </intent-filter>
+        </activity-alias>
 
         <activity-alias
             android:name=".clock.HandleSetAlarmApiCalls"

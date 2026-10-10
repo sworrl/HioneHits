@@ -237,9 +237,13 @@ object ListeningProfileManager {
             gain = runCatching { CirrusLogicManager.getGainMode(ctx).sysfsValue }.getOrNull(),
             highPower = runCatching { CirrusLogicManager.isHighPowerEnabled(ctx) }.getOrNull(),
             dre = runCatching { CirrusLogicManager.isDreEnabled(ctx) }.getOrNull(),
-            dsdGainComp = runCatching { CirrusLogicManager.getDsdGainCompensate(ctx) }.getOrNull(),
-            eqEnabled = eq.enabled,
-            eq = eq.curve,
+            // Not snapshotted: it reaches nothing on this firmware (DspKnob.DSD_GAIN_COMP), and
+            // reading its default would record a "change" against every built-in.
+            dsdGainComp = null,
+            // "On but flat" sounds exactly like "off", so it is saved as off; the curve is only
+            // captured when it is actually heard.
+            eqEnabled = eq.audible,
+            eq = if (eq.audible) eq.curve else null,
         )
     }
 

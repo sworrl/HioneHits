@@ -22,6 +22,14 @@ class HandleApiCalls : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val i = intent
+        // Arriving on the activity's own (unprotected) component means the caller was not
+        // checked for SET_ALARM; only the screen-opening actions are honored that way. The
+        // aliases carry the permission and report their own component name.
+        val viaOpenEntry = i?.component?.className == HandleApiCalls::class.java.name
+        if (viaOpenEntry && i?.action !in setOf(AlarmClock.ACTION_SHOW_ALARMS, AlarmClock.ACTION_SHOW_TIMERS)) {
+            Log.w("MikuClock", "ignoring ${i?.action} sent to the unprotected entry")
+            finish(); return
+        }
         try {
             when (i?.action) {
                 AlarmClock.ACTION_SET_ALARM -> setAlarm(i)

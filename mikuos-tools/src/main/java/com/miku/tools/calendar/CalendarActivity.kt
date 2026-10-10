@@ -10,6 +10,7 @@ import android.provider.Settings
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.tween
@@ -90,6 +91,10 @@ class CalendarActivity : ComponentActivity() {
     private val granted = mutableStateOf(false)
     private val deniedForever = mutableStateOf(false)
     private val jumpTo = mutableStateOf<LocalDate?>(null)
+    private val permissionLauncher = registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {
+        granted.value = CalendarRepo.hasPermission(this)
+        if (!granted.value) deniedForever.value = !shouldShowRequestPermissionRationale(Manifest.permission.READ_CALENDAR)
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
@@ -135,13 +140,7 @@ class CalendarActivity : ComponentActivity() {
             // Event reminders are notifications; ask once alongside.
             perms += Manifest.permission.POST_NOTIFICATIONS
         }
-        requestPermissions(perms.toTypedArray(), 7)
-    }
-
-    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        granted.value = CalendarRepo.hasPermission(this)
-        if (!granted.value) deniedForever.value = !shouldShowRequestPermissionRationale(Manifest.permission.READ_CALENDAR)
+        permissionLauncher.launch(perms.toTypedArray())
     }
 }
 
@@ -221,19 +220,23 @@ private fun CalendarApp(jump: LocalDate?, onJumpHandled: () -> Unit) {
                     }
             ) {
                 AnimatedContent(
-                    targetState = Triple(mode, rangeStart, if (mode == CalMode.DAY || mode == CalMode.MONTH) selected else rangeStart),
+                    // Keyed on the period, not the selected day: picking a day inside the month
+                    // must not slide the whole month in again.
+                    targetState = Triple(mode, rangeStart, if (mode == CalMode.DAY) selected else rangeStart),
                     transitionSpec = {
                         val d = dir
                         (slideInHorizontally(tween(220)) { w -> w / 4 * d } + fadeIn(tween(220))) togetherWith
                             (slideOutHorizontally(tween(180)) { w -> -w / 4 * d } + fadeOut(tween(160)))
                     },
                     label = "period"
-                ) { (m, start, _) ->
+                ) { (m, start, day) ->
                     when (m) {
-                        CalMode.MONTH -> MonthView(YearMonth.from(selected), selected, insts, onSelect = { selected = it })
+                        // The grid starts up to six days before the 1st, so a week in is always
+                        // inside the month this content belongs to.
+                        CalMode.MONTH -> MonthView(YearMonth.from(start.plusDays(7)), selected, insts, onSelect = { selected = it })
                         CalMode.WEEK -> TimeGridView((0 until 7).map { start.plusDays(it.toLong()) }, insts, compact = true,
                             onDayTap = { selected = it; mode = CalMode.DAY })
-                        CalMode.DAY -> TimeGridView(listOf(selected), insts, compact = false, onDayTap = {})
+                        CalMode.DAY -> TimeGridView(listOf(day), insts, compact = false, onDayTap = {})
                         CalMode.AGENDA -> AgendaView(start, insts)
                     }
                 }

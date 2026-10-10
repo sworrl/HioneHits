@@ -28,6 +28,7 @@ import androidx.compose.material.icons.outlined.Public
 import androidx.compose.material.icons.outlined.Timer
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -126,7 +127,7 @@ private fun ClockRoot(
 ) {
     val ctx = LocalContext.current
     var tab by remember { mutableIntStateOf(startTab) }
-    if (tabRequest >= 0) { tab = tabRequest; onTabRequestHandled() }
+    LaunchedEffect(tabRequest) { if (tabRequest >= 0) { tab = tabRequest; onTabRequestHandled() } }
     val setTab = { t: Int -> tab = t; ClockStore.prefs(ctx).edit().putInt("lastTab", t).apply() }
     var showSettings by remember { mutableStateOf(false) }
 

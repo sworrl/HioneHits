@@ -38,8 +38,17 @@ class MikuPageActivity : ComponentActivity() {
         fun intent(ctx: Context, route: String, source: Intent? = null): Intent =
             Intent(ctx, MikuPageActivity::class.java).apply {
                 putExtra(EXTRA_ROUTE, route)
-                if (source != null) putExtra(EXTRA_SOURCE, Intent(source).apply { component = null })
+                if (source != null) putExtra(EXTRA_SOURCE, sanitized(source))
             }
+
+        /**
+         * Only the parts pages read. Copying the caller's whole extras bundle could carry a
+         * Parcelable class that does not exist in this process and crash the page on unparcel.
+         */
+        private fun sanitized(src: Intent): Intent = Intent(src.action).apply {
+            setDataAndType(src.data, src.type)
+            runCatching { src.getStringArrayExtra("account_types") }.getOrNull()?.let { putExtra("account_types", it) }
+        }
 
         fun open(ctx: Context, route: String) {
             ctx.startActivity(intent(ctx, route).addFlags(if (ctx is android.app.Activity) 0 else Intent.FLAG_ACTIVITY_NEW_TASK))
