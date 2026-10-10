@@ -316,6 +316,8 @@ object FmRadioManager {
     fun setViewMode(m: QualcommFmHardwareEngine.ViewMode) { engine?.setViewMode(m) }
     fun retrySiphon() { engine?.retrySiphon() }
     fun identifySong() { engine?.identifySong() }
+    /** Blocking terrain fetch for one station; see QualcommFmHardwareEngine.terrainFor. */
+    fun terrainFor(st: FmStationCatalogue.Station): FmStationCatalogue.Station? = engine?.terrainFor(st)
     fun dismissSongId() = FmSongId.dismiss()
 
     /**

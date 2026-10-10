@@ -25,6 +25,21 @@ class BootReceiver : BroadcastReceiver() {
             "stop adbd 2>/dev/null; start adbd 2>/dev/null"
         )
 
+        // Settings parity: claim the settings intents we tie with stock on (see PreferredRouting),
+        // and keep a boot-time HOME placeholder available if stock FallbackHome is gone.
+        if (intent?.action != Intent.ACTION_LOCKED_BOOT_COMPLETED) {
+            val app = context.applicationContext
+            val pending = goAsync()
+            Thread {
+                try {
+                    com.miku.settings.home.MikuFallbackHome.syncWithStock(app)
+                    com.miku.settings.route.PreferredRouting.claim(app)
+                } catch (t: Throwable) {
+                    Log.w("MikuOS_Settings", "settings routing setup failed", t)
+                } finally { pending.finish() }
+            }.start()
+        }
+
     }
 }
 

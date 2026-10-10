@@ -380,6 +380,22 @@ class QualcommFmHardwareEngine(private val context: Context) {
     private val terrainByCall = java.util.concurrent.ConcurrentHashMap<String, FmFresnel.Profile>()
     @Volatile private var terrainListJob: Job? = null
 
+    /**
+     * Terrain for one station on demand (the detail sheet asks when it opens on a station the
+     * background prefetch did not cover). Blocking: call off the main thread. Returns the station
+     * re-annotated with the profile, or null when no profile could be had (no network, no cache).
+     */
+    fun terrainFor(st: FmStationCatalogue.Station): FmStationCatalogue.Station? {
+        val pos = FmStationCatalogue.listenerPosition(context) ?: return null
+        val p = terrainByCall[st.call]
+            ?: runCatching { FmFresnel.profile(context, pos.first, pos.second, st) }.getOrNull()
+            ?: return null
+        if (terrainByCall.put(st.call, p) == null && rawNearby.any { it.call == st.call }) reannotate()
+        val plan = band.value
+        val sweep = bandRssi.value.takeIf { it.isNotEmpty() && sweepPlace != null }
+        return FmReach.annotate(listOf(st), sweep, plan.lowKHz, plan.stepKHz, mapOf(st.call to p)).firstOrNull()
+    }
+
     /** NOAA Weather Radio transmitters near here (reference only; see [FmWeatherRadio]). */
     val weatherRadios = MutableStateFlow<List<FmWeatherRadio.Transmitter>>(emptyList())
 

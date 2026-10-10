@@ -143,6 +143,7 @@ fun Modifier.glassCircle(tint: Color = MikuTeal, fillAlpha: Float = 0.5f): Modif
  * Press feedback: a short scale dip plus a haptic tick. Scale is a graphicsLayer property, so the
  * press animates on the render thread without recomposing or redrawing the content.
  */
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
 fun Modifier.pressable(
     enabled: Boolean = true,

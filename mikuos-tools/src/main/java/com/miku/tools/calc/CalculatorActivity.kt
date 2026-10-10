@@ -50,6 +50,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -72,6 +73,8 @@ import com.miku.tools.ui.MikuMono
 import com.miku.tools.ui.MikuTheme
 import com.miku.tools.ui.glass
 import com.miku.tools.ui.pressable
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -115,12 +118,19 @@ class CalcModel(private val ctx: Context) {
     private fun openParens(): Int = keys.sumOf { k -> k.show.count { it == '(' } - k.show.count { it == ')' } }
     private fun lastEndsValue() = keys.lastOrNull()?.endsValue == true
 
-    /** Live answer shown under the expression; null while it is just a number or incomplete. */
-    fun preview(): String? {
+    /** Snapshot of what the live preview needs, taken on the main thread. */
+    fun previewInput(): Triple<String, String, Boolean>? {
         if (keys.isEmpty() || justEvaluated) return null
         val e = expression
         if (e.none { it in "+−×÷^!%√(" || it.isLetter() || it == 'π' }) return null
-        return runCatching { CalcEngine.format(CalcEngine.evaluate(evalString, degrees)) }.getOrNull()
+        return Triple(e, evalString, degrees)
+    }
+
+    /** Live answer for the expression so far, or null when incomplete. Series evaluation of
+     *  trig and logs at 60 digits can take tens of milliseconds on the M500, so callers run
+     *  this off the main thread. */
+    fun computePreview(input: Triple<String, String, Boolean>?): String? = input?.let { (_, ev, deg) ->
+        runCatching { CalcEngine.format(CalcEngine.evaluate(ev, deg)) }.getOrNull()
     }
 
     private fun touch() { error = null }
@@ -236,9 +246,12 @@ class CalcModel(private val ctx: Context) {
 
     fun clearHistory() { history.clear(); saveHistory() }
 
+    /** Last live preview, published by the display. Used by Copy. */
+    var lastPreview by mutableStateOf<String?>(null)
+
     fun currentResultText(): String? = when {
         justEvaluated -> keys.firstOrNull()?.show
-        else -> preview()
+        else -> lastPreview
     }
 
     /** Paste: accept what people actually copy (1,234.5 / 3*4 / -2) and turn it into keys. */
@@ -333,7 +346,11 @@ fun CalculatorScreen(m: CalcModel) {
 private fun Display(m: CalcModel, modifier: Modifier) {
     val ctx = LocalContext.current
     val expr = m.expression
-    val preview = m.preview()
+    val input = m.previewInput()
+    val preview by produceState<String?>(null, input) {
+        value = withContext(Dispatchers.Default) { m.computePreview(input) }
+        m.lastPreview = value
+    }
     val big by animateFloatAsState(if (m.justEvaluated) 1f else 0f, tween(180), label = "eval")
     val scroll = rememberScrollState()
     LaunchedEffect(expr) { scroll.scrollTo(scroll.maxValue) }
@@ -372,7 +389,7 @@ private fun Display(m: CalcModel, modifier: Modifier) {
         Spacer(Modifier.height(6.dp))
         val sub = when {
             m.error != null -> m.error!!
-            preview != null -> "= " + CalcEngine.group(preview)
+            preview != null && input != null -> "= " + CalcEngine.group(preview!!)
             m.justEvaluated -> m.history.firstOrNull()?.expr?.let { "$it =" } ?: ""
             else -> ""
         }

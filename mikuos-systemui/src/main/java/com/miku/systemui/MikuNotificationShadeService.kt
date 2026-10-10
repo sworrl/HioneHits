@@ -30,25 +30,28 @@ import android.view.accessibility.AccessibilityEvent
 import android.view.animation.DecelerateInterpolator
 import android.view.animation.OvershootInterpolator
 import kotlin.math.abs
+import kotlin.math.min
 import kotlinx.coroutines.launch
 
 /**
- * MikuOS navigation layer (this device's stock SystemUI draws NO nav bar / status bar, so
- * this accessibility service IS the navigation). Pixel-10 gesture model, Miku-themed:
+ * MikuOS navigation layer. AOSP SystemUI still runs and still provides the status bar, the
+ * nav bar inset and the edge back gesture; this accessibility service adds the Miku parts:
  *
- *  • Edge back (both edges, 24dp strips): indicator emerges after 16dp of inward travel,
- *    follows the finger's Y, rubber-bands to 36dp, commits at 32dp (haptic + pop),
- *    un-commits below 22dp, cancels beyond ~55° vertical. Touches that turn out to be
- *    taps / vertical scrolls / long-presses are REPLAYED into the app on release via
- *    dispatchGesture (the a11y MotionEventInjector cancels injected input while a real
- *    finger is still moving, so live pass-through is impossible — replay-on-lift is the
- *    closest achievable behaviour; the strip is toggled NOT_TOUCHABLE during the replay).
- *  • Home pill (132x24dp zone, bottom centre): swipe up 24dp / fling = HOME; swipe up
- *    48dp then pause 150ms = Miku Recents; horizontal 32dp = quick switch (right = previous
- *    app, left = forward again). Pill stretches/lifts with the drag and pops on trigger.
- *  • Top strip (20dp, fully transparent — the status bar lives in the launcher): 24dp
- *    downward drag opens MikuShadeActivity with the drag offset; anything else is replayed.
- *  • Power: framework assistant path owns long-press (see frameworkOwnsPowerLongPress).
+ *  - Back: NOT here any more. AOSP's EdgeBackGestureHandler is the only back handler. It works
+ *    in every app, respects gesture-exclusion rects and immersive mode, and does predictive
+ *    back. Miku used to run its own edge strips as well, so every edge swipe had two handlers
+ *    fighting over it, and an app that excluded its edges (drawers, carousels) still lost them
+ *    to our overlay. The debug back broadcast still works (performGlobalAction).
+ *  - Home pill (full-width zone, as tall as the real nav bar inset): swipe up / fling = HOME;
+ *    swipe up then pause = Miku Recents; horizontal swipe = quick switch (right = previous
+ *    app, left = forward again). Anything that does not turn into one of those is replayed
+ *    into the app underneath, so bottom tabs and buttons in that band still work.
+ *  - Top strip (as tall as the real status bar, transparent): a downward drag opens the Miku
+ *    shade with the drag offset; anything else is replayed.
+ *  - Replay-on-lift: the a11y MotionEventInjector cancels injected input while a real finger is
+ *    still moving, so live pass-through is impossible. The strip keeps the touch, and on release
+ *    re-injects it with dispatchGesture while the strip is NOT_TOUCHABLE.
+ *  - Power: framework assistant path owns long-press (see frameworkOwnsPowerLongPress).
  */
 class MikuNotificationShadeService : AccessibilityService() {
 
@@ -62,24 +65,17 @@ class MikuNotificationShadeService : AccessibilityService() {
 
         // Gesture geometry (dp)
         const val POWER_HOLD_MS = 450L
-        const val EDGE_STRIP_DP = 24
-        // AOSP EdgeBackGestureHandler claims the gesture at the view touch slop and
-        // BackPanelController commits at R.dimen.navigation_edge_action_drag_threshold (16dp).
-        // Ours were 16/32/22, which is roughly double the Pixel's and is why back felt stiff.
-        const val EDGE_CLAIM_DP = 8f
-        const val EDGE_COMMIT_DP = 16f
-        const val EDGE_UNCOMMIT_DP = 10f
-        const val EDGE_MAX_DP = 36f
-        const val EDGE_VERTICAL_INTENT_PX = 20f
-        const val EDGE_MAX_ANGLE_TAN = 1.428f      // tan(55°)
-        // 40dp (was 20) so the shade pull is catchable from content-heavy 3rd-party apps like
-        // Spotify that draw right up to the top edge - a user's downward swipe rarely lands in a
-        // 20dp (33px) band there. Non-pull touches are replayed through to the app below
-        // (replayTouch on ACTION_UP), same as the side edge-back strips.
-        const val TOP_STRIP_DP = 40
+        /**
+         * Fallback height of the top strip when the framework's status_bar_height can't be read.
+         * The strip used to be 40dp so the pull was easy to catch in apps that draw to the top
+         * edge, but at 40dp it sat over app toolbars (every tap there was delayed to lift and
+         * replayed) and over a status bar that is now visible again. It is now exactly the
+         * status bar, which is where a pull starts on every other Android phone.
+         */
+        const val TOP_STRIP_FALLBACK_DP = 24
+        /** Fallback height of the pill zone when navigation_bar_height can't be read. */
+        const val PILL_ZONE_FALLBACK_DP = 24
         const val SHADE_PULL_DP = 24f
-        const val PILL_ZONE_W_DP = 132
-        const val PILL_ZONE_H_DP = 30
         const val PILL_W_DP = 104f
         const val PILL_H_DP = 4f
         const val HOME_DP = 24f
@@ -119,13 +115,10 @@ class MikuNotificationShadeService : AccessibilityService() {
     private val workHandler = Handler(workThread.looper)
     private var overlaysAdded = false
 
-    private var leftEdgeView: EdgeBackView? = null
-    private var rightEdgeView: EdgeBackView? = null
     private var topStripView: ShadePullView? = null
     private var pillView: HomePillView? = null
-    private var leftParams: WindowManager.LayoutParams? = null
-    private var rightParams: WindowManager.LayoutParams? = null
     private var topParams: WindowManager.LayoutParams? = null
+    private var pillParams: WindowManager.LayoutParams? = null
 
     private val density: Float get() = resources.displayMetrics.density
     private fun dp(v: Float): Float = v * density
@@ -156,7 +149,7 @@ class MikuNotificationShadeService : AccessibilityService() {
                     addUpdateListener {
                         val f = it.animatedValue as Float
                         navTeal = MikuAccent.mix(fromTeal, toTeal, f); navTealBright = MikuAccent.mix(fromBright, toBright, f)
-                        pillView?.invalidate(); leftEdgeView?.invalidate(); rightEdgeView?.invalidate()
+                        pillView?.invalidate()
                     }
                     start()
                 }
@@ -260,40 +253,33 @@ class MikuNotificationShadeService : AccessibilityService() {
     }
 
     /**
-     * The AOSP-stock SystemUI we ship still draws its own status bar + pull-down shade, which
-     * competed with the Miku shade ("both stock and our swipe-from-top"). Block the STOCK shade
-     * expansion + notification chrome via StatusBarManager so ONLY the Miku a11y top-strip shade
-     * responds. Our shade is a separate overlay, unaffected by DISABLE_EXPAND.
+     * The AOSP-stock SystemUI we ship still draws its own status bar and pull-down shade, which
+     * competed with the Miku shade ("both stock and our swipe-from-top"). Block the stock shade
+     * expansion and its home/recents via StatusBarManager so only the Miku top strip opens a
+     * shade. Our shade is a separate overlay, unaffected by DISABLE_EXPAND.
      */
     private fun suppressStockShade() {
         runCatching {
             val sb = getSystemService(Context.STATUS_BAR_SERVICE)
-            // Block ONLY the stock shade PANEL (DISABLE_EXPAND) so the Miku top-strip shade is the
-            // one that opens. Deliberately do NOT disable notification ALERTS/ICONS — heads-up
-            // popups + notification sounds are a function the Miku shade does not replicate (it only
-            // lists notifications passively), so killing them would lose notifications entirely.
-            // Blank the STOCK status bar (clock + system-info/battery/signal + notification icons)
-            // and block its shade — the Miku launcher draws its own top bar, so the stock one must
-            // show nothing. Deliberately NOT DISABLE_NOTIFICATION_ALERTS (0x40000) so heads-up
-            // popups + sounds still work (the Miku shade doesn't replicate those).
+            // What stays disabled, and why:
+            //   EXPAND  the stock shade panel. The Miku top strip opens the Miku shade instead.
+            //   HOME, RECENT  the stock home handle and recents. The Miku pill owns those gestures.
+            //           (The handle itself is also made transparent by the MikuSystemUIOverlay
+            //           RRO, since DISABLE_HOME alone did not always stop it drawing.)
+            // What is deliberately NOT disabled any more:
+            //   CLOCK, SYSTEM_INFO, NOTIFICATION_ICONS  blanking them left third-party apps with
+            //           an empty black status bar (the launcher hides the bars itself, so it was
+            //           only ever other apps that saw it).
+            //   BACK    AOSP's edge back gesture is now the only back handler on the device.
+            //   NOTIFICATION_ALERTS  heads-up popups and sounds still come from stock SystemUI.
+            // StatusBarManager.disable() replaces the whole set on every call, so the flags that
+            // were set before are cleared simply by not passing them.
             val DISABLE_EXPAND = 0x00010000
-            val DISABLE_NOTIFICATION_ICONS = 0x00020000
-            val DISABLE_SYSTEM_INFO = 0x00100000
-            val DISABLE_CLOCK = 0x00800000
-            // THE DUPLICATE GESTURE PILL. AOSP SystemUI draws its own NavigationBar0 and
-            // SecondaryHomeHandle0 next to our accessibility home pill, so there are two handles
-            // and the bland one is not ours. It cannot be removed with an RRO: idmap2 refuses to
-            // map android:bool/config_showNavigationBar on this device (proven 2026-09-27 — the
-            // resource exists in framework-res AND in our overlay, and the idmap carries only the
-            // other two entries), so baking it would change nothing. StatusBarManager's disable
-            // flags are the runtime lever that is actually ours to pull.
             val DISABLE_HOME = 0x00200000
-            val DISABLE_BACK = 0x00400000
             val DISABLE_RECENT = 0x01000000
-            val flags = DISABLE_EXPAND or DISABLE_NOTIFICATION_ICONS or DISABLE_SYSTEM_INFO or
-                DISABLE_CLOCK or DISABLE_HOME or DISABLE_BACK or DISABLE_RECENT
+            val flags = DISABLE_EXPAND or DISABLE_HOME or DISABLE_RECENT
             sb.javaClass.getMethod("disable", Int::class.javaPrimitiveType).invoke(sb, flags)
-            Log.i(TAG, "stock status bar blanked, shade blocked, stock nav disabled (alerts/sounds preserved)")
+            Log.i(TAG, "stock shade blocked, stock home/recents disabled; status bar and back left to AOSP")
         }.onFailure { Log.w(TAG, "suppressStockShade failed: $it") }
     }
 
@@ -312,49 +298,53 @@ class MikuNotificationShadeService : AccessibilityService() {
         ).apply { this.gravity = gravity }
 
     /**
-     * Adds the four navigation overlays. There must be exactly ONE of each on screen — most of
-     * all the home pill — so any previous set is torn down first (onServiceConnected can fire
-     * again after a rebind on the SAME instance, which would otherwise stack a second pill).
+     * A framework dimen in px, or [fallbackDp] when the resource is missing or reads as zero.
+     * The strips size themselves from these so they cover exactly the real bars, no more.
+     */
+    private fun systemDimenPx(name: String, fallbackDp: Int): Int {
+        val id = resources.getIdentifier(name, "dimen", "android")
+        val px = if (id != 0) runCatching { resources.getDimensionPixelSize(id) }.getOrDefault(0) else 0
+        return if (px > 0) px else dp(fallbackDp.toFloat()).toInt()
+    }
+
+    /**
+     * Adds the navigation overlays (top pull strip, home pill). There must be exactly ONE of each
+     * on screen, most of all the home pill, so any previous set is torn down first
+     * (onServiceConnected can fire again after a rebind on the SAME instance, which would
+     * otherwise stack a second pill).
      */
     private fun addOverlays() {
-        if (overlaysAdded || leftEdgeView != null || rightEdgeView != null ||
-            topStripView != null || pillView != null) {
+        if (overlaysAdded || topStripView != null || pillView != null) {
             Log.i(TAG, "addOverlays: tearing down previous overlay set first")
             removeOverlays()
         }
-        val dm = resources.displayMetrics
-        val topPx = dp(TOP_STRIP_DP.toFloat()).toInt()
-        val pillZoneH = dp(PILL_ZONE_H_DP.toFloat()).toInt()
-        val edgeW = dp(EDGE_STRIP_DP.toFloat()).toInt()
-        val edgeH = (dm.heightPixels - topPx - pillZoneH).coerceAtLeast(dp(200f).toInt())
+        val topPx = systemDimenPx("status_bar_height", TOP_STRIP_FALLBACK_DP)
+        // navigation_bar_height is the inset apps see (41px here); navigation_bar_frame_height is
+        // the taller window AOSP draws in. The inset is the band apps already keep clear.
+        val pillZoneH = systemDimenPx("navigation_bar_height", PILL_ZONE_FALLBACK_DP)
+            .coerceIn(dp(16f).toInt(), dp(48f).toInt())
+        Log.i(TAG, "overlays: top strip ${topPx}px, pill zone ${pillZoneH}px")
 
-        leftEdgeView = EdgeBackView(this, isLeft = true).also { v ->
-            leftParams = overlayParams(edgeW, edgeH, Gravity.TOP or Gravity.START).apply { y = topPx }
-            runCatching { windowManager.addView(v, leftParams) }.onFailure { Log.w(TAG, "left edge add: $it") }
-        }
-        rightEdgeView = EdgeBackView(this, isLeft = false).also { v ->
-            rightParams = overlayParams(edgeW, edgeH, Gravity.TOP or Gravity.END).apply { y = topPx }
-            runCatching { windowManager.addView(v, rightParams) }.onFailure { Log.w(TAG, "right edge add: $it") }
-        }
         topStripView = ShadePullView(this).also { v ->
             topParams = overlayParams(WindowManager.LayoutParams.MATCH_PARENT, topPx, Gravity.TOP or Gravity.CENTER_HORIZONTAL)
             runCatching { windowManager.addView(v, topParams) }.onFailure { Log.w(TAG, "top strip add: $it") }
         }
         pillView = HomePillView(this).also { v ->
-            // Full-width bottom strip so the home swipe is catchable across the whole bottom edge,
-            // not only the centre 132dp (3rd-party apps like Spotify own the centre-bottom). The pill
-            // is still DRAWN centred (onDraw uses width/2), so it looks identical.
-            val p = overlayParams(WindowManager.LayoutParams.MATCH_PARENT, pillZoneH, Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL)
-            runCatching { windowManager.addView(v, p) }.onFailure { Log.w(TAG, "pill add: $it") }
+            // Full width so the home swipe is catchable across the whole bottom edge, not only the
+            // centre (3rd-party apps like Spotify own the centre-bottom). Touches that are not a
+            // gesture are replayed, so app bottom tabs in this band still get their taps. The pill
+            // is still DRAWN centred (onDraw uses width/2).
+            pillParams = overlayParams(WindowManager.LayoutParams.MATCH_PARENT, pillZoneH, Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL)
+            runCatching { windowManager.addView(v, pillParams) }.onFailure { Log.w(TAG, "pill add: $it") }
         }
         overlaysAdded = true
     }
 
     private fun removeOverlays() {
-        listOf(leftEdgeView, rightEdgeView, topStripView, pillView).forEach { v ->
+        listOf(topStripView, pillView).forEach { v ->
             v?.let { runCatching { windowManager.removeView(it) } }
         }
-        leftEdgeView = null; rightEdgeView = null; topStripView = null; pillView = null
+        topStripView = null; pillView = null; topParams = null; pillParams = null
         overlaysAdded = false
     }
 
@@ -681,201 +671,6 @@ class MikuNotificationShadeService : AccessibilityService() {
         }
     }
 
-    // ================================================================== EDGE BACK
-
-    private enum class Mode { UNDECIDED, BACK, FORWARD, CANCELLED }
-
-    inner class EdgeBackView(context: Context, private val isLeft: Boolean) : View(context) {
-        private var mode = Mode.UNDECIDED
-        private var startX = 0f; private var startY = 0f
-        private var curX = 0f; private var curY = 0f
-        private var committed = false
-        private var down = false
-        private val points = ArrayList<TouchPt>(64)
-
-        // Visual state
-        private var visProgress = 0f          // 0..1 extension of the indicator
-        private var visY = 0f
-        private var pop = 1f
-        private var retractAnim: ValueAnimator? = null
-        private var popAnim: ValueAnimator? = null
-        private var commitFade = 0f          // chevron fade-in on commit (120ms), independent of travel
-        private var fadeAnim: ValueAnimator? = null
-
-        private val fillPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL; color = 0xFF39C5BB.toInt() }
-        private val glowPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL; color = 0x5500F5D4 }
-        private val glyphPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            color = Color.WHITE; textAlign = Paint.Align.CENTER; textSize = dp(12f)
-            setShadowLayer(dp(4f), 0f, 0f, 0xAA00F5D4.toInt())
-        }
-        private val chevronPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            style = Paint.Style.STROKE; strokeWidth = dp(2.2f); strokeCap = Paint.Cap.ROUND; strokeJoin = Paint.Join.ROUND
-            color = 0xFFF0FDFB.toInt()
-        }
-        private val rect = RectF()
-        private val chevron = Path()
-
-        private fun inward(x: Float) = if (isLeft) (x - startX) else (startX - x)
-
-        override fun onDraw(canvas: Canvas) {
-            super.onDraw(canvas)
-            if (visProgress <= 0.01f) return
-            val h = dp(34f)
-            val maxW = dp(EDGE_MAX_DP)
-            val w = dp(8f) + maxW * visProgress
-            val cy = visY.coerceIn(h / 2f, height - h / 2f)
-            val cx = if (isLeft) w / 2f - dp(6f) else width - w / 2f + dp(6f)
-            canvas.save()
-            canvas.scale(pop, pop, cx, cy)
-            // Capsule that emerges from the edge ("D" shape)
-            val left = if (isLeft) -dp(20f) else width - w
-            val right = if (isLeft) w else width + dp(20f)
-            // soft Miku glow (radial shader — stays hardware-accelerated)
-            val gcx = if (isLeft) right - dp(12f) else left + dp(12f)
-            val gb = navTealBright and 0x00FFFFFF
-            glowPaint.shader = android.graphics.RadialGradient(gcx, cy, h * 1.6f,
-                intArrayOf(gb or ((0x80 * visProgress).toInt() shl 24), gb), null, android.graphics.Shader.TileMode.CLAMP)
-            rect.set(gcx - h * 1.6f, cy - h * 1.6f, gcx + h * 1.6f, cy + h * 1.6f)
-            canvas.drawOval(rect, glowPaint)
-            rect.set(left, cy - h / 2f, right, cy + h / 2f)
-            fillPaint.color = navTeal
-            fillPaint.alpha = (0xF2 * (0.55f + 0.45f * visProgress)).toInt()
-            canvas.drawRoundRect(rect, h, h, fillPaint)
-            // Heart glyph + chevron pointing inward (chevron fades in as we approach commit)
-            val gx = if (isLeft) (right - dp(12f)) else (left + dp(12f))
-            glyphPaint.alpha = (255 * visProgress).toInt()
-            canvas.drawText("♥", gx, cy + dp(4.5f), glyphPaint)
-            val chevAlpha = maxOf(((visProgress - 0.55f) / 0.45f).coerceIn(0f, 1f), commitFade)
-            if (chevAlpha > 0f) {
-                chevronPaint.alpha = (255 * chevAlpha).toInt()
-                val s = dp(4f)
-                val ax = if (isLeft) gx + dp(9f) else gx - dp(9f)
-                chevron.reset()
-                if (isLeft) { chevron.moveTo(ax - s, cy - s); chevron.lineTo(ax, cy); chevron.lineTo(ax - s, cy + s) }
-                else { chevron.moveTo(ax + s, cy - s); chevron.lineTo(ax, cy); chevron.lineTo(ax + s, cy + s) }
-                canvas.drawPath(chevron, chevronPaint)
-            }
-            canvas.restore()
-        }
-
-        private fun animateRetract() {
-            retractAnim?.cancel()
-            fadeAnim?.cancel()
-            retractAnim = ValueAnimator.ofFloat(visProgress, 0f).apply {
-                duration = MikuMotion.ms(160).toLong(); interpolator = MikuMotion.decel()
-                addUpdateListener { visProgress = it.animatedValue as Float; commitFade *= 0.85f; invalidate() }
-                start()
-            }
-        }
-
-        /** Commit: 1.2x pop with overshoot (Pixel back-arrow "click"). */
-        private fun animatePop() {
-            popAnim?.cancel()
-            popAnim = ValueAnimator.ofFloat(1f, 1.2f, 1f).apply {
-                duration = MikuMotion.ms(160).toLong(); interpolator = MikuMotion.overshoot(1.5f)
-                addUpdateListener { pop = it.animatedValue as Float; invalidate() }
-                start()
-            }
-        }
-
-        /** Chevron fades in over 120ms at commit and out over 100ms on un-commit. */
-        private fun animateCommitFade(on: Boolean) {
-            fadeAnim?.cancel()
-            fadeAnim = ValueAnimator.ofFloat(commitFade, if (on) 1f else 0f).apply {
-                duration = MikuMotion.ms(if (on) 120 else 100).toLong(); interpolator = MikuMotion.decel()
-                addUpdateListener { commitFade = it.animatedValue as Float; invalidate() }
-                start()
-            }
-        }
-
-        override fun onTouchEvent(event: MotionEvent): Boolean {
-            val now = SystemClock.uptimeMillis()
-            when (event.actionMasked) {
-                MotionEvent.ACTION_DOWN -> {
-                    if (replayInFlight) return false          // our own injected touch
-                    retractAnim?.cancel()
-                    down = true; committed = false; mode = Mode.UNDECIDED
-                    startX = event.rawX; startY = event.rawY; curX = startX; curY = startY
-                    points.clear(); points += TouchPt(event.rawX, event.rawY, now)
-                    visY = event.y; visProgress = 0f; pop = 1f; commitFade = 0f
-                    invalidate()
-                    return true
-                }
-                MotionEvent.ACTION_MOVE -> {
-                    if (!down) return false
-                    curX = event.rawX; curY = event.rawY
-                    if (points.size < 400) points += TouchPt(curX, curY, now)
-                    val dxIn = inward(curX)
-                    val dy = abs(curY - startY)
-                    when (mode) {
-                        Mode.UNDECIDED -> {
-                            if (dxIn >= dp(EDGE_CLAIM_DP)) {
-                                mode = if (dy <= dxIn * EDGE_MAX_ANGLE_TAN) Mode.BACK else Mode.FORWARD
-                                if (mode == Mode.BACK) MikuHaptics.tick(this)     // light: gesture claimed
-                            } else if (dy >= EDGE_VERTICAL_INTENT_PX) {
-                                mode = Mode.FORWARD          // vertical intent first → belongs to the app
-                            }
-                        }
-                        Mode.BACK -> {
-                            if (!committed && dy > dxIn * EDGE_MAX_ANGLE_TAN) {
-                                mode = Mode.CANCELLED; animateRetract(); return true
-                            }
-                            val wasCommitted = committed
-                            if (!committed && dxIn >= dp(EDGE_COMMIT_DP)) committed = true
-                            else if (committed && dxIn < dp(EDGE_UNCOMMIT_DP)) committed = false
-                            if (committed && !wasCommitted) {
-                                MikuHaptics.confirm(this)                          // stronger: commit
-                                animatePop(); animateCommitFade(true)
-                            } else if (!committed && wasCommitted) {
-                                MikuHaptics.tick(this)
-                                animateCommitFade(false)
-                            }
-                        }
-                        else -> {}
-                    }
-                    if (mode == Mode.BACK) {
-                        val max = dp(EDGE_MAX_DP)
-                        val raw = dxIn.coerceAtLeast(0f)
-                        // rubber-band past the max: only 15% of the extra travel shows
-                        val eff = if (raw <= max) raw else max + (raw - max) * 0.15f
-                        visProgress = (eff / max).coerceIn(0f, 1.12f)
-                        visY += (event.y - visY) * 0.3f                 // Pixel: loose 0.3 lerp follow
-                        invalidate()
-                    }
-                    return true
-                }
-                MotionEvent.ACTION_UP -> {
-                    if (!down) return false
-                    down = false
-                    points += TouchPt(event.rawX, event.rawY, now)
-                    Log.i(TAG, "edge up: left=$isLeft mode=$mode committed=$committed dxIn=${inward(event.rawX).toInt()} pts=${points.size}")
-                    when (mode) {
-                        Mode.BACK -> {
-                            if (committed) {
-                                MikuHaptics.confirm(this)
-                                performGlobalAction(GLOBAL_ACTION_BACK)
-                            }
-                            animateRetract()
-                        }
-                        Mode.UNDECIDED, Mode.FORWARD -> {
-                            val (v, p) = if (isLeft) leftEdgeView to leftParams else rightEdgeView to rightParams
-                            replayTouch(ArrayList(points), v, p)
-                        }
-                        Mode.CANCELLED -> {}
-                    }
-                    committed = false
-                    return true
-                }
-                MotionEvent.ACTION_CANCEL -> {
-                    down = false; committed = false; mode = Mode.CANCELLED
-                    animateRetract()
-                    return true
-                }
-            }
-            return super.onTouchEvent(event)
-        }
-    }
-
     // ================================================================== TOP SHADE PULL
 
     inner class ShadePullView(context: Context) : View(context) {
@@ -964,6 +759,8 @@ class MikuNotificationShadeService : AccessibilityService() {
         private var holdScheduled = false  // holdCheck poll is running; see ACTION_MOVE
         private var relaxAnim: ValueAnimator? = null
         private var popAnim: ValueAnimator? = null
+        /** The whole touch, for replaying it into the app when it was not a gesture. */
+        private val points = ArrayList<TouchPt>(64)
 
         private val pillPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL; color = 0xD9FFFFFF.toInt() }
         private val glowPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL; color = 0x3800F5D4 }
@@ -1020,7 +817,9 @@ class MikuNotificationShadeService : AccessibilityService() {
             val w = width.toFloat(); val h = height.toFloat()
             val pw = dp(PILL_W_DP) * (1f + 0.18f * stretch)
             val ph = dp(PILL_H_DP)
-            val lift = dp(12f) * stretch
+            // The zone is only as tall as the nav inset (24dp here), so the lift is capped to
+            // keep the pill and its glow inside the window instead of clipping off the top.
+            val lift = min(dp(12f), (h - dp(8f) - ph - dp(7f)).coerceAtLeast(0f)) * stretch
             val cx = w / 2f + shiftX
             val bottom = h - dp(8f) - lift
             canvas.save()
@@ -1080,9 +879,11 @@ class MikuNotificationShadeService : AccessibilityService() {
         override fun onTouchEvent(event: MotionEvent): Boolean {
             when (event.actionMasked) {
                 MotionEvent.ACTION_DOWN -> {
+                    if (replayInFlight) return false          // our own injected touch
                     relaxAnim?.cancel()
                     down = true; fired = false; armed = false; claimed = false; holdScheduled = false
                     startX = event.rawX; startY = event.rawY; curX = startX; curY = startY
+                    points.clear(); points += TouchPt(startX, startY, SystemClock.uptimeMillis())
                     pausePrevSpeed = 0f; pauseIsPaused = false; pauseEverPaused = false
                     pauseDisabled = false; pauseSlowCount = 0
                     pauseLastTime = event.eventTime; pauseLastY = event.rawY
@@ -1095,6 +896,7 @@ class MikuNotificationShadeService : AccessibilityService() {
                     if (!down) return false
                     velocity?.addMovement(event)
                     curX = event.rawX; curY = event.rawY
+                    if (points.size < 400) points += TouchPt(curX, curY, SystemClock.uptimeMillis())
                     val dyUp = (startY - curY).coerceAtLeast(0f)
                     val dx = curX - startX
                     val max = dp(RECENTS_DP)
@@ -1149,6 +951,12 @@ class MikuNotificationShadeService : AccessibilityService() {
                             animatePop()
                             quickSwitch(if (dx > 0) 1 else -1)
                         }
+                    }
+                    // Not a gesture (a tap on an app's bottom tab, a short scroll, a long press):
+                    // hand it to the app underneath.
+                    if (event.actionMasked == MotionEvent.ACTION_UP && !fired) {
+                        points += TouchPt(event.rawX, event.rawY, SystemClock.uptimeMillis())
+                        replayTouch(ArrayList(points), pillView, pillParams)
                     }
                     armed = false
                     animateRelax()

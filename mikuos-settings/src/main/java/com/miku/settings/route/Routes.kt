@@ -107,7 +107,7 @@ object Routes {
                 intent.getStringExtra(EXTRA_LISTENER)?.let { Dest.Page("listener/${Uri.encode(it)}") } ?: Dest.Page("access/listener")
 
             // ---- Notifications & sound
-            Settings.ACTION_NOTIFICATION_SETTINGS, Settings.ACTION_ALL_APPS_NOTIFICATION_SETTINGS -> Dest.Page("notifications")
+            "android.settings.NOTIFICATION_SETTINGS", Settings.ACTION_ALL_APPS_NOTIFICATION_SETTINGS -> Dest.Page("notifications")
             Settings.ACTION_APP_NOTIFICATION_SETTINGS -> pkgOf(intent)?.let { Dest.Page("appnotif/${Uri.encode(it)}") } ?: Dest.Page("notifications")
             Settings.ACTION_CHANNEL_NOTIFICATION_SETTINGS -> {
                 val p = pkgOf(intent); val ch = intent.getStringExtra(EXTRA_CHANNEL_ID)
@@ -158,7 +158,7 @@ object Routes {
             "android.settings.USER_SETTINGS" -> Dest.Page("users")
             Settings.ACTION_APPLICATION_DEVELOPMENT_SETTINGS, "com.android.settings.APPLICATION_DEVELOPMENT_SETTINGS" -> Dest.Page("developer")
             "com.android.settings.action.FACTORY_RESET" -> Dest.Page("reset")
-            Settings.ACTION_DEVICE_INFO_SETTINGS, Settings.ACTION_DEVICE_NAME, "android.settings.HIBY_SETTINGS_ABOUT",
+            Settings.ACTION_DEVICE_INFO_SETTINGS, "android.settings.DEVICE_NAME", "android.settings.HIBY_SETTINGS_ABOUT",
             "com.android.settings.ANDROID_VERSION_SETTINGS" -> Dest.Section("about")
 
             // ---- Not applicable to a DAP with no biometrics, work profile, calling or stylus

@@ -417,5 +417,3 @@ fun InternetPage() {
         }, onDismiss = { dnsEdit = false })
 }
 
-@Suppress("unused")
-private val sdk = Build.VERSION.SDK_INT

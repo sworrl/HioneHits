@@ -60,7 +60,7 @@ import kotlinx.coroutines.withContext
 import kotlin.math.roundToInt
 
 /**
- * "Set as wallpaper" for ATTACH_DATA image/* and the system SET_WALLPAPER chooser entry.
+ * "Set as wallpaper" for ATTACH_DATA on images and the system SET_WALLPAPER chooser entry.
  *
  * The image is centre-cropped to the panel's aspect and scaled to its real pixel size before it
  * is handed to WallpaperManager. Handing over the full photo would make the system keep a 12 MP

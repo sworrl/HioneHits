@@ -230,7 +230,7 @@ class CameraEngine(private val ctx: Context) {
 
     fun setTorch(on: Boolean) { if (hasFlash) camera?.cameraControl?.enableTorch(on) }
 
-    fun setZoom(r: Float) {
+    fun applyZoom(r: Float) {
         val c = r.coerceIn(minZoom, maxZoom)
         zoom = c
         camera?.cameraControl?.setZoomRatio(c)

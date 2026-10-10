@@ -200,7 +200,8 @@ object CalcEngine {
                     if (peek() is Tok.RParen) p++ else if (p < t.size) fail("Check the parentheses")
                     v
                 }
-                is Tok.Sqrt -> { p++; sqrt(postfixArg()) }
+                // √−4 should say "not a real number", not "check the expression".
+                is Tok.Sqrt -> { p++; sqrt(if (isOp('−')) unary() else postfixArg()) }
                 is Tok.Fn -> {
                     p++
                     val arg = if (peek() is Tok.LParen) primary() else postfixArg()

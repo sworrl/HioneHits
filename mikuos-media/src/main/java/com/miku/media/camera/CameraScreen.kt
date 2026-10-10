@@ -372,7 +372,7 @@ private fun Viewfinder(
                     }
                 }
                 .pointerInput(Unit) {
-                    detectTransformGestures { _, _, z, _ -> if (z != 1f) engine.setZoom(engine.zoom * z) }
+                    detectTransformGestures { _, _, z, _ -> if (z != 1f) engine.applyZoom(engine.zoom * z) }
                 }
         ) {
             Canvas(Modifier.fillMaxSize()) {
@@ -467,7 +467,7 @@ private fun Viewfinder(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             if (engine.maxZoom > 1.05f) {
-                ZoomChips(engine.zoom, engine.maxZoom) { engine.setZoom(it) }
+                ZoomChips(engine.zoom, engine.maxZoom) { engine.applyZoom(it) }
                 Spacer(Modifier.height(10.dp))
             }
             if (mode is CaptureMode.Free && !recording) {

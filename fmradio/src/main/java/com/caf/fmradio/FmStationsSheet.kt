@@ -352,7 +352,16 @@ private fun StationRow(
 @Composable
 fun ColumnScope.FmStationDetail(st: FmState, target: PresetTarget, onClose: () -> Unit) {
     // Prefer the live copy: terrain and measurements land in the engine's list after the sheet opens.
-    val s = target.station?.let { t -> st.nearbyStations.firstOrNull { it.call == t.call } ?: t }
+    val listed = target.station?.let { t -> st.nearbyStations.firstOrNull { it.call == t.call } ?: t }
+    // Stations the background prefetch skipped (search results, far ones) get their terrain
+    // fetched here, once, when the sheet opens on them.
+    var fetched by remember(target) { mutableStateOf<FmStationCatalogue.Station?>(null) }
+    LaunchedEffect(target, listed?.fresnelFraction) {
+        if (listed != null && listed.fresnelFraction == null) {
+            fetched = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { FmRadioManager.terrainFor(listed) }
+        }
+    }
+    val s = if (listed?.fresnelFraction == null) fetched ?: listed else listed
     val color = s?.let { stationColor(it.call) } ?: frequencyColor(target.khz)
     val fav = st.favorites.any { abs(it - target.khz) <= 60 }
     val tunable = target.khz in st.band.lowKHz..st.band.highKHz

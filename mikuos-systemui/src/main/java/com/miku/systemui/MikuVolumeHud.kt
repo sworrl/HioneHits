@@ -116,11 +116,45 @@ class MikuVolumeHud(
         val km = ctx.getSystemService(Context.KEYGUARD_SERVICE) as? android.app.KeyguardManager
         if (km?.isKeyguardLocked == true) return true
 
-        val fgPkg = lastForegroundPkg ?: runCatching { MikuTaskStack.topTask(ctx)?.second?.packageName }.getOrNull()
-        val fgCls = lastForegroundCls ?: runCatching { MikuTaskStack.topTask(ctx)?.second?.className }.getOrNull()
+        // The LIVE top task, not only the cached window event. The service's notificationTimeout
+        // (100ms) merges window-state events, so after leaving Miku Music for a third-party app
+        // the cache could still say Miku Music and the HUD stayed suppressed in that app.
+        val live = liveTop()
+        val fgPkg = live?.packageName ?: lastForegroundPkg
+        val fgCls = live?.className ?: lastForegroundCls
         if (isSelfDrawingSurface(fgPkg, fgCls)) return true
 
         return false
+    }
+
+    private var liveTopAt = 0L
+    private var liveTopCached: android.content.ComponentName? = null
+
+    /** Top activity from getRunningTasks, cached 300ms so a fast knob spin is one binder call, not ten. */
+    private fun liveTop(): android.content.ComponentName? {
+        val now = android.os.SystemClock.uptimeMillis()
+        if (now - liveTopAt > 300L) {
+            liveTopCached = runCatching { MikuTaskStack.topTask(ctx)?.second }.getOrNull()
+            liveTopAt = now
+        }
+        return liveTopCached
+    }
+
+    /**
+     * Distance in px between the right screen edge and the right bar. The bar used to sit 4dp
+     * from the edge, inside AOSP's back-gesture zone, so for the 2.4s it was up a right-edge back
+     * swipe landed on the HUD instead. Now it starts just inside that zone: the framework's
+     * config_backGestureInset times the user's right-side scale, the same numbers
+     * EdgeBackGestureHandler uses (50px on this device). Falls back to 30dp.
+     */
+    private fun rightBarInsetPx(): Int {
+        val id = ctx.resources.getIdentifier("config_backGestureInset", "dimen", "android")
+        val base = if (id != 0) runCatching { ctx.resources.getDimensionPixelSize(id) }.getOrDefault(0) else 0
+        val scale = runCatching {
+            Settings.Secure.getFloat(ctx.contentResolver, "back_gesture_inset_scale_right", 1f)
+        }.getOrDefault(1f)
+        val px = (base * scale).toInt()
+        return (if (px > 0) px else dp(30f).toInt()) + dp(4f).toInt()
     }
 
     fun stepVolume(delta: Int) {
@@ -203,7 +237,7 @@ class MikuVolumeHud(
                 ).apply {
                     gravity = Gravity.TOP or Gravity.END
                     y = dp(92f).toInt()
-                    x = dp(4f).toInt()
+                    x = rightBarInsetPx()
                 }
             }
             try {

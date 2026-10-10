@@ -109,20 +109,34 @@ fun openAospSettings(ctx: Context, action: String, fallbackMsg: String = "Not av
     try { Toast.makeText(ctx, fallbackMsg, Toast.LENGTH_SHORT).show() } catch (_: Throwable) {}
 }
 
-enum class SettingsSection(val title: String, val icon: ImageVector, val desc: String) {
+/**
+ * Home tiles. A tile with a [route] opens a MikuPageActivity page (the screens that replace stock
+ * Settings); a tile without one opens its original in-activity screen.
+ */
+enum class SettingsSection(val title: String, val icon: ImageVector, val desc: String, val route: String? = null) {
     AUDIO_DAC("DAC & Audio", Icons.Default.Headphones, "Cirrus Dual CS43198 MasterHIFI, Gain, Filters & USB DAC"),
     // Was "dynamic modes & BPM pulse": this screen stores a mode, it does not animate anything,
     // and the indicator is non-functional on this unit.
     FN_SWITCH("FN Switch & Keys", Icons.Default.ToggleOn, "Hardware Fn lock switch (Screen & Keys Lock default)"),
-    WIRELESS("Network & ADB", Icons.Default.Wifi, "Wi-Fi, Wireless ADB, Hotspot & Network tools"),
+    NETWORK("Network & internet", Icons.Default.Language, "Wi-Fi, mobile data, hotspot, VPN and data usage", "internet"),
+    WIRELESS("Network & ADB", Icons.Default.Wifi, "Wireless ADB, Google Fi network tools"),
     BLUETOOTH("Bluetooth", Icons.Default.Bluetooth, "Audio streaming codecs, LDAC, aptX & paired gear"),
+    CONNECTED("Connected devices", Icons.Default.Usb, "USB mode, NFC, Bluetooth device name", "connected"),
+    STORAGE_APPS("Apps & Storage", Icons.Default.Storage, "App info, default apps, special access, internal storage and SD card"),
+    NOTIFICATIONS("Notifications", Icons.Default.Notifications, "App notifications and Do Not Disturb", "notifications"),
+    SOUND("Sound & vibration", Icons.Default.VolumeUp, "Volume, ring mode, ringtones and system sounds", "sound"),
     DISPLAY("Display & Light", Icons.Default.BrightnessMedium, "Brightness, ambient light sensor, screen timeout & theme"),
-    BATTERY("Battery & Power", Icons.Default.BatteryChargingFull, "Live telemetry, voltage, current mA & battery health"),
-    STORAGE_APPS("Apps & Storage", Icons.Default.Storage, "Internal memory, MicroSD card & application manager"),
+    BATTERY("Battery & Power", Icons.Default.BatteryChargingFull, "Live telemetry, battery saver and app battery use"),
+    SECURITY("Security & privacy", Icons.Default.Lock, "Screen lock, permissions, device admins", "security"),
+    LOCATION("Location", Icons.Default.LocationOn, "Location on or off, app access and scanning", "location"),
+    ACCESSIBILITY("Accessibility", Icons.Default.Accessibility, "Services, color, text and interaction", "a11y"),
+    SYSTEM("System", Icons.Default.SettingsApplications, "Languages, keyboard, date and time, accounts, users, reset", "system"),
     SYSTEM_ABOUT("About MikuOS", Icons.Default.Info, "Build, kernel, SoC & privilege as reported by the running system")
 }
 
 class MikuSettingsActivity : ComponentActivity() {
+    companion object { private val routingClaimed = java.util.concurrent.atomic.AtomicBoolean(false) }
+
     private fun applyImmersiveMode() {
         @Suppress("DEPRECATION")
         window.decorView.systemUiVisibility = (
@@ -140,6 +154,11 @@ class MikuSettingsActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         applyImmersiveMode()
+        // Once per process: make sure tied settings intents resolve here (cheap, off the UI thread).
+        if (routingClaimed.compareAndSet(false, true)) {
+            val app = applicationContext
+            Thread { runCatching { com.miku.settings.route.PreferredRouting.claim(app) } }.start()
+        }
         val targetAction = intent?.action ?: ""
         val extraSec = intent?.getStringExtra("extra_section") ?: intent?.getStringExtra("section") ?: ""
         val initialSection = when {
@@ -302,7 +321,10 @@ fun MikuOSSettingsApp(initialSection: SettingsSection?, onExit: () -> Unit) {
                                 .clip(RoundedCornerShape(16.dp))
                                 .background(MikuCardBg)
                                 .border(1.dp, tileAccent.copy(alpha = 0.30f), RoundedCornerShape(16.dp))
-                                .clickable { currentSection = sec }
+                                .clickable {
+                                    if (sec.route != null) com.miku.settings.pages.MikuPageActivity.open(ctx, sec.route)
+                                    else currentSection = sec
+                                }
                                 .padding(14.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
@@ -372,7 +394,7 @@ fun MikuOSSettingsApp(initialSection: SettingsSection?, onExit: () -> Unit) {
                         SettingsSection.BATTERY -> BatteryScreen(ctx)
                         SettingsSection.STORAGE_APPS -> StorageAppsScreen(ctx)
                         SettingsSection.SYSTEM_ABOUT -> AboutScreen(ctx)
-                        null -> {}
+                        else -> {}
                     }
                 }
             }
@@ -1339,33 +1361,27 @@ fun WirelessScreen(ctx: Context) {
 
                 SettingsLinkRow(
                     icon = Icons.Default.Wifi,
-                    title = "Wi-Fi Settings",
-                    subtitle = "Scan and connect to 2.4GHz & 5GHz networks",
-                    onClick = {
-                        openAospSettings(ctx, Settings.ACTION_WIFI_SETTINGS, "Wi-Fi settings not available")
-                    }
+                    title = "Wi-Fi",
+                    subtitle = "Scan and connect to 2.4 GHz and 5 GHz networks",
+                    onClick = { com.miku.settings.pages.MikuPageActivity.open(ctx, "wifi") }
                 )
 
                 Spacer(Modifier.height(8.dp))
 
                 SettingsLinkRow(
                     icon = Icons.Default.WifiTethering,
-                    title = "Portable Hotspot & Tethering",
-                    subtitle = "Share 4G LTE mobile data with other devices",
-                    onClick = {
-                        openAospSettings(ctx, Settings.ACTION_WIRELESS_SETTINGS, "Tethering settings not available")
-                    }
+                    title = "Hotspot & tethering",
+                    subtitle = "Share LTE mobile data with other devices",
+                    onClick = { com.miku.settings.pages.MikuPageActivity.open(ctx, "hotspot") }
                 )
 
                 Spacer(Modifier.height(8.dp))
 
                 SettingsLinkRow(
                     icon = Icons.Default.AirplanemodeActive,
-                    title = "Airplane Mode",
-                    subtitle = "Disable all radio transmissions (Wi-Fi, Bluetooth, LTE)",
-                    onClick = {
-                        openAospSettings(ctx, Settings.ACTION_AIRPLANE_MODE_SETTINGS, "Airplane mode settings not available")
-                    }
+                    title = "Airplane mode & internet",
+                    subtitle = "Airplane mode, mobile network, VPN and private DNS",
+                    onClick = { com.miku.settings.pages.MikuPageActivity.open(ctx, "internet") }
                 )
             }
         }
@@ -1963,7 +1979,7 @@ fun BluetoothScreen(ctx: Context) {
                     Spacer(Modifier.height(12.dp))
                     Button(
                         onClick = {
-                            openAospSettings(ctx, Settings.ACTION_BLUETOOTH_SETTINGS, "Connected devices not available")
+                            com.miku.settings.pages.MikuPageActivity.open(ctx, "connected")
                         },
                         colors = ButtonDefaults.buttonColors(containerColor = MikuSurface2),
                         border = BorderStroke(1.dp, MikuTeal.copy(alpha = 0.3f)),
@@ -1973,7 +1989,7 @@ fun BluetoothScreen(ctx: Context) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(Icons.Default.Tune, contentDescription = null, tint = MikuTealBright, modifier = Modifier.size(16.dp))
                             Spacer(Modifier.width(8.dp))
-                            Text("Advanced System Connected Devices", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                            Text("Device name, USB and NFC", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
                         }
                     }
                 }
@@ -2319,11 +2335,9 @@ fun DisplayScreen(ctx: Context) {
 
                 SettingsLinkRow(
                     icon = Icons.Default.DisplaySettings,
-                    title = "AOSP Display Settings",
-                    subtitle = "Screen timeout, color temperature, night light & lock screen",
-                    onClick = {
-                        openAospSettings(ctx, Settings.ACTION_DISPLAY_SETTINGS, "System display settings not available")
-                    }
+                    title = "More display settings",
+                    subtitle = "Screen timeout, dark theme, Night Light, auto-rotate, wallpaper",
+                    onClick = { com.miku.settings.pages.MikuPageActivity.open(ctx, "display_more") }
                 )
             }
         }
@@ -2410,6 +2424,7 @@ fun BatteryScreen(ctx: Context) {
     }
     val technology = remember(sticky) { sticky?.getStringExtra(android.os.BatteryManager.EXTRA_TECHNOLOGY)?.takeIf { it.isNotBlank() } ?: "—" }
 
+    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) {
     Column(Modifier.mikuHeroCard().padding(16.dp)) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
             Column {
@@ -2442,6 +2457,27 @@ fun BatteryScreen(ctx: Context) {
         Spacer(Modifier.height(8.dp))
         Text("Chemistry: $technology · values not reported by the battery HAL show as —", color = MikuMuted, fontSize = 10.5.sp)
     }
+    BatteryControls(ctx, tick)
+    }
+}
+
+/** Battery saver and app battery controls that used to live only in stock Settings. */
+@Composable
+private fun BatteryControls(ctx: Context, tick: Int) {
+    val pm = remember { ctx.getSystemService(android.os.PowerManager::class.java) }
+    var refresh by remember { mutableIntStateOf(0) }
+    val saver = remember(tick, refresh) { try { pm.isPowerSaveMode } catch (_: Throwable) { null } }
+    com.miku.settings.ui.Section("Power") {
+        // PowerManager.setPowerSaveModeEnabled is @SystemApi (DEVICE_POWER / POWER_SAVER).
+        com.miku.settings.ui.ToggleRow("Battery Saver", "Limits background activity and some visual effects", saver) {
+            if (com.miku.settings.sys.Hidden.call(pm, "setPowerSaveModeEnabled", it) != true) com.miku.settings.ui.toast(ctx, "Battery Saver was not changed")
+            refresh++
+        }
+        com.miku.settings.ui.NavRow("App battery use", "Which apps may run unrestricted in the background") {
+            com.miku.settings.pages.MikuPageActivity.open(ctx, "access/battery")
+        }
+        com.miku.settings.pages.StockRow("Battery usage history", ".Settings\$PowerUsageSummaryActivity")
+    }
 }
 
 // ----------------------------------------------------
@@ -2455,22 +2491,36 @@ fun StorageAppsScreen(ctx: Context) {
 
         SettingsLinkRow(
             icon = Icons.Default.Apps,
-            title = "Installed Applications",
-            subtitle = "Manage app permissions, background battery & storage cache",
-            onClick = {
-                openAospSettings(ctx, Settings.ACTION_APPLICATION_SETTINGS, "App manager not available")
-            }
+            title = "Apps",
+            subtitle = "App info, permissions, notifications, storage and force stop",
+            onClick = { com.miku.settings.pages.MikuPageActivity.open(ctx, "apps") }
         )
 
         Spacer(Modifier.height(8.dp))
 
         SettingsLinkRow(
             icon = Icons.Default.SdCard,
-            title = "Storage & MicroSD Card",
-            subtitle = "Internal flash memory and external MicroSD storage management",
-            onClick = {
-                openAospSettings(ctx, Settings.ACTION_INTERNAL_STORAGE_SETTINGS, "Storage settings not available")
-            }
+            title = "Storage & microSD card",
+            subtitle = "Internal storage and the memory card",
+            onClick = { com.miku.settings.pages.MikuPageActivity.open(ctx, "storage") }
+        )
+
+        Spacer(Modifier.height(8.dp))
+
+        SettingsLinkRow(
+            icon = Icons.Default.AppSettingsAlt,
+            title = "Default apps",
+            subtitle = "Home, browser, assistant and SMS",
+            onClick = { com.miku.settings.pages.MikuPageActivity.open(ctx, "default_apps") }
+        )
+
+        Spacer(Modifier.height(8.dp))
+
+        SettingsLinkRow(
+            icon = Icons.Default.Security,
+            title = "Special app access",
+            subtitle = "Overlays, all files, usage access, battery and more",
+            onClick = { com.miku.settings.pages.MikuPageActivity.open(ctx, "special") }
         )
     }
 }
@@ -2570,11 +2620,18 @@ fun AboutScreen(ctx: Context) {
 
         SettingsLinkRow(
             icon = Icons.Default.Code,
-            title = "Developer Options",
-            subtitle = "USB debugging, OEM unlocking & GPU profiling",
-            onClick = {
-                openAospSettings(ctx, Settings.ACTION_APPLICATION_DEVELOPMENT_SETTINGS, "Developer options not available")
-            }
+            title = "Developer options",
+            subtitle = "USB debugging, wireless debugging, animation scales",
+            onClick = { com.miku.settings.pages.MikuPageActivity.open(ctx, "developer") }
+        )
+
+        Spacer(Modifier.height(8.dp))
+
+        SettingsLinkRow(
+            icon = Icons.Default.Gavel,
+            title = "Legal information",
+            subtitle = "Open source licenses. Opens the stock Settings page.",
+            onClick = { com.miku.settings.pages.openStockPage(ctx, ".SettingsLicenseActivity", "android.settings.LICENSE") }
         )
     }
 }
