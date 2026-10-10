@@ -38,10 +38,12 @@ import java.util.concurrent.atomic.AtomicLong
  * a few hundred milliseconds. Both tracks report how many frames they have played, and each
  * byte offered is written to the primary in order, so "which source byte is the primary
  * playing now" and "which source byte is this mirror playing now" are both known. The mirror
- * corrects the difference by writing silence (when ahead) or skipping (when behind), only when
- * it exceeds [SYNC_TOLERANCE_MS], so a correction is one tiny gap rather than constant warble.
- * Bluetooth also has latency after the playback head that the head cannot see; [extraLatencyMs]
- * accounts for it per device type, and Settings.Global `miku_audio_share_offset_ms` nudges it.
+ * corrects the difference by writing silence (when early) or skipping (when late), only when the
+ * median of several readings exceeds [SYNC_TOLERANCE_MS], so a correction is one tiny gap
+ * rather than constant warble. Positions come from AudioTrack.getTimestamp (presentation time),
+ * not the playback head, which moves a whole HAL period at a time: the first version used the
+ * head and corrected every few seconds, alternately early and late, chasing its own jitter.
+ * Settings.Global `miku_audio_share_offset_ms` nudges the mirror later (positive) or earlier.
  *
  * DEFAULT ON. Settings.Global `miku_audio_share_enabled` unset means on: if you plug in a second
  * pair of headphones you hear music in them. 0 turns it off.
@@ -57,8 +59,12 @@ object MikuMirrorOutput {
 
     /** ~10 s of 24/96 stereo. A mirror more than this behind skips forward. */
     private const val CAPACITY = 6 * 1024 * 1024
-    private const val SYNC_TOLERANCE_MS = 25
-    private const val SYNC_INTERVAL_MS = 400L
+    private const val SYNC_TOLERANCE_MS = 35
+    private const val SYNC_INTERVAL_MS = 250L
+    /** Readings whose median decides a correction. */
+    private const val SYNC_WINDOW = 7
+    /** Quiet time after a correction before measuring again. */
+    private const val SYNC_SETTLE_MS = 1500L
 
     private val ring = ByteArray(CAPACITY)
     /** Bytes ever offered. Counted even while no mirror is active, so positions stay valid. */
@@ -172,6 +178,7 @@ object MikuMirrorOutput {
         Log.i(TAG, "rescan ($reason): $status")
         // USB routing defers to us while sharing and takes over again when we stop.
         MikuUsbDacOutput.refresh(reason = "mirror:$reason")
+        com.miku.player.volume.MikuOutputVolumes.refresh()
     }
 
     private fun label(d: AudioDeviceInfo) =
@@ -245,14 +252,14 @@ object MikuMirrorOutput {
 
     // ------------------------------------------------------------------ one mirror
 
-    /** Delay after the playback head that the head cannot see: the radio link, mostly. */
-    private fun extraLatencyMs(type: Int): Int = when (type) {
-        AudioDeviceInfo.TYPE_BLUETOOTH_A2DP, AudioDeviceInfo.TYPE_BLE_HEADSET,
-        AudioDeviceInfo.TYPE_BLE_SPEAKER -> 180
-        AudioDeviceInfo.TYPE_USB_HEADSET, AudioDeviceInfo.TYPE_USB_DEVICE,
-        AudioDeviceInfo.TYPE_USB_ACCESSORY -> 10
-        else -> 0
-    }
+    /**
+     * Delay after presentation that getTimestamp cannot see. Zero for everything now: timestamps
+     * are taken at presentation, and the A2DP HAL folds the headset's reported delay into its
+     * presentation position. Kept as the one place to add a measured per-type correction;
+     * Settings.Global miku_audio_share_offset_ms is the per-listener nudge.
+     */
+    @Suppress("UNUSED_PARAMETER")
+    private fun extraLatencyMs(type: Int): Int = 0
 
     private class MirrorSink(val device: AudioDeviceInfo) {
         @Volatile private var running = true
@@ -356,29 +363,54 @@ object MikuMirrorOutput {
             }.getOrElse { Log.e(TAG, "mirror track build failed for ${label(device)}", it); false }
         }
 
+        /** Recent sync errors in ms (mirror minus primary, positive = mirror early). */
+        private val errWindow = ArrayDeque<Long>()
+        private val tsP = android.media.AudioTimestamp()
+        private val tsM = android.media.AudioTimestamp()
+
         /**
-         * Compare which source byte each output is playing and close the gap when it is past
-         * tolerance. Ahead: write that much silence. Behind: skip that much of the ring.
+         * Frames [track] has PRESENTED as of [atNs], from getTimestamp (the frame at the DAC and
+         * the instant it got there), projected forward at the sample rate. The plain head
+         * position is not good enough: it advances one HAL period at a time, so two of them read
+         * a moment apart disagree by up to a period each and the "drift" is mostly that. Falls
+         * back to the head position only before the first timestamp exists.
+         */
+        private fun presentedFrames(track: AudioTrack, ts: android.media.AudioTimestamp, rate: Int, atNs: Long): Long? {
+            val ok = runCatching { track.getTimestamp(ts) }.getOrDefault(false)
+            if (ok && ts.framePosition > 0) return ts.framePosition + (atNs - ts.nanoTime) * rate / 1_000_000_000L
+            return null
+        }
+
+        /**
+         * Compare which source byte each output is presenting at the same instant, and close the
+         * gap only when it is real: the median of the last [SYNC_WINDOW] readings past
+         * [SYNC_TOLERANCE_MS]. Ahead: write that much silence. Behind: skip that much of the
+         * ring. After a correction, both buffers need a moment to show it, so readings restart.
          */
         private fun sync(t: AudioTrack, f: Fmt) {
             val nowMs = SystemClock.elapsedRealtime()
             if (nowMs - lastSyncAt < SYNC_INTERVAL_MS) return
             lastSyncAt = nowMs
             val p = primaryTrack ?: return
-            val pHead = runCatching { p.playbackHeadPosition.toLong() and 0xFFFFFFFFL }.getOrNull() ?: return
-            val mHead = runCatching { t.playbackHeadPosition.toLong() and 0xFFFFFFFFL }.getOrNull() ?: return
-            if (pHead == 0L || mHead == 0L) return       // not started yet; nothing to compare
-            val primaryAt = primaryBase + pHead * f.frameSize
-            val mirrorAt = base + mHead * f.frameSize
+            val atNs = System.nanoTime()
+            val pFrames = presentedFrames(p, tsP, f.sampleRate, atNs) ?: return
+            val mFrames = presentedFrames(t, tsM, f.sampleRate, atNs) ?: return
+            val primaryAt = primaryBase + pFrames * f.frameSize
+            val mirrorAt = base + mFrames * f.frameSize
             val offsetMs = extraLatencyMs(device.type) +
                 runCatching { Settings.Global.getInt(app!!.contentResolver, KEY_OFFSET, 0) }.getOrDefault(0)
             val bytesPerMs = f.sampleRate.toLong() * f.frameSize / 1000
-            // Positive: the mirror is ahead of where it should be.
-            val err = mirrorAt - primaryAt - offsetMs * bytesPerMs
-            val errMs = err / bytesPerMs
-            if (kotlin.math.abs(errMs) < SYNC_TOLERANCE_MS) return
-            val frames = (kotlin.math.abs(err) / f.frameSize).toInt()
-            if (err > 0) {
+            // Positive: the mirror is early. The offset asks for it to be that much later.
+            val errMs = (mirrorAt - primaryAt) / bytesPerMs + offsetMs
+            errWindow.addLast(errMs)
+            while (errWindow.size > SYNC_WINDOW) errWindow.removeFirst()
+            if (errWindow.size < SYNC_WINDOW) return
+            val median = errWindow.sorted()[SYNC_WINDOW / 2]
+            if (kotlin.math.abs(median) < SYNC_TOLERANCE_MS) return
+            errWindow.clear()
+            lastSyncAt = nowMs + SYNC_SETTLE_MS            // let both buffers show the change
+            val frames = (kotlin.math.abs(median) * f.sampleRate / 1000).toInt()
+            if (median > 0) {
                 val outCh = if (f.channels == 1) 1 else 2
                 val silence = FloatArray(minOf(frames, f.sampleRate) * outCh)
                 t.write(silence, 0, silence.size, AudioTrack.WRITE_BLOCKING)
@@ -388,7 +420,8 @@ object MikuMirrorOutput {
                 cursor += skip
                 base += skip
             }
-            Log.d(TAG, "sync ${label(device)}: ${if (err > 0) "ahead" else "behind"} ${kotlin.math.abs(errMs)} ms, corrected")
+            Log.i(TAG, "sync ${label(device)}: ${if (median > 0) "early" else "late"} by " +
+                "${kotlin.math.abs(median)} ms (median of $SYNC_WINDOW), corrected")
         }
 
         /** Decode [n] bytes of [f] into [floats], stereo or mono. Returns the sample count. */

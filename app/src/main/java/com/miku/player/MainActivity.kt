@@ -606,6 +606,12 @@ class MainActivity : ComponentActivity() {
                                     .align(Alignment.TopEnd)
                                     .padding(top = 92.dp, end = 4.dp)
                             )
+                            // One slider per output while playing to several, beside the HUD.
+                            com.miku.player.volume.MikuOutputVolumesPanel(
+                                modifier = Modifier
+                                    .align(Alignment.TopEnd)
+                                    .padding(top = 92.dp, end = 62.dp)
+                            )
                         }
                     } else PermissionPrompt { launcher.launch(permissionsToRequest()) }
                 }
