@@ -34,6 +34,14 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
+/**
+ * Miku Music's playback settings: listening profiles, the direct route, car audio and the
+ * external USB DAC output. These are the player's own options.
+ *
+ * The DAC itself (filter, gain, DRE, high power, output, USB DAC mode) is set on the Hardware
+ * app's page, the only DAC page on MikuOS. The first row here opens it (DacSettingsLink).
+ * Listening profiles still apply their DAC settings through HibyDacBridge on their own.
+ */
 class HardwareSettingsActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         CrashSentinel.install(this)
@@ -50,140 +58,16 @@ fun HardwareSettingsScreen(onBack: () -> Unit) {
     val ctx = LocalContext.current
     val scope = rememberCoroutineScope()
 
-    var isRooted by remember { mutableStateOf(false) }
-
-    // Cirrus Logic CS43198 Hardware State
-    var csFilter by remember { mutableStateOf(CirrusLogicManager.DigitalFilter.NOS) }
-    var csGain by remember { mutableStateOf(CirrusLogicManager.GainMode.LOW) }
-    var csDre by remember { mutableStateOf(true) }
-    var showDreOffConfirm by remember { mutableStateOf(false) }
-    var csTurbo by remember { mutableStateOf(false) }
-    var csDsdComp by remember { mutableStateOf(true) }
-    var csOutput by remember { mutableStateOf(CirrusLogicManager.OutputMode.BAL_HEADPHONE_OUT) }
-
-    // USB DAC
-    var usbDacActive by remember { mutableStateOf(UsbDacManager.isActive(ctx)) }
-    var usbDacRate by remember { mutableStateOf(UsbDacManager.getSampleRate(ctx)) }
-    var usbDacBits by remember { mutableStateOf(UsbDacManager.getBitDepth(ctx)) }
-
-    // CPU Audio Priority
-    var cpuGovernorOn by remember { mutableStateOf(PlayerPreferences.loadCpuPerfEnabled(ctx)) }
-
-    // Real-Time Kernel Sysfs Hardware State Audit
-    var auditState by remember { mutableStateOf(CirrusLogicManager.HardwareAuditState()) }
-
     // DTA (bit-perfect DIRECT-to-DAC) live status + playback behavior prefs
     var dtaStatus by remember { mutableStateOf<MikuDirectAudio.DirectStatus?>(null) }
     var pauseOnUnplug by remember { mutableStateOf(PlayerPreferences.loadPauseOnUnplug(ctx)) }
 
-    // What the DAC was last told: Settings.Global miku_dac_state (written by com.miku.sysbridge),
-    // or the persist properties when that row is missing. The screen's colors follow it.
-    fun readDacState(): DacState {
-        val raw = runCatching { android.provider.Settings.Global.getString(ctx.contentResolver, "miku_dac_state") }.getOrNull()
-        if (!raw.isNullOrBlank()) return parseDacState(raw)
-        val b = com.miku.player.profiles.HibyDacBridge
-        return DacState(
-            filter = b.get(b.PROP_FILTER), gain = b.get(b.PROP_GAIN),
-            dre = b.get(b.PROP_DRE)?.let { it == "dremode_enable" },
-            hp = b.get(b.PROP_HIGH_POWER)?.let { it == "hpower_enable" },
-        )
-    }
-    var dacState by remember { mutableStateOf(DacState(null, null, null, null)) }
-
-    fun refreshAudit() {
-        scope.launch(Dispatchers.IO) {
-            auditState = CirrusLogicManager.getLiveHardwareAudit(ctx)
-            dtaStatus = MikuDirectAudio.status(ctx)
-            dacState = readDacState()
-        }
-    }
-
-    // Programmatic theme (DacTheme.kt, the same function the Hardware app, the status bar badge
-    // and the SystemUI tiles use): filter sets the hue, gain the saturation, DRE the second
-    // accent, high power the glow and a slow pulse. Changes fade over 450 ms.
-    val dacPal = remember(dacState) { dacTheme(dacState) }
-    val dacPrimary by androidx.compose.animation.animateColorAsState(Color(dacPal.primary), androidx.compose.animation.core.tween(450), label = "dacPrimary")
-    val dacSecondary by androidx.compose.animation.animateColorAsState(Color(dacPal.secondary), androidx.compose.animation.core.tween(450), label = "dacSecondary")
-    val dacBg by androidx.compose.animation.animateColorAsState(Color(dacPal.background), androidx.compose.animation.core.tween(450), label = "dacBg")
-    val dacGlowBase by androidx.compose.animation.core.animateFloatAsState(dacPal.glow, androidx.compose.animation.core.tween(450), label = "dacGlow")
-    val dacGlow = if (dacPal.pulse) {
-        val t = androidx.compose.animation.core.rememberInfiniteTransition(label = "dacPulse")
-        dacGlowBase * t.animateFloat(
-            0.7f, 1f,
-            androidx.compose.animation.core.infiniteRepeatable(androidx.compose.animation.core.tween(1400), androidx.compose.animation.core.RepeatMode.Reverse),
-            label = "dacPulseV"
-        ).value
-    } else dacGlowBase
-    // Every MikuCyan below this line is the DAC accent, so the whole screen follows the combo.
-    @Suppress("LocalVariableName") val MikuCyan = dacPrimary
-
-    // A change made somewhere else (Hardware app, SystemUI tiles) lands in miku_dac_state.
-    DisposableEffect(Unit) {
-        val obs = object : android.database.ContentObserver(android.os.Handler(android.os.Looper.getMainLooper())) {
-            override fun onChange(selfChange: Boolean) {
-                refreshAudit()
-                scope.launch(Dispatchers.IO) {
-                    csFilter = CirrusLogicManager.getDigitalFilter(ctx)
-                    csGain = CirrusLogicManager.getGainMode(ctx)
-                    csDre = CirrusLogicManager.isDreEnabled(ctx)
-                    csTurbo = CirrusLogicManager.isHighPowerEnabled(ctx)
-                }
-            }
-        }
-        runCatching { ctx.contentResolver.registerContentObserver(android.provider.Settings.Global.getUriFor("miku_dac_state"), false, obs) }
-        onDispose { runCatching { ctx.contentResolver.unregisterContentObserver(obs) } }
-    }
-    if (showDreOffConfirm) {
-        AlertDialog(
-            onDismissRequest = { showDreOffConfirm = false },
-            containerColor = Color(0xFF0A1E26),
-            titleContentColor = Color(0xFFFF6B6B),
-            textContentColor = Color.White,
-            title = { Text("TURN OFF DRE?", fontWeight = FontWeight.Black, fontFamily = AudiowideFont, fontSize = 14.sp) },
-            text = {
-                Text(
-                    "Turning Dynamic Range Enhancement off drops the CS43198 dynamic range from about 130 dB back to stock. Every other setting stays as it is, and DRE stays off until you turn it back on here.",
-                    fontSize = 12.sp, lineHeight = 16.sp
-                )
-            },
-            confirmButton = {
-                TextButton(onClick = {
-                    showDreOffConfirm = false
-                    csDre = false
-                    scope.launch {
-                        CirrusLogicManager.setDreEnabled(ctx, false)
-                        refreshAudit()
-                    }
-                }) { Text("TURN OFF DRE", color = Color(0xFFFF6B6B), fontWeight = FontWeight.Bold) }
-            },
-            dismissButton = {
-                TextButton(onClick = { showDreOffConfirm = false }) { Text("KEEP DRE ON", color = MikuCyan, fontWeight = FontWeight.Bold) }
-            }
-        )
-    }
-
     // Poll the HAL's direct flags while this screen is open so the readout is live truth,
-    // not a stale snapshot — start/stop playback and watch it flip.
+    // not a stale snapshot. Start or stop playback and watch it flip.
     LaunchedEffect(Unit) {
         while (true) {
             withContext(Dispatchers.IO) { dtaStatus = MikuDirectAudio.status(ctx) }
             kotlinx.coroutines.delay(2000)
-        }
-    }
-
-    LaunchedEffect(Unit) {
-        withContext(Dispatchers.IO) {
-            // "Privileged" here means the platform grants this build actually holds - system UID
-            // or WRITE_SECURE_SETTINGS. Root is never part of the answer on MikuOS.
-            isRooted = android.os.Process.myUid() == 1000 || ctx.checkSelfPermission(android.Manifest.permission.WRITE_SECURE_SETTINGS) == android.content.pm.PackageManager.PERMISSION_GRANTED
-            csFilter = CirrusLogicManager.getDigitalFilter(ctx)
-            csGain = CirrusLogicManager.getGainMode(ctx)
-            csDre = CirrusLogicManager.isDreEnabled(ctx)
-            csTurbo = CirrusLogicManager.isHighPowerEnabled(ctx)
-            csDsdComp = CirrusLogicManager.getDsdGainCompensate(ctx)
-            csOutput = CirrusLogicManager.getOutputMode(ctx)
-            auditState = CirrusLogicManager.getLiveHardwareAudit(ctx)
-            dacState = readDacState()
         }
     }
 
@@ -192,22 +76,19 @@ fun HardwareSettingsScreen(onBack: () -> Unit) {
             .fillMaxSize()
             .background(CyberDarkBg)
     ) {
-        // Bespoke Hatsune Miku Audiophile Stage Artwork Backdrop
         Image(
             painter = painterResource(id = R.drawable.miku_audiophile_art),
             contentDescription = "Miku artwork",
             modifier = Modifier.fillMaxSize(),
             contentScale = ContentScale.Crop
         )
-
-        // Frosted Dark Cyan Gradient Overlay
         Box(
             Modifier
                 .fillMaxSize()
                 .background(
                     Brush.verticalGradient(
                         listOf(
-                            dacBg.copy(alpha = 0.93f),
+                            Color(0xEE04161A),
                             Color(0x99000000),
                             Color(0xF8040D12)
                         )
@@ -220,7 +101,6 @@ fun HardwareSettingsScreen(onBack: () -> Unit) {
                 .fillMaxSize()
                 .systemBarsPadding()
         ) {
-            // Header Bar
             Row(
                 Modifier
                     .fillMaxWidth()
@@ -229,46 +109,16 @@ fun HardwareSettingsScreen(onBack: () -> Unit) {
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 com.miku.player.ui.MikuBackButton(onClick = onBack)
-
                 Text(
-                    "MIKU AUDIO SETTINGS",
+                    "PLAYBACK SETTINGS",
                     color = MikuCyan,
                     fontSize = 13.5.sp,
                     fontWeight = FontWeight.Black,
                     fontFamily = AudiowideFont,
                     letterSpacing = 1.sp
                 )
-
-                // DAC Chipset Badge
-                Box(
-                    Modifier
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(dacBg)
-                        .border(1.dp, MikuCyan, RoundedCornerShape(12.dp))
-                        .padding(horizontal = 8.dp, vertical = 4.dp)
-                ) {
-                    Text(
-                        "CS43198",
-                        color = MikuCyan,
-                        fontSize = 9.sp,
-                        fontWeight = FontWeight.Bold,
-                        fontFamily = AudiowideFont
-                    )
-                }
+                Spacer(Modifier.width(40.dp))
             }
-
-            // The applied combo in plain words, in its own colors.
-            Text(
-                dacPal.label,
-                color = dacPrimary,
-                fontSize = 12.5.sp,
-                fontWeight = FontWeight.Bold,
-                lineHeight = 16.sp,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 14.dp)
-                    .padding(bottom = 10.dp)
-            )
 
             LazyColumn(
                 modifier = Modifier
@@ -277,8 +127,31 @@ fun HardwareSettingsScreen(onBack: () -> Unit) {
                 verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
                 // ============================================================
+                // DAC SETTINGS: the Hardware app's page
+                // ============================================================
+                item {
+                    Row(
+                        Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(16.dp))
+                            .background(Color(0xDD0A1E26))
+                            .border(1.dp, MikuCyan, RoundedCornerShape(16.dp))
+                            .clickable { DacSettingsLink.open(ctx) }
+                            .padding(14.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(Modifier.weight(1f)) {
+                            Text("DAC SETTINGS", color = MikuCyan, fontSize = 11.sp, fontWeight = FontWeight.Bold, fontFamily = AudiowideFont)
+                            Text("Filter, gain, DRE, high power, output and USB DAC mode. Opens the Hardware app.", color = MikuTextSecondary, fontSize = 10.5.sp)
+                        }
+                        Text("OPEN", color = MikuCyan, fontSize = 10.sp, fontWeight = FontWeight.Bold, fontFamily = AudiowideFont)
+                    }
+                }
+
+                // ============================================================
                 // LISTENING PROFILES ENTRY (per-headphone EQ + DAC settings)
                 // ============================================================
+
                 item {
                     remember { com.miku.player.profiles.ListeningProfileStore.load(ctx) }
                     val current by com.miku.player.profiles.ListeningProfileStore.currentId.collectAsState()
@@ -305,394 +178,6 @@ fun HardwareSettingsScreen(onBack: () -> Unit) {
                             )
                         }
                         Text("OPEN", color = MikuNeonPink, fontSize = 10.sp, fontWeight = FontWeight.Bold, fontFamily = AudiowideFont)
-                    }
-                }
-
-                // ============================================================
-                // HARDWARE STATUS & LIVE KERNEL AUDIT BANNER
-                // ============================================================
-                item {
-                    Column(
-                        Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(18.dp))
-                            .background(Brush.linearGradient(listOf(dacBg.copy(alpha = 0.87f), androidx.compose.ui.graphics.lerp(dacBg, dacSecondary, 0.2f).copy(alpha = 0.87f))))
-                            .border((1f + dacGlow * 1.5f).dp, Brush.linearGradient(listOf(dacPrimary.copy(alpha = 0.35f + 0.65f * dacGlow), dacSecondary.copy(alpha = 0.35f + 0.65f * dacGlow))), RoundedCornerShape(18.dp))
-                            .padding(14.dp)
-                    ) {
-                        Row(
-                            Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                // FAKE-DATA FIX: this status dot was hardcoded green, so the banner
-                                // read "healthy" even when not one sa_sound_setting node could be
-                                // read and every field below said "—". It now tracks the real probe.
-                                Box(
-                                    Modifier
-                                        .size(10.dp)
-                                        .clip(CircleShape)
-                                        .background(
-                                            when (auditState.source) {
-                                                CirrusLogicManager.HardwareAuditState.Source.SYSFS -> Color(0xFF00E676)
-                                                CirrusLogicManager.HardwareAuditState.Source.VENDOR_SETTINGS -> Color(0xFF7FE3FF)
-                                                else -> Color(0xFF6B7A80)
-                                            }
-                                        )
-                                )
-                                Spacer(Modifier.width(8.dp))
-                                Text(
-                                    "CIRRUS LOGIC DAC",
-                                    color = Color.White,
-                                    fontSize = 11.5.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    fontFamily = AudiowideFont
-                                )
-                            }
-                            IconButton(
-                                onClick = { refreshAudit() },
-                                modifier = Modifier.size(24.dp)
-                            ) {
-                                Icon(
-                                    painterResource(id = R.drawable.ic_settings_miku),
-                                    contentDescription = "Refresh",
-                                    tint = MikuCyan,
-                                    modifier = Modifier.size(16.dp)
-                                )
-                            }
-                        }
-                        Spacer(Modifier.height(6.dp))
-                        Text(
-                            "Settings for the dual CS43198 DACs: filter, gain, DRE, high power and USB audio.",
-                            color = MikuTextSecondary,
-                            fontSize = 10.5.sp,
-                            lineHeight = 14.5.sp
-                        )
-                        Spacer(Modifier.height(10.dp))
-
-                        // Live Kernel Sysfs Audit Box
-                        Column(
-                            Modifier
-                                .fillMaxWidth()
-                                .clip(RoundedCornerShape(10.dp))
-                                .background(Color(0xFF051014))
-                                .border(1.dp, Color(0x3300E5FF), RoundedCornerShape(10.dp))
-                                .padding(10.dp)
-                        ) {
-                            Text(
-                                // Say which source answered. The sysfs nodes are the closest thing
-                                // to ground truth but SELinux denies them to platform_app, so most
-                                // of the time this reads the vendor settings the audio HAL itself
-                                // uses. Both are real reads; claiming "kernel" for either would not be.
-                                when (auditState.source) {
-                                    CirrusLogicManager.HardwareAuditState.Source.SYSFS ->
-                                        "LIVE KERNEL SYSFS STATE (/sys/.../sa_sound_setting/)"
-                                    CirrusLogicManager.HardwareAuditState.Source.VENDOR_SETTINGS ->
-                                        "APPLIED DAC STATE (persist.vendor.audio.miku.*, then vendor.audio.hiby.*)"
-                                    else ->
-                                        "NO DAC STATE READABLE BY THIS PROCESS"
-                                },
-                                color = MikuCyan,
-                                fontSize = 9.sp,
-                                fontWeight = FontWeight.Bold,
-                                fontFamily = AudiowideFont
-                            )
-                            Spacer(Modifier.height(6.dp))
-                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                                Text("Filter: ${auditState.kernelFilterText}", color = Color.White, fontSize = 10.sp)
-                                Text("Gain: ${auditState.kernelGainText}", color = if (auditState.kernelGain?.contains("high") == true) MikuNeonPink else Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold)
-                            }
-                            Spacer(Modifier.height(3.dp))
-                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                                Text("High Power: ${auditState.kernelHighPowerText}", color = MikuTextSecondary, fontSize = 9.5.sp)
-                                Text("DRE Mode: ${auditState.kernelDreText}", color = MikuTextSecondary, fontSize = 9.5.sp)
-                            }
-                            Spacer(Modifier.height(3.dp))
-                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                                Text("Turbo: ${auditState.kernelTurboText}", color = MikuTextSecondary, fontSize = 9.5.sp)
-                                Text("Output: ${auditState.kernelOutputText}", color = MikuCyan, fontSize = 9.5.sp)
-                            }
-                        }
-                    }
-                }
-
-                // ============================================================
-                // SECTION 1: CIRRUS LOGIC CS43198 DAC ARCHITECTURE
-                // ============================================================
-                item {
-                    Column(
-                        Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(16.dp))
-                            .background(Color(0xDD0A1E26))
-                            .border(1.dp, CyberGlassBorder, RoundedCornerShape(16.dp))
-                            .padding(14.dp)
-                    ) {
-                        Text(
-                            "DIGITAL FILTER",
-                            color = MikuCyan,
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold,
-                            fontFamily = AudiowideFont
-                        )
-                        Spacer(Modifier.height(4.dp))
-                        Text(
-                            "NOS (non-oversampling) has no pre or post-ringing. Fast roll-off has the flattest frequency response.",
-                            color = MikuTextSecondary,
-                            fontSize = 10.sp,
-                            lineHeight = 13.5.sp
-                        )
-                        Spacer(Modifier.height(8.dp))
-
-                        CirrusLogicManager.DigitalFilter.values().forEach { filter ->
-                            val isSel = csFilter == filter
-                            Row(
-                                Modifier
-                                    .fillMaxWidth()
-                                    .clip(RoundedCornerShape(10.dp))
-                                    .background(if (isSel) Color(0x3300E5FF) else Color.Transparent)
-                                    .clickable {
-                                        csFilter = filter
-                                        scope.launch {
-                                            CirrusLogicManager.setDigitalFilter(ctx, filter)
-                                            refreshAudit()
-                                        }
-                                    }
-                                    .padding(horizontal = 8.dp, vertical = 6.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                RadioButton(
-                                    selected = isSel,
-                                    onClick = {
-                                        csFilter = filter
-                                        scope.launch {
-                                            CirrusLogicManager.setDigitalFilter(ctx, filter)
-                                            refreshAudit()
-                                        }
-                                    },
-                                    colors = RadioButtonDefaults.colors(selectedColor = MikuCyan, unselectedColor = Color.Gray)
-                                )
-                                Spacer(Modifier.width(6.dp))
-                                Column {
-                                    Text(filter.label, color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                                    Text(filter.description, color = MikuTextSecondary, fontSize = 10.sp, lineHeight = 13.sp)
-                                }
-                            }
-                        }
-
-                        Spacer(Modifier.height(14.dp))
-                        HorizontalDivider(color = Color.White.copy(alpha = 0.1f))
-                        Spacer(Modifier.height(14.dp))
-
-                        Text(
-                            "HEADPHONE GAIN",
-                            color = MikuCyan,
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold,
-                            fontFamily = AudiowideFont
-                        )
-                        Spacer(Modifier.height(4.dp))
-                        Text(
-                            "Use low gain (0 dB) for sensitive IEMs to keep hiss down. Use high gain (+6 dB) for high-impedance and planar headphones.",
-                            color = MikuTextSecondary,
-                            fontSize = 10.sp,
-                            lineHeight = 13.5.sp
-                        )
-                        Spacer(Modifier.height(8.dp))
-
-                        Row(
-                            Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            CirrusLogicManager.GainMode.values().forEach { gain ->
-                                val isSel = csGain == gain
-                                Box(
-                                    Modifier
-                                        .weight(1f)
-                                        .clip(RoundedCornerShape(12.dp))
-                                        .background(if (isSel) MikuCyan else Color(0x44040D12))
-                                        .border(1.dp, if (isSel) MikuCyan else CyberGlassBorder, RoundedCornerShape(12.dp))
-                                        .clickable {
-                                            csGain = gain
-                                            scope.launch {
-                                                CirrusLogicManager.setGainMode(ctx, gain)
-                                                refreshAudit()
-                                            }
-                                        }
-                                        .padding(vertical = 10.dp, horizontal = 8.dp),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                        Text(
-                                            gain.label,
-                                            color = if (isSel) Color.Black else Color.White,
-                                            fontSize = 11.sp,
-                                            fontWeight = FontWeight.Bold,
-                                            fontFamily = AudiowideFont
-                                        )
-                                        Spacer(Modifier.height(2.dp))
-                                        Text(
-                                            if (gain == CirrusLogicManager.GainMode.LOW) "0 dB (IEMs)" else "+6 dB (High-Z)",
-                                            color = if (isSel) Color.Black.copy(alpha = 0.8f) else MikuTextSecondary,
-                                            fontSize = 9.5.sp
-                                        )
-                                    }
-                                }
-                            }
-                        }
-
-                        Spacer(Modifier.height(14.dp))
-                        HorizontalDivider(color = Color.White.copy(alpha = 0.1f))
-                        Spacer(Modifier.height(14.dp))
-
-                        // Dynamic Range Enhancement & High Power Turbo
-                        Row(
-                            Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Column(Modifier.weight(1f)) {
-                                Text("Dynamic Range Enhancement (DRE)", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                                Text("Raises the CS43198 dynamic range.", color = MikuTextSecondary, fontSize = 10.sp)
-                            }
-                            Switch(
-                                checked = csDre,
-                                onCheckedChange = {
-                                    if (!it) {
-                                        // Disabling DRE is an audible quality downgrade — never on a stray tap.
-                                        showDreOffConfirm = true
-                                    } else {
-                                        csDre = true
-                                        scope.launch {
-                                            CirrusLogicManager.setDreEnabled(ctx, true)
-                                            refreshAudit()
-                                        }
-                                    }
-                                },
-                                colors = SwitchDefaults.colors(checkedThumbColor = MikuCyan, checkedTrackColor = Color(0xFF00695C))
-                            )
-                        }
-
-                        Spacer(Modifier.height(8.dp))
-
-                        Row(
-                            Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Column(Modifier.weight(1f)) {
-                                Text("High power (+2 dBV)", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                                Text("More output voltage on the 4.4mm balanced jack (4.0 Vrms max).", color = MikuTextSecondary, fontSize = 10.sp)
-                            }
-                            Switch(
-                                checked = csTurbo,
-                                onCheckedChange = {
-                                    csTurbo = it
-                                    scope.launch {
-                                        CirrusLogicManager.setHighPowerEnabled(ctx, it)
-                                        refreshAudit()
-                                    }
-                                },
-                                colors = SwitchDefaults.colors(checkedThumbColor = MikuNeonPink, checkedTrackColor = Color(0xFF880E4F))
-                            )
-                        }
-                    }
-                }
-
-                // ============================================================
-                // SECTION 1.2: AUDIO OUTPUT ROUTING MATRIX & QUICK SWAP
-                // ============================================================
-                item {
-                    Column(
-                        Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(16.dp))
-                            .background(Color(0xDD0A1E26))
-                            .border(1.dp, CyberGlassBorder, RoundedCornerShape(16.dp))
-                            .padding(14.dp)
-                    ) {
-                        Row(
-                            Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Column(Modifier.weight(1f)) {
-                                Text("AUDIO OUTPUT", color = MikuCyan, fontSize = 12.sp, fontWeight = FontWeight.Bold, fontFamily = AudiowideFont)
-                                Text("Pick the wired DAC output or Bluetooth", color = MikuTextSecondary, fontSize = 10.sp)
-                            }
-
-                            // Quick Swap Button
-                            Button(
-                                onClick = {
-                                    scope.launch {
-                                        csOutput = CirrusLogicManager.swapOutputMode(ctx)
-                                        refreshAudit()
-                                    }
-                                },
-                                colors = ButtonDefaults.buttonColors(containerColor = Color(0x3300E5FF)),
-                                border = androidx.compose.foundation.BorderStroke(1.dp, MikuCyan),
-                                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
-                                shape = RoundedCornerShape(8.dp),
-                                modifier = Modifier.height(28.dp)
-                            ) {
-                                Text("Swap 4.4mm/BT", color = MikuCyan, fontSize = 10.sp, fontWeight = FontWeight.Bold)
-                            }
-                        }
-
-                        Spacer(Modifier.height(10.dp))
-
-                        CirrusLogicManager.OutputMode.values().forEach { out ->
-                            val isSel = csOutput == out
-                            Row(
-                                Modifier
-                                    .fillMaxWidth()
-                                    .clip(RoundedCornerShape(10.dp))
-                                    .background(if (isSel) MikuCyan.copy(alpha = 0.15f) else Color.Transparent)
-                                    .border(1.dp, if (isSel) MikuCyan.copy(alpha = 0.5f) else Color.Transparent, RoundedCornerShape(10.dp))
-                                    .clickable {
-                                        csOutput = out
-                                        scope.launch {
-                                            CirrusLogicManager.setOutputMode(ctx, out)
-                                            refreshAudit()
-                                        }
-                                    }
-                                    .padding(8.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text(out.icon, fontSize = 16.sp)
-                                Spacer(Modifier.width(10.dp))
-                                Column(Modifier.weight(1f)) {
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Text(out.label, color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                                        if (isSel) {
-                                            Spacer(Modifier.width(6.dp))
-                                            Box(
-                                                Modifier
-                                                    .clip(RoundedCornerShape(4.dp))
-                                                    .background(MikuCyan.copy(alpha = 0.25f))
-                                                    .padding(horizontal = 4.dp, vertical = 1.dp)
-                                            ) {
-                                                Text("ACTIVE", color = MikuCyan, fontSize = 8.5.sp, fontWeight = FontWeight.Bold)
-                                            }
-                                        }
-                                    }
-                                    Text(out.description, color = MikuTextSecondary, fontSize = 10.sp)
-                                }
-                                RadioButton(
-                                    selected = isSel,
-                                    onClick = {
-                                        csOutput = out
-                                        scope.launch {
-                                            CirrusLogicManager.setOutputMode(ctx, out)
-                                            refreshAudit()
-                                        }
-                                    },
-                                    colors = RadioButtonDefaults.colors(selectedColor = MikuCyan, unselectedColor = MikuTextSecondary)
-                                )
-                            }
-                            Spacer(Modifier.height(4.dp))
-                        }
                     }
                 }
 
@@ -931,69 +416,6 @@ fun HardwareSettingsScreen(onBack: () -> Unit) {
                             }
                             Switch(checked = MikuUsbDacOutput.volumePassthrough, onCheckedChange = { MikuUsbDacOutput.setVolumePassthrough(ctx, it) },
                                 colors = SwitchDefaults.colors(checkedThumbColor = MikuCyan, checkedTrackColor = Color(0xFF00695C)))
-                        }
-                    }
-                }
-
-                // ---------------- USB DAC MODE (PC → M500, UAC2 gadget) ----------------
-                item {
-                    var usbStatus by remember { mutableStateOf(UsbDacManager.statusLine(ctx)) }
-                    LaunchedEffect(usbDacActive) {
-                        while (true) {
-                            usbStatus = UsbDacManager.statusLine(ctx)
-                            usbDacActive = UsbDacManager.isActive(ctx)
-                            usbDacRate = UsbDacManager.getSampleRate(ctx)
-                            usbDacBits = UsbDacManager.getBitDepth(ctx)
-                            kotlinx.coroutines.delay(2000)
-                        }
-                    }
-                    Column(
-                        Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(16.dp))
-                            .background(Color(0xDD0A1E26))
-                            .border(1.dp, if (usbDacActive) MikuPink.copy(alpha = 0.6f) else CyberGlassBorder, RoundedCornerShape(16.dp))
-                            .padding(14.dp)
-                    ) {
-                        Row(
-                            Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Column(Modifier.weight(1f)) {
-                                Text("USB DAC MODE (UAC2 · M500 as a DAC)", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                                Text("Turns the M500 into a USB sound card for a PC, Mac or phone, bit-perfect up to 32-bit/768 kHz. Uses HiBy's work-mode switch (its DAC screen opens).", color = MikuTextSecondary, fontSize = 10.sp)
-                            }
-                            Switch(
-                                checked = usbDacActive,
-                                enabled = UsbDacManager.isSupported(ctx),
-                                onCheckedChange = {
-                                    usbDacActive = it
-                                    scope.launch {
-                                        val ok = UsbDacManager.setUsbDacMode(ctx, it)
-                                        if (!ok) usbDacActive = UsbDacManager.isActive(ctx)
-                                        usbStatus = UsbDacManager.statusLine(ctx)
-                                    }
-                                },
-                                colors = SwitchDefaults.colors(checkedThumbColor = MikuPink, checkedTrackColor = Color(0xFF6A1B4D))
-                            )
-                        }
-                        Spacer(Modifier.height(8.dp))
-                        Text(usbStatus, color = if (usbDacActive) MikuPink else MikuTextSecondary, fontSize = 10.5.sp, fontWeight = FontWeight.Bold)
-                        if (usbDacActive) {
-                            Spacer(Modifier.height(6.dp))
-                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                                Text("Host stream", color = MikuTextSecondary, fontSize = 10.5.sp)
-                                Text(if (usbDacRate > 0) "${usbDacRate / 1000} kHz / ${usbDacBits}-bit" else "waiting for host audio…", color = MikuCyan, fontSize = 11.sp, fontWeight = FontWeight.Bold, fontFamily = AudiowideFont)
-                            }
-                            Spacer(Modifier.height(6.dp))
-                            Text("Turning this off puts USB back on MTP/ADB. The vendor UAC2 daemon is only fully released by \"Android mode\" on HiBy's DAC screen. Open it if the host still sees a sound card.", color = MikuTextSecondary, fontSize = 9.5.sp, lineHeight = 12.sp)
-                            Spacer(Modifier.height(4.dp))
-                            Text("OPEN HIBY DAC SCREEN", color = MikuPink, fontSize = 10.5.sp, fontWeight = FontWeight.Black, fontFamily = AudiowideFont,
-                                modifier = Modifier.clickable { UsbDacManager.openHibyDacScreen(ctx) }.padding(vertical = 6.dp))
-                        } else if (!UsbDacManager.isSupported(ctx)) {
-                            Spacer(Modifier.height(6.dp))
-                            Text("Unavailable: HiBy's Settings work-mode screen (android.settings.WORK_MODE_VIEW) is not on this build.", color = MikuPink, fontSize = 10.sp)
                         }
                     }
                 }

@@ -23,7 +23,6 @@ object RiotSystem {
     const val UNLOCK_ID = "secret.os.riot"
     const val LAUNCHER_PKG = "com.miku.launcher"
     const val FM_PKG = "com.caf.fmradio"
-    const val FM_DEBUG = "com.caf.fmradio.action.DEBUG"
 
     // ---- unlock -------------------------------------------------------------------------------
 
@@ -39,17 +38,28 @@ object RiotSystem {
 
     // ---- battery and "disk" -------------------------------------------------------------------
 
-    data class Battery(val pct: Int, val charging: Boolean)
+    /**
+     * [charging]: on external power and still filling (the firmware's CHARGE gauge).
+     * [plugged]: on external power at all. [usb]: connected to a computer (the Riot's USB plug icon).
+     */
+    data class Battery(val pct: Int, val charging: Boolean, val plugged: Boolean = false, val usb: Boolean = false)
 
     fun battery(ctx: Context): Battery {
         val i = ctx.registerReceiver(null, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
         val level = i?.getIntExtra(BatteryManager.EXTRA_LEVEL, -1) ?: -1
         val scale = i?.getIntExtra(BatteryManager.EXTRA_SCALE, 100) ?: 100
         val status = i?.getIntExtra(BatteryManager.EXTRA_STATUS, -1) ?: -1
+        val plugged = (i?.getIntExtra(BatteryManager.EXTRA_PLUGGED, 0) ?: 0) != 0
         val pct = if (level >= 0 && scale > 0) level * 100 / scale else 0
-        val charging = status == BatteryManager.BATTERY_STATUS_CHARGING || status == BatteryManager.BATTERY_STATUS_FULL
-        return Battery(pct, charging)
+        val charging = status == BatteryManager.BATTERY_STATUS_CHARGING
+        return Battery(pct, charging, plugged, usbHost(ctx))
     }
+
+    /** Plugged into a computer (a USB host), whatever the transfer mode. A wall charger is not. */
+    private fun usbHost(ctx: Context): Boolean = runCatching {
+        val i = ctx.registerReceiver(null, IntentFilter("android.hardware.usb.action.USB_STATE")) ?: return false
+        i.getBooleanExtra("connected", false)
+    }.getOrDefault(false)
 
     /** Shared storage, standing in for the Riot's hard drive: (used bytes, total bytes). */
     fun disk(): Pair<Long, Long> = runCatching {
@@ -69,21 +79,7 @@ object RiotSystem {
         runCatching { Settings.Global.getString(ctx.contentResolver, key) }.getOrNull()
 
     // ---- FM ------------------------------------------------------------------------------------
-
-    /**
-     * The FM app's debug receiver (QualcommFmHardwareEngine.registerDebugReceiver) takes cmd=tune
-     * freq=kHz, cmd=power on=1|0, cmd=seek_up, cmd=seek_down. It is registered at runtime by the
-     * engine, so it only answers while the FM app's process is alive; [fmStatus] tells us whether
-     * anything happened.
-     */
-    fun fm(ctx: Context, cmd: String, extras: Map<String, Int> = emptyMap()) {
-        val i = Intent(FM_DEBUG).setPackage(FM_PKG).putExtra("cmd", cmd)
-        for ((k, v) in extras) i.putExtra(k, v)
-        runCatching { ctx.sendBroadcast(i) }.onFailure { Log.w(TAG, "fm $cmd: $it") }
-    }
-
-    /** "off", "101.9 WVAQ", or null when the FM app has never published anything. */
-    fun fmStatus(ctx: Context): String? = global(ctx, "miku_fm_status")?.trim()?.takeIf { it.isNotEmpty() }
+    // The radio goes through the FM app's media session, see RiotFm.
 
     fun openFmApp(ctx: Context): Boolean = launch(ctx, FM_PKG)
 

@@ -158,44 +158,18 @@
             android:windowSoftInputMode="adjustResize"
             android:configChanges="orientation|screenSize|keyboardHidden" />
 
+        <!-- Miku Music's playback settings (profiles, direct route, car audio, USB DAC output).
+             Not a DAC page and not a system settings target any more: the DAC page is the
+             Hardware app's (com.miku.action.DAC_SETTINGS). Kept exported for old callers. -->
         <activity
             android:name=".HardwareSettingsActivity"
             android:exported="true"
-            android:label="Miku Audio Settings"
+            android:label="Playback settings"
             android:icon="@mipmap/ic_launcher"
             android:roundIcon="@mipmap/ic_launcher_round"
             android:theme="@style/Theme.MikuLauncher"
             android:screenOrientation="portrait"
-            android:configChanges="orientation|screenSize|keyboardHidden">
-            <intent-filter android:priority="999">
-                <action android:name="android.intent.action.VIEW" />
-                <action android:name="android.settings.AUDIO_SETTINGS" />
-                <action android:name="android.settings.SOUND_SETTINGS" />
-                <action android:name="android.settings.WORK_MODE" />
-                <category android:name="android.intent.category.DEFAULT" />
-            </intent-filter>
-            <intent-filter android:priority="999">
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.DEFAULT" />
-                <category android:name="android.intent.category.AUDIO_LAUNCH" />
-            </intent-filter>
-            <intent-filter android:priority="999">
-                <action android:name="android.media.action.DISPLAY_AUDIO_EFFECT_CONTROL_PANEL" />
-                <action android:name="com.android.settings.action.IA_SETTINGS" />
-                <action android:name="android.intent.action.APPLICATION_PREFERENCES" />
-                <category android:name="android.intent.category.DEFAULT" />
-                <category android:name="com.android.settings.category.ia.sound" />
-            </intent-filter>
-            <meta-data
-                android:name="com.android.settings.category"
-                android:value="com.android.settings.category.ia.sound" />
-            <meta-data
-                android:name="com.android.settings.title"
-                android:value="M500 Hardware &amp; DAC Settings" />
-            <meta-data
-                android:name="com.android.settings.summary"
-                android:value="Cirrus Logic CS43198 DAC, NOS filter mode, Gain stages &amp; UAC2 USB DAC" />
-        </activity>
+            android:configChanges="orientation|screenSize|keyboardHidden" />
 
 
 

@@ -33,7 +33,8 @@ class MikuCarPlayerScreen(carContext: CarContext) : Screen(carContext) {
             retriever.setDataSource(path)
             val art = retriever.embeddedPicture
             retriever.release()
-            if (art != null) {
+            com.miku.player.SharedCoverGuard.init(carContext)
+            if (art != null && !com.miku.player.SharedCoverGuard.isSuspectBytes(art)) {
                 BitmapFactory.decodeByteArray(art, 0, art.size)
             } else null
         } catch (e: Exception) {

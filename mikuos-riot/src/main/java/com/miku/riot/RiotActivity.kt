@@ -6,7 +6,12 @@ import android.content.pm.PackageManager
 import android.media.AudioManager
 import android.os.Build
 import android.os.Bundle
-import android.view.HapticFeedbackConstants
+import android.os.SystemClock
+import android.os.VibrationAttributes
+import android.os.VibrationEffect
+import android.os.Vibrator
+import android.os.VibratorManager
+import android.provider.Settings
 import android.view.KeyEvent
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
@@ -27,25 +32,44 @@ import kotlinx.coroutines.launch
  */
 class RiotActivity : ComponentActivity() {
 
+    companion object {
+        const val TICK_GAP_MS = 35L
+    }
+
     private lateinit var shell: RiotShell
     private var ticker: Job? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         WindowCompat.setDecorFitsSystemWindows(window, false)
-        WindowInsetsControllerCompat(window, window.decorView).apply {
-            hide(WindowInsetsCompat.Type.systemBars())
-            systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+        if (Build.VERSION.SDK_INT >= 28) {
+            window.attributes = window.attributes.apply {
+                layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
+            }
         }
+        hideSystemBars()
         volumeControlStream = AudioManager.STREAM_MUSIC
         RiotAssets.load(this)
         shell = RiotShell(this, unlockedOrForced(intent))
-        setContent { RiotDevice(shell) }
+        setContent { RiotDevice(shell) { shell.powerButton() } }
         // Gesture back arrives here rather than as a key. As HOME there is nowhere to go back
         // to, so it is the Riot's own Back key.
         onBackPressedDispatcher.addCallback(this, object : androidx.activity.OnBackPressedCallback(true) {
             override fun handleOnBackPressed() { shell.keyDown(Key.BACK); shell.keyUp(Key.BACK) }
         })
+    }
+
+    /** No status bar, no navigation bar: the whole screen is the player. */
+    private fun hideSystemBars() {
+        WindowInsetsControllerCompat(window, window.decorView).apply {
+            hide(WindowInsetsCompat.Type.systemBars())
+            systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+        }
+    }
+
+    override fun onWindowFocusChanged(hasFocus: Boolean) {
+        super.onWindowFocusChanged(hasFocus)
+        if (hasFocus) hideSystemBars()
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -86,6 +110,20 @@ class RiotActivity : ComponentActivity() {
      * Forward and Backward tune the radio in radio mode, as they did on the Riot. Back is the
      * Riot's Back key. A D-pad, if one is attached, is the Scroll wheel and Select.
      */
+    /**
+     * While Riot mode is in front, MikuSystemUI passes the volume keys through instead of showing
+     * its own HUD. Take them here, before anything else can, and show the Riot's own volume bar.
+     */
+    override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        val k = when (event.keyCode) {
+            KeyEvent.KEYCODE_VOLUME_UP -> Key.VOL_UP
+            KeyEvent.KEYCODE_VOLUME_DOWN -> Key.VOL_DOWN
+            else -> return super.dispatchKeyEvent(event)
+        }
+        if (event.action == KeyEvent.ACTION_DOWN) shell.keyDown(k)
+        return true
+    }
+
     private fun map(code: Int): Key? = when (code) {
         KeyEvent.KEYCODE_VOLUME_UP -> Key.VOL_UP
         KeyEvent.KEYCODE_VOLUME_DOWN -> Key.VOL_DOWN
@@ -118,11 +156,58 @@ class RiotActivity : ComponentActivity() {
 
     // ---- services for the shell ------------------------------------------------------------------
 
+    // ---- haptics ---------------------------------------------------------------------------------
+
+    private val vibrator: Vibrator? by lazy {
+        if (Build.VERSION.SDK_INT >= 31) getSystemService(VibratorManager::class.java)?.defaultVibrator
+        else @Suppress("DEPRECATION") getSystemService(Vibrator::class.java)
+    }
+    private var lastTick = 0L
+
+    /** Follows Settings > Sound > Touch feedback, like any system haptic. */
+    private fun hapticsOn(): Boolean = runCatching {
+        Settings.System.getInt(contentResolver, Settings.System.HAPTIC_FEEDBACK_ENABLED, 1) != 0
+    }.getOrDefault(true)
+
+    private fun buzz(effect: VibrationEffect) {
+        val v = vibrator ?: return
+        if (!v.hasVibrator() || !hapticsOn()) return
+        runCatching {
+            if (Build.VERSION.SDK_INT >= 33) v.vibrate(effect, VibrationAttributes.createForUsage(VibrationAttributes.USAGE_TOUCH))
+            else @Suppress("DEPRECATION") v.vibrate(effect)
+        }
+    }
+
+    /**
+     * One detent of the thumb wheel: a crisp, short tick. At most one every [TICK_GAP_MS], so a
+     * fast spin clicks instead of turning into a buzz.
+     */
     fun tickFeedback() {
-        window.decorView.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
+        val now = SystemClock.uptimeMillis()
+        if (now - lastTick < TICK_GAP_MS) return
+        lastTick = now
+        buzz(if (Build.VERSION.SDK_INT >= 29) VibrationEffect.createPredefined(VibrationEffect.EFFECT_TICK)
+             else VibrationEffect.createOneShot(8, 120))
+    }
+
+    /** A button press: a firmer pulse than the wheel. [strong] for the hold that leaves Riot mode. */
+    fun pressFeedback(strong: Boolean = false) {
+        buzz(when {
+            strong && Build.VERSION.SDK_INT >= 29 -> VibrationEffect.createPredefined(VibrationEffect.EFFECT_HEAVY_CLICK)
+            Build.VERSION.SDK_INT >= 29 -> VibrationEffect.createPredefined(VibrationEffect.EFFECT_CLICK)
+            else -> VibrationEffect.createOneShot(if (strong) 40 else 20, 255)
+        })
     }
 
     fun exitRiot() = RiotSystem.exitToMiku(this)
+
+    /**
+     * The silver button. As the launcher, hand HOME back to Miku. Opened from somewhere else,
+     * just close, which lands back wherever Riot mode was started from.
+     */
+    fun leave() {
+        if (RiotSystem.isDefaultHome(this)) RiotSystem.exitToMiku(this) else finishAndRemoveTask()
+    }
 
     /** Power Saver: the LCD goes dark and so does the real screen, until a key wakes it. */
     fun setPowerSaving(on: Boolean) {

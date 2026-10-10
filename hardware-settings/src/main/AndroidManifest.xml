@@ -60,6 +60,13 @@
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
             </intent-filter>
+            <!-- The one DAC settings page on MikuOS. Miku Music, MikuSettings, the launcher and
+                 the SystemUI DAC tiles (long-press) all open this. -->
+            <intent-filter>
+                <action android:name="com.miku.action.DAC_SETTINGS" />
+                <action android:name="com.m500.hardware.action.DAC_SETTINGS" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
             <intent-filter>
                 <action android:name="android.settings.SOUND_SETTINGS" />
                 <action android:name="android.media.action.DISPLAY_AUDIO_EFFECT_CONTROL_PANEL" />

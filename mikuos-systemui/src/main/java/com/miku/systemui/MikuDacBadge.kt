@@ -139,9 +139,16 @@ class MikuDacBadge(private val ctx: Context, private val wm: WindowManager, priv
         applyVisibility()
     }
 
+    /** A retro mode (Riot mode, MikuPod) is in front: no badge. */
+    private var retro = false
+
+    fun setRetro(on: Boolean) {
+        if (on != retro) { retro = on; applyVisibility() }
+    }
+
     private fun applyVisibility() {
         val v = view ?: return
-        val show = enabled && palette.badge.isNotEmpty() && !onAod && (statusBarShown || ownRowInFront)
+        val show = enabled && !retro && palette.badge.isNotEmpty() && !onAod && (statusBarShown || ownRowInFront)
         // Faded rather than GONE: a GONE root makes the window invisible to the window manager,
         // and then it may stop getting the insets that say the status bar came back.
         v.animate().cancel()

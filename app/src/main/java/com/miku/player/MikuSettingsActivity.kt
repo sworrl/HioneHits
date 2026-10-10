@@ -176,20 +176,20 @@ fun MikuSettingsScreen(onBack: () -> Unit) {
             SettingsCategoryItem(
                 id = "usb",
                 title = "USB Preferences",
-                subtitle = "USB DAC, OTG and file transfer",
+                subtitle = "USB DAC mode, in the Hardware app",
                 icon = Icons.Default.Usb,
                 badge = "UAC2",
                 accentColor = Color(0xFF00E5FF),
-                onClick = { ctx.startActivity(Intent(ctx, HardwareSettingsActivity::class.java)) }
+                onClick = { DacSettingsLink.open(ctx) }
             ),
             SettingsCategoryItem(
                 id = "audio",
-                title = "Audio settings",
-                subtitle = "DAC filter, gain, DRE and direct ALSA",
+                title = "DAC settings",
+                subtitle = "Filter, gain, DRE and high power, in the Hardware app",
                 icon = Icons.Default.Headphones,
                 badge = "CS43198",
                 accentColor = Color(0xFF7C4DFF),
-                onClick = { ctx.startActivity(Intent(ctx, HardwareSettingsActivity::class.java)) }
+                onClick = { DacSettingsLink.open(ctx) }
             ),
             SettingsCategoryItem(
                 id = "fn_lock",

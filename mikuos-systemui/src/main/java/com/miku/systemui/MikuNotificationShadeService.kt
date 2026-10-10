@@ -59,11 +59,22 @@ class MikuNotificationShadeService : AccessibilityService() {
         private const val TAG = "MikuNav"
         /** Draws its own status row on home, the lockscreen and AOD. */
         private const val LAUNCHER_PKG = "com.miku.launcher"
+        /**
+         * Retro modes (Riot mode, MikuPod). While one is in front, no modern system UI shows: no
+         * track toast, volume or brightness HUD, DAC badge, heads-up notifications, top pull strip
+         * or home pill. The app draws its own era's volume and status, and has its own exit.
+         */
+        val RETRO_PKGS = setOf("com.miku.riot", "com.miku.wheel")
         const val ACTION_TRIGGER_BACK = "com.miku.systemui.action.TRIGGER_BACK"
         const val ACTION_DEBUG_QUICK_SWITCH = "com.miku.systemui.action.DEBUG_QUICK_SWITCH"
         const val ACTION_DEBUG_RECENTS = "com.miku.systemui.action.DEBUG_RECENTS"
         const val ACTION_DEBUG_HOME = "com.miku.systemui.action.DEBUG_HOME"
         const val ACTION_DEBUG_BACK = "com.miku.systemui.action.DEBUG_BACK"
+        /**
+         * Opens the Miku shade window from another MikuOS app (the launcher's top bar). The sender
+         * must hold android.permission.STATUS_BAR, which only platform-signed apps get.
+         */
+        const val ACTION_OPEN_SHADE = "com.miku.systemui.action.OPEN_SHADE_WINDOW"
 
         // Gesture geometry (dp)
         const val POWER_HOLD_MS = 450L
@@ -169,18 +180,18 @@ class MikuNotificationShadeService : AccessibilityService() {
                 MikuTrackHud.ACTION_TRACK_CHANGED, MikuTrackHud.ACTION_DEBUG -> {
                     val a = intent.getIntExtra("accent", 0); val a2 = intent.getIntExtra("accent2", 0)
                     if (a != 0) MikuAccent.push(a, a2)
-                    trackHud?.show(MikuTrackHud.Payload.from(intent))
+                    if (!retroInFront) trackHud?.show(MikuTrackHud.Payload.from(intent))
                 }
                 "android.media.VOLUME_CHANGED_ACTION",
                 "android.media.MASTER_VOLUME_CHANGED_ACTION",
                 "android.media.RINGER_MODE_CHANGED" -> {
                     // One HUD at a time: the centre-capsule volume style sits where this bar does.
                     brightnessHud?.hide()
-                    volumeHud?.onVolumeChanged()
+                    if (!retroInFront) volumeHud?.onVolumeChanged()
                 }
                 MikuBrightnessHud.ACTION_SHOW -> {
                     volumeHud?.hide()
-                    brightnessHud?.show()
+                    if (!retroInFront) brightnessHud?.show()
                 }
                 ACTION_TRIGGER_BACK, ACTION_DEBUG_BACK -> performGlobalAction(GLOBAL_ACTION_BACK)
                 ACTION_DEBUG_HOME -> triggerHome()
@@ -190,6 +201,15 @@ class MikuNotificationShadeService : AccessibilityService() {
                     quickSwitch(dir)
                 }
             }
+        }
+    }
+
+    /** Separate from [receiver]: this one is permission-guarded. */
+    private val openShadeReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent?) {
+            if (intent?.action != ACTION_OPEN_SHADE) return
+            Log.i(TAG, "open shade: broadcast")
+            mainHandler.post { openShadeActivity(-1) }
         }
     }
 
@@ -222,6 +242,14 @@ class MikuNotificationShadeService : AccessibilityService() {
                 registerReceiver(receiver, filter)
             }
         } catch (t: Throwable) { Log.w(TAG, "receiver register failed: $t") }
+        try {
+            val f = IntentFilter(ACTION_OPEN_SHADE)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                registerReceiver(openShadeReceiver, f, "android.permission.STATUS_BAR", mainHandler, Context.RECEIVER_EXPORTED)
+            } else {
+                registerReceiver(openShadeReceiver, f, "android.permission.STATUS_BAR", mainHandler)
+            }
+        } catch (t: Throwable) { Log.w(TAG, "open-shade receiver register failed: $t") }
     }
 
     override fun onServiceConnected() {
@@ -254,6 +282,7 @@ class MikuNotificationShadeService : AccessibilityService() {
         shadeWindow?.attach()
         addOverlays()
         MikuNotificationStore.ensureEnabled(this)
+        MikuRotationKeeper.start(this)
         suppressStockShade()
         mainHandler.post(checkOwnBar)
         Log.i(TAG, "MikuNav connected; overlays=$overlaysAdded canGestures=" +
@@ -262,6 +291,7 @@ class MikuNotificationShadeService : AccessibilityService() {
 
     override fun onDestroy() {
         try { unregisterReceiver(receiver) } catch (_: Throwable) {}
+        try { unregisterReceiver(openShadeReceiver) } catch (_: Throwable) {}
         idleDim?.destroy(); idleDim = null
         shadeWindow?.detach(); shadeWindow = null
         trackHud?.destroy(); trackHud = null
@@ -287,16 +317,35 @@ class MikuNotificationShadeService : AccessibilityService() {
      * front means the reveal shows nothing, so there is never a second clock.
      */
     private var ownBarInFront = false
+    /** A retro mode (RETRO_PKGS) is in front. */
+    @Volatile private var retroInFront = false
 
     private val checkOwnBar = Runnable {
         val top = MikuTaskStack.topTask(this)?.second
         val pkg = top?.packageName
         dacBadge?.setForeground(pkg, top?.className)
         val own = pkg == LAUNCHER_PKG
-        if (own != ownBarInFront) {
+        val retro = pkg in RETRO_PKGS
+        if (own != ownBarInFront || retro != retroInFront) {
             ownBarInFront = own
+            if (retro != retroInFront) {
+                retroInFront = retro
+                applyRetroMode()
+            }
             suppressStockShade()
         }
+    }
+
+    /** Hide or bring back the Miku overlays for a retro mode. */
+    private fun applyRetroMode() {
+        val vis = if (retroInFront) View.GONE else View.VISIBLE
+        topStripView?.visibility = vis
+        pillView?.visibility = vis
+        if (retroInFront) {
+            trackHud?.hide(); volumeHud?.hideImmediately(); brightnessHud?.hideImmediately()
+        }
+        dacBadge?.setRetro(retroInFront)
+        Log.i(TAG, "retro mode ${if (retroInFront) "on: modern overlays hidden" else "off"}")
     }
 
     private fun suppressStockShade() {
@@ -322,8 +371,11 @@ class MikuNotificationShadeService : AccessibilityService() {
             val DISABLE_NOTIFICATION_ICONS = 0x00020000
             val DISABLE_SYSTEM_INFO = 0x00100000
             val DISABLE_CLOCK = 0x00800000
-            val icons = if (ownBarInFront) DISABLE_NOTIFICATION_ICONS or DISABLE_SYSTEM_INFO or DISABLE_CLOCK else 0
-            val flags = DISABLE_EXPAND or DISABLE_HOME or DISABLE_RECENT or icons
+            val DISABLE_NOTIFICATION_ALERTS = 0x00040000
+            val icons = if (ownBarInFront || retroInFront) DISABLE_NOTIFICATION_ICONS or DISABLE_SYSTEM_INFO or DISABLE_CLOCK else 0
+            // Retro modes also drop heads-up popups and notification sounds.
+            val alerts = if (retroInFront) DISABLE_NOTIFICATION_ALERTS else 0
+            val flags = DISABLE_EXPAND or DISABLE_HOME or DISABLE_RECENT or icons or alerts
             sb.javaClass.getMethod("disable", Int::class.javaPrimitiveType).invoke(sb, flags)
             Log.i(TAG, "stock shade blocked, stock home/recents disabled, stock icons ${if (ownBarInFront) "hidden (Miku screen in front)" else "shown"}")
         }.onFailure { Log.w(TAG, "suppressStockShade failed: $it") }
@@ -422,6 +474,13 @@ class MikuNotificationShadeService : AccessibilityService() {
      * the manifest so the quick-settings tile and any external launcher intent keep working.
      */
     private fun openShadeActivity(dragOffsetPx: Int = -1) {
+        if (retroInFront) return
+        // If stock SystemUI's panel got out anyway (an app called expandNotificationsPanel before
+        // DISABLE_EXPAND landed), fold it so only the Miku shade is on screen.
+        runCatching {
+            val sb = getSystemService(Context.STATUS_BAR_SERVICE)
+            sb.javaClass.getMethod("collapsePanels").invoke(sb)
+        }
         val w = shadeWindow
         if (w != null) { w.open(dragOffsetPx); return }
         launchOwnActivity(MikuShadeActivity::class.java, 0) {
@@ -660,6 +719,8 @@ class MikuNotificationShadeService : AccessibilityService() {
         if (event.action == android.view.KeyEvent.ACTION_DOWN) idleDim?.poke()
         if (event.keyCode == android.view.KeyEvent.KEYCODE_VOLUME_UP ||
             event.keyCode == android.view.KeyEvent.KEYCODE_VOLUME_DOWN) {
+            // Retro modes take the volume keys themselves and draw their own era's volume bar.
+            if (retroInFront) return super.onKeyEvent(event)
             if (handleVolumeKnob(event)) return true
         }
         // Brightness keys (a keyboard or remote that has them): step and show the brightness bar.
@@ -727,7 +788,7 @@ class MikuNotificationShadeService : AccessibilityService() {
             if (cls.contains("BrightnessDialog", ignoreCase = true)) {
                 runCatching { performGlobalAction(GLOBAL_ACTION_BACK) }
                 volumeHud?.hide()
-                brightnessHud?.show()
+                if (!retroInFront) brightnessHud?.show()
                 return
             }
             if (cls.contains("NotificationShade", ignoreCase = true) ||
@@ -767,6 +828,7 @@ class MikuNotificationShadeService : AccessibilityService() {
                         val dx = abs(event.rawX - startX)
                         if (dy >= dp(SHADE_PULL_DP) && dx < dy) {
                             opened = true
+                            Log.i(TAG, "top strip pull -> shade (dy=${dy.toInt()})")
                             MikuHaptics.tick(this)
                             MikuShadeDrag.begin(dy)                  // the shade follows this finger 1:1
                             openShadeActivity(dy.toInt())

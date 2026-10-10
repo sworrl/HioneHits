@@ -123,7 +123,7 @@ class Skin(
             }
             else -> false
         }
-        if (moved) clicker.tick(view)
+        if (moved) clicker.step()
         invalidate()
         return moved
     }
@@ -147,7 +147,7 @@ class Skin(
     fun onButton(b: Btn, view: View?) {
         val wasLit = isLit(now())
         wake()
-        clicker.press(view)
+        // The click itself (sound and pulse) came from the wheel when the switch closed.
         // Like the originals, the first press on a dark screen only turns the light on,
         // except play/pause, which should always work blind.
         if (!wasLit && b != Btn.PLAY) { invalidate(); return }
@@ -188,7 +188,6 @@ class Skin(
             Btn.PREV -> link.seekBy(-5000)
             Btn.SELECT -> {
                 if (s !is AboutScreen) return false
-                clicker.press(view)
                 push(BrickScreen(newBrick()))
             }
             Btn.MENU -> {
@@ -508,6 +507,41 @@ class Skin(
 
     private fun onOff(b: Boolean) = if (b) "On" else "Off"
 
+    private fun clickerLabel(): String {
+        val r = prefs.clickerRoute(era)
+        return if (era == Era.COLOR_2004) r.label else onOff(r != ClickRoute.OFF)
+    }
+
+    private fun nextClicker() {
+        val choices = ClickRoute.choices(era)
+        val cur = choices.indexOf(prefs.clickerRoute(era)).coerceAtLeast(0)
+        val r = choices[(cur + 1) % choices.size]
+        prefs.setClickerRoute(era, r)
+        clicker.route = r
+    }
+
+    /**
+     * A hardware volume key. Turns the music volume one wheel step, ticks the clicker, and shows
+     * the era's volume bar: the Now Playing bar when that screen is up, else a strip at the
+     * bottom of the panel. Returns true when the volume changed.
+     */
+    fun volumeKey(dir: Int): Boolean {
+        wake()
+        val before = link.volume
+        link.adjustVolume(dir * maxOf(1, link.maxVolume / 30))
+        val t = now()
+        if (top is NowPlayingScreen && npMode != NpMode.SCRUB) {
+            npMode = NpMode.VOLUME
+            npModeUntil = t + 2000
+        } else {
+            volumeShownUntil = t + 2000
+        }
+        val moved = link.volume != before
+        if (moved) clicker.soundOnly()
+        invalidate()
+        return moved
+    }
+
     private fun settingsMenu() = MenuScreen("Settings", StaticRows {
         buildList {
             add(Row("About") { push(AboutScreen()) })
@@ -530,14 +564,18 @@ class Skin(
             if (era == Era.COLOR_2004) add(Row("Screen", arrow = false, value = {
                 if (prefs.color2004) "Color" else "Gray"
             }) { prefs.color2004 = !prefs.color2004 })
-            // The 2004 models could click through the speaker, the headphones or both.
-            add(Row("Clicker", arrow = false, value = {
-                if (era == Era.COLOR_2004) (if (prefs.clicker) "Speaker" else "Off") else onOff(prefs.clicker)
+            // 2004 offered Off, Speaker, Headphones and Both. The others had On and Off.
+            add(Row("Clicker", arrow = false, value = { clickerLabel() }) { nextClicker() })
+            // Not on the originals (they had no motor). Pulses also need the system's touch
+            // feedback switch on.
+            add(Row("Haptics", arrow = false, value = {
+                when {
+                    !prefs.haptics -> "Off"
+                    !clicker.systemHapticsOn() -> "Off (system)"
+                    else -> "On"
+                }
             }) {
-                prefs.clicker = !prefs.clicker; clicker.sound = prefs.clicker
-            })
-            add(Row("Vibrate", arrow = false, value = { onOff(prefs.haptics) }) {
-                prefs.haptics = !prefs.haptics; clicker.haptic = prefs.haptics
+                prefs.haptics = !prefs.haptics; clicker.haptics = prefs.haptics
             })
             add(Row("Legal") { push(legalScreen()) })
         }

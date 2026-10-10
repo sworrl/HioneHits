@@ -486,6 +486,7 @@ fun MikuNotificationShadeView(
                 val visibleNotifs = remember(notifs, media) {
                     notifs.filter { !(it.hasMediaSession && media != null && it.pkg == media?.pkg) }
                 }
+                var openGroups by remember { mutableStateOf(setOf<String>()) }
                 LazyColumn(
                     state = listState,
                     modifier = Modifier.fillMaxWidth().weight(1f, fill = false).nestedScroll(nested),
@@ -495,17 +496,46 @@ fun MikuNotificationShadeView(
                     media?.let { m ->
                         item(key = "media") { MediaCard(m, onOpen = { openApp(ctx, m.pkg); onDismiss() }) }
                     }
-                    items(visibleNotifs, key = { it.key }) { n ->
-                        NotifRow(
-                            n,
-                            modifier = Modifier.animateItem(
-                                fadeInSpec = tween(MikuMotion.ms(150)),
-                                fadeOutSpec = tween(MikuMotion.ms(120)),
-                                placementSpec = spring(dampingRatio = MikuMotion.SETTLE_DAMPING, stiffness = MikuMotion.SETTLE_STIFFNESS)
-                            ),
-                            onOpen = { if (MikuNotificationStore.send(ctx, n.contentIntent)) { if (n.isClearable) MikuNotificationStore.dismiss(n.key); onDismiss() } },
-                            onDismiss = { MikuNotificationStore.dismiss(n.key) }
-                        )
+                    // Grouped by app, newest app first, apps with only ongoing ones last. An app
+                    // with one notification is a plain row. More than one gets a header with the
+                    // count. Past two rows the group folds until the header is tapped.
+                    notifGroups(visibleNotifs).forEach { (pkg, group) ->
+                        val openN: (MikuNotif) -> Unit = { n -> if (MikuNotificationStore.open(ctx, n)) onDismiss() }
+                        val replyN: (MikuNotif) -> Unit = { n -> onDismiss(); MikuReplyActivity.start(ctx, n.key) }
+                        if (group.size == 1) {
+                            val n = group[0]
+                            item(key = n.key) {
+                                NotifRow(n, modifier = Modifier.animateItem(
+                                    fadeInSpec = tween(MikuMotion.ms(150)), fadeOutSpec = tween(MikuMotion.ms(120)),
+                                    placementSpec = spring(dampingRatio = MikuMotion.SETTLE_DAMPING, stiffness = MikuMotion.SETTLE_STIFFNESS)
+                                ), onOpen = { openN(n) }, onReply = { replyN(n) }, onDismiss = { MikuNotificationStore.dismiss(n.key) })
+                            }
+                        } else {
+                            val open = pkg in openGroups || group.size <= 2
+                            item(key = "group:$pkg") {
+                                NotifGroupHeader(group, expanded = open, canFold = group.size > 2,
+                                    modifier = Modifier.animateItem(fadeInSpec = tween(MikuMotion.ms(150)), fadeOutSpec = tween(MikuMotion.ms(120))),
+                                    onToggle = { openGroups = if (pkg in openGroups) openGroups - pkg else openGroups + pkg },
+                                    onClearGroup = { group.filter { it.isClearable }.forEach { MikuNotificationStore.dismiss(it.key) } })
+                            }
+                            val shown = if (open) group else group.take(1)
+                            items(shown, key = { it.key }) { n ->
+                                NotifRow(n, modifier = Modifier.padding(start = 10.dp).animateItem(
+                                    fadeInSpec = tween(MikuMotion.ms(150)), fadeOutSpec = tween(MikuMotion.ms(120)),
+                                    placementSpec = spring(dampingRatio = MikuMotion.SETTLE_DAMPING, stiffness = MikuMotion.SETTLE_STIFFNESS)
+                                ), onOpen = { openN(n) }, onReply = { replyN(n) }, onDismiss = { MikuNotificationStore.dismiss(n.key) })
+                            }
+                            if (!open) {
+                                item(key = "more:$pkg") {
+                                    Text(
+                                        "${group.size - 1} more from ${group[0].appLabel}",
+                                        color = MikuTextSecondary, fontSize = 11.sp,
+                                        modifier = Modifier.fillMaxWidth().padding(start = 22.dp)
+                                            .clickable { openGroups = openGroups + pkg }.padding(vertical = 6.dp)
+                                    )
+                                }
+                            }
+                        }
                     }
                     if (visibleNotifs.any { it.isClearable }) {
                         item(key = "clear") {
@@ -848,9 +878,53 @@ private fun MediaCard(m: MikuMediaHub.Now, onOpen: () -> Unit) {
 
 // ------------------------------------------------------------------------------------ notification row
 
+/** Notifications grouped by app: newest app first, apps whose notifications are all ongoing last. */
+private fun notifGroups(list: List<MikuNotif>): List<Pair<String, List<MikuNotif>>> {
+    val by = LinkedHashMap<String, MutableList<MikuNotif>>()
+    list.forEach { by.getOrPut(it.pkg) { ArrayList() }.add(it) }
+    return by.entries
+        .map { (pkg, l) -> pkg to l.sortedWith(compareBy<MikuNotif> { it.isOngoing }.thenByDescending { it.postTime }) }
+        .sortedWith(compareBy<Pair<String, List<MikuNotif>>> { (_, l) -> l.all { it.isOngoing } }
+            .thenByDescending { (_, l) -> l.maxOf { it.postTime } })
+}
+
+/** Header over an app's notifications: icon, app name, count, fold chevron, clear-group. */
+@Composable
+private fun NotifGroupHeader(
+    group: List<MikuNotif>,
+    expanded: Boolean,
+    canFold: Boolean,
+    modifier: Modifier = Modifier,
+    onToggle: () -> Unit,
+    onClearGroup: () -> Unit
+) {
+    val first = group[0]
+    val appIconBmp = remember(first.pkg) { runCatching { first.appIcon?.toBitmap(48, 48)?.asImageBitmap() }.getOrNull() }
+    val accent = if (first.accent != 0) Color(first.accent) else MikuTeal
+    Row(
+        modifier.fillMaxWidth().height(32.dp).clip(RoundedCornerShape(12.dp))
+            .clickable(enabled = canFold) { onToggle() }
+            .padding(horizontal = 8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        if (appIconBmp != null) Image(appIconBmp, null, modifier = Modifier.size(18.dp).clip(RoundedCornerShape(5.dp)))
+        else Box(Modifier.size(18.dp).clip(CircleShape).background(accent.copy(alpha = 0.6f)))
+        Spacer(Modifier.width(8.dp))
+        Text(first.appLabel, color = accent, fontSize = 12.sp, fontWeight = FontWeight.Bold, maxLines = 1,
+            overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
+        Text("  ${group.size}", color = MikuMuted, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+        Spacer(Modifier.weight(1f))
+        if (group.any { it.isClearable }) {
+            Text("Clear", color = MikuTextSecondary, fontSize = 11.sp, fontWeight = FontWeight.Bold,
+                modifier = Modifier.clip(RoundedCornerShape(8.dp)).clickable { onClearGroup() }.padding(horizontal = 8.dp, vertical = 6.dp))
+        }
+        if (canFold) Icon(if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore, null, tint = MikuTextSecondary, modifier = Modifier.size(18.dp))
+    }
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun NotifRow(n: MikuNotif, onOpen: () -> Unit, onDismiss: () -> Unit, modifier: Modifier = Modifier) {
+private fun NotifRow(n: MikuNotif, onOpen: () -> Unit, onReply: () -> Unit, onDismiss: () -> Unit, modifier: Modifier = Modifier) {
     val ctx = LocalContext.current
     val view = LocalView.current
     var expanded by remember(n.key) { mutableStateOf(false) }
@@ -867,6 +941,9 @@ private fun NotifRow(n: MikuNotif, onOpen: () -> Unit, onDismiss: () -> Unit, mo
     val timeLabel = remember(n.postTime) {
         DateUtils.getRelativeTimeSpanString(n.postTime, System.currentTimeMillis(), DateUtils.MINUTE_IN_MILLIS, DateUtils.FORMAT_ABBREV_RELATIVE).toString()
     }
+    // Something to show when expanded: longer text, a chat history, actions, or a title that was cut.
+    val canExpand = n.actions.isNotEmpty() || n.bigText != null || n.messages.size > 1 ||
+        n.text.length > 60 || n.title.length > 32
     SwipeToDismissBox(
         state = state,
         modifier = modifier,
@@ -892,7 +969,7 @@ private fun NotifRow(n: MikuNotif, onOpen: () -> Unit, onDismiss: () -> Unit, mo
                     if (n.isOngoing) NotifGlassQuiet else NotifGlass,
                     accent = accent
                 )
-                .clickable { view.performHapticFeedback(android.view.HapticFeedbackConstants.CONTEXT_CLICK); onOpen() }
+                .clickable { view.performHapticFeedback(android.view.HapticFeedbackConstants.CONTEXT_CLICK); if (n.contentIntent != null) onOpen() else expanded = !expanded }
                 .padding(start = 12.dp, end = 4.dp, top = 8.dp, bottom = 8.dp)
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -903,16 +980,25 @@ private fun NotifRow(n: MikuNotif, onOpen: () -> Unit, onDismiss: () -> Unit, mo
                 Text("  ·  $timeLabel", color = MikuMuted, fontSize = 11.sp, maxLines = 1)
                 if (n.isOngoing) Text("  ·  ongoing", color = MikuMuted, fontSize = 11.sp, maxLines = 1)
                 Spacer(Modifier.weight(1f))
-                Box(
-                    Modifier.size(40.dp).clip(CircleShape).clickable { expanded = !expanded },
-                    contentAlignment = Alignment.Center
-                ) { Icon(if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore, null, tint = MikuTextSecondary, modifier = Modifier.size(20.dp)) }
+                if (canExpand) {
+                    Box(
+                        Modifier.size(40.dp).clip(CircleShape).clickable { expanded = !expanded },
+                        contentAlignment = Alignment.Center
+                    ) { Icon(if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore, if (expanded) "Collapse" else "Expand", tint = MikuTextSecondary, modifier = Modifier.size(20.dp)) }
+                } else Spacer(Modifier.size(width = 8.dp, height = 40.dp))
             }
             Row(Modifier.padding(end = 8.dp), verticalAlignment = Alignment.Top) {
                 Column(Modifier.weight(1f)) {
                     Text(n.title, color = MikuWhite, fontSize = 13.sp, fontWeight = FontWeight.Bold, maxLines = if (expanded) 3 else 1, overflow = TextOverflow.Ellipsis)
-                    val body = if (expanded) (n.bigText ?: n.text) else n.text
-                    if (body.isNotBlank()) Text(body, color = MikuTextSecondary, fontSize = 12.sp, maxLines = if (expanded) 12 else 2, overflow = TextOverflow.Ellipsis)
+                    if (expanded && n.messages.size > 1) {
+                        // Chat history, the way a messaging notification expands on a phone.
+                        n.messages.forEach { m ->
+                            Text((m.sender?.let { "$it: " } ?: "") + m.text, color = MikuTextSecondary, fontSize = 12.sp, maxLines = 4, overflow = TextOverflow.Ellipsis)
+                        }
+                    } else {
+                        val body = if (expanded) (n.bigText ?: n.text) else n.text
+                        if (body.isNotBlank()) Text(body, color = MikuTextSecondary, fontSize = 12.sp, maxLines = if (expanded) 12 else 2, overflow = TextOverflow.Ellipsis)
+                    }
                     n.subText?.takeIf { expanded && it.isNotBlank() }?.let { Text(it, color = MikuMuted, fontSize = 11.sp, maxLines = 1) }
                 }
                 n.largeIcon?.let { bmp ->
@@ -928,8 +1014,12 @@ private fun NotifRow(n: MikuNotif, onOpen: () -> Unit, onDismiss: () -> Unit, mo
             }
             AnimatedVisibility(visible = expanded && n.actions.isNotEmpty(), enter = expandVertically() + fadeIn(), exit = shrinkVertically() + fadeOut()) {
                 Row(Modifier.padding(top = 6.dp, end = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    n.actions.take(3).forEach { (label, pi) ->
-                        GlassChipButton(label.uppercase(), accent = accent) { MikuNotificationStore.send(ctx, pi) }
+                    n.actions.take(3).forEach { a ->
+                        val label = a.title.ifBlank { if (a.isReply) "Reply" else "Open" }.uppercase()
+                        GlassChipButton(label, accent = accent, filled = a.isReply) {
+                            if (a.isReply) onReply()
+                            else if (MikuNotificationStore.send(ctx, a.intent) && n.autoCancel && n.isClearable) MikuNotificationStore.dismiss(n.key)
+                        }
                     }
                 }
             }

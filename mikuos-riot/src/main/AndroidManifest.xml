@@ -3,6 +3,8 @@
 
     <!-- Genres come from MediaStore directly; everything else is browsed through Miku Music. -->
     <uses-permission android:name="android.permission.READ_MEDIA_AUDIO" />
+    <!-- Wheel detents and key presses. -->
+    <uses-permission android:name="android.permission.VIBRATE" />
     <uses-permission
         android:name="android.permission.READ_EXTERNAL_STORAGE"
         android:maxSdkVersion="32" />
@@ -39,7 +41,7 @@
             android:stateNotNeeded="true"
             android:excludeFromRecents="false"
             android:resizeableActivity="false"
-            android:screenOrientation="portrait"
+            android:screenOrientation="sensorLandscape"
             android:configChanges="orientation|screenSize|keyboardHidden|keyboard|navigation|uiMode"
             android:windowSoftInputMode="stateAlwaysHidden">
             <intent-filter>

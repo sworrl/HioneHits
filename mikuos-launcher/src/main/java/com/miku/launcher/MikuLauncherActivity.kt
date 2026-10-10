@@ -5034,15 +5034,28 @@ private fun CyberShadeSoundboardSection(
     }
 
 
-    // 8 Cyber Quick Hardware Tiles (2x4 Grid)
-    Text(
-        text = "DAC",
-        color = MikuCyan,
-        fontSize = 11.sp,
-        fontWeight = FontWeight.Bold,
-        fontFamily = AudiowideFont,
-        letterSpacing = 1.sp
-    )
+    // 8 Cyber Quick Hardware Tiles (2x4 Grid). The tiles are quick toggles; "All settings"
+    // opens the Hardware app's DAC page, the only full DAC page on MikuOS.
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        Text(
+            text = "DAC",
+            color = MikuCyan,
+            fontSize = 11.sp,
+            fontWeight = FontWeight.Bold,
+            fontFamily = AudiowideFont,
+            letterSpacing = 1.sp,
+            modifier = Modifier.weight(1f)
+        )
+        Text(
+            text = "All settings",
+            color = MikuCyan,
+            fontSize = 10.sp,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier
+                .clickable { if (DacSettingsLink.open(ctx)) onClose() }
+                .padding(horizontal = 6.dp, vertical = 2.dp)
+        )
+    }
 
     Spacer(Modifier.height(6.dp))
 
@@ -5566,14 +5579,8 @@ private fun MikuLauncherQuiltSection(
         },
         QuiltBadge("dac", "CS43198 DAC") {
             CyberBespokeBadge(
-                onClick = {
-                    try {
-                        val intent = ctx.packageManager.getLaunchIntentForPackage("com.miku.settings")?.apply {
-                            flags = Intent.FLAG_ACTIVITY_NEW_TASK
-                        }
-                        if (intent != null) ctx.startActivity(intent, MikuCompositing.optionsFor(ctx, MikuTransitionEvent.SETTINGS))
-                    } catch (_: Throwable) {}
-                },
+                // The DAC page is the Hardware app's (the only one on MikuOS).
+                onClick = { DacSettingsLink.open(ctx) },
                 accentColor = Color(0xFF7C4DFF),
                 gradient = listOf(Color(0x447C4DFF), Color(0xFF0A0418)),
                 shape = DacChipShape

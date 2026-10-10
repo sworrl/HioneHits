@@ -5810,6 +5810,12 @@ internal val settingsCategoryRequest = androidx.compose.runtime.mutableStateOf<S
             LazyColumn(Modifier.fillMaxSize().padding(horizontal = 16.dp)) {
                 when (selectedCategory) {
                     SettingsCategory.GENERAL -> {
+                        // DAC settings live in the Hardware app (the only DAC page on MikuOS).
+                        // Miku Music keeps its own playback options on HardwareSettingsActivity.
+                        listOf(
+                            Triple("DAC settings", "Filter, gain, DRE, high power and USB DAC. Opens the Hardware app.", true),
+                            Triple("Playback and listening profiles", "Headphone profiles, direct route, car audio, USB DAC output", false),
+                        ).forEach { (title, sub, isDac) ->
                         item {
                             Spacer(Modifier.height(8.dp))
                             Row(
@@ -5819,19 +5825,21 @@ internal val settingsCategoryRequest = androidx.compose.runtime.mutableStateOf<S
                                     .background(Brush.horizontalGradient(listOf(Color(0xFF0F3238), Color(0xFF071B20))))
                                     .border(1.dp, MikuTealBright.copy(alpha = 0.4f), RoundedCornerShape(14.dp))
                                     .clickable {
-                                        ctx.startActivity(android.content.Intent(ctx, HardwareSettingsActivity::class.java))
+                                        if (isDac) DacSettingsLink.open(ctx)
+                                        else ctx.startActivity(android.content.Intent(ctx, HardwareSettingsActivity::class.java))
                                     }
                                     .padding(14.dp),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Text("🎛️", fontSize = 22.sp)
+                                Icon(if (isDac) Icons.Default.Headphones else Icons.Default.Tune, null, tint = MikuTealBright, modifier = Modifier.size(22.dp))
                                 Spacer(Modifier.width(12.dp))
                                 Column(Modifier.weight(1f)) {
-                                    Text("M500 Hardware & DAC Settings", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
-                                    Text("Dual CS43198 DAC, filters, gain, Fn switch, USB DAC", color = MikuTealBright, fontSize = 11.5.sp)
+                                    Text(title, color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                                    Text(sub, color = MikuTealBright, fontSize = 11.5.sp)
                                 }
                                 Icon(Icons.AutoMirrored.Filled.ArrowBack, null, tint = MikuTealBright, modifier = Modifier.size(18.dp).rotate(180f))
                             }
+                        }
                         }
                         item { SettingsSection("Library") }
                         item { StorageAccessCard(ctx) }

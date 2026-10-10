@@ -137,6 +137,8 @@ fun SkinShell(
                 ClickWheel(
                     st, d, view,
                     onScroll = { n -> skin.onScroll(n, view); frame.intValue++ },
+                    onDown = { skin.clicker.wake() },
+                    onClick = { b -> skin.clicker.press(feelOf(skin.era, b)) },
                     onButton = { b -> skin.onButton(b, view); frame.intValue++ },
                     onHold = { b -> skin.onHold(b, view).also { frame.intValue++ } },
                 )
@@ -194,10 +196,30 @@ private fun QuietLink(label: String, color: Color, onClick: () -> Unit) {
 val PixelFamily = FontFamily(Font(R.font.pixel_operator_bold))
 val SansFamily = FontFamily(Font(R.font.pt_sans), Font(R.font.pt_sans_bold, FontWeight.Bold))
 
+/** Which switch a press feels like on this era. */
+fun feelOf(e: Era, b: Btn): Feel = when {
+    b == Btn.SELECT -> Feel.CENTER
+    e == Era.MONO_2001 -> Feel.SIDE
+    else -> Feel.RING
+}
+
 /**
- * The wheel. Drag around the ring to scroll (one detent per 15 degrees, clockwise = down),
- * tap the ring's top/right/bottom/left for MENU / next / play-pause / previous, tap the middle
- * to select. Holding a button does that button's hold action (seek, light, hidden game).
+ * Steps per turn. Neither wheel had detents, so these follow Rockbox's drivers: 96 positions per
+ * turn on all of them, one step every 6 on the 1G to 3G wheels (16 a turn, 22.5 degrees) and
+ * every 4 on the click wheel (24 a turn, 15 degrees).
+ */
+fun detentsOf(e: Era): Int = if (e == Era.MONO_2001) 16 else 24
+
+/**
+ * The wheel. Drag around the ring to scroll (clockwise = down), tap the ring's
+ * top/right/bottom/left for MENU / next / play-pause / previous, tap the middle to select.
+ * Holding a button does that button's hold action (seek, light, hidden game).
+ *
+ * Like the originals, a touch that starts on the center is only ever a button (it never
+ * scrolls), and a touch on the ring is a scroll once it has turned more than half a step,
+ * otherwise a button press on release. The center "clicks" (sound and pulse) as it goes down,
+ * the way its dome switch did. On 2001 the wheel and the buttons are separate parts: the
+ * outer band is four buttons that never scroll, the inner wheel scrolls and never presses.
  */
 @Composable
 fun ClickWheel(
@@ -205,6 +227,8 @@ fun ClickWheel(
     diameter: androidx.compose.ui.unit.Dp,
     view: View,
     onScroll: (Int) -> Unit,
+    onDown: () -> Unit,
+    onClick: (Btn) -> Unit,
     onButton: (Btn) -> Unit,
     onHold: (Btn) -> Boolean,
 ) {
@@ -228,17 +252,25 @@ fun ClickWheel(
                     val dy0 = down.position.y - cy
                     val r0 = sqrt(dx0 * dx0 + dy0 * dy0)
                     if (r0 > outer * 1.04f) return@awaitEachGesture
+                    onDown()
                     val onCenter = r0 < inner
+                    val separate = st.era == Era.MONO_2001
+                    val onButtonBand = separate && !onCenter && r0 > outer * BUTTON_BAND_2001
+                    val canScroll = !onCenter && !onButtonBand
+                    val canPress = onCenter || !separate || onButtonBand
                     val btn = if (onCenter) Btn.SELECT else buttonAt(dx0, dy0)
+                    if (onCenter) onClick(Btn.SELECT)
                     var lastA = atan2(dy0, dx0)
                     var acc = 0f
                     var travel = 0f
                     var scrolling = false
                     var held = false
-                    val detent = (2 * PI / DETENTS).toFloat()
-                    val holdJob: Job = scope.launch {
+                    val detent = (2 * PI / detentsOf(st.era)).toFloat()
+                    val holdJob: Job? = if (!canPress) null else scope.launch {
                         delay(holdMs(btn))
                         held = onHold(btn)
+                        // A ring switch held down clicked when it closed; we only know now.
+                        if (held && !onCenter) onClick(btn)
                         if (held && (btn == Btn.NEXT || btn == Btn.PREV)) while (true) { delay(260); onHold(btn) }
                     }
                     while (true) {
@@ -247,7 +279,7 @@ fun ClickWheel(
                         if (!ch.pressed) break
                         val dx = ch.position.x - cx
                         val dy = ch.position.y - cy
-                        if (!onCenter && !held) {
+                        if (canScroll && !held) {
                             val a = atan2(dy, dx)
                             var d = a - lastA
                             if (d > PI) d -= (2 * PI).toFloat()
@@ -255,7 +287,7 @@ fun ClickWheel(
                             lastA = a
                             acc += d
                             travel += abs(d)
-                            if (!scrolling && travel > detent * 0.55f) { scrolling = true; holdJob.cancel() }
+                            if (!scrolling && travel > detent * 0.55f) { scrolling = true; holdJob?.cancel() }
                             if (scrolling) {
                                 var n = 0
                                 while (acc >= detent) { n++; acc -= detent }
@@ -265,8 +297,11 @@ fun ClickWheel(
                         }
                         ch.consume()
                     }
-                    holdJob.cancel()
-                    if (!scrolling && !held) onButton(btn)
+                    holdJob?.cancel()
+                    if (canPress && !scrolling && !held) {
+                        if (!onCenter) onClick(btn)
+                        onButton(btn)
+                    }
                 }
             }
     ) {
@@ -277,7 +312,7 @@ fun ClickWheel(
         drawCircle(Color(st.wheelEdge), r - 1.5f, c, style = Stroke(3f))
         if (st.era == Era.MONO_2001) {
             // The first wheel turned inside a ring of four separate buttons.
-            drawCircle(Color(st.wheelEdge), r * 0.70f, c, style = Stroke(2.5f))
+            drawCircle(Color(st.wheelEdge), r * BUTTON_BAND_2001, c, style = Stroke(2.5f))
         }
         val inner = r * CENTER_RATIO
         drawCircle(Brush.verticalGradient(listOf(lighten(st.center, 0.04f), Color(st.center), darken(st.center, 0.06f)),
@@ -297,7 +332,8 @@ fun ClickWheel(
     }
 }
 
-private const val DETENTS = 24
+/** 2001: the inner edge of the button ring, as a fraction of the wheel's radius. */
+private const val BUTTON_BAND_2001 = 0.70f
 private const val CENTER_RATIO = 0.36f
 /** Seeking starts quickly; the light and the hidden game want a deliberate hold. */
 private fun holdMs(b: Btn) = when (b) {

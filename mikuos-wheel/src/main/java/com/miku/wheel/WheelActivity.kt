@@ -81,14 +81,11 @@ class WheelActivity : ComponentActivity() {
             frame.intValue++
         }
         art = ArtCache(this) { frame.intValue++ }
-        clicker = Clicker(this).apply { sound = prefs.clicker; haptic = prefs.haptics }
+        clicker = Clicker(this).apply { haptics = prefs.haptics }
         volumeControlStream = android.media.AudioManager.STREAM_MUSIC
 
         WindowCompat.setDecorFitsSystemWindows(window, false)
-        WindowInsetsControllerCompat(window, window.decorView).apply {
-            hide(WindowInsetsCompat.Type.systemBars())
-            systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
-        }
+        immersive()
 
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
@@ -131,6 +128,7 @@ class WheelActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
+        immersive()
         refreshUnlocks()
         ContextCompat.registerReceiver(this, battery, IntentFilter(Intent.ACTION_BATTERY_CHANGED),
             ContextCompat.RECEIVER_NOT_EXPORTED)
@@ -152,22 +150,37 @@ class WheelActivity : ComponentActivity() {
         clicker.release()
     }
 
-    /** Hardware volume keys: change the music volume and show the era's own volume bar. */
-    override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {
-        if (keyCode == KeyEvent.KEYCODE_VOLUME_UP || keyCode == KeyEvent.KEYCODE_VOLUME_DOWN) {
-            val dir = if (keyCode == KeyEvent.KEYCODE_VOLUME_UP) 1 else -1
-            link.adjustVolume(dir * maxOf(1, link.maxVolume / 30))
-            skin?.let { s ->
-                s.wake()
-                if (s.top is NowPlayingScreen && s.npMode != NpMode.SCRUB) {
-                    s.npMode = NpMode.VOLUME
-                    s.npModeUntil = System.currentTimeMillis() + 2000
-                }
+    override fun onWindowFocusChanged(hasFocus: Boolean) {
+        super.onWindowFocusChanged(hasFocus)
+        if (hasFocus) immersive()
+    }
+
+    /** No status bar, no nav bar, in every era and on the picker. A swipe shows them briefly. */
+    private fun immersive() {
+        WindowInsetsControllerCompat(window, window.decorView).apply {
+            hide(WindowInsetsCompat.Type.systemBars())
+            systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+        }
+    }
+
+    /**
+     * Hardware volume keys. MikuSystemUI passes them through while MikuPod is in front, so they
+     * are handled here: the music volume moves one wheel step with no system UI (flags 0), the
+     * clicker ticks, and the era's own volume bar shows. Both down and up are consumed.
+     */
+    override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        val k = event.keyCode
+        if (k == KeyEvent.KEYCODE_VOLUME_UP || k == KeyEvent.KEYCODE_VOLUME_DOWN) {
+            if (event.action == KeyEvent.ACTION_DOWN) {
+                val dir = if (k == KeyEvent.KEYCODE_VOLUME_UP) 1 else -1
+                val s = skin
+                if (s != null && era.value != null) s.volumeKey(dir)
+                else link.adjustVolume(dir * maxOf(1, link.maxVolume / 30))
+                frame.intValue++
             }
-            frame.intValue++
             return true
         }
-        return super.onKeyDown(keyCode, event)
+        return super.dispatchKeyEvent(event)
     }
 
     // ---- routing -----------------------------------------------------------------------------
@@ -195,6 +208,8 @@ class WheelActivity : ComponentActivity() {
     private fun enter(e: Era) {
         if (!forced && e !in unlocked.value) return
         prefs.lastEra = e.id
+        clicker.era = e
+        clicker.route = prefs.clickerRoute(e)
         skin = Skin(e, this, prefs, link, art, clicker, library, libraryLoaded, hasPermission) { frame.intValue++ }
         era.value = e
         frame.intValue++

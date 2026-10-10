@@ -70,11 +70,18 @@ class RiotShell(private val activity: RiotActivity, unlocked: Boolean) {
     private var usbScreen = false
 
     // ---- radio ---------------------------------------------------------------------------------
-    private var fmStatus: String? = null
+    /** The FM app's media session. Riot mode never opens the tuner itself. */
+    val fm = RiotFm(activity)
     private var fmKHz = prefs.fmKHz
     private var presetSel = 0
-    private var fmWakeCheckAt = 0L
-    private var fmAsleep = false
+    /** Last local tune: the session's frequency is ignored for a moment so steps don't bounce. */
+    private var tunedAt = 0L
+    /** Tune [fmKHz] as soon as the session connects (entering radio mode, or starting in it). */
+    private var tuneOnConnect = false
+    /** Back on the FM screen: the station details instead of the presets. */
+    private var fmInfo = false
+    /** Volume bar popup, for screens that hide the home screen's own bar. */
+    private var volUntil = 0L
 
     // ---- keys ----------------------------------------------------------------------------------
     private val downAt = HashMap<Key, Long>()
@@ -92,12 +99,15 @@ class RiotShell(private val activity: RiotActivity, unlocked: Boolean) {
         RiotAssets.load(activity)
         media.onTrackStarted = { id -> id.toLongOrNull()?.let { lib.countPlay(it) } }
         media.connect { dirty = true }
+        fm.onChange = { onFm() }
+        if (prefs.radioMode) { tuneOnConnect = true; fm.connect() }
         loadLibrary()
         dirty = true
     }
 
     fun stop() {
         media.release()
+        fm.release()
     }
 
     fun setUnlocked(u: Boolean) { if (u != unlocked) { unlocked = u; dirty = true } }
@@ -157,6 +167,9 @@ class RiotShell(private val activity: RiotActivity, unlocked: Boolean) {
         dirty = true
     }
 
+    /** Haptic pulse for a key on the body. */
+    fun buttonFeedback(strong: Boolean = false) = activity.pressFeedback(strong)
+
     /** A tap on the glass: lights the backlight and wakes the player, nothing else. */
     fun touchLcd() { wakeUp() }
 
@@ -176,6 +189,8 @@ class RiotShell(private val activity: RiotActivity, unlocked: Boolean) {
             wakeUp()
             media.adjustVolume(if (k == Key.VOL_UP) 1 else -1)
             vol = media.volume()
+            volUntil = SystemClock.uptimeMillis() + VOLUME_POPUP_MS
+            dirty = true
             return
         }
         if (wakeUp()) { downAt.remove(k); return }
@@ -198,7 +213,7 @@ class RiotShell(private val activity: RiotActivity, unlocked: Boolean) {
                 Key.FWD, Key.REW -> if (dt > 600) {
                     val first = held.add(k)
                     if (prefs.radioMode && stack.isEmpty()) {
-                        if (first) { RiotSystem.fm(activity, if (k == Key.FWD) "seek_up" else "seek_down"); fmWakeCheckAt = nowMs + 2500 }
+                        if (first) { fm.seek(k == Key.FWD); tunedAt = 0 }
                     } else if (stack.isEmpty() || stack.last().overlay) {
                         media.seekBy(if (k == Key.FWD) 4000 else -4000)
                     }
@@ -226,12 +241,12 @@ class RiotShell(private val activity: RiotActivity, unlocked: Boolean) {
         }
         when (k) {
             Key.PLAY -> {
-                if (prefs.radioMode) RiotSystem.fm(activity, "power", mapOf("on" to if (fmStatus == null || fmStatus == "off") 1 else 0))
+                if (prefs.radioMode) { if (fm.state.on) fm.powerOff() else radioOn() }
                 else media.playPause()
                 return
             }
             Key.STOP -> {
-                if (prefs.radioMode) RiotSystem.fm(activity, "power", mapOf("on" to 0)) else media.stop()
+                if (prefs.radioMode) fm.powerOff() else media.stop()
                 return
             }
             Key.FWD, Key.REW -> {
@@ -254,9 +269,10 @@ class RiotShell(private val activity: RiotActivity, unlocked: Boolean) {
         // Home screens.
         if (prefs.radioMode) {
             if (k == Key.SELECT) {
-                if (fmAsleep) { RiotSystem.openFmApp(activity); fmAsleep = false; return }
                 val f = prefs.presets()[presetSel]
                 if (f > 0) tune(f)
+            } else if (k == Key.BACK) {
+                fmInfo = !fmInfo
             }
         } else {
             when (k) {
@@ -287,26 +303,14 @@ class RiotShell(private val activity: RiotActivity, unlocked: Boolean) {
             val usb = RiotSystem.usbTransfer(activity)
             if (usb != usbWas) { usbWas = usb; usbScreen = usb; dirty = true }
             vol = media.volume()
-            val st = RiotSystem.fmStatus(activity)
-            if (st != fmStatus) { fmStatus = st; dirty = true }
-            st?.split(' ')?.firstOrNull()?.toDoubleOrNull()?.let { mhz ->
-                val k = (mhz * 1000).toInt()
-                if (k != fmKHz && t > fmWakeCheckAt) { fmKHz = k; prefs.fmKHz = k }
-            }
-            if (prefs.radioMode && fmWakeCheckAt in 1 until t) {
-                fmAsleep = st == null || st == "off"
-                fmWakeCheckAt = 0
-                if (fmAsleep) flash("The FM app is asleep. Press SELECT to wake it.", "FM Tuner") {
-                    RiotSystem.openFmApp(activity); fmAsleep = false
-                }
-            }
+            if (volUntil in 1 until t) { volUntil = 0; dirty = true }
             if (npCursor >= 0 && t > npCursorUntil) { npCursor = -1; dirty = true }
             if (msg != null && t > msgUntil) { msg = null; dirty = true }
             if (lockFlashUntil in 1 until t) { lockFlashUntil = 0; dirty = true }
             // Power Saver: sleep after the set idle time, never while music plays.
             val idle = t - lastInput
             val limit = RiotPrefs.POWER_SAVER_MS[prefs.powerSaver.coerceIn(0, 4)]
-            val busy = now.playing || (prefs.radioMode && fmStatus != null && fmStatus != "off")
+            val busy = now.playing || (prefs.radioMode && fm.state.on)
             if (!asleep && !busy && idle > limit) { asleep = true; activity.setPowerSaving(true); dirty = true }
         }
         // Blink, slide and backlight edges need frames even with no new data.
@@ -344,6 +348,8 @@ class RiotShell(private val activity: RiotActivity, unlocked: Boolean) {
                 } else {
                     top.draw(c, t)
                 }
+                // The home screens carry their own volume bar; anywhere else it pops up briefly.
+                if (volUntil > t && (top != null || usbScreen)) drawVolumePopup(c)
                 msg?.let { c.message(it, msgTitle) }
                 if (lockFlashUntil > 0) drawLockFlash(c)
             }
@@ -371,6 +377,14 @@ class RiotShell(private val activity: RiotActivity, unlocked: Boolean) {
         if (icon != null) c.sprite(icon, (W - icon.w) / 2, 52)
         c.textCenter(RiotAssets.medium, W / 2, 82, "USB Connected", INK, bold = true)
         c.textCenter(RiotAssets.small, W / 2, 100, "Press any button to keep listening.")
+    }
+
+    private fun drawVolumePopup(c: Lcd) {
+        val w = 14 + 10 * 5 + 10
+        val x = (W - w) / 2
+        c.round(x - 1, 63, w + 2, 25, 6, fill = CLEAR, line = CLEAR)
+        c.round(x, 64, w, 23, 6, fill = CLEAR, line = INK)
+        c.volume(x + 6, 70, vol.first, vol.second)
     }
 
     private fun drawLockFlash(c: Lcd) {
@@ -416,7 +430,7 @@ class RiotShell(private val activity: RiotActivity, unlocked: Boolean) {
         val sp = RiotAssets.icons[icon]
         if (sp != null) c.sprite(sp, W - 4 - sp.w, 31 + (15 - sp.h) / 2)
         c.text(med, 3, 51, "Upcoming Tracks", INK, bold = true)
-        c.battery(W - 3, 53, batt.pct, batt.charging)
+        c.battery(W - 3, 53, batt)
         c.hline(0, W - 1, 66)
         if (showInfo) { drawTrackInfo(c); return }
         val q = now.queue
@@ -467,48 +481,161 @@ class RiotShell(private val activity: RiotActivity, unlocked: Boolean) {
             if (major) c.textCenter(tiny, x + 1, 9, m.toString())
         }
         c.sprite(RiotAssets.icons["pointer"], fx(fmKHz) - 2, 0)
-        val on = fmStatus != null && fmStatus != "off"
         val freq = String.format(Locale.US, "%.1f", fmKHz / 1000.0)
         val x = c.text(large, 2, 16, freq) + 3
-        if (on) c.tag(x, 27, "TUNED")
+        val st = fm.state
+        // TUNED as on the Riot; under it, stacked like Now Playing's time over RND, what the
+        // M500's tuner adds: STEREO or MONO when the FM app reports it, AD during an ad break.
+        val extra = when {
+            !st.tuned -> null
+            st.adBreak == true -> "AD"
+            st.stereo == true -> "STEREO"
+            st.stereo == false -> "MONO"
+            else -> null
+        }
+        if (st.tuned) c.tag(x, if (extra != null) 18 else 27, "TUNED")
+        if (extra != null) c.tag(x, 27, extra)
         c.volume(118, 22, vol.first, vol.second)
         val fmx = W - 3 - Lcd.measure(large, "FM")
         c.text(large, fmx, 16, "FM")
         c.text(tiny, fmx + 1, 37, "TUNER")
         c.text(RiotAssets.medium, 3, 47, "Radio Presets", INK, bold = true)
-        c.battery(W - 3, 49, batt.pct, batt.charging)
+        c.battery(W - 3, 49, batt)
         c.hline(0, W - 1, 62)
+        if (fmInfo) { drawFmInfo(c); return }
         val presets = prefs.presets()
         val labels = presets.mapIndexed { i, f ->
-            "Preset ${i + 1} - " + if (f > 0) String.format(Locale.US, "%.1f FM", f / 1000.0) else "empty"
+            "Preset ${i + 1} - " + if (f > 0) String.format(Locale.US, "%5.1f FM", f / 1000.0) else "empty"
         }
-        val rows = 6
+        val line = fmLine()
+        val rows = if (line != null) 5 else 6
         c.list(1, 66, W - 2, rows, 15, labels, presetSel, RiotUi.follow(presetSel, 0, rows, 8), f = RiotAssets.medium)
+        if (line != null) {
+            // What the station is sending, under a rule, in the small face of the detail block.
+            c.hline(0, W - 1, 143)
+            marquee(c, RiotAssets.small, 3, 147, W - 6, line)
+        }
+    }
+
+    /** The decoded line under the presets: station name, then the song or RadioText. */
+    private fun fmLine(): String? {
+        val st = fm.state
+        if (!st.on) return null
+        val name = (st.ps ?: st.station).trim().takeIf { it.isNotBlank() && !it.endsWith(" FM") }
+        val body = st.song ?: st.rt
+        return listOfNotNull(name, body).joinToString("  ").ifBlank { null }
+    }
+
+    /** Text wider than [w] scrolls left, pauses at each end, and starts over. */
+    private fun marquee(c: Lcd, f: BitmapFont, x: Int, y: Int, w: Int, s: String, lvl: Int = INK) {
+        val tw = Lcd.measure(f, s)
+        if (tw <= w) { c.text(f, x, y, s, lvl); return }
+        val over = tw - w
+        val ms = SystemClock.uptimeMillis()
+        val cycle = 1500 + over * 40L + 1500
+        val p = ms % cycle
+        val off = when {
+            p < 1500 -> 0
+            p < 1500 + over * 40L -> ((p - 1500) / 40).toInt()
+            else -> over
+        }
+        c.clip(x, y, x + w, y + f.height + 2)
+        c.text(f, x - off, y, s, lvl)
+        c.unclip()
+        animating = true
+    }
+
+    /**
+     * Back on the FM screen. The Riot had no RDS; this borrows the layout of its own track detail
+     * block (Back on Now Playing) for what the M500's tuner adds.
+     */
+    private fun drawFmInfo(c: Lcd) {
+        val f = RiotAssets.small
+        c.fill(0, 63, W, H - 63, CLEAR)
+        val st = fm.state
+        val lines = mutableListOf<String>()
+        lines += "Station: " + when {
+            !st.connected -> "the FM app isn't answering"
+            !st.on -> "tuner off"
+            else -> listOfNotNull(st.ps ?: st.station, st.pty ?: st.genre).joinToString(", ")
+        }
+        if (st.on) {
+            st.song?.let { lines += "Song: $it" }
+            st.songIdStatus?.takeIf { st.songIdTitle == null }?.let { lines += "Song ID: $it" }
+            st.rt?.takeIf { it != st.song }?.let { lines += c.wrap(f, "Text: $it", W - 12).take(3) }
+            if (st.adBreak == true) lines += "Ad break"
+            val sig = listOfNotNull(
+                when (st.stereo) { true -> "Stereo"; false -> "Mono"; null -> null },
+                st.rssi?.let { "$it dBuV" }
+            )
+            if (sig.isNotEmpty()) lines += "Signal: " + sig.joinToString(", ")
+        }
+        lines += "Frequency: " + String.format(Locale.US, "%.1f MHz", fmKHz / 1000.0)
+        lines += "Antenna: " + if (fm.hasAntenna()) "headphone cable" else "none, plug in wired headphones"
+        st.error?.let { lines += "Tuner: $it" }
+        lines.take(7).forEachIndexed { i, l -> c.textClip(f, 6, 67 + i * 12, W - 10, l) }
     }
 
     // ---- radio actions ---------------------------------------------------------------------------
 
+    /** Tunes through the FM app's session; that also powers the tuner on, as tuning did on the Riot. */
     private fun tune(khz: Int) {
         val k = khz.coerceIn(87500, 108000)
         fmKHz = k; prefs.fmKHz = k
-        RiotSystem.fm(activity, "tune", mapOf("freq" to k))
-        fmWakeCheckAt = SystemClock.uptimeMillis() + 2500
+        tunedAt = SystemClock.uptimeMillis()
+        if (fm.state.connected) { antennaCheck(); fm.tune(k) } else { tuneOnConnect = true; fm.connect() }
+        dirty = true
+    }
+
+    private fun radioOn() {
+        if (!fm.state.connected) { tuneOnConnect = true; fm.connect(); return }
+        antennaCheck()
+        fm.tune(fmKHz)
+    }
+
+    /** The M500's antenna is the headphone cable. The Riot's was too, but it never said so. */
+    private fun antennaCheck() {
+        if (msg == null && !fm.hasAntenna()) flash("Plug in wired headphones. They are the FM antenna.", "FM Tuner")
+    }
+
+    /** Session news: follow the tuner's frequency (seek lands somewhere new), tune if asked to. */
+    private fun onFm() {
+        val st = fm.state
+        if (st.connected && tuneOnConnect) {
+            tuneOnConnect = false
+            if (prefs.radioMode) { antennaCheck(); fm.tune(fmKHz) }
+        }
+        if (st.connected && st.on && st.khz in 87500..108000 && st.khz != fmKHz &&
+            SystemClock.uptimeMillis() - tunedAt > 1500) {
+            fmKHz = st.khz; prefs.fmKHz = st.khz
+        }
+        // First visit: fill empty preset slots from the FM app's own starred stations.
+        if (st.presets.isNotEmpty() && !prefs.presetsSeeded) {
+            prefs.presetsSeeded = true
+            if (prefs.presets().all { it == 0 }) st.presets.take(8).forEachIndexed { i, k -> prefs.setPreset(i, k) }
+        }
         dirty = true
     }
 
     private fun enterRadio() {
         prefs.radioMode = true
         media.stop()
-        RiotSystem.fm(activity, "power", mapOf("on" to 1))
-        RiotSystem.fm(activity, "tune", mapOf("freq" to fmKHz))
-        fmWakeCheckAt = SystemClock.uptimeMillis() + 2500
+        fmInfo = false
+        tuneOnConnect = true
+        if (fm.state.connected) onFm() else fm.connect()
         goHome()
     }
 
     private fun enterPlayer() {
         prefs.radioMode = false
-        RiotSystem.fm(activity, "power", mapOf("on" to 0))
+        fm.powerOff()
         goHome()
+    }
+
+    /** The silver button: leave Riot mode. The radio goes off with it, music keeps playing. */
+    fun powerButton() {
+        if (prefs.radioMode) fm.powerOff()
+        activity.leave()
     }
 
     private fun savePreset(i: Int) {
@@ -1010,13 +1137,14 @@ class RiotShell(private val activity: RiotActivity, unlocked: Boolean) {
         val text = (if (home) "Go back to the Miku home screen. Riot mode stops being your launcher." else "Go back to the Miku home screen.") +
             "\n\n" + TRIBUTE
         push(DialogPage("Preferences", "Exit Riot Mode", "Exit Riot Mode", listOf(DRow.Text(text)), listOf("Exit", "Cancel")) { _, b ->
-            if (b == 0) { if (prefs.radioMode) RiotSystem.fm(activity, "power", mapOf("on" to 0)); activity.exitRiot() } else pop()
+            if (b == 0) { if (prefs.radioMode) fm.powerOff(); activity.exitRiot() } else pop()
         }.apply { isExit = true })
     }
 
     companion object {
         const val TICK_MS = 40L
         const val BOOT_MS = 2600L
+        const val VOLUME_POPUP_MS = 1500L
         const val TRIBUTE = "A fan tribute. Not affiliated with or endorsed by SonicBlue, D&M Holdings, or Rio."
     }
 }

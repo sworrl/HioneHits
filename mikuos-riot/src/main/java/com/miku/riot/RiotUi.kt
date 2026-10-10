@@ -168,38 +168,25 @@ object RiotUi {
 
     /**
      * "E [####] F" battery gauge, from the firmware's own gauge images (icons/battery_*.png):
-     * four fill levels and a "LOW" cell under 15 percent. The small USB icon shows while charging.
+     * four fill levels, a "LOW" cell under 15 percent, and the "CHARGE" cell while on external
+     * power and still filling. The USB plug sits left of the gauge while a computer is connected,
+     * as in the guide's page 18 drawing. The level thresholds are not known; these split the
+     * range evenly.
      */
-    fun Lcd.battery(xRight: Int, y: Int, pct: Int, charging: Boolean) {
+    fun Lcd.battery(xRight: Int, y: Int, b: RiotSystem.Battery) {
         val name = when {
-            pct < 15 && !charging -> "battery_low"
-            pct >= 88 -> "battery_100"
-            pct >= 63 -> "battery_75"
-            pct >= 38 -> "battery_50"
+            b.charging -> "battery_charging"
+            b.plugged -> "battery_100"
+            b.pct < 15 -> "battery_low"
+            b.pct >= 88 -> "battery_100"
+            b.pct >= 63 -> "battery_75"
+            b.pct >= 38 -> "battery_50"
             else -> "battery_25"
         }
-        val g = RiotAssets.icons[name]
-        if (g != null) {
-            val gx = xRight - g.w + 1
-            sprite(g, gx, y)
-            if (charging) RiotAssets.icons["usb"]?.let { sprite(it, gx - it.w - 3, y + 2) }
-            return
-        }
-        val tiny = RiotAssets.tiny
-        val boxW = 21
-        val fx = xRight - width(tiny, "F")
-        text(tiny, fx, y + 1, "F")
-        val bx = fx - 2 - boxW
-        rect(bx, y, boxW, 7)
-        if (pct < 15 && !charging) {
-            textCenter(tiny, bx + boxW / 2 + 1, y + 1, "LOW")
-        } else {
-            val segs = ((pct + 12) / 25).coerceIn(0, 4)
-            for (i in 0 until segs) fill(bx + 2 + i * 4 + i, y + 2, 4, 3)
-        }
-        val ex = bx - 2 - width(tiny, "E")
-        text(tiny, ex, y + 1, "E")
-        if (charging) sprite(RiotAssets.icons["usb"], ex - 16, y + 1)
+        val g = RiotAssets.icons[name] ?: RiotAssets.icons["battery_100"] ?: return
+        val gx = xRight - g.w + 1
+        sprite(g, gx, y)
+        if (b.usb) RiotAssets.icons["usb"]?.let { sprite(it, gx - it.w - 3, y + 2) }
     }
 
     /** A centered message box. Lines wrap. */

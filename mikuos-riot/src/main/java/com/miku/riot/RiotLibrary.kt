@@ -231,6 +231,10 @@ class RiotPrefs(ctx: Context) {
     /** Eight FM presets in kHz; 0 is "empty". */
     fun presets(): IntArray = IntArray(8) { p.getInt("preset_$it", 0) }
     fun setPreset(i: Int, khz: Int) = p.edit().putInt("preset_$i", khz).apply()
+    /** Set once the FM app's starred stations have been offered to the empty preset slots. */
+    var presetsSeeded: Boolean
+        get() = p.getBoolean("presets_seeded", false)
+        set(v) = p.edit().putBoolean("presets_seeded", v).apply()
 
     fun playlists(): MutableList<Playlist> = runCatching {
         val a = JSONArray(p.getString("playlists", "[]"))

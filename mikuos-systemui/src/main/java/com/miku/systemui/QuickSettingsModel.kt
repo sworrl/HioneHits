@@ -149,6 +149,8 @@ object QuickSettingsModel {
                     "settings put system accelerometer_rotation " + (if (enable) 1 else 0)
             )
         }
+        // Saved so the choice survives a reboot (see MikuRotationKeeper).
+        MikuRotationKeeper.record(ctx, enable, if (enable) lockedRotation(ctx) else rot)
     }
 
     private fun rotationName(rot: Int) = when (rot) {
@@ -244,7 +246,7 @@ object QuickSettingsModel {
                         onRefresh()
                     }
                 },
-                onLongClick = { openMikuSettings(ctx, "audio_dac") }
+                onLongClick = { DacSettingsLink.open(ctx) }
             )
         )
 
@@ -271,7 +273,7 @@ object QuickSettingsModel {
                         onRefresh()
                     }
                 },
-                onLongClick = { openMikuSettings(ctx, "audio_dac") }
+                onLongClick = { DacSettingsLink.open(ctx) }
             )
         )
 
@@ -292,7 +294,7 @@ object QuickSettingsModel {
                         onRefresh()
                     }
                 },
-                onLongClick = { openMikuSettings(ctx, "audio_dac") }
+                onLongClick = { DacSettingsLink.open(ctx) }
             )
         )
 
@@ -313,7 +315,7 @@ object QuickSettingsModel {
                         onRefresh()
                     }
                 },
-                onLongClick = { openMikuSettings(ctx, "audio_dac") }
+                onLongClick = { DacSettingsLink.open(ctx) }
             )
         )
 

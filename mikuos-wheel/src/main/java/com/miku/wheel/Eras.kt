@@ -83,9 +83,17 @@ class WheelPrefs(ctx: Context) {
         get() = p.getInt("backlight", 10)
         set(v) { p.edit().putInt("backlight", v).apply() }
 
-    var clicker: Boolean
-        get() = p.getBoolean("clicker", true)
-        set(v) { p.edit().putBoolean("clicker", v).apply() }
+    /**
+     * The era's Clicker setting, kept per era. Falls back to the era's default, or Off when the
+     * old single "clicker" switch was turned off.
+     */
+    fun clickerRoute(e: Era): ClickRoute {
+        val saved = p.getString("clicker_${e.id}", null)
+        ClickRoute.entries.firstOrNull { it.name == saved }?.let { return it }
+        return if (!p.getBoolean("clicker", true)) ClickRoute.OFF else ClickRoute.default(e)
+    }
+
+    fun setClickerRoute(e: Era, r: ClickRoute) { p.edit().putString("clicker_${e.id}", r.name).apply() }
 
     var haptics: Boolean
         get() = p.getBoolean("haptics", true)

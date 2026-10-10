@@ -81,7 +81,7 @@ fun SoundPage() {
     PageList {
         item {
             Section {
-                NavRow("DAC & audio hardware", "Output, gain, filters and USB DAC", Icons.Default.Headphones) { openSection(ctx, "audio_dac") }
+                NavRow("DAC settings", "Filter, gain, DRE and USB DAC, in the Hardware app", Icons.Default.Headphones) { com.miku.settings.DacSettingsLink.open(ctx) }
             }
         }
         item {

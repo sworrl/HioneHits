@@ -27,6 +27,9 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.EXPAND_STATUS_BAR" />
+    <!-- Grants our own notification listener access. Writing enabled_notification_listeners is
+         ignored by NotificationManagerService on Android 14, so the shade had no notifications. -->
+    <uses-permission android:name="android.permission.MANAGE_NOTIFICATION_LISTENERS" tools:ignore="ProtectedPermissions" />
     <uses-permission android:name="android.permission.CAMERA" />
     <!-- Navigation layer (quick switch + Miku Recents). All signature|privileged: granted by the
          platform signature, no priv-app whitelist needed. Hidden APIs reached via reflection. -->
@@ -154,6 +157,27 @@
                 <action android:name="android.service.notification.NotificationListenerService" />
             </intent-filter>
         </service>
+
+        <!-- Per-app notification summary for the launcher's top bar tray. Platform-signed
+             MikuOS apps only (STATUS_BAR is signature|privileged). -->
+        <provider
+            android:name=".MikuNotificationTrayProvider"
+            android:authorities="com.miku.systemui.notifications"
+            android:exported="true"
+            android:readPermission="android.permission.STATUS_BAR"
+            android:writePermission="android.permission.STATUS_BAR" />
+
+        <!-- Reply box for a notification's reply action. The shade is an accessibility overlay,
+             which sits above the keyboard, so typing happens in this small activity instead. -->
+        <activity
+            android:name=".MikuReplyActivity"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:noHistory="true"
+            android:taskAffinity="com.miku.systemui.reply"
+            android:launchMode="singleTask"
+            android:windowSoftInputMode="adjustResize|stateAlwaysVisible"
+            android:theme="@style/Theme.M500Hardware.Translucent" />
 
         <receiver
             android:name=".SystemUIBootReceiver"

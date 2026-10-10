@@ -110,6 +110,7 @@ class Renderer(ctx: Context, val st: Style) {
             is SlideshowScreen -> slideshow(skin, s, now)
             is MessageScreen -> message(s)
         }
+        if (now < skin.volumeShownUntil && skin.top !is NowPlayingScreen && skin.top !is BootScreen) volumeStrip(skin)
         if (!lit && !st.mono) c.drawColor(0xD0000000.toInt())
     }
 
@@ -562,6 +563,27 @@ class Renderer(ctx: Context, val st: Style) {
         val ty = t + bh + if (st.pixelFont) 11f else 15f
         draw(mmss(pos), l, ty)
         if (dur > 0) drawRight("-" + mmss(dur - pos), r, ty)
+    }
+
+    /**
+     * Volume keys away from Now Playing: the same speaker-bar-speaker row the Now Playing screen
+     * shows when the wheel turns the volume, on a plain strip at the bottom of the panel.
+     */
+    private fun volumeStrip(skin: Skin) {
+        val link = skin.link
+        val bh = if (st.pixelFont) 6f else 9f
+        val pad = if (st.pixelFont) 5f else 8f
+        val boxH = bh + pad * 2
+        val l = 4f
+        val r = w - 4f
+        val b = h - 4f
+        val t = b - boxH
+        rect(l, t, r, b, bg)
+        frame(l, t, r, b, if (st.mono) fg else 0xFFB3B9C0.toInt())
+        val v = link.volume.toFloat() / link.maxVolume.coerceAtLeast(1)
+        speaker(l + pad, t + pad + bh / 2, false)
+        speaker(r - pad - 10f, t + pad + bh / 2, true)
+        bar(l + pad + 14f, t + pad, r - pad - 16f, t + pad + bh, v, false)
     }
 
     private fun bar(l: Float, t: Float, r: Float, b: Float, frac: Float, knob: Boolean) {

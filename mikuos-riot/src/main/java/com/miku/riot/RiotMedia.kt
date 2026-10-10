@@ -134,10 +134,18 @@ class RiotMedia(private val ctx: Context) {
         return am.getStreamVolume(AudioManager.STREAM_MUSIC) to am.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
     }
 
+    /**
+     * One press of the Riot's Volume key. The M500's music stream has 100 steps, which would take
+     * ten presses to light one of the bar's ten segments, so a press moves 1/25 of the range.
+     * Flags 0: no system volume panel, the Riot's own bar shows it.
+     */
     fun adjustVolume(dir: Int) {
         val am = ctx.getSystemService(AudioManager::class.java) ?: return
-        am.adjustStreamVolume(AudioManager.STREAM_MUSIC,
-            if (dir > 0) AudioManager.ADJUST_RAISE else AudioManager.ADJUST_LOWER, 0)
+        val max = am.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
+        val cur = am.getStreamVolume(AudioManager.STREAM_MUSIC)
+        val step = maxOf(1, (max + 24) / 25)
+        val next = (cur + (if (dir > 0) step else -step)).coerceIn(0, max)
+        if (next != cur) runCatching { am.setStreamVolume(AudioManager.STREAM_MUSIC, next, 0) }
     }
 
     companion object {

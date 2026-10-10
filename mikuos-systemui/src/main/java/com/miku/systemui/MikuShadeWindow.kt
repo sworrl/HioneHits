@@ -266,8 +266,15 @@ class MikuShadeWindow(
                     } else if (wasDown) {
                         wasDown = false
                         val vel = s.velocityPxS
-                        val revealed = ((panelH + ty.value) / panelH).coerceIn(0f, 1f)
-                        if (vel < -900f || (revealed < 0.45f && vel < 600f)) {
+                        // Px of panel showing. The old rule was "under 45% of the panel and not
+                        // flung down = close". The panel is taller than a landscape screen, so a
+                        // full-length drag there could never pass 45% and the shade closed on
+                        // every release. Now: open past a quarter of the screen or 120dp
+                        // (whichever is less), or on any downward fling. Close on an upward fling.
+                        val shownPx = (panelH + ty.value).coerceAtLeast(0f)
+                        val dm = ctx.resources.displayMetrics
+                        val openAt = minOf(dm.heightPixels * 0.25f, 120f * dm.density, panelH * 0.45f)
+                        if (vel < -900f || (shownPx < openAt && vel < 600f)) {
                             ty.animateTo(-panelH - 40f, tween(MikuMotion.ms(150), easing = FastOutSlowInEasing))
                             close()
                         } else {
