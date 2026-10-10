@@ -23,6 +23,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -61,23 +68,14 @@ fun MikuFMRadioScreen(onBack: () -> Unit) {
     BackHandler(enabled = sheet != FmSheet.None) { sheet = FmSheet.None }
 
     Box(Modifier.fillMaxSize().background(CyberDarkBg)) {
-        Image(
-            painter = painterResource(id = R.drawable.miku_bg_fm),
-            contentDescription = null,
-            modifier = Modifier.fillMaxSize(),
-            contentScale = ContentScale.Crop
-        )
-        Box(
-            Modifier.fillMaxSize().background(
-                Brush.verticalGradient(listOf(Color(0xCC040D12), Color(0x77000000), Color(0xF5040D12)))
-            )
-        )
+        FmBackdrop()
 
         Column(
             Modifier.fillMaxSize().systemBarsPadding().padding(horizontal = 10.dp, vertical = 4.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            FmHeaderBar(st.isHeadsetPlugged, onBack) { sheet = FmSheet.Settings }
+            FmHeaderBar(st.isHeadsetPlugged, st.weatherAlerts, onBack,
+                onAlerts = { sheet = FmSheet.Stations(StationsTab.WEATHER) }) { sheet = FmSheet.Settings }
             Spacer(Modifier.height(GAP))
             FmFrequencyCard(
                 st,
@@ -104,11 +102,11 @@ fun MikuFMRadioScreen(onBack: () -> Unit) {
                     skin = st.sdrSkin,
                     rowTimes = st.bandHistoryTimes,
                     mode = st.viewMode,
+                    isScanning = st.isScanning,
                     onCycleSkin = { FmRadioManager.cycleSdrSkin() },
                     onTuneFreq = { FmRadioManager.tune(it) }
                 )
                 FmViewModeChips(st.viewMode, Modifier.align(Alignment.TopEnd).padding(top = 18.dp, end = 6.dp))
-                if (st.isScanning) FmScanOverlay(st)
                 SongIdCard(
                     st.songId,
                     onHistory = { sheet = FmSheet.SongHistory },
@@ -130,6 +128,7 @@ fun MikuFMRadioScreen(onBack: () -> Unit) {
             FmToolRow(
                 stereoRequested = st.stereoRequested,
                 isScanning = st.isScanning,
+                scanProgress = st.scanProgress,
                 isRecording = st.isRecording,
                 recordedBytes = st.recordedBytes,
                 songId = st.songId,
@@ -174,7 +173,13 @@ fun MikuFMRadioScreen(onBack: () -> Unit) {
 // ---------------------------------------------------------------------------- header
 
 @Composable
-private fun FmHeaderBar(headsetPlugged: Boolean, onBack: () -> Unit, onSettings: () -> Unit) {
+private fun FmHeaderBar(
+    headsetPlugged: Boolean,
+    alerts: List<FmWeatherRadio.Alert>?,
+    onBack: () -> Unit,
+    onAlerts: () -> Unit,
+    onSettings: () -> Unit,
+) {
     // This board has no internal antenna, so the headphone cable is it. The chip reports what
     // is actually plugged in rather than a decorative "ANTENNA OK".
     val label = if (headsetPlugged) "ANTENNA OK" else "PLUG HEADSET"
@@ -189,6 +194,22 @@ private fun FmHeaderBar(headsetPlugged: Boolean, onBack: () -> Unit, onSettings:
             fontWeight = FontWeight.Bold, fontFamily = AudiowideFont, letterSpacing = 1.sp
         )
         Row(verticalAlignment = Alignment.CenterVertically) {
+            // Active NWS alerts here: a badge you can tap straight into the weather tab.
+            if (!alerts.isNullOrEmpty()) {
+                val c = alertColor(worstSeverity(alerts))
+                Row(
+                    Modifier.heightIn(min = 32.dp)
+                        .glass(RoundedCornerShape(10.dp), accent = c, accent2 = c, fill = c.copy(alpha = 0.22f), rimAlpha = 1f)
+                        .pressable(onClick = onAlerts)
+                        .padding(horizontal = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Icon(Icons.Default.Warning, "Weather alerts", tint = c, modifier = Modifier.size(13.dp))
+                    Spacer(Modifier.width(2.dp))
+                    Text("${alerts.size}", color = c, fontSize = 8.sp, fontWeight = FontWeight.Bold, fontFamily = AudiowideFont)
+                }
+                Spacer(Modifier.width(5.dp))
+            }
             CyberChip(label, headsetPlugged)
             Spacer(Modifier.width(5.dp))
             CyberIconButton(Icons.Default.Tune, "Settings", 40.dp, false, onSettings)
@@ -440,6 +461,7 @@ private fun FmTransportRow(isPowerOn: Boolean, ctx: Context) {
 private fun FmToolRow(
     stereoRequested: Boolean,
     isScanning: Boolean,
+    scanProgress: Float,
     isRecording: Boolean,
     recordedBytes: Long,
     songId: FmSongId.State,
@@ -459,10 +481,7 @@ private fun FmToolRow(
             if (stereoRequested) "Stereo requested" else "Mono", 42.dp, stereoRequested
         ) { FmRadioManager.setStereo(!stereoRequested) }
 
-        CyberIconButton(
-            if (isScanning) Icons.Default.Close else Icons.Default.Search,
-            if (isScanning) "Stop the scan" else "Scan the band", 42.dp, isScanning, onScan
-        )
+        FmScanButton(isScanning, scanProgress, onScan)
 
         SongIdButton(songId, onHistory = onSongHistory, modifier = Modifier.widthIn(min = 104.dp))
 
@@ -476,29 +495,6 @@ private fun FmToolRow(
             "REC %d:%02d · %.1f MB".format(seconds / 60, seconds % 60, recordedBytes / 1_048_576.0),
             color = Color(0xFFFF5252), fontSize = 7.5.sp, fontFamily = AudiowideFont
         )
-    }
-}
-
-@Composable
-private fun FmScanOverlay(st: FmState) {
-    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        Column(
-            Modifier.glass(RoundedCornerShape(14.dp), accent = MikuCyan, fill = Color(0xEE02090D), rimAlpha = 0.9f)
-                .padding(horizontal = 16.dp, vertical = 10.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Text("SCANNING ${st.band.label.uppercase(Locale.US)}", color = MikuCyan,
-                fontSize = 10.sp, fontFamily = AudiowideFont, fontWeight = FontWeight.Bold)
-            Spacer(Modifier.height(5.dp))
-            LinearProgressIndicator(
-                progress = { st.scanProgress },
-                color = MikuCyan, trackColor = Color(0x3300E5FF),
-                modifier = Modifier.width(170.dp).height(4.dp)
-            )
-            Spacer(Modifier.height(5.dp))
-            Text("${st.scanResults.size} found · tap the scan key to stop",
-                color = MikuTextSecondary, fontSize = 8.sp)
-        }
     }
 }
 
@@ -600,5 +596,95 @@ private fun FmViewModeChips(mode: QualcommFmHardwareEngine.ViewMode, modifier: M
                 )
             }
         }
+    }
+}
+
+// ---------------------------------------------------------------------------- backdrop
+
+/**
+ * The artwork and its darkening gradient, baked once into one opaque bitmap at screen size.
+ *
+ * The JPEG lives in drawable/ (no density qualifier), so painterResource decoded it as mdpi and
+ * scaled it to 1536x2752 on this xhdpi screen: a 17 MB texture sampled down every frame, plus a
+ * full-screen gradient blended over it. Baked, it is one 720x1280 opaque blit (no blending) and
+ * the gradient costs nothing per frame.
+ */
+@Composable
+private fun FmBackdrop() {
+    val ctx = LocalContext.current
+    BoxWithConstraints(Modifier.fillMaxSize()) {
+        val w = constraints.maxWidth
+        val h = constraints.maxHeight
+        val img by produceState<androidx.compose.ui.graphics.ImageBitmap?>(null, w, h) {
+            if (w <= 0 || h <= 0) return@produceState
+            value = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
+                runCatching { bakeBackdrop(ctx, w, h) }.getOrNull()
+            }
+        }
+        img?.let {
+            Image(it, contentDescription = null, modifier = Modifier.fillMaxSize(), contentScale = ContentScale.FillBounds)
+        }
+    }
+}
+
+private fun bakeBackdrop(ctx: Context, w: Int, h: Int): androidx.compose.ui.graphics.ImageBitmap {
+    val src = android.graphics.BitmapFactory.decodeResource(
+        ctx.resources, R.drawable.miku_bg_fm, android.graphics.BitmapFactory.Options().apply { inScaled = false })
+    val out = android.graphics.Bitmap.createBitmap(w, h, android.graphics.Bitmap.Config.ARGB_8888)
+    val c = android.graphics.Canvas(out)
+    c.drawColor(0xFF040D12.toInt())
+    // Centre crop.
+    val scale = maxOf(w / src.width.toFloat(), h / src.height.toFloat())
+    val dw = src.width * scale
+    val dh = src.height * scale
+    val dst = android.graphics.RectF((w - dw) / 2f, (h - dh) / 2f, (w + dw) / 2f, (h + dh) / 2f)
+    c.drawBitmap(src, null, dst, android.graphics.Paint(android.graphics.Paint.FILTER_BITMAP_FLAG))
+    src.recycle()
+    val g = android.graphics.Paint().apply {
+        shader = android.graphics.LinearGradient(
+            0f, 0f, 0f, h.toFloat(),
+            intArrayOf(0xCC040D12.toInt(), 0x77000000, 0xF5040D12.toInt()), null,
+            android.graphics.Shader.TileMode.CLAMP)
+    }
+    c.drawRect(0f, 0f, w.toFloat(), h.toFloat(), g)
+    out.setHasAlpha(false)
+    return out.asImageBitmap()
+}
+
+// ---------------------------------------------------------------------------- scan button
+
+/**
+ * The scan key. Idle it is a plain glass key; scanning it becomes a little radar: a sweep that
+ * turns, and a pink ring that fills with the sweep's real progress. Tap again to stop. The
+ * rotation lives in a graphics layer and its animation only exists while a scan runs.
+ */
+@Composable
+private fun FmScanButton(isScanning: Boolean, progress: Float, onClick: () -> Unit) {
+    if (!isScanning) {
+        CyberIconButton(Icons.Default.Radar, "Scan the band", 42.dp, false, onClick)
+        return
+    }
+    val t = rememberInfiniteTransition(label = "radar")
+    val angle = t.animateFloat(0f, 360f, infiniteRepeatable(tween(1400, easing = LinearEasing)), label = "sweep")
+    Box(Modifier.size(48.dp).pressable(onClick = onClick), contentAlignment = Alignment.Center) {
+        Box(
+            Modifier.size(42.dp).glass(CircleShape, accent = MikuPink, accent2 = MikuCyan,
+                fill = Color(0xD0101C28), rimAlpha = 1f, shine = 1.4f)
+        )
+        androidx.compose.foundation.Canvas(Modifier.size(42.dp).graphicsLayer { rotationZ = angle.value }) {
+            drawArc(
+                Brush.sweepGradient(listOf(Color.Transparent, MikuTeal.copy(alpha = 0.1f), MikuCyan.copy(alpha = 0.7f))),
+                -90f, 90f, true, topLeft = androidx.compose.ui.geometry.Offset(4f, 4f),
+                size = androidx.compose.ui.geometry.Size(size.width - 8f, size.height - 8f)
+            )
+        }
+        androidx.compose.foundation.Canvas(Modifier.size(42.dp)) {
+            val sw = 2.5.dp.toPx()
+            drawArc(MikuPink, -90f, 360f * progress.coerceIn(0f, 1f), false,
+                topLeft = androidx.compose.ui.geometry.Offset(sw / 2, sw / 2),
+                size = androidx.compose.ui.geometry.Size(size.width - sw, size.height - sw),
+                style = androidx.compose.ui.graphics.drawscope.Stroke(sw, cap = androidx.compose.ui.graphics.StrokeCap.Round))
+        }
+        Icon(Icons.Default.Close, "Stop the scan", tint = Color.White, modifier = Modifier.size(16.dp))
     }
 }

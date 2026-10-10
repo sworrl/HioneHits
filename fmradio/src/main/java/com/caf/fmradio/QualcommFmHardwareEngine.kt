@@ -1922,6 +1922,7 @@ class QualcommFmHardwareEngine(private val context: Context) {
     private fun updateSpectrum(samples: ShortArray, count: Int, sampleRate: Int) {
         val now = android.os.SystemClock.elapsedRealtime()
         FmSongId.offer(samples, count, 1, sampleRate)
+        if (FmPcmTap.active) FmPcmTap.offer(samples, count, sampleRate)
         val f = fft?.takeIf { it.sampleRateHz == sampleRate } ?: FmFft(sampleRate).also {
             fft = it
             spectrumBinHz.value = it.binHz.copyOf()

@@ -85,11 +85,23 @@ fun ColumnScope.FmStationsSheet(
                     .pressable { tab = t },
                 contentAlignment = Alignment.Center
             ) {
-                Text(
-                    t.label + (count?.let { " · $it" } ?: ""),
-                    color = if (on) Color.White else MikuTextSecondary,
-                    fontSize = 8.5.sp, fontWeight = FontWeight.Bold, fontFamily = AudiowideFont,
-                )
+                val alerts = if (t == StationsTab.WEATHER) st.weatherAlerts.orEmpty() else emptyList()
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        t.label + (count?.let { " · $it" } ?: ""),
+                        color = if (on) Color.White else MikuTextSecondary,
+                        fontSize = 8.5.sp, fontWeight = FontWeight.Bold, fontFamily = AudiowideFont,
+                    )
+                    // Active NWS alerts: a badge in the worst severity's colour.
+                    if (alerts.isNotEmpty()) {
+                        Spacer(Modifier.width(4.dp))
+                        Text(
+                            "!${alerts.size}", color = Color.Black, fontSize = 7.sp, fontWeight = FontWeight.Bold,
+                            modifier = Modifier.clip(RoundedCornerShape(6.dp)).background(alertColor(worstSeverity(alerts)))
+                                .padding(horizontal = 4.dp, vertical = 1.dp)
+                        )
+                    }
+                }
             }
         }
     }
@@ -436,76 +448,5 @@ private fun DetailRow(label: String, value: String, valueColor: Color = Color.Wh
     Row(Modifier.fillMaxWidth().padding(vertical = 3.dp)) {
         Text(label, color = MikuTextSecondary, fontSize = 9.sp, modifier = Modifier.width(108.dp))
         Text(value, color = valueColor, fontSize = 9.sp, fontWeight = FontWeight.Bold)
-    }
-}
-
-// ============================================================================ weather radio
-
-/**
- * NOAA Weather Radio near here, as reference. Not tunable and not dressed up as tunable: the
- * Si4705 stops at 108 MHz and NWR is at 162.4–162.55 MHz.
- */
-@Composable
-fun ColumnScope.FmWeatherRadioList(st: FmState) {
-    Row(
-        Modifier.fillMaxWidth()
-            .glass(RoundedCornerShape(12.dp), accent = CyberAmber, accent2 = MikuPink, fill = Color(0x33FFD54F), rimAlpha = 0.8f)
-            .padding(10.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Icon(Icons.Default.Thunderstorm, null, tint = CyberAmber, modifier = Modifier.size(22.dp))
-        Spacer(Modifier.width(8.dp))
-        Column {
-            Text("NOAA WEATHER RADIO", color = CyberAmber, fontSize = 9.sp, fontWeight = FontWeight.Bold, fontFamily = AudiowideFont)
-            Text(
-                "For a weather radio or ham handheld. This tuner can't receive 162 MHz " +
-                    "(the Si4705 stops at 108 MHz), so these are listed, not tunable.",
-                color = MikuTextPrimary, fontSize = 8.sp, lineHeight = 10.5.sp,
-            )
-        }
-    }
-    Spacer(Modifier.height(8.dp))
-    if (st.weatherRadios.isEmpty()) {
-        Text(
-            if (st.listenerPlace == null) "Needs a position to find the nearest transmitters."
-            else "No NOAA transmitters listed within 120 km.",
-            color = MikuTextPrimary, fontSize = 9.sp,
-        )
-        return
-    }
-    LazyColumn(Modifier.fillMaxWidth().weight(1f, fill = false), verticalArrangement = Arrangement.spacedBy(5.dp)) {
-        items(st.weatherRadios.distinctBy { it.call + it.mhz }, key = { it.call + it.mhz }) { t ->
-            val statusColor = when (t.status) {
-                "NORMAL" -> MikuTeal
-                "DEGRADED" -> CyberAmber
-                else -> MikuNeonPink
-            }
-            Row(
-                Modifier.fillMaxWidth().heightIn(min = 56.dp)
-                    .alpha(if (t.inService) 1f else 0.55f)
-                    .glass(RoundedCornerShape(12.dp), accent = CyberAmber, rimAlpha = 0.3f, shine = 0.5f)
-                    .padding(horizontal = 10.dp, vertical = 6.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Column(Modifier.width(62.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(t.wx.ifBlank { "WX?" }, color = CyberAmber, fontSize = 14.sp, fontWeight = FontWeight.Bold, fontFamily = AudiowideFont)
-                    Text(String.format(Locale.US, "%.3f", t.mhz), color = Color.White, fontSize = 9.sp, fontFamily = AudiowideFont)
-                }
-                Spacer(Modifier.width(8.dp))
-                Column(Modifier.weight(1f)) {
-                    Text("${t.call} · ${t.site}", color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold,
-                         maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    Text(
-                        listOfNotNull("${t.city}, ${t.state}", t.watts?.let { w -> if (w >= 1000) "${w / 1000.0} kW" else "$w W" },
-                                      t.wfo?.let { "NWS $it" }).joinToString(" · "),
-                        color = MikuTextSecondary, fontSize = 8.sp, maxLines = 1, overflow = TextOverflow.Ellipsis,
-                    )
-                }
-                Column(horizontalAlignment = Alignment.End) {
-                    Text(String.format(Locale.US, "%.0f km", t.distanceKm), color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold)
-                    Text(t.status, color = statusColor, fontSize = 7.sp, fontWeight = FontWeight.Bold)
-                }
-            }
-        }
     }
 }

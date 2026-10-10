@@ -210,14 +210,14 @@ object FmRadioManager {
             launch { eng.weatherRadios.collect { v -> _state.update { it.copy(weatherRadios = v) } } }
             launch { eng.weatherAlerts.collect { v -> _state.update { it.copy(weatherAlerts = v) } } }
             // The engine updates the RMS level on every capture block (dozens of times a
-            // second). Only a printed number reads it, so it is sampled at 4 Hz and rounded to
-            // what is printed; otherwise it alone recomposed the screen at audio-block rate.
+            // second). Only a printed number reads it, so it is sampled once a second and
+            // rounded to what is printed: each change is a full window frame on this GPU.
             launch {
                 var last = -1f
                 while (true) {
                     val v = (eng.audioLevel.value * 100f).roundToInt() / 100f
                     if (v != last) { last = v; _state.update { it.copy(audioLevel = v) } }
-                    delay(250)
+                    delay(1000)
                 }
             }
             launch { eng.captureFraming.collect { v -> _state.update { it.copy(captureFraming = v) } } }
@@ -228,7 +228,15 @@ object FmRadioManager {
             launch { eng.rdsSupported.collect { v -> _state.update { it.copy(rdsSupported = v) } } }
             launch { eng.rdsArtist.collect { v -> _state.update { it.copy(rdsArtist = v) } } }
             launch { eng.rdsTitle.collect { v -> _state.update { it.copy(rdsTitle = v) } } }
-            launch { eng.rdsGroups.collect { v -> _state.update { it.copy(rdsGroups = v) } } }
+            // The group counter ticks on every RDS poll (up to ~16 Hz while decoding) and no
+            // screen prints it live; sampled once a second so it cannot drive recomposition.
+            launch {
+                while (true) {
+                    val v = eng.rdsGroups.value
+                    _state.update { if (it.rdsGroups == v) it else it.copy(rdsGroups = v) }
+                    delay(1000)
+                }
+            }
             launch { eng.channelGrid.collect { v -> _state.update { it.copy(channelGrid = v) } } }
             launch {
                 eng.nearbyStations.collect { v ->

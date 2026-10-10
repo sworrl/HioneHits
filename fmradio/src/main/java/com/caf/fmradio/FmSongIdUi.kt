@@ -21,6 +21,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.MusicNote
@@ -31,6 +33,11 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.produceState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -51,9 +58,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.net.HttpURLConnection
-import java.net.URL
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -64,7 +70,8 @@ private const val SONG_MIN_SECONDS = 6
 // ============================================================================ cover art
 
 /**
- * Album art for song-ID results: plain HttpURLConnection on IO, decoded down to thumbnail size,
+ * Album art for song-ID results: fetched through FmNet (this app's SELinux domain cannot open
+ * sockets itself) on IO, decoded down to thumbnail size,
  * kept in a small in-memory LRU. No image library: this app has none and one cover per match
  * does not justify adding one.
  */
@@ -231,7 +238,8 @@ fun SongIdCard(state: FmSongId.State, onHistory: () -> Unit, modifier: Modifier 
                             color = MikuTextSecondary, fontSize = 8.sp, maxLines = 1, overflow = TextOverflow.Ellipsis,
                         )
                         Spacer(Modifier.height(4.dp))
-                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+                            LikeButton(m, compact = true)
                             CardAction("OPEN", Icons.AutoMirrored.Filled.OpenInNew, MikuPink) { openSongPage(ctx, m.webUrl) }
                             CardAction("HISTORY", Icons.Default.History, MikuTeal, onHistory)
                         }
@@ -330,11 +338,51 @@ fun ColumnScope.FmSongHistory(state: FmSongId.State) {
                     Text(m.artist, color = MikuTealBright, fontSize = 9.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     m.album?.let { Text(it, color = MikuTextSecondary, fontSize = 8.sp, maxLines = 1, overflow = TextOverflow.Ellipsis) }
                 }
+                LikeButton(m, compact = true)
                 Column(horizontalAlignment = Alignment.End) {
                     Text(fmt.format(Date(m.atMs)), color = MikuTextSecondary, fontSize = 8.sp, fontFamily = AudiowideFont)
                     Text("${fmtMhz(m.freqKHz)}", color = MikuPink, fontSize = 8.sp, fontFamily = AudiowideFont)
                 }
             }
         }
+    }
+}
+
+// ============================================================================ like
+
+/**
+ * The heart. Liking keeps the track with the station, frequency, time and place it was heard,
+ * and hands it to Miku Music as something to get. The liked state is read and written off the
+ * main thread (it is a small JSON file in prefs plus a hand-off to the other app).
+ */
+@Composable
+fun LikeButton(m: FmSongId.Match, compact: Boolean = false) {
+    val ctx = LocalContext.current
+    val scope = rememberCoroutineScope()
+    var liked by remember(m.title, m.artist) { mutableStateOf<Boolean?>(null) }
+    LaunchedEffect(m.title, m.artist) {
+        liked = withContext(Dispatchers.IO) { runCatching { FmRadioManager.isSongLiked(ctx, m) }.getOrDefault(false) }
+    }
+    val on = liked == true
+    val toggle: () -> Unit = {
+        scope.launch {
+            val now = withContext(Dispatchers.IO) { runCatching { FmRadioManager.toggleLikeSong(ctx, m) }.getOrNull() }
+            if (now != null) {
+                liked = now
+                Toast.makeText(ctx, if (now) "Saved to Miku Music · to get" else "Removed from Miku Music likes",
+                    Toast.LENGTH_SHORT).show()
+            } else {
+                Toast.makeText(ctx, "Could not save the like", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+    if (compact) {
+        Box(Modifier.size(44.dp).clip(CircleShape).pressable(onClick = toggle), contentAlignment = Alignment.Center) {
+            Icon(if (on) Icons.Default.Favorite else Icons.Default.FavoriteBorder, if (on) "Unlike" else "Like",
+                 tint = if (on) MikuPink else MikuTextSecondary, modifier = Modifier.size(20.dp))
+        }
+    } else {
+        CardAction(if (on) "LIKED" else "LIKE", if (on) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                   if (on) MikuNeonPink else MikuPink, toggle)
     }
 }

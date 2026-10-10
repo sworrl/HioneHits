@@ -108,6 +108,8 @@ fun RadioWaterfallSpectrum(
     /** Sweep times, newest first, parallel to bandHistory. Empty when nothing has swept. */
     rowTimes: List<Long> = emptyList(),
     mode: QualcommFmHardwareEngine.ViewMode = QualcommFmHardwareEngine.ViewMode.LIVE,
+    /** A band scan draws on the live surface whatever the view mode: see ScanArt. */
+    isScanning: Boolean = false,
     onCycleSkin: () -> Unit = {},
     onTuneFreq: (Int) -> Unit,
 ) {
@@ -118,7 +120,7 @@ fun RadioWaterfallSpectrum(
             .background(Color(0xFF040D12))
             .border(1.2.dp, CyberGlassBorder, RoundedCornerShape(14.dp))
     ) {
-        if (mode == QualcommFmHardwareEngine.ViewMode.LIVE) {
+        if (mode == QualcommFmHardwareEngine.ViewMode.LIVE || isScanning) {
             LivePanel()
         } else {
             BandPanel(currentFreqKHz, band, signalHistory, bandProfile, bandHistory, favorites,

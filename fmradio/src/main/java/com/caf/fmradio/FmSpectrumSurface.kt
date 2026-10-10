@@ -169,6 +169,8 @@ class FmSpectrumSurfaceView(context: Context) : SurfaceView(context), SurfaceHol
         private val readoutBg = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0xE6040D12.toInt() }
         private val readoutText = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0xFFFFFFFF.toInt(); isFakeBoldText = true }
         private val barPaint = Paint()
+        private var scanning = false
+        private val scan = ScanArt(density, scaledDensity)
 
         fun start() {
             thread.start()
@@ -203,6 +205,17 @@ class FmSpectrumSurfaceView(context: Context) : SurfaceView(context), SurfaceHol
         override fun doFrame(frameTimeNanos: Long) {
             if (!alive || !active) { looping = false; return }
             choreographer?.postFrameCallback(this)
+
+            // A band scan takes the panel over and animates every vsync while it runs. It only
+            // ever costs this surface's buffer; the app window is not involved.
+            val st = FmRadioManager.state.value
+            if (st.isScanning) {
+                if (!scanning) scan.begin()
+                scanning = true
+                frame { c, w, h -> scan.draw(c, st, w, h, frameTimeNanos) }
+                return
+            }
+            if (scanning) { scanning = false; dirty = true }
 
             val f = FmRadioManager.spectrum.value
             val hasAudio = f.level.isNotEmpty()
@@ -273,6 +286,13 @@ class FmSpectrumSurfaceView(context: Context) : SurfaceView(context), SurfaceHol
         }
 
         private fun draw(f: FmRadioManager.SpectrumFrame, hist: FloatArray?, cx: Float, ageSec: Long) {
+            frame { canvas, w, h ->
+                if (hist == null) drawAnalyser(canvas, f, cx, ageSec) else drawFallback(canvas, hist, w, h)
+            }
+        }
+
+        /** Lock, clear to the panel colour, draw, post. Guarded so a dying surface is never touched. */
+        private inline fun frame(block: (Canvas, Int, Int) -> Unit) {
             synchronized(drawLock) {
                 if (!alive) return
                 val w = width; val h = height
@@ -285,7 +305,7 @@ class FmSpectrumSurfaceView(context: Context) : SurfaceView(context), SurfaceHol
                 } catch (_: Exception) { null } ?: return
                 try {
                     canvas.drawRect(0f, 0f, w.toFloat(), h.toFloat(), bgPaint)
-                    if (hist == null) drawAnalyser(canvas, f, cx, ageSec) else drawFallback(canvas, hist, w, h)
+                    block(canvas, w, h)
                 } finally {
                     runCatching { holder.unlockCanvasAndPost(canvas) }
                 }
@@ -299,7 +319,7 @@ class FmSpectrumSurfaceView(context: Context) : SurfaceView(context), SurfaceHol
             for (k in DB_LINES.indices) {
                 val y = dbY[k]
                 c.drawLine(gutter, y, gutter + plotW, y, gridPaint)
-                val s = if (DB_LINES[k] == 0) "0" else DB_LINES[k].toInt().toString()
+                val s = DB_LINES[k].toInt().toString()
                 val tw = labelPaint.measureText(s)
                 c.drawText(s, gutter - tw - 3f, (y + labelPaint.textSize * 0.35f).coerceIn(top + 2f, top + plotH), labelPaint)
             }
@@ -411,6 +431,212 @@ class FmSpectrumSurfaceView(context: Context) : SurfaceView(context), SurfaceHol
             tracePaint.color = TEAL
             c.drawPath(trace, tracePaint)
             tracePaint.color = TEAL_BRIGHT
+        }
+    }
+
+    // ======================================================================== scan art
+
+    /**
+     * What the panel shows while the band is being swept: an honest instrument with something
+     * fun layered under it.
+     *
+     * The instrument: a band axis in MHz, the RSSI of every channel measured so far drawn as a
+     * ribbon, a scan head at the exact channel the chip is on (derived from the engine's
+     * progress, the same arithmetic the sweep loop uses), a readout of frequency, last RSSI and
+     * channel count, what the sweep is doing right now, and every hit marked with a burst and its
+     * call sign from the catalogue. The audio is muted for the sweep and the panel says so.
+     *
+     * The fun: a field of teal and pink streaks drifting through a slowly turning flow field,
+     * sped up by the signal the sweep has found under them and lit by the scan head as it
+     * passes; and the ribbon doubled into three phase-shifted strands that breathe. All of it is
+     * a few hundred line and path calls a frame on this thread, with no allocation.
+     */
+    private class ScanArt(private val d: Float, private val sd: Float) {
+        private val n = 140
+        private val px = FloatArray(n); private val py = FloatArray(n)
+        private val vx = FloatArray(n); private val vy = FloatArray(n)
+        private val rnd = java.util.Random(39)
+        private var seeded = false
+        private var headX = -1f
+        private val hitBirth = HashMap<Int, Long>()
+        private val hitName = HashMap<Int, String>()
+        private var lastHitKhz = -1
+        private var lastHitAt = 0L
+        private val ribbon = Path()
+        private val ribbonFill = Path()
+
+        private val streak = Paint(Paint.ANTI_ALIAS_FLAG).apply { strokeCap = Paint.Cap.ROUND; strokeWidth = 1.6f * d }
+        private val ribbonPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE; strokeWidth = 1.5f * d; strokeJoin = Paint.Join.ROUND }
+        private val ribbonFillPaint = Paint(Paint.ANTI_ALIAS_FLAG)
+        private val beamPaint = Paint()
+        private val glowPaint = Paint(Paint.ANTI_ALIAS_FLAG)
+        private val corePaint = Paint().apply { color = 0xFFFFD9EC.toInt(); strokeWidth = 1.5f * d }
+        private val tickPaint = Paint().apply { color = argb(0.35f, TEAL); strokeWidth = 1f }
+        private val axisText = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = argb(0.7f, TEAL); textSize = 6.5f * sd }
+        private val hudBig = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0xFFFFFFFF.toInt(); textSize = 9f * sd; isFakeBoldText = true }
+        private val hudLine = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = TEAL_BRIGHT; textSize = 7.5f * sd }
+        private val hudFound = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = PINK; textSize = 7.5f * sd; isFakeBoldText = true }
+        private val hudMuted = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0xFFFFD54F.toInt(); textSize = 6.5f * sd }
+        private val hitPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = PINK; style = Paint.Style.STROKE; strokeWidth = 1.5f * d }
+        private val hitDot = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = PINK }
+        private val hitText = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0xFFFFFFFF.toInt(); textSize = 6.5f * sd; isFakeBoldText = true }
+        private var shadersFor = -1f
+
+        fun begin() {
+            hitBirth.clear(); hitName.clear(); lastHitKhz = -1; lastHitAt = 0L; headX = -1f; seeded = false
+        }
+
+        private fun ensureShaders(h: Float) {
+            if (shadersFor == h) return
+            shadersFor = h
+            val bw = 22f * d
+            beamPaint.shader = LinearGradient(-bw, 0f, bw, 0f,
+                intArrayOf(0, argb(0.45f, PINK), argb(0.85f, 0xFFFFD9EC.toInt()), argb(0.45f, CYAN), 0),
+                floatArrayOf(0f, 0.38f, 0.5f, 0.62f, 1f), Shader.TileMode.CLAMP)
+            glowPaint.shader = android.graphics.RadialGradient(0f, 0f, 30f * d,
+                intArrayOf(argb(0.9f, 0xFFFFD9EC.toInt()), argb(0.35f, PINK), 0), floatArrayOf(0f, 0.35f, 1f), Shader.TileMode.CLAMP)
+        }
+
+        fun draw(c: Canvas, st: FmState, w: Int, h: Int, nanos: Long) {
+            val t = (nanos / 1_000_000L % 3_600_000L) / 1000f
+            val now = SystemClock.elapsedRealtime()
+            val band = st.band
+            val span = (band.highKHz - band.lowKHz).toFloat().coerceAtLeast(1f)
+            val channels = (band.highKHz - band.lowKHz) / band.stepKHz + 1
+            val idx = ((st.scanProgress * channels).roundToInt() - 1).coerceIn(0, channels - 1)
+            val khz = band.lowKHz + idx * band.stepKHz
+            val m = 8f * d
+            val plotW = w - 2 * m
+            fun xOf(k: Int) = m + (k - band.lowKHz) / span * plotW
+            val artTop = 36f * d
+            val axisH = 14f * d
+            val base = h - axisH - 4f * d
+            val amp = (base - artTop) * 0.8f
+            ensureShaders(h.toFloat())
+
+            // Scan head eases toward the channel being measured, so it glides rather than ticks.
+            val target = xOf(khz)
+            headX = if (headX < 0f) target else headX + (target - headX) * 0.35f
+
+            val prof = st.bandProfile
+            val measured = minOf(idx + 1, prof.size)
+
+            // ---- particle field
+            if (!seeded) {
+                for (i in 0 until n) { px[i] = m + rnd.nextFloat() * plotW; py[i] = artTop + rnd.nextFloat() * (base - artTop) }
+                seeded = true
+            }
+            val sigma2 = (42f * d) * (42f * d) * 2f
+            for (i in 0 until n) {
+                val x = px[i]; val y = py[i]
+                val a = (kotlin.math.sin(x * 0.011f / d + t * 0.6f) + kotlin.math.cos(y * 0.016f / d - t * 0.45f)) * Math.PI.toFloat()
+                // Energy from the signal measured under this particle: busy band, busy air.
+                val ch = (((x - m) / plotW) * (channels - 1)).roundToInt().coerceIn(0, channels - 1)
+                val e = if (ch < measured) prof[ch] else 0.05f
+                val sp = (0.35f + 2.2f * e) * d
+                vx[i] = vx[i] * 0.85f + kotlin.math.cos(a) * sp * 0.15f + 0.25f * d * 0.15f
+                vy[i] = vy[i] * 0.85f + kotlin.math.sin(a) * sp * 0.15f
+                var nx = x + vx[i] * 4f; var ny = y + vy[i] * 4f
+                if (nx < m) nx += plotW; if (nx > m + plotW) nx -= plotW
+                if (ny < artTop) ny += base - artTop; if (ny > base) ny -= base - artTop
+                px[i] = nx; py[i] = ny
+                val dx = nx - headX
+                val glow = exp(-(dx * dx) / sigma2)
+                val alpha = (0.18f + 0.35f * e + 0.6f * glow).coerceAtMost(1f)
+                streak.color = argb(alpha, if (i % 3 == 0) PINK else if (i % 3 == 1) TEAL else CYAN)
+                val tail = 5f + 7f * glow
+                if (kotlin.math.abs(vx[i] * tail) < plotW / 4) c.drawLine(nx - vx[i] * tail, ny - vy[i] * tail, nx, ny, streak)
+            }
+
+            // ---- the measured band as three breathing strands
+            if (measured >= 2) {
+                for (j in 0 until 3) {
+                    ribbon.rewind()
+                    for (i in 0 until measured) {
+                        val x = xOf(band.lowKHz + i * band.stepKHz)
+                        val p = prof[i].coerceIn(0f, 1f)
+                        val wobble = kotlin.math.sin(i * 0.21f + t * (1.3f + j * 0.5f) + j * 2.1f) * (2f + 5f * p) * d * (if (j == 0) 0.3f else 1f)
+                        val y = base - p * amp + wobble
+                        if (i == 0) ribbon.moveTo(x, y) else ribbon.lineTo(x, y)
+                    }
+                    if (j == 0) {
+                        ribbonFill.rewind(); ribbonFill.addPath(ribbon)
+                        ribbonFill.lineTo(xOf(band.lowKHz + (measured - 1) * band.stepKHz), base)
+                        ribbonFill.lineTo(m, base); ribbonFill.close()
+                        ribbonFillPaint.shader = null
+                        ribbonFillPaint.color = argb(0.16f, TEAL)
+                        c.drawPath(ribbonFill, ribbonFillPaint)
+                    }
+                    ribbonPaint.color = when (j) { 0 -> TEAL_BRIGHT; 1 -> argb(0.45f, CYAN); else -> argb(0.4f, PINK) }
+                    c.drawPath(ribbon, ribbonPaint)
+                }
+            }
+
+            // ---- hits: a burst when they land, then a marker with the call sign
+            for (hit in st.scanResults) {
+                if (hit.freqKHz !in hitBirth) {
+                    hitBirth[hit.freqKHz] = now
+                    hitName[hit.freqKHz] = stationOn(hit.freqKHz, st.nearbyStations)?.call ?: fmtMhz(hit.freqKHz)
+                    lastHitKhz = hit.freqKHz; lastHitAt = now
+                }
+            }
+            var label = 0
+            for ((k, born) in hitBirth) {
+                val x = xOf(k)
+                val ci = ((k - band.lowKHz) / band.stepKHz).coerceIn(0, channels - 1)
+                val y = base - (if (ci < prof.size) prof[ci] else 0f) * amp
+                val age = now - born
+                if (age < 900) {
+                    val f = age / 900f
+                    hitPaint.alpha = ((1f - f) * 255).toInt()
+                    c.drawCircle(x, y, 4f * d + f * 24f * d, hitPaint)
+                    for (r in 0 until 6) {
+                        val ang = r * (Math.PI.toFloat() / 3f) + f
+                        val r0 = 6f * d + f * 14f * d; val r1 = r0 + 6f * d
+                        c.drawLine(x + kotlin.math.cos(ang) * r0, y + kotlin.math.sin(ang) * r0,
+                                   x + kotlin.math.cos(ang) * r1, y + kotlin.math.sin(ang) * r1, hitPaint)
+                    }
+                }
+                c.drawCircle(x, y, 2.6f * d, hitDot)
+                val name = hitName[k] ?: continue
+                val tw = hitText.measureText(name)
+                val ly = y - 6f * d - (label % 2) * 9f * d
+                c.drawText(name, (x - tw / 2f).coerceIn(m, w - m - tw), ly.coerceAtLeast(artTop + 8f * d), hitText)
+                label++
+            }
+
+            // ---- the scan head: a light the field reacts to
+            c.save(); c.translate(headX, 0f)
+            c.drawRect(-22f * d, artTop - 6f * d, 22f * d, base, beamPaint)
+            c.restore()
+            c.drawLine(headX, artTop - 6f * d, headX, base + 3f * d, corePaint)
+            val headY = base - (if (idx < prof.size && idx < measured) prof[idx] else 0f) * amp
+            c.save(); c.translate(headX, headY)
+            c.drawCircle(0f, 0f, 30f * d, glowPaint)
+            c.restore()
+
+            // ---- band axis
+            val step = if (span > 20_000f) 4 else 2
+            var mhzTick = (band.lowKHz / 1000 / step + 1) * step
+            while (mhzTick * 1000 <= band.highKHz) {
+                val x = xOf(mhzTick * 1000)
+                c.drawLine(x, base + 2f * d, x, base + 6f * d, tickPaint)
+                val s = mhzTick.toString()
+                c.drawText(s, x - axisText.measureText(s) / 2f, base + 6f * d + axisText.textSize, axisText)
+                mhzTick += step
+            }
+
+            // ---- readout: where, what, how far along, and the honest bit about audio
+            val rssiIdx = (measured - 1).coerceAtLeast(0)
+            val rssi = if (prof.isNotEmpty() && measured > 0) (prof[rssiIdx] * QualcommFmHardwareEngine.SWEEP_RSSI_FULL_SCALE).roundToInt() else null
+            c.drawText("SCANNING ${fmtMhz(khz)} MHz · RSSI ${rssi ?: "—"} · ${idx + 1}/$channels", 4f * d, 11f * d, hudBig)
+            if (lastHitKhz > 0 && now - lastHitAt < 1600) {
+                c.drawText("station found: ${hitName[lastHitKhz] ?: ""} ${fmtMhz(lastHitKhz)}", 4f * d, 21f * d, hudFound)
+            } else {
+                c.drawText(if (idx == 0) "muting audio, starting the sweep" else "measuring signal · ${hitBirth.size} found so far",
+                           4f * d, 21f * d, hudLine)
+            }
+            c.drawText("audio muted while scanning", 4f * d, 30f * d, hudMuted)
         }
     }
 

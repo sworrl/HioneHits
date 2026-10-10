@@ -72,7 +72,9 @@ fun Modifier.bpmBeatPulse(accent: Color, shape: Shape = CircleShape): Modifier =
             try {
                 while (isActive) {
                     val iv = MikuBpmEngine.beatGridIntervalNanos
-                    if (iv <= 0.0 || !MikuBpmEngine.isPlaying) {
+                    // screenActive is re-checked here as well as at composition: its display-on
+                    // half is a plain volatile, so a panel switched off does not recompose us.
+                    if (iv <= 0.0 || !MikuBpmEngine.isPlaying || !IdleController.screenActive) {
                         env.floatValue = 0f
                         delay(500)
                         continue
