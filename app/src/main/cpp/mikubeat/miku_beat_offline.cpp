@@ -20,9 +20,6 @@
 #include <algorithm>
 #include <cmath>
 #include <numeric>
-#ifdef MIKUBEAT_HOST_DEBUG
-#include <cstdio>
-#endif
 
 #include "dsp/onsets/DetectionFunction.h"
 #include "dsp/tempotracking/TempoTrackV2.h"
@@ -324,86 +321,7 @@ OfflineResult OfflineAnalyzer::finish() {
     tp.reserve(tempi.size());
     for (double t : tempi) if (t > 0) tp.push_back(t);
     r.medianTempoCurve = median(tp);
-    if (r.ok) {
-        r.bpm = resolveOctave(df, r.bpm, &r.octaveNote);
-        // Doubling keeps every old grid beat on the new grid; halving keeps one of each pair.
-        r.firstBeatSec = std::fmod(r.firstBeatSec, 60.0 / r.bpm);
-    }
     return r;
-}
-
-/**
- * Second opinion on the octave. TempoTrackV2's tempo prior is centred near 120 BPM, so a fast
- * track with a strong pulse on every beat (174 D&B, 180 punk) tends to come out at half speed.
- * Folding into 70..180 cannot fix that, because the half tempo is inside the range too.
- *
- * The check, after the 0.3.0 analyzer's best idea: how busy the onsets are sets where the
- * perceived pulse sits (dense onsets are heard as a faster beat), and the detection function's
- * autocorrelation says whether the other octave is a real periodicity at all. The other octave
- * replaces the tracked one only when it is at least half as periodic and clearly closer to that
- * centre. Applied in both directions, within 70..180.
- */
-/** The other octave must be at least this periodic, relative to the tracked one, to be chosen. */
-constexpr double kOctaveMinAcf = 0.5;
-
-double OfflineAnalyzer::resolveOctave(const std::vector<double>& df, double bpm, int* note) {
-    *note = 0;
-    const double rate = double(kRate) / kHop;  // detection-function frames per second
-    const size_t n = df.size();
-    if (n < size_t(rate * 20) || bpm <= 0) return bpm;
-
-    // Onset density: local maxima above 30 % of the +-1 s local maximum, at least 60 ms apart.
-    const int half = int(rate);
-    const int minGap = std::max(2, int(0.06 * rate));
-    int onsets = 0, last = -minGap;
-    for (int i = 1; i + 1 < int(n); i++) {
-        double v = df[size_t(i)];
-        if (v <= 0 || v < df[size_t(i - 1)] || v < df[size_t(i + 1)]) continue;
-        double lm = 0;
-        for (int k = std::max(0, i - half); k < std::min(int(n), i + half + 1); k++) lm = std::max(lm, df[size_t(k)]);
-        if (v < 0.3 * lm || i - last < minGap) continue;
-        onsets++;
-        last = i;
-    }
-    const double density = onsets / (double(n) / rate);
-    const double centre = std::min(185.0, std::max(110.0, 95.0 + 17.0 * density));
-
-    // Autocorrelation of the mean-removed detection function near a tempo's lag.
-    double mean = 0;
-    for (double v : df) mean += v;
-    mean /= double(n);
-    auto acf = [&](double tempo) {
-        double lag = 60.0 * rate / tempo;
-        int l0 = int(std::floor(lag * 0.97)), l1 = int(std::ceil(lag * 1.03));
-        double best = 0;
-        for (int l = std::max(1, l0); l <= l1 && l < int(n) / 2; l++) {
-            double acc = 0;
-            for (size_t i = 0; i + size_t(l) < n; i++) acc += (df[i] - mean) * (df[i + size_t(l)] - mean);
-            best = std::max(best, acc / double(n - size_t(l)));
-        }
-        return best;
-    };
-    auto weight = [&](double tempo) {
-        double o = std::log2(tempo / centre) / 0.5;
-        return std::exp(-0.5 * o * o);
-    };
-    const double base = acf(bpm);
-    if (base <= 0) return bpm;
-    double chosen = bpm;
-    double bestScore = base * weight(bpm);
-    for (double alt : {bpm * 2.0, bpm * 0.5}) {
-        if (alt < kFoldMinBpm || alt >= kFoldMaxBpm) continue;
-        double a = acf(alt);
-        if (a < kOctaveMinAcf * base) continue;
-        double sc = a * weight(alt);
-        if (sc > 1.15 * bestScore) { bestScore = sc; chosen = alt; }
-    }
-#ifdef MIKUBEAT_HOST_DEBUG
-    std::fprintf(stderr, "octave: bpm=%.2f density=%.2f centre=%.1f acf(b)=%.4g acf(2b)=%.4g acf(b/2)=%.4g\n",
-                 bpm, density, centre, base, acf(bpm * 2), acf(bpm / 2));
-#endif
-    if (chosen != bpm) *note = chosen > bpm ? 2 : -2;
-    return chosen;
 }
 
 }  // namespace mikubeat

@@ -66,14 +66,15 @@ import kotlin.math.pow
  * line uses the color the status bar badge would show for that filter.
  */
 
-private enum class GraphRange(val label: String) { ZOOM("Top end"), WIDE("Wide"), FULL("Out to 2×Fs") }
+/** AUDIO is the IEM-chart view. TOP zooms on the top octaves, where the filters differ. FULL shows images. */
+private enum class GraphRange(val label: String) { AUDIO("20 Hz to 20 kHz"), TOP("Top octaves"), FULL("Out to 2×Fs") }
 
 private val BANDS = listOf(
     Triple("Sub bass", 20.0, 60.0), Triple("Bass", 60.0, 250.0), Triple("Low mid", 250.0, 500.0),
     Triple("Mid", 500.0, 2000.0), Triple("Mid high", 2000.0, 4000.0), Triple("High", 4000.0, 10000.0),
-    Triple("Air", 10000.0, 20000.0),
+    Triple("Air", 10000.0, 20000.0), Triple("Ultrasonic", 20000.0, 1e7),
 )
-private val BAND_COLORS = listOf(0xFF7E57C2, 0xFF5C6BC0, 0xFF26A69A, 0xFF66BB6A, 0xFFD4E157, 0xFFFFA726, 0xFFEF5350).map { Color(it) }
+private val BAND_COLORS = listOf(0xFF7E57C2, 0xFF5C6BC0, 0xFF26A69A, 0xFF66BB6A, 0xFFD4E157, 0xFFFFA726, 0xFFEF5350, 0xFF78909C).map { Color(it) }
 
 private const val POINTS = 260
 
@@ -96,7 +97,7 @@ fun DacResponseCard(
     val applied = DacFilterModel.Filter.of(filterId)
 
     var tab by remember { mutableIntStateOf(0) }
-    var range by remember { mutableStateOf(GraphRange.ZOOM) }
+    var range by remember { mutableStateOf(GraphRange.AUDIO) }
     var preview by remember { mutableStateOf<DacFilterModel.Filter?>(null) }
     val shown = preview ?: applied ?: DacFilterModel.Filter.FAST_LL
     var port by remember { mutableStateOf(OutputProfiles.PORT_35) }
@@ -143,8 +144,8 @@ fun DacResponseCard(
         }
     }
 
-    val fromHz = 20.0
-    val toHz = if (range == GraphRange.FULL) 2.0 * rate else 20000.0
+    val fromHz = if (range == GraphRange.TOP) 2000.0 else 20.0
+    val toHz = when (range) { GraphRange.FULL -> 2.0 * rate; GraphRange.TOP -> rate / 2.0; GraphRange.AUDIO -> 20000.0 }
     val g by animateFloatAsState(gainDb(gain), tween(500), label = "gain")
 
     // Curves for the plot, cached per (models, range).
@@ -211,7 +212,7 @@ fun DacResponseCard(
         Spacer(Modifier.height(8.dp))
 
         // Legend: tap a filter to preview it here without changing the DAC.
-        Text(if (preview == null) "Tap a filter to preview it. The DAC is not changed." else "Previewing ${shown.shortLabel}. Tap it again to go back to the applied filter.",
+        Text(if (preview == null) "Tap a filter to preview it. The DAC is not changed." else "Previewing ${shown.shortLabel.removeSuffix(".")}. Tap it again to go back to the applied filter.",
             color = HwMuted, fontSize = 11.sp)
         Spacer(Modifier.height(4.dp))
         FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -331,8 +332,8 @@ private fun FrequencyGraph(
     val density = LocalDensity.current
     // The y window follows the gain, so a gain change slides the scale (labels are absolute dB).
     val (yTopRel, yBotRel, yStep) = when (range) {
-        GraphRange.ZOOM -> Triple(1f, -6f, 1f)
-        GraphRange.WIDE -> Triple(10f, -20f, 5f)
+        GraphRange.AUDIO -> Triple(1f, -6f, 1f)
+        GraphRange.TOP -> Triple(1f, -10f, 1f)
         GraphRange.FULL -> Triple(10f, -150f, 20f)
     }
     // "At your ears" can go well outside the zoomed window: widen to fit it.
@@ -346,7 +347,7 @@ private fun FrequencyGraph(
     }
     val yTop = top + gainDb
     val yBot = bot + gainDb
-    val step = if (top - bot > 12f && range == GraphRange.ZOOM) 3f else yStep
+    val step = if (top - bot > 12f && range != GraphRange.FULL) 3f else yStep
 
     Canvas(Modifier.fillMaxWidth().height(250.dp)) {
         val left = with(density) { 34.dp.toPx() }
@@ -363,8 +364,8 @@ private fun FrequencyGraph(
 
         // Band row across the top, like an IEM chart.
         BANDS.forEachIndexed { i, (name, a, b) ->
-            if (a >= toHz) return@forEachIndexed
-            val x0 = x(a); val x1 = x(min(b, toHz))
+            if (a >= toHz || b <= fromHz) return@forEachIndexed
+            val x0 = x(max(a, fromHz)); val x1 = x(min(b, toHz))
             drawRect(BAND_COLORS[i].copy(alpha = 0.55f), Offset(x0, 0f), Size(x1 - x0 - 1f, topPad - 4f))
             // Narrow bands (Mid high is one octave) fall back to a smaller font, then a short name.
             val style = TextStyle(color = Color.White, fontSize = 8.5.sp, fontWeight = FontWeight.Bold)
@@ -434,8 +435,8 @@ private fun FrequencyGraph(
         val gl = when (gain) { "low" -> "Low gain −12 dB"; "middle" -> "Middle gain −6 dB"; else -> "High gain 0 dB" }
         val gt = tm.measure(gl, TextStyle(color = Color.White, fontSize = 9.sp, fontWeight = FontWeight.Bold))
         val gy = (y(gainDb) - gt.size.height - 2f).coerceIn(topPad, topPad + h - gt.size.height)
-        drawText(gt, topLeft = Offset(left + w - gt.size.width - 4f, gy))
-        if (range == GraphRange.ZOOM) {
+        drawText(gt, topLeft = Offset(left + 6f, gy))
+        if (range != GraphRange.FULL) {
             val nt = tm.measure("no smoothing", TextStyle(color = HwMuted, fontSize = 8.5.sp))
             drawText(nt, topLeft = Offset(left + 4f, topPad + h - nt.size.height - 2f))
         }
@@ -468,9 +469,12 @@ private fun ImpulseGraph(m: DacFilterModel.Model?, shown: DacFilterModel.Filter,
     val density = LocalDensity.current
     if (m == null) { Box(Modifier.fillMaxWidth().height(250.dp)); return }
     val ring = remember(m) { DacFilterModel.ringing(m) }
-    // Peak-aligned window, -1 ms to +2 ms, so the filters compare at a glance.
-    val t0 = -1.0e-3
-    val t1 = 2.0e-3
+    // Peak-aligned window of -26 to +53 input samples (-0.6 to +1.2 ms at 44.1 kHz), so every
+    // filter fits and the shapes compare at any rate. The axis is in ms, so higher rates show
+    // as shorter ringing.
+    val t0 = -26.0 / m.rateHz
+    val t1 = 53.0 / m.rateHz
+    val tickStep = niceStep((t1 - t0) / 6)
     val pts = remember(m) {
         val peak = m.impulse[m.peakIndex]
         val n = 600
@@ -494,12 +498,12 @@ private fun ImpulseGraph(m: DacFilterModel.Model?, shown: DacFilterModel.Filter,
         fun y(v: Float) = topPad + (yMax - v) / (yMax - yMin) * h
         val label = TextStyle(color = HwMuted, fontSize = 9.sp)
         drawRect(Color(0xFF071C21), Offset(left, topPad), Size(w, h))
-        var t = -1.0e-3
-        while (t <= t1 + 1e-9) {
+        var t = kotlin.math.ceil(t0 / tickStep) * tickStep
+        while (t <= t1 + 1e-12) {
             drawLine(Color.White.copy(alpha = if (abs(t) < 1e-9) 0.3f else 0.1f), Offset(x(t), topPad), Offset(x(t), topPad + h), 1f)
-            val s = tm.measure(String.format(java.util.Locale.US, "%.1f ms", t * 1000), label)
+            val s = tm.measure(fmtTick(t, tickStep), label)
             drawText(s, topLeft = Offset((x(t) - s.size.width / 2).coerceIn(left - 6f, size.width - s.size.width), topPad + h + 3f))
-            t += 0.5e-3
+            t += tickStep
         }
         listOf(1f, 0.5f, 0f, -0.5f).forEach { v ->
             drawLine(Color.White.copy(alpha = if (v == 0f) 0.25f else 0.08f), Offset(left, y(v)), Offset(left + w, y(v)), 1f)
@@ -511,12 +515,12 @@ private fun ImpulseGraph(m: DacFilterModel.Model?, shown: DacFilterModel.Filter,
         if (ring.preSeconds > 2e-5) {
             val a = x(-ring.preSeconds).coerceAtLeast(left)
             drawRect(amber.copy(alpha = 0.10f), Offset(a, topPad), Size(x(0.0) - a, h))
-            bracket(tm, "Pre-ringing ${fmtMs(ring.preSeconds)}", a, x(0.0), topPad, amber)
+            bracket(tm, "Pre-ringing ${fmtMs(ring.preSeconds)}", a, x(0.0), topPad, amber, alignRight = true)
         }
         if (ring.postSeconds > 2e-5) {
             val b = x(ring.postSeconds).coerceAtMost(left + w)
             drawRect(secondary.copy(alpha = 0.08f), Offset(x(0.0), topPad), Size(b - x(0.0), h))
-            bracket(tm, "Post-ringing ${fmtMs(ring.postSeconds)}", x(0.0), b, topPad, secondary)
+            bracket(tm, "Post-ringing ${fmtMs(ring.postSeconds)}", x(0.0), b, topPad, secondary, alignRight = false)
         }
         clipRect(left, topPad, left + w, topPad + h) {
             anim?.let { arr ->
@@ -538,14 +542,26 @@ private fun ImpulseGraph(m: DacFilterModel.Model?, shown: DacFilterModel.Filter,
     }
 }
 
-private fun DrawScope.bracket(tm: TextMeasurer, text: String, x0: Float, x1: Float, top: Float, color: Color) {
+/** Pre label ends at the peak, post label starts there, so the two never overlap. */
+private fun DrawScope.bracket(tm: TextMeasurer, text: String, x0: Float, x1: Float, top: Float, color: Color, alignRight: Boolean) {
     val yb = top - 6f
     drawLine(color, Offset(x0, yb), Offset(x1, yb), 2f)
     drawLine(color, Offset(x0, yb - 4f), Offset(x0, yb + 4f), 2f)
     drawLine(color, Offset(x1, yb - 4f), Offset(x1, yb + 4f), 2f)
     val t = tm.measure(text, TextStyle(color = color, fontSize = 9.sp, fontWeight = FontWeight.Bold))
-    val cx = ((x0 + x1) / 2 - t.size.width / 2).coerceIn(0f, size.width - t.size.width)
+    val cx = (if (alignRight) x1 - t.size.width - 6f else x0 + 6f).coerceIn(0f, size.width - t.size.width)
     drawText(t, topLeft = Offset(cx, yb - t.size.height - 3f))
+}
+
+private fun niceStep(raw: Double): Double {
+    val p = 10.0.pow(kotlin.math.floor(kotlin.math.log10(raw)))
+    return listOf(1.0, 2.0, 2.5, 5.0, 10.0).map { it * p }.first { it >= raw }
+}
+
+private fun fmtTick(t: Double, step: Double): String {
+    val ms = t * 1000
+    val digits = when { step * 1000 >= 0.5 -> 1; step * 1000 >= 0.05 -> 2; else -> 3 }
+    return String.format(java.util.Locale.US, "%.${digits}f ms", if (abs(ms) < 1e-9) 0.0 else ms)
 }
 
 private fun fmtMs(s: Double) = String.format(java.util.Locale.US, "%.2f ms", s * 1000)
@@ -560,7 +576,7 @@ private fun Notes(
 ) {
     @Composable
     fun line(title: String, body: String) {
-        Text(buildString { append(title); append(". "); append(body) }, color = Color.White.copy(alpha = 0.86f), fontSize = 11.5.sp, lineHeight = 15.sp)
+        Text(buildString { append(title.removeSuffix(".")); append(". "); append(body) }, color = Color.White.copy(alpha = 0.86f), fontSize = 11.5.sp, lineHeight = 15.sp)
         Spacer(Modifier.height(5.dp))
     }
     if (m == null) return

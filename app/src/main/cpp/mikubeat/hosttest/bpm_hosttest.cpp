@@ -57,9 +57,9 @@ int main(int argc, char** argv) {
         mikubeat::OfflineResult r = a.finish();
         double ms = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - t0).count();
         std::printf("{\"ok\":%s,\"bpm\":%.4f,\"raw\":%.4f,\"conf\":%.4f,\"first\":%.4f,\"curve\":%.3f,"
-                    "\"beats\":%d,\"oct\":%d,\"sec\":%.2f,\"ms\":%.1f,\"beat_times\":[",
+                    "\"beats\":%d,\"sec\":%.2f,\"ms\":%.1f,\"beat_times\":[",
                     r.ok ? "true" : "false", r.bpm, r.rawBpm, r.confidence, r.firstBeatSec,
-                    r.medianTempoCurve, r.beatCount, r.octaveNote, r.analysedSec, ms);
+                    r.medianTempoCurve, r.beatCount, r.analysedSec, ms);
         for (size_t i = 0; i < r.beatsSec.size(); i++) std::printf(i ? ",%.4f" : "%.4f", r.beatsSec[i]);
         std::printf("]}\n");
         return 0;

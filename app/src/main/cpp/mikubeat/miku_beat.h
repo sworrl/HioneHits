@@ -73,8 +73,6 @@ struct OfflineResult {
     /** Median of TempoTrackV2's own per-frame tempo curve, unfolded. */
     double medianTempoCurve = 0.0;
     int beatCount = 0;
-    /** 0, or +2 / -2 when the octave check doubled or halved TempoTrackV2's tempo. */
-    int octaveNote = 0;
     double analysedSec = 0.0;
     std::vector<double> beatsSec;
 };
@@ -88,7 +86,6 @@ public:
     OfflineResult finish();
 
 private:
-    static double resolveOctave(const std::vector<double>& df, double bpm, int* note);
     void pushMono(const float* x, size_t n);
     void drainFrames(bool final);
     int channels_;

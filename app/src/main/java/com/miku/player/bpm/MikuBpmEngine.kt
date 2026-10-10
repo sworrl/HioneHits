@@ -296,6 +296,7 @@ object MikuBpmEngine {
             var flushEpoch = MikuBeatTap.flushCount
             var freeAnchorNs = 0L
             var lastPublishedBpm = currentBpm
+            var lastLoggedGrid = ""
             try {
                 while (isActive && isPlaying) {
                     // A seek: put the file grid back under the new position until BTrack relocks.
@@ -311,6 +312,21 @@ object MikuBpmEngine {
                         }
                     }
                     var g = MikuBeatClock.grid
+                    val state = "${g.source}/${g.phaseLocked}/${"%.0f".format(60e9 / maxOf(1.0, g.periodNs))}"
+                    if (state != lastLoggedGrid) {
+                        lastLoggedGrid = state
+                        android.util.Log.i(TAG, "beat grid: source=${g.source} locked=${g.phaseLocked} " +
+                            "bpm=${"%.1f".format(60e9 / maxOf(1.0, g.periodNs))} shown=$currentBpm")
+                    }
+                    // The whole-file analysis ran and found no steady beat (ambient, rubato,
+                    // spoken word): no tempo and no beat, rather than a live number that wanders.
+                    val analysedNoBeat = currentBpm <= 0f && currentRow != null
+                    if (analysedNoBeat) {
+                        beatGridIntervalNanos = 0.0
+                        if (lastPublishedBpm != 0f) { lastPublishedBpm = 0f; publishState(context, 0f, true) }
+                        delay(250)
+                        continue
+                    }
                     // No file tempo yet: the live tracker's own tempo, once it has one.
                     if (currentBpm <= 0f && g.bpm > 0f && g.bpm != lastPublishedBpm) {
                         lastPublishedBpm = g.bpm
