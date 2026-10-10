@@ -238,6 +238,16 @@ fun DacResponseCard(
             Text("The two ${if (shown.slow) "slow" else "fast"} filters have the same frequency response, so their lines overlap. They differ in timing: see Impulse.",
                 color = HwMuted, fontSize = 11.sp, lineHeight = 14.sp)
         }
+        if (tab == 0) {
+            Spacer(Modifier.height(4.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(Modifier.size(width = 14.dp, height = 4.dp).background(dacColor(shown, gain, dre, highPower)))
+                Spacer(Modifier.width(5.dp))
+                Text("At the ${if (port == OutputProfiles.PORT_44) "4.4 mm" else "3.5 mm"} jack: ${shown.shortLabel.removeSuffix(".")} at ${fmtRate(rate)}, " +
+                    when (gain) { "low" -> "low gain"; "middle" -> "middle gain"; else -> "high gain" },
+                    color = HwMuted, fontSize = 11.sp, lineHeight = 14.sp)
+            }
+        }
         if (measuredArr != null && tab == 0) {
             Spacer(Modifier.height(4.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -267,7 +277,7 @@ fun DacResponseCard(
 private fun earsLegend(e: OutputProfiles.Entry?, measured: ResponseStore.Stored?, hp: ResponseStore.Stored?): String = buildList {
     add("At your ears")
     if (e?.name != null) add(e.name + if (e.eqAudible) ", EQ on" else ", EQ off")
-    if (measured != null) add("measured curve") else if (hp != null) add("headphone curve: ${hp.label}")
+    if (measured != null) add("measured curve") else if (hp != null) add("curve: ${hp.label}")
 }.joinToString(" · ")
 
 /** The color dacTheme gives [f] with the current gain/DRE/high power. */
@@ -340,9 +350,10 @@ private fun FrequencyGraph(
     // "At your ears" can go well outside the zoomed window: widen to fit it.
     var top = yTopRel
     var bot = yBotRel
-    if (ears != null && bold != null && range != GraphRange.FULL) {
+    if ((ears != null || measured != null) && bold != null && range != GraphRange.FULL) {
         var lo = 0f; var hi = 0f
-        for (i in ears.indices) { val v = ears[i] + bold[i]; lo = min(lo, v); hi = max(hi, v) }
+        ears?.let { e -> for (i in e.indices) { val v = e[i] + bold[i]; lo = min(lo, v); hi = max(hi, v) } }
+        measured?.let { m -> for (v in m) { lo = min(lo, v); hi = max(hi, v) } }
         if (hi > top) top = (hi + 1f).coerceAtMost(25f)
         if (lo < bot) bot = (lo - 1f).coerceAtLeast(-40f)
     }
@@ -655,7 +666,10 @@ private fun ProfileTools(
                 runCatching {
                     val text = ctx.contentResolver.openInputStream(uri)?.use { it.bufferedReader().readText() } ?: ""
                     val c = ResponseMath.parseCsv(text) ?: return@runCatching "That file has no frequency,dB columns I could read."
-                    val name = uri.lastPathSegment?.substringAfterLast('/')?.substringBeforeLast('.') ?: "imported"
+                    val display = ctx.contentResolver.query(uri, arrayOf(android.provider.OpenableColumns.DISPLAY_NAME), null, null, null)?.use { c ->
+                        if (c.moveToFirst()) c.getString(0) else null
+                    }
+                    val name = (display ?: uri.lastPathSegment?.substringAfterLast('/') ?: "imported").substringBeforeLast('.')
                     ResponseStore.save(ctx, storeKey, ResponseStore.HEADPHONE, ResponseStore.Stored(c, name, System.currentTimeMillis()))
                     "Imported $name (${c.hz.size} points)."
                 }.getOrElse { "Could not read that file: ${it.message}" }
@@ -669,21 +683,21 @@ private fun ProfileTools(
     }
 
     Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-        Chip(if (headphone == null) "Import headphone CSV" else "Replace headphone CSV", false, secondary) {
+        Chip(if (headphone == null) "Import curve (CSV)" else "Replace curve", false, secondary) {
             importer.launch(arrayOf("text/*", "text/csv", "text/comma-separated-values", "application/csv", "application/octet-stream"))
         }
-        if (headphone != null) Chip("Remove CSV", false, secondary) {
-            ResponseStore.delete(ctx, storeKey, ResponseStore.HEADPHONE); onChanged()
+        if (headphone != null) Chip("Remove curve", false, secondary) {
+            ResponseStore.delete(ctx, storeKey, ResponseStore.HEADPHONE); status = null; onChanged()
         }
         Chip(if (measured == null) "Measure with the mic" else "Measure again", false, secondary) {
             if (ContextCompat.checkSelfPermission(ctx, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) askMeasure = true
             else micPermission.launch(Manifest.permission.RECORD_AUDIO)
         }
         if (measured != null) Chip("Remove measurement", false, secondary) {
-            ResponseStore.delete(ctx, storeKey, ResponseStore.MEASURED); onChanged()
+            ResponseStore.delete(ctx, storeKey, ResponseStore.MEASURED); status = null; onChanged()
         }
     }
-    if (headphone != null) Text("Headphone curve: ${headphone.label}. Only the shape is used (300 Hz to 3 kHz set to 0 dB).", color = HwMuted, fontSize = 11.sp, lineHeight = 14.sp)
+    if (headphone != null) Text("Imported curve: ${headphone.label}. Only the shape is used (300 Hz to 3 kHz set to 0 dB).", color = HwMuted, fontSize = 11.sp, lineHeight = 14.sp)
     if (measured != null) Text("Measured ${android.text.format.DateFormat.format("MMM d, h:mm a", measured.atMillis)}: ${measured.label}.", color = HwMuted, fontSize = 11.sp, lineHeight = 14.sp)
 
     if (running) {

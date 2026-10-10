@@ -177,6 +177,8 @@ object MikuBpmEngine {
                 MikuBeatTap.seed(bpm, bpm > 0f && (row?.confidence ?: 0f) >= FIX_TEMPO_CONFIDENCE)
             }
             currentBpm = bpm
+            // Analysed, no steady beat: nothing for the live tracker to follow either.
+            if (row != null && bpm <= 0f) MikuBeatTap.setWanted(false)
             if (row != null && bpm > 0f && row.firstBeatMs >= 0 && posMs >= 0 && isPlaying) {
                 val nowNs = SystemClock.elapsedRealtimeNanos()
                 val positionNow = posMs + (nowNs - posAtNs) / 1_000_000L
@@ -312,20 +314,24 @@ object MikuBpmEngine {
                         }
                     }
                     var g = MikuBeatClock.grid
-                    val state = "${g.source}/${g.phaseLocked}/${g.bpm}"
-                    if (state != lastLoggedGrid) {
-                        lastLoggedGrid = state
-                        android.util.Log.i(TAG, "beat grid: source=${g.source} locked=${g.phaseLocked} " +
-                            "bpm=${g.bpm} shown=$currentBpm")
-                    }
                     // The whole-file analysis ran and found no steady beat (ambient, rubato,
                     // spoken word): no tempo and no beat, rather than a live number that wanders.
                     val analysedNoBeat = currentBpm <= 0f && currentRow != null
                     if (analysedNoBeat) {
                         beatGridIntervalNanos = 0.0
                         if (lastPublishedBpm != 0f) { lastPublishedBpm = 0f; publishState(context, 0f, true) }
+                        if (lastLoggedGrid != "no-beat") {
+                            lastLoggedGrid = "no-beat"
+                            android.util.Log.i(TAG, "beat grid: none, the file analysis found no steady beat")
+                        }
                         delay(250)
                         continue
+                    }
+                    val state = "${g.source}/${g.phaseLocked}/${g.bpm}"
+                    if (state != lastLoggedGrid) {
+                        lastLoggedGrid = state
+                        android.util.Log.i(TAG, "beat grid: source=${g.source} locked=${g.phaseLocked} " +
+                            "bpm=${g.bpm} shown=$currentBpm")
                     }
                     // No file tempo yet: the live tracker's own tempo, once it has one.
                     if (currentBpm <= 0f && g.bpm > 0f && g.bpm != lastPublishedBpm) {

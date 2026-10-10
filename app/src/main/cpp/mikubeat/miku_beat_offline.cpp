@@ -191,12 +191,30 @@ OfflineResult fitConstantGrid(const std::vector<double>& beats, double analysedS
     double rms = cnt > 2 ? std::sqrt(ss / (cnt - 2)) : P;
     double seP = (cnt > 2 && snn > 0) ? rms / std::sqrt(snn) : P;
 
+    // A track whose tempo changes between sections (or drifts, played live) has no single
+    // straight line through its beats: the least-squares period lands between the sections, the
+    // beats wander more than 12 % of a period off the line, or most of them miss it entirely.
+    // Then the typical beat interval, the tempo most of the song is at, is the honest number.
+    const bool constant = std::fabs(P - p0) <= 0.015 * p0 && rms <= 0.12 * P &&
+                          cnt >= 0.6 * double(beats.size());
+    if (!constant) {
+        // Mean of the intervals near the median: beats sit on 11.6 ms detection frames, so the
+        // median alone is quantised to about 1 % at 130 BPM, and the mean of many is not.
+        double sum = 0;
+        int k = 0;
+        for (double d : ibi) if (std::fabs(d - p0) <= 0.05 * p0) { sum += d; k++; }
+        P = k >= 4 ? sum / k : p0;
+        double acc = 0, c = 0;
+        for (size_t i = 0; i < beats.size() && i < 16; i++) { acc += beats[i] - P * n[i]; c += 1; }
+        phi = c > 0 ? acc / c : beats[0];
+    }
+
     double raw = 60.0 / P;
-    double seBpm = 60.0 * seP / (P * P);
+    double seBpm = constant ? 60.0 * seP / (P * P) : 0.0;
     // Most produced music sits on a whole-number tempo. Snap when the fit cannot tell the
     // difference anyway, then refit the phase for the snapped period.
     double snapped = std::round(raw);
-    if (std::fabs(raw - snapped) <= std::max(0.05, 2.0 * seBpm)) {
+    if (constant && std::fabs(raw - snapped) <= std::max(0.05, 2.0 * seBpm)) {
         raw = snapped;
         P = 60.0 / raw;
         double acc = 0;
@@ -204,15 +222,23 @@ OfflineResult fitConstantGrid(const std::vector<double>& beats, double analysedS
         phi = cnt > 0 ? acc / cnt : phi;
     }
 
-    // Regularity: share of inter-beat intervals within 5 % of the fitted period.
+    // Regularity: share of inter-beat intervals within 5 % of the period.
     int regular = 0;
     for (double d : ibi) if (std::fabs(d - P) <= 0.05 * P) regular++;
     double c1 = double(regular) / double(ibi.size());
-    // Grid fit: a steady track stays within a few percent of one period across its length.
-    double rel = rms / P;
-    double c2 = std::exp(-(rel / 0.08) * (rel / 0.08));
-    double inlierShare = cnt / double(beats.size());
-    r.confidence = std::max(0.0, std::min(1.0, c1 * (0.6 + 0.4 * c2) * std::min(1.0, inlierShare / 0.8)));
+    if (constant) {
+        // Grid fit: a steady track stays within a few percent of one period across its length.
+        double rel = rms / P;
+        double c2 = std::exp(-(rel / 0.08) * (rel / 0.08));
+        double inlierShare = cnt / double(beats.size());
+        r.confidence = c1 * (0.6 + 0.4 * c2) * std::min(1.0, inlierShare / 0.8);
+    } else {
+        // Real beats, but no one grid: the tempo is right for most of the song, the phase from
+        // the file is not to be trusted (the live tracker supplies it).
+        r.confidence = c1 * 0.8;
+    }
+    r.confidence = std::max(0.0, std::min(1.0, r.confidence));
+    r.constantTempo = constant;
 
     r.rawBpm = raw;
     r.bpm = foldBpm(raw);

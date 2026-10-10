@@ -33,13 +33,13 @@ object MikuTempoAnalyzer {
     private const val TAG = "MikuTempoAnalyzer"
 
     /** Bump when the analysis changes enough that cached rows should be redone. */
-    const val VERSION = 2
+    const val VERSION = 3
 
     /** Long files (DJ mixes, whole-disc rips without a cue split) are analysed for this long. */
     const val MAX_ANALYSE_SEC = 480
 
     /** Below this the tempo is kept in the cache but not shown as the track's tempo. */
-    const val MIN_SHOW_CONFIDENCE = 0.2f
+    const val MIN_SHOW_CONFIDENCE = 0.3f
 
     const val SOURCE_TAG = "tag"
     const val SOURCE_ANALYSIS = "qm-tempotrackv2"

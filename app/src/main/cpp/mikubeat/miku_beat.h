@@ -70,6 +70,8 @@ struct OfflineResult {
     double confidence = 0.0;
     /** Time of the first grid beat at or after 0 s, on the folded grid. */
     double firstBeatSec = 0.0;
+    /** False when the beats do not fit one straight grid; bpm is then the median interval. */
+    bool constantTempo = true;
     /** Median of TempoTrackV2's own per-frame tempo curve, unfolded. */
     double medianTempoCurve = 0.0;
     int beatCount = 0;
