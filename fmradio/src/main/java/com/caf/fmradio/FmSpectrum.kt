@@ -353,7 +353,7 @@ private fun BandPanel(
                 for ((st, x) in placed) {
                     val tuned = kotlin.math.abs(st.khz - currentFreqKHz) <= 60
                     Text(
-                        st.call,
+                        if (st.isJapan) st.chipLabel else st.call,
                         color = if (tuned) MikuPink else stationColor(st.call).copy(alpha = 0.7f),
                         fontSize = 6.5.sp,
                         fontWeight = if (tuned) FontWeight.Bold else FontWeight.Normal,

@@ -135,7 +135,7 @@ fun FmFresnelProfileView(
             horizontalArrangement = androidx.compose.foundation.layout.Arrangement.SpaceBetween
         ) {
             Text(
-                "PATH TO ${profile.station.call} · ${"%.1f".format(profile.distanceKm)} km",
+                "PATH TO ${profile.station.label} · ${"%.1f".format(profile.distanceKm)} km",
                 color = MikuTeal.copy(alpha = 0.85f), fontSize = 7.5.sp, fontWeight = FontWeight.Bold
             )
             // The terrain line is a prediction. A reading from the tuner, when there is one,

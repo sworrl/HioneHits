@@ -4,6 +4,8 @@
     <!-- USB DAC mode is switched by com.miku.sysbridge (system UID); see UsbDacManager. -->
     <uses-permission android:name="com.miku.permission.SYSTEM_BRIDGE" />
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- DAC graph: "Measure with the mic" records a sine sweep with the built-in mic (asked at use). -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
 
     <!--
       Position, for MikuLocationFusion. ACCESS_FINE_LOCATION is Android's gate on reading Wi-Fi

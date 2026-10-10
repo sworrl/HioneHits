@@ -10,7 +10,8 @@ plugins {
 val soundsSrc = rootProject.file("../mikuos/data")
 val genAssets = layout.buildDirectory.dir("generated/voicecheckAssets")
 val copySounds by tasks.registering(Copy::class) {
-    from(soundsSrc) { include("voice/**", "sfx/**", "sounds_index.json") }
+    // os_sounds: the MikuOS system sounds (tools/sounds/build_os_sounds.py), chimes and voices.
+    from(soundsSrc) { include("voice/**", "sfx/**", "sounds_index.json", "os_sounds/**/*.ogg", "os_sounds/index.json") }
     into(genAssets)
 }
 

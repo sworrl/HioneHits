@@ -18,6 +18,9 @@ import kotlin.math.pow
  *  - ≥ 1.5 V           → High gain, High Power on  (HD 600/650/800 class)
  * Without a sensitivity figure: IEMs and earbuds → Low/off; other wired headphones → by
  * impedance (≥ 150 Ω High/on, ≥ 50 Ω High/off, else Low/off).
+ * Line out / car aux → Low/off: aux inputs expect consumer line level (roughly 1 to 2 V at
+ * most), so the extra swing of High Power only risks clipping the input. Custom profiles only;
+ * the built-ins have no line-out type, so gen_listening_profiles.py needs no copy of this line.
  * Bluetooth-only hardware gets no DAC settings at all: the M500's DAC is not in that signal path.
  *
  * Filter: fast roll-off, phase compensated (linear phase; flattest passband, the CS43198
@@ -54,6 +57,7 @@ object ProfileRules {
     }
 
     private fun driveFor(hw: Hardware): Pair<String, Boolean> {
+        if (hw.type == HardwareType.LINE_OUT) return "low" to false
         val v = voltsFor110dB(hw)
         if (v != null) return when {
             v < 0.5 -> "low" to false
@@ -71,6 +75,7 @@ object ProfileRules {
 
     fun rationale(hw: Hardware): String {
         if (!hw.connection.isWired) return "Bluetooth: the M500's DAC is not in this signal path, so only the EQ applies."
+        if (hw.type == HardwareType.LINE_OUT) return "Line out into an aux input: low gain and High Power off. Aux inputs expect about 1 to 2 V at most. Set the M500 volume once and use the car's or amp's volume."
         val v = voltsFor110dB(hw)
         val (gain, hp) = driveFor(hw)
         val setting = "$gain gain and High Power ${if (hp) "on" else "off"}."

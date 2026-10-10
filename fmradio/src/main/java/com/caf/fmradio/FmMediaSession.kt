@@ -207,7 +207,7 @@ object FmMediaSession {
     // ------------------------------------------------------------------ state -> session
 
     private fun stationTitle(st: FmState): String =
-        st.stationName.trim().ifBlank { st.tunedStation?.call ?: "${fmtMhz(st.frequencyKHz)} FM" }
+        st.stationName.trim().ifBlank { st.tunedStation?.label ?: "${fmtMhz(st.frequencyKHz)} FM" }
 
     /** Whether radioText is decoded RDS, as opposed to one of the engine's own status lines. */
     private fun isRdsText(rt: String): Boolean =
@@ -243,7 +243,7 @@ object FmMediaSession {
             on = st.isPowerOn, online = st.isHardwareOnline, muted = st.isMuted,
             error = st.hardwareError, khz = st.frequencyKHz, title = stationTitle(st),
             subtitle = subtitle, detail = listOfNotNull(freqLine, genre).joinToString(" · "),
-            call = st.tunedStation?.call, genre = genre,
+            call = st.tunedStation?.label, genre = genre,
             ps = st.stationName.trim(), radioText = rt,
             rtArtist = st.rdsArtist?.trim()?.takeIf { it.isNotEmpty() },
             rtTitle = st.rdsTitle?.trim()?.takeIf { it.isNotEmpty() },
@@ -483,24 +483,24 @@ object FmMediaSession {
     private fun presetItem(khz: Int, st: FmState): MediaBrowser.MediaItem {
         val station = stationOn(khz, st.nearbyStations)
         val rdsName = st.stationName.trim().takeIf { khz == st.frequencyKHz && it.isNotEmpty() }
-        val title = rdsName ?: station?.call ?: "${fmtMhz(khz)} FM"
+        val title = rdsName ?: station?.label ?: "${fmtMhz(khz)} FM"
         val genre = station?.let { it.genre ?: it.format }
         return playable(
             khz, title,
             listOfNotNull("${fmtMhz(khz)} MHz", genre).joinToString(" · "),
             station?.let { place(it) },
-            station?.call,
+            station?.label,
         )
     }
 
     private fun stationItem(s: FmStationCatalogue.Station): MediaBrowser.MediaItem {
         val genre = s.genre ?: s.format
         return playable(
-            s.khz, s.call,
+            s.khz, s.label,
             listOfNotNull("${fmtMhz(s.khz)} MHz", genre).joinToString(" · "),
             listOfNotNull(place(s), s.reach.label.takeIf { s.reach != FmReach.Verdict.UNKNOWN })
                 .joinToString(" · ").ifBlank { null },
-            s.call,
+            s.label,
         )
     }
 

@@ -122,7 +122,7 @@ fun ColumnScope.FmScanResults(st: FmState, onTuned: () -> Unit) {
                     modifier = Modifier.width(64.dp)
                 )
                 Column(Modifier.weight(1f)) {
-                    Text(stn?.call ?: "not in the catalog here", color = if (stn != null) color else MikuTextSecondary,
+                    Text(stn?.label ?: "not in the catalog here", color = if (stn != null) color else MikuTextSecondary,
                          fontSize = 9.5.sp, fontWeight = FontWeight.Bold)
                     Text(
                         buildString {
@@ -155,8 +155,26 @@ fun FmSettings(st: FmState) {
     Column(Modifier.verticalScroll(rememberScrollState())) {
         Text("REGION", color = MikuTextSecondary, fontSize = 7.5.sp, fontFamily = AudiowideFont)
         Spacer(Modifier.height(4.dp))
+        Row(
+            Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp))
+                .background(if (st.bandAuto) MikuCyan.copy(alpha = 0.2f) else Color.Transparent)
+                .clickable { FmRadioManager.setBandAuto() }
+                .padding(horizontal = 8.dp, vertical = 6.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                "Automatic", color = if (st.bandAuto) MikuCyan else Color.White,
+                fontSize = 10.sp, fontWeight = FontWeight.Bold
+            )
+            Spacer(Modifier.weight(1f))
+            Text(
+                if (st.bandAuto) st.band.label + (st.bandAutoReason?.let { " · $it" } ?: "")
+                else "Japan or North America, from where you are",
+                color = MikuTextSecondary, fontSize = 8.sp
+            )
+        }
         FmBandPlan.entries.forEach { plan ->
-            val sel = plan == st.band
+            val sel = plan == st.band && !st.bandAuto
             Row(
                 Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp))
                     .background(if (sel) MikuCyan.copy(alpha = 0.2f) else Color.Transparent)
@@ -181,7 +199,10 @@ fun FmSettings(st: FmState) {
         SheetNote(
             "The region sets the band limits, channel spacing, de-emphasis and RDS standard, " +
                 "all of which the chip only reads when it is enabled. Changing it therefore " +
-                "power-cycles the tuner."
+                "power-cycles the tuner. Automatic picks Japan (76.0-95.0 MHz, 100 kHz) when the " +
+                "nearest stations in the catalog are Japanese, and North America when they are " +
+                "US, Canadian or Mexican. Before the device knows where it is, it goes by the " +
+                "SIM country, or a Japanese locale together with the Tokyo time zone."
         )
 
         Spacer(Modifier.height(12.dp))

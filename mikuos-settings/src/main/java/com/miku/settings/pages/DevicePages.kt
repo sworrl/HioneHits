@@ -82,6 +82,7 @@ fun SoundPage() {
         item {
             Section {
                 NavRow("DAC settings", "Filter, gain, DRE and USB DAC, in the Hardware app", Icons.Default.Headphones) { com.miku.settings.DacSettingsLink.open(ctx) }
+                NavRow("MikuOS sounds", "Charger, battery, lock, screenshot and other system sounds", Icons.Default.MusicNote) { nav.push("miku_sounds") }
             }
         }
         item {

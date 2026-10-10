@@ -1,27 +1,23 @@
 package com.miku.update.ota
 
 import android.content.Context
+import android.util.Log
+import java.io.File
+import java.security.cert.CertificateFactory
+import java.util.zip.ZipFile
 
 /**
- * How a full system image gets onto the device. Today there is one path: send the user to the web
- * installer on a PC. This interface is the seam for a later on-device path.
+ * How a full system image gets onto the device. Two paths:
  *
- * FUTURE: on-device A/B through update_engine (not implemented, deliberately).
- * The M500 is an A/B device, so the eventual path is android.os.UpdateEngine:
- *   - manifest gains system_update.payload { url, offset, size, headers[] } pointing at a
- *     payload.bin built by brillo_update_payload / ota_from_target_files from the MikuOS image,
- *     signed with a MikuOS OTA key whose cert is in /system/etc/security/otacerts.zip;
- *   - the update_engine binder (update_engine_service) is guarded by SELinux. Running as the
- *     system UID puts this app in system_app, which AOSP's own SystemUpdater-style clients use;
- *     check HiBy's vendor sepolicy for the find/call rules before relying on it;
- *   - applyPayload(url, offset, size, headers) streams into the inactive slot, then
- *     UpdateEngineCallback reports progress and UPDATED_NEED_REBOOT, and a reboot flips slots;
- *   - the HiBy vbmeta is flashed "disabled" (flags=3) today, so a payload must not rely on AVB
- *     verification of the new slot, and the FM app, driver patches, overlays and debloat are all
- *     inside super, so a payload covers everything the web installer does except the stock boot
- *     chain images, which would need their own partitions in the payload.
- * Until that exists and is tested on hardware, [AbUpdateEnginePath.isAvailable] is false and the
- * UI only offers [WebInstallerPath].
+ *  - [AbUpdateEnginePath]: on the device, through update_engine. The manifest's system_update
+ *    lists payload.bin files (built by mikuos/ota/ab_payload.py, signed with a MikuOS payload key);
+ *    Miku Update downloads one into /data/ota_package, checks its SHA-256 against the signed
+ *    manifest and hands it to update_engine, which writes the inactive slot. A restart switches
+ *    slots. If the new slot fails before Android marks it good, the bootloader goes back to the
+ *    old one. [AbUpdater] runs it.
+ *  - [WebInstallerPath]: a PC and the WebUSB installer. Always there, and the only way for an
+ *    image that does not trust the MikuOS payload keys yet (anything before the first image built
+ *    with MIKUOS_AB_OTA=1).
  */
 interface SystemUpdatePath {
     /** Short label for the action button. */
@@ -41,8 +37,73 @@ class WebInstallerPath(val installerUrl: String, val build: String) : SystemUpda
     }
 }
 
-/** Placeholder for the on-device A/B path described above. Never available yet. */
+/**
+ * On-device A/B through update_engine.
+ *
+ * Facts this relies on (checked on the M500, MikuOS 0.3.0, 2026-10-10):
+ *  - ro.build.ab_update=true, Virtual A/B with compression (snapuserd in init_boot's ramdisk),
+ *    update_engine running, boot control HAL 1.2. HiBy shipped their own 1.00 and 1.20 updates
+ *    this way, so the boot chain handles slot switches.
+ *  - update_engine checks payload signatures against /system/etc/security/otacerts.zip. Stock
+ *    images carry HiBy's key there; images built with MIKUOS_AB_OTA=1 carry the MikuOS payload
+ *    certificates instead. [deviceTrustsMikuKeys] compares that file with the certificates
+ *    embedded in this APK, so the button only shows when update_engine will take the payload.
+ *  - SELinux: system_app (this app) may find update_engine_service and binder-call update_engine
+ *    (vendor policy), and may create files in /data/ota_package, which update_engine may read.
+ */
 object AbUpdateEnginePath : SystemUpdatePath {
+    private const val TAG = "MikuUpdate"
+    private const val OTACERTS = "/system/etc/security/otacerts.zip"
+    private val CERT_ASSETS = listOf("ota-keys/ab-payload-primary.x509.pub.pem", "ota-keys/ab-payload-backup.x509.pub.pem")
+
     override val actionLabel = "Install on this device"
-    override fun isAvailable(ctx: Context) = false
+
+    private var trustCache: Boolean? = null
+
+    fun isAbDevice(): Boolean =
+        BuildInfo.sysProp("ro.build.ab_update") == "true" && !BuildInfo.sysProp("ro.boot.slot_suffix").isNullOrBlank()
+
+    /** True when otacerts.zip in this image holds one of the MikuOS payload keys. */
+    fun deviceTrustsMikuKeys(ctx: Context): Boolean {
+        trustCache?.let { return it }
+        val result = try {
+            val cf = CertificateFactory.getInstance("X.509")
+            val ours = CERT_ASSETS.mapNotNull { name ->
+                runCatching { ctx.assets.open(name).use { cf.generateCertificate(it).publicKey.encoded } }.getOrNull()
+            }
+            val device = mutableListOf<ByteArray>()
+            ZipFile(File(OTACERTS)).use { z ->
+                for (e in z.entries()) {
+                    if (!e.name.endsWith("x509.pem")) continue
+                    runCatching { z.getInputStream(e).use { device += cf.generateCertificate(it).publicKey.encoded } }
+                }
+            }
+            ours.isNotEmpty() && device.any { d -> ours.any { it.contentEquals(d) } }
+        } catch (e: Exception) {
+            Log.w(TAG, "could not read $OTACERTS", e)
+            false
+        }
+        trustCache = result
+        return result
+    }
+
+    override fun isAvailable(ctx: Context) = isAbDevice() && deviceTrustsMikuKeys(ctx)
+
+    /**
+     * The payload to use for [su] on a device running [deviceBuild]: a delta made from exactly
+     * this build if there is one (smaller), otherwise the full one. Null when this path cannot
+     * install [su] at all. [skipDelta] forces the full payload, used after a delta failed.
+     */
+    fun choosePayload(
+        ctx: Context,
+        su: OtaManifest.SystemUpdate,
+        deviceBuild: String?,
+        skipDelta: Boolean = false,
+    ): OtaManifest.Payload? {
+        if (su.payloads.isEmpty() || !isAvailable(ctx)) return null
+        if (!BuildInfo.isOlder(deviceBuild, su.build)) return null
+        val delta = if (skipDelta || deviceBuild == null) null
+        else su.payloads.firstOrNull { !it.isFull && it.sourceBuild == deviceBuild }
+        return delta ?: su.payloads.firstOrNull { it.isFull }
+    }
 }

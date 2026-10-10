@@ -12,8 +12,13 @@ import android.content.Intent
 class BootReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         when (intent.action) {
-            Intent.ACTION_BOOT_COMPLETED, Intent.ACTION_MY_PACKAGE_REPLACED ->
+            Intent.ACTION_BOOT_COMPLETED, Intent.ACTION_MY_PACKAGE_REPLACED -> {
                 runCatching { UpdateWorker.schedule(context.applicationContext) }
+                // After a restart into (or back from) a new system slot: report how it went.
+                if (intent.action == Intent.ACTION_BOOT_COMPLETED) {
+                    runCatching { com.miku.update.ota.AbUpdater.afterBoot(context.applicationContext) }
+                }
+            }
         }
     }
 }

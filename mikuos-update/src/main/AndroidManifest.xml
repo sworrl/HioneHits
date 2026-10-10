@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
   Miku Update. Installs newer builds of MikuOS's own system apps over the image copies, as /data
-  updates, and tells the user when a full system image is needed instead.
+  updates, and installs full system images on the device through update_engine (A/B) when the
+  image trusts the MikuOS payload keys, or points to the web installer when it does not.
 
   Runs as the system UID, the same pattern as miku-sysbridge: sharedUserId android.uid.system,
   platform-signed. That puts it in the system_app SELinux domain (network allowed) and makes
@@ -22,6 +23,9 @@
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <!-- "Restart to finish" after update_engine wrote the other slot. Signature|privileged:
+         granted to this platform-signed system UID app. -->
+    <uses-permission android:name="android.permission.REBOOT" />
 
     <application
         android:name=".MikuUpdateApp"

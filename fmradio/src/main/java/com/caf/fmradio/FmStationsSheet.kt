@@ -314,7 +314,8 @@ private fun StationRow(
         Spacer(Modifier.width(8.dp))
         Column(Modifier.weight(1f).padding(vertical = 6.dp)) {
             Row(verticalAlignment = Alignment.Bottom) {
-                Text(s.call, color = color, fontSize = 12.sp, fontWeight = FontWeight.Bold, fontFamily = AudiowideFont, maxLines = 1)
+                Text(s.label, color = color, fontSize = 12.sp, fontWeight = FontWeight.Bold, fontFamily = AudiowideFont, maxLines = 1,
+                     overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
                 Spacer(Modifier.width(6.dp))
                 Text(fmtMhz(s.khz), color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold, fontFamily = AudiowideFont)
                 if (s.service != "FM") {
@@ -323,7 +324,7 @@ private fun StationRow(
                 }
             }
             Text(
-                listOfNotNull(listOfNotNull(s.city, s.state).joinToString(", ").ifBlank { null },
+                listOfNotNull(s.altName, listOfNotNull(s.city, s.state).joinToString(", ").ifBlank { null },
                               "${s.distanceKm.toInt()} km").joinToString(" · "),
                 color = MikuTextPrimary.copy(alpha = 0.8f), fontSize = 8.5.sp, maxLines = 1, overflow = TextOverflow.Ellipsis,
             )
@@ -382,10 +383,11 @@ fun ColumnScope.FmStationDetail(st: FmState, target: PresetTarget, onClose: () -
         Box(Modifier.width(5.dp).height(48.dp).clip(RoundedCornerShape(3.dp)).background(color))
         Spacer(Modifier.width(10.dp))
         Column(Modifier.weight(1f)) {
-            Text(s?.call ?: "${fmtMhz(target.khz)} MHz", color = color, fontSize = 18.sp,
+            Text(s?.label ?: "${fmtMhz(target.khz)} MHz", color = color, fontSize = 18.sp,
                  fontWeight = FontWeight.Bold, fontFamily = AudiowideFont)
             Text(
-                if (s != null) "${fmtMhz(s.khz)} MHz · ${s.kind} · ${listOfNotNull(s.city, s.state).joinToString(", ")}"
+                if (s != null) listOfNotNull(s.altName, "${fmtMhz(s.khz)} MHz", s.kind,
+                    listOfNotNull(s.city, s.state).joinToString(", ").ifBlank { null }).joinToString(" · ")
                 else "A preset the station catalog has no entry for here.",
                 color = MikuTextPrimary, fontSize = 9.sp,
             )
@@ -416,11 +418,24 @@ fun ColumnScope.FmStationDetail(st: FmState, target: PresetTarget, onClose: () -
         }, los.color)
         s.terrainLossDb?.takeIf { it > 0.5 }?.let { DetailRow("Terrain loss", String.format(Locale.US, "~%.0f dB predicted, diffraction over the ridge", it)) }
         DetailRow("Distance", String.format(Locale.US, "%.1f km", s.distanceKm))
-        DetailRow("Power", s.erpKw?.let { String.format(Locale.US, "%.2f kW ERP", it) } ?: "—")
+        DetailRow("Power", s.erpKw?.let {
+            String.format(Locale.US, "%.2f kW ERP", it) + if (s.erpEstimated) ", estimated from transmitter power" else ""
+        } ?: "—")
         DetailRow("Antenna height", listOfNotNull(
             s.haatM?.takeIf { it > 0 }?.let { "${it.toInt()} m above average terrain" },
             s.rcamslM?.let { "${it.toInt()} m above sea level" },
-        ).joinToString(" · ").ifEmpty { "—" })
+        ).joinToString(" · ").ifEmpty { "—" } + if (s.haatEstimated) " (mast height estimated)" else "")
+        if (s.isJapan) {
+            DetailRow("Call sign", if ('_' in s.call) "none published for this relay" else s.call)
+            s.parentCall?.let { DetailRow("Relays", it) }
+            DetailRow("Site", when (s.sitePrecision) {
+                "wikipedia" -> "transmitter coordinates"
+                "oaza" -> "placed by district, within a km or two"
+                "municipality" -> "placed at the town, can be several km off"
+                "oaza-hill", "municipality-hill" -> "placed on the high ground near the town, can be a few km off"
+                else -> "—"
+            })
+        }
         DetailRow("Format", s.format ?: "—")
         DetailRow("Genre", s.genre ?: "—", genreColor(s.genre))
         DetailRow("Licensee", s.licensee ?: "—")

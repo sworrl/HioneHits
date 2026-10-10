@@ -26,6 +26,8 @@
     <uses-permission android:name="android.permission.MANAGE_APP_OPS_MODES" />
     <uses-permission android:name="android.permission.CHANGE_COMPONENT_ENABLED_STATE" />
     <uses-permission android:name="android.permission.CHANGE_OVERLAY_PACKAGES" />
+    <!-- SoundEvents: spots new screenshots in MediaStore to play the screenshot sound. -->
+    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
 
     <application
         android:name=".BridgeApp"

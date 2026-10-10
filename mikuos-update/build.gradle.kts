@@ -9,7 +9,12 @@ plugins {
 // The OTA public keys live in one place, mikuos/ota/keys, next to the publish tooling. They are
 // copied into the APK's assets at build time by exact file name. Never a wildcard: nothing else
 // in that directory (or anything someone drops there by mistake) can end up inside the APK.
-val otaKeyNames = listOf("ota-signing-primary-p521.pub.pem", "ota-signing-backup-p521.pub.pem")
+// The A/B payload certificates go in too: the app compares them with the image's
+// /system/etc/security/otacerts.zip to know whether update_engine will take a MikuOS payload.
+val otaKeyNames = listOf(
+    "ota-signing-primary-p521.pub.pem", "ota-signing-backup-p521.pub.pem",
+    "ab-payload-primary.x509.pub.pem", "ab-payload-backup.x509.pub.pem",
+)
 val otaKeyAssetsDir = layout.buildDirectory.dir("generated/otaKeys")
 val copyOtaKeys = tasks.register<Copy>("copyOtaKeys") {
     val keyDir = rootProject.file("../mikuos/ota/keys")
@@ -18,13 +23,29 @@ val copyOtaKeys = tasks.register<Copy>("copyOtaKeys") {
             val f = File(keyDir, name)
             require(f.isFile) { "missing OTA public key ${f.path}" }
             val text = f.readText()
-            require(text.contains("BEGIN PUBLIC KEY") && !text.contains("PRIVATE")) {
-                "${f.path} is not a public key PEM; refusing to package it"
+            require((text.contains("BEGIN PUBLIC KEY") || text.contains("BEGIN CERTIFICATE")) && !text.contains("PRIVATE")) {
+                "${f.path} is not a public key or certificate PEM; refusing to package it"
             }
         }
     }
     from(keyDir) { otaKeyNames.forEach { include(it) } }
     into(otaKeyAssetsDir.map { it.dir("ota-keys") })
+}
+
+// android.os.UpdateEngine is @SystemApi, so it is missing from the public android.jar. Two small
+// stubs in src/systemapi are compiled into a jar that is only on the compile classpath; the APK
+// never carries them and the real classes come from the framework at run time.
+val systemApiStubClasses = tasks.register<JavaCompile>("compileSystemApiStubs") {
+    source = fileTree("src/systemapi/java")
+    classpath = files("${android.sdkDirectory.path}/platforms/android-34/android.jar")
+    destinationDirectory.set(layout.buildDirectory.dir("systemApiStubs/classes"))
+    sourceCompatibility = "17"
+    targetCompatibility = "17"
+}
+val systemApiStubJar = tasks.register<Jar>("systemApiStubJar") {
+    from(systemApiStubClasses)
+    archiveFileName.set("systemapi-stubs.jar")
+    destinationDirectory.set(layout.buildDirectory.dir("systemApiStubs"))
 }
 
 android {
@@ -35,8 +56,8 @@ android {
         applicationId = "com.miku.update"
         minSdk = 26
         targetSdk = 34
-        versionCode = 3
-        versionName = "0.3.0"
+        versionCode = 4
+        versionName = "0.4.0"
     }
 
     sourceSets["main"].assets.srcDir(otaKeyAssetsDir)
@@ -131,6 +152,7 @@ android {
 tasks.named("preBuild") { dependsOn(copyOtaKeys) }
 
 dependencies {
+    compileOnly(files(systemApiStubJar.flatMap { it.archiveFile }).builtBy(systemApiStubJar))
     implementation(platform("androidx.compose:compose-bom:2024.09.02"))
     implementation("androidx.compose.material3:material3")
     implementation("androidx.compose.ui:ui")

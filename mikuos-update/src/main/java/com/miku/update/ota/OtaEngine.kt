@@ -76,6 +76,9 @@ object OtaEngine {
 
     fun requestCancel() = cancel.set(true)
 
+    /** The URL the current manifest came from. Payload and APK URLs resolve against it. */
+    fun manifestUrl(): URL? = manifestUrl
+
     private suspend fun <T> exclusive(label: String, block: suspend () -> T): T? {
         if (!mutex.tryLock()) {
             _state.update { it.copy(notice = "Already busy: ${it.busy ?: "working"}") }
@@ -406,7 +409,8 @@ object OtaEngine {
         val s = _state.value
         s.systemUpdate?.let { su ->
             if (prefs.notifiedSystemBuild != su.build) {
-                Notifier.systemUpdate(ctx, su.build, su.required || s.blockedByMinBuild)
+                val onDevice = AbUpdateEnginePath.choosePayload(ctx, su, BuildInfo.mikuosVersion()) != null
+                Notifier.systemUpdate(ctx, su.build, su.required || s.blockedByMinBuild, onDevice)
                 prefs.notifiedSystemBuild = su.build
             }
         }

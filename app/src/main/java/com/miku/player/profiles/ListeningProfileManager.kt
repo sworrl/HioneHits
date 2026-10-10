@@ -65,6 +65,8 @@ object ListeningProfileManager {
         val a = ctx.applicationContext
         app = a
         ListeningProfileStore.load(a)
+        // Profile per output for the rest of the OS (Settings.Global miku_listening_outputs).
+        ListeningOutputsPublisher.start(a)
         // The live EQ starts as the current profile's (unsaved edits do not survive a restart).
         ListeningProfileStore.current(a)?.effective?.let { MikuEq.set(it.eqEnabled == true, it.eq ?: EqCurve.FLAT) }
         MikuEq.onArmChanged = { requestReflush() }

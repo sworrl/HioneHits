@@ -289,6 +289,12 @@
             android:exported="false"
             android:foregroundServiceType="dataSync" />
 
+        <!-- Whole-library tempo analysis (QM-DSP TempoTrackV2), only while charging. -->
+        <service
+            android:name=".bpm.MikuBpmScanJob"
+            android:exported="false"
+            android:permission="android.permission.BIND_JOB_SERVICE" />
+
         <!-- Phone-as-Bluetooth-remote: BLE GATT server advertised ONLY while the Settings toggle
              is on (default off). Companion page: tools/remote-pwa (Web Bluetooth, no phone app). -->
         <service

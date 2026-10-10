@@ -50,6 +50,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.miku.update.BuildConfig
+import com.miku.update.ota.AbUpdateEnginePath
+import com.miku.update.ota.AbUpdater
 import com.miku.update.ota.Installer
 import com.miku.update.ota.OtaConfig
 import com.miku.update.ota.OtaEngine
@@ -105,10 +107,14 @@ private fun size(ctx: Context, bytes: Long) = Formatter.formatShortFileSize(ctx,
 fun UpdateScreen() {
     val ctx = LocalContext.current.applicationContext
     val s by OtaEngine.state.collectAsState()
+    val ab by AbUpdater.state.collectAsState()
     val prefs = remember { Prefs(ctx) }
     var settingsTick by remember { mutableStateOf(0) }
 
     LaunchedEffect(Unit) {
+        // Connects to update_engine (its current status comes straight back) and reports what
+        // happened to a system update that was pending before the last restart.
+        AbUpdater.afterBoot(ctx)
         OtaEngine.refreshInstalled(ctx)
         if (s.manifest == null && s.busy == null) MainActivity.appScope.launch { OtaEngine.check(ctx) }
     }
@@ -124,7 +130,9 @@ fun UpdateScreen() {
         ) {
             item { Header(s) }
             item { StatusCard(ctx, s, prefs) }
-            s.systemUpdate?.let { su -> item { SystemUpdateCard(ctx, su, s.blockedByMinBuild) } }
+            if (s.systemUpdate != null || ab.phase != AbUpdater.Phase.IDLE || ab.message != null) {
+                item { SystemUpdateCard(ctx, s.systemUpdate, s.blockedByMinBuild, ab, s.deviceBuild) }
+            }
             if (s.items.isNotEmpty()) item { UpdatesCard(ctx, s) }
             if (s.installed.isNotEmpty()) item { InstalledCard(ctx, s) }
             item {
@@ -199,38 +207,154 @@ private fun StatusCard(ctx: Context, s: OtaEngine.State, prefs: Prefs) {
 }
 
 @Composable
-private fun SystemUpdateCard(ctx: Context, su: com.miku.update.ota.OtaManifest.SystemUpdate, blocked: Boolean) {
-    val path = WebInstallerPath(su.installerUrl, su.build)
-    val needed = su.required || blocked
-    Section(
-        title = if (needed) "System update needed" else "System update available",
-        note = "MikuOS ${su.build}",
-        hot = true,
-    ) {
-        BodyText(
-            if (blocked) "This device is on an older MikuOS than these app updates were built for. Put MikuOS ${su.build} on first, then app updates pick up again here."
-            else "Some changes, like the FM app, drivers and system settings, only come with a full image. That goes on from a computer, not from here.",
-            Color.White,
-        )
-        if (su.notes.isNotBlank()) {
-            Spacer(Modifier.height(8.dp))
-            BodyText(su.notes)
-        }
-        Spacer(Modifier.height(10.dp))
-        BodyText("On a computer with Chrome or Edge, open the address below (or scan the code), plug the M500 in with USB, and follow the steps. Your music and settings stay unless you pick a clean install.")
-        Spacer(Modifier.height(10.dp))
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            QrCode(path.link(), 132.dp)
-            Spacer(Modifier.width(12.dp))
-            Column(Modifier.weight(1f)) {
-                Text(path.link(), color = MikuTealBright, fontSize = 11.sp, fontFamily = FontFamily.Monospace, lineHeight = 14.sp)
+private fun SystemUpdateCard(
+    ctx: Context,
+    su: com.miku.update.ota.OtaManifest.SystemUpdate?,
+    blocked: Boolean,
+    ab: AbUpdater.State,
+    deviceBuild: String?,
+) {
+    val payload = remember(su, deviceBuild) { su?.let { AbUpdateEnginePath.choosePayload(ctx, it, deviceBuild) } }
+    val build = ab.build ?: su?.build ?: ""
+    val needed = su != null && (su.required || blocked)
+    val title = when (ab.phase) {
+        AbUpdater.Phase.NEED_REBOOT -> "Restart to finish"
+        AbUpdater.Phase.MERGING -> "Finishing the system update"
+        AbUpdater.Phase.DOWNLOADING, AbUpdater.Phase.VERIFYING, AbUpdater.Phase.APPLYING, AbUpdater.Phase.FINALIZING -> "Installing a system update"
+        else -> if (su == null) "System update" else if (needed) "System update needed" else "System update available"
+    }
+    var confirm by remember { mutableStateOf<String?>(null) }
+    var showPc by remember { mutableStateOf(false) }
+    Section(title = title, note = build.takeIf { it.isNotBlank() }?.let { "MikuOS $it" }, hot = true) {
+        when (ab.phase) {
+            AbUpdater.Phase.DOWNLOADING, AbUpdater.Phase.VERIFYING, AbUpdater.Phase.APPLYING, AbUpdater.Phase.FINALIZING -> {
+                val line = when (ab.phase) {
+                    AbUpdater.Phase.DOWNLOADING -> "Downloading" + if (ab.delta) " the changes since your build." else "."
+                    AbUpdater.Phase.VERIFYING -> "Checking the download against its signed hash."
+                    AbUpdater.Phase.APPLYING -> "Writing the new system next to the current one. Keep using the M500 if you like."
+                    else -> "Almost done."
+                }
+                BodyText(line, Color.White)
                 Spacer(Modifier.height(8.dp))
-                ActionButton(path.actionLabel) {
-                    try {
-                        ctx.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(path.link())).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
-                    } catch (_: ActivityNotFoundException) {
-                        toast(ctx, "No browser here. Scan the code or type the address on a computer.")
+                val frac = if (ab.phase == AbUpdater.Phase.DOWNLOADING && ab.total > 0) ab.done.toFloat() / ab.total
+                else if (ab.phase == AbUpdater.Phase.APPLYING || ab.phase == AbUpdater.Phase.FINALIZING) ab.percent else -1f
+                if (frac >= 0f) {
+                    LinearProgressIndicator(
+                        progress = { frac.coerceIn(0f, 1f) },
+                        modifier = Modifier.fillMaxWidth().height(4.dp).clip(RoundedCornerShape(2.dp)),
+                        color = MikuPink, trackColor = MikuSurface1,
+                    )
+                    Text(
+                        if (ab.phase == AbUpdater.Phase.DOWNLOADING) "${size(ctx, ab.done)} of ${size(ctx, ab.total)}" else "${(frac * 100).toInt()}%",
+                        color = MikuMuted, fontSize = 10.5.sp,
+                    )
+                } else {
+                    LinearProgressIndicator(Modifier.fillMaxWidth().height(4.dp).clip(RoundedCornerShape(2.dp)), color = MikuTealBright, trackColor = MikuSurface1)
+                }
+                Spacer(Modifier.height(10.dp))
+                ButtonRow { ActionButton("Stop", danger = true) { AbUpdater.cancelOrUndo(ctx) } }
+            }
+            AbUpdater.Phase.NEED_REBOOT -> {
+                BodyText("MikuOS $build is written to the spare slot. Restart to switch to it. If it does not start, the M500 goes back to the system it runs now by itself.", Color.White)
+                Spacer(Modifier.height(10.dp))
+                ButtonRow {
+                    ActionButton("Restart now") { AbUpdater.restart(ctx) }
+                    ActionButton("Undo", danger = true) { confirm = "undo" }
+                }
+            }
+            AbUpdater.Phase.MERGING -> {
+                BodyText("The new system is running. update_engine is folding it into place in the background. The M500 works as normal meanwhile.", Color.White)
+                Spacer(Modifier.height(8.dp))
+                LinearProgressIndicator(
+                    progress = { ab.percent.coerceIn(0f, 1f) },
+                    modifier = Modifier.fillMaxWidth().height(4.dp).clip(RoundedCornerShape(2.dp)),
+                    color = MikuTealBright, trackColor = MikuSurface1,
+                )
+            }
+            else -> {
+                if (su != null) {
+                    BodyText(
+                        when {
+                            blocked -> "This device is on an older MikuOS than these app updates were built for. Put MikuOS ${su.build} on first, then app updates pick up again here."
+                            payload != null -> "This one installs right here. Music, settings and apps stay. It takes a restart at the end."
+                            else -> "Some changes, like the FM app, drivers and system settings, only come with a full image. That goes on from a computer, not from here."
+                        },
+                        Color.White,
+                    )
+                    if (su.notes.isNotBlank()) {
+                        Spacer(Modifier.height(8.dp))
+                        BodyText(su.notes)
                     }
+                    if (payload != null) {
+                        Spacer(Modifier.height(10.dp))
+                        ButtonRow {
+                            ActionButton("${AbUpdateEnginePath.actionLabel} (${size(ctx, payload.size)})") { confirm = "install" }
+                        }
+                    }
+                }
+            }
+        }
+        ab.message?.let {
+            Spacer(Modifier.height(8.dp))
+            BodyText(it, if (ab.phase == AbUpdater.Phase.FAILED) MikuPinkBright else MikuMuted)
+        }
+        if (su != null && !ab.busy && ab.phase != AbUpdater.Phase.NEED_REBOOT && ab.phase != AbUpdater.Phase.MERGING) {
+            if (payload != null) {
+                Spacer(Modifier.height(6.dp))
+                Text(
+                    if (showPc) "Hide the computer option" else "Or put it on from a computer",
+                    color = MikuMuted, fontSize = 11.5.sp, fontWeight = FontWeight.Bold,
+                    modifier = Modifier.clickable { showPc = !showPc }.padding(vertical = 4.dp),
+                )
+            }
+            if (payload == null || showPc) WebInstallerBlock(ctx, WebInstallerPath(su.installerUrl, su.build))
+        }
+    }
+    when (confirm) {
+        "install" -> if (su != null && payload != null) {
+            MikuAlert(
+            title = "Install MikuOS ${su.build}?",
+            text = "This downloads ${size(ctx, payload.size)}" + (if (payload.isFull) "" else " (only what changed since your build)") +
+                " and writes the new system next to the one you run now. Music, settings and apps stay. When it is done, a restart switches over. If the new system does not start, the M500 comes back to this one.",
+            confirm = "Install",
+            onConfirm = {
+                confirm = null
+                MainActivity.appScope.launch {
+                    val url = OtaEngine.manifestUrl()
+                    val err = if (url == null) "Check for updates first." else AbUpdater.start(ctx, su, url)
+                    err?.let { OtaEngine.setNotice(it) }
+                }
+            },
+            onDismiss = { confirm = null },
+            )
+        }
+        "undo" -> MikuAlert(
+            title = "Undo the update?",
+            text = "This throws away the new system that was written to the spare slot. The M500 stays on the system it runs now.",
+            confirm = "Undo",
+            danger = true,
+            onConfirm = { confirm = null; AbUpdater.cancelOrUndo(ctx) },
+            onDismiss = { confirm = null },
+        )
+    }
+}
+
+@Composable
+private fun WebInstallerBlock(ctx: Context, path: WebInstallerPath) {
+    Spacer(Modifier.height(10.dp))
+    BodyText("On a computer with Chrome or Edge, open the address below (or scan the code), plug the M500 in with USB, and follow the steps. Your music and settings stay unless you pick a clean install.")
+    Spacer(Modifier.height(10.dp))
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        QrCode(path.link(), 132.dp)
+        Spacer(Modifier.width(12.dp))
+        Column(Modifier.weight(1f)) {
+            Text(path.link(), color = MikuTealBright, fontSize = 11.sp, fontFamily = FontFamily.Monospace, lineHeight = 14.sp)
+            Spacer(Modifier.height(8.dp))
+            ActionButton(path.actionLabel) {
+                try {
+                    ctx.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(path.link())).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+                } catch (_: ActivityNotFoundException) {
+                    toast(ctx, "No browser here. Scan the code or type the address on a computer.")
                 }
             }
         }

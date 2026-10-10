@@ -873,6 +873,13 @@ public final class MikuDirectAudioSink implements AudioSink {
     audioSessionId = audioTrack.getAudioSessionId();
     // Mirrors sync against this track's head position, which starts from zero here.
     com.miku.player.MikuMirrorOutput.onPrimaryTrack(audioTrack);
+    // Live beat tracking (BTrack) on the same PCM; it maps beats to output time with this track.
+    com.miku.player.bpm.MikuBeatTap.onPrimaryTrack(
+        audioTrack,
+        configuration.outputSampleRate,
+        configuration.outputPcmFrameSize,
+        configuration.outputEncoding,
+        configuration.outputMode == OUTPUT_MODE_PCM);
 
     // Publish the format the platform GRANTED to the OS surfaces that show it (launcher status
     // bar chip, lockscreen badge, anatomical observatory pill). Read back from the AudioTrack
@@ -1367,6 +1374,8 @@ public final class MikuDirectAudioSink implements AudioSink {
       if (teeFrom >= 0) {
         buffer.position(teeFrom);
         com.miku.player.MikuMirrorOutput.offer(buffer, bytesWrittenOrError);
+        // Same span to the live beat tracker. Also leaves the position as found.
+        com.miku.player.bpm.MikuBeatTap.offer(buffer, bytesWrittenOrError);
         buffer.position(afterWrite);
       }
     }
@@ -1668,6 +1677,7 @@ public final class MikuDirectAudioSink implements AudioSink {
   @Override
   public void flush() {
     com.miku.player.MikuMirrorOutput.onPrimaryFlush();
+    com.miku.player.bpm.MikuBeatTap.onPrimaryFlush();
     if (isAudioTrackInitialized()) {
       resetSinkStateForFlush();
 

@@ -25,7 +25,27 @@ data class OtaManifest(
         val build: String,
         val notes: String,
         val installerUrl: String,
+        /** A/B payloads for update_engine: a full one, and deltas from named builds. May be empty. */
+        val payloads: List<Payload> = emptyList(),
     )
+
+    /**
+     * One payload.bin. [url] is relative to the manifest like the APK URLs. [headers] are the
+     * payload_properties.txt lines (FILE_HASH, FILE_SIZE, METADATA_HASH, METADATA_SIZE) handed to
+     * update_engine as is. [sourceBuild] is null for a full payload; a delta only applies on top
+     * of exactly that build.
+     */
+    data class Payload(
+        val type: String,
+        val sourceBuild: String?,
+        val url: String,
+        val offset: Long,
+        val size: Long,
+        val sha256: String,
+        val headers: List<String>,
+    ) {
+        val isFull get() = sourceBuild == null
+    }
 
     data class ApkEntry(
         val packageName: String,
@@ -45,6 +65,31 @@ data class OtaManifest(
         private fun JSONObject.str(name: String): String? =
             if (isNull(name)) null else optString(name, "").ifBlank { null }
 
+        private val HEADER = Regex("^[A-Z_]+=[^\\n]*$")
+
+        private fun parsePayloads(arr: org.json.JSONArray?): List<Payload> = buildList {
+            if (arr == null) return@buildList
+            for (i in 0 until arr.length()) {
+                val p = arr.getJSONObject(i)
+                val sha = p.getString("sha256").lowercase()
+                require(HEX64.matches(sha)) { "Bad sha256 for a system payload" }
+                val size = p.getLong("size")
+                require(size > 0) { "Bad size for a system payload" }
+                val offset = p.optLong("offset", 0L)
+                require(offset >= 0) { "Bad offset for a system payload" }
+                val h = p.getJSONArray("headers")
+                val headers = (0 until h.length()).map { h.getString(it) }
+                require(headers.all { HEADER.matches(it) }) { "Bad header in a system payload" }
+                for (k in listOf("FILE_HASH=", "FILE_SIZE=", "METADATA_HASH=", "METADATA_SIZE=")) {
+                    require(headers.any { it.startsWith(k) }) { "A system payload is missing $k" }
+                }
+                val type = p.optString("type", "full")
+                val source = p.str("source_build")
+                require((type == "full") == (source == null)) { "A system payload has a mismatched type and source" }
+                add(Payload(type, source, p.getString("url"), offset, size, sha, headers))
+            }
+        }
+
         fun parse(bytes: ByteArray): OtaManifest {
             val o = JSONObject(String(bytes, Charsets.UTF_8))
             val schema = o.getInt("schema_version")
@@ -57,6 +102,7 @@ data class OtaManifest(
                     build = it.getString("build"),
                     notes = it.str("notes") ?: "",
                     installerUrl = it.str("installer_url") ?: OtaConfig.DEFAULT_INSTALLER_URL,
+                    payloads = parsePayloads(it.optJSONArray("payloads")),
                 )
             }
             val arr = o.optJSONArray("apks")

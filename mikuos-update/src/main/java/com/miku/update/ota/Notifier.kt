@@ -77,13 +77,28 @@ object Notifier {
         post(ctx, ID_REVOKED, base(ctx, CH_UPDATES, title, lines.joinToString("\n") + "\nBack on the version that came with MikuOS."))
     }
 
-    fun systemUpdate(ctx: Context, build: String, required: Boolean) {
+    fun systemUpdate(ctx: Context, build: String, required: Boolean, onDevice: Boolean = false) {
+        val how = if (onDevice) "Open Miku Update to install it." else "It goes on from a PC with the web installer."
         val text = if (required) {
-            "MikuOS $build is needed before more app updates can install. It goes on from a PC with the web installer."
+            "MikuOS $build is needed before more app updates can install. $how"
         } else {
-            "MikuOS $build is out. It goes on from a PC with the web installer."
+            "MikuOS $build is out. $how"
         }
         post(ctx, ID_SYSTEM, base(ctx, CH_UPDATES, "System update available", text))
+    }
+
+    /** update_engine wrote the other slot. A restart finishes it. */
+    fun systemReady(ctx: Context, build: String) =
+        post(ctx, ID_SYSTEM, base(ctx, CH_UPDATES, "Restart to finish the update", "MikuOS $build is ready. Restart the M500 to switch to it.").setOngoing(true).setAutoCancel(false))
+
+    fun systemInstalled(ctx: Context, build: String) {
+        NotificationManagerCompat.from(ctx).cancel(ID_SYSTEM)
+        post(ctx, ID_SYSTEM, base(ctx, CH_UPDATES, "System updated", "The M500 is on MikuOS $build now."))
+    }
+
+    fun systemFailed(ctx: Context, text: String) {
+        NotificationManagerCompat.from(ctx).cancel(ID_SYSTEM)
+        post(ctx, ID_SYSTEM, base(ctx, CH_UPDATES, "System update did not finish", text))
     }
 
     fun userActionNeeded(ctx: Context, confirm: Intent, pkg: String) {

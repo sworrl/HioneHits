@@ -579,7 +579,7 @@ class FmSpectrumSurfaceView(context: Context) : SurfaceView(context), SurfaceHol
             for (hit in st.scanResults) {
                 if (hit.freqKHz !in hitBirth) {
                     hitBirth[hit.freqKHz] = now
-                    hitName[hit.freqKHz] = stationOn(hit.freqKHz, st.nearbyStations)?.call ?: fmtMhz(hit.freqKHz)
+                    hitName[hit.freqKHz] = stationOn(hit.freqKHz, st.nearbyStations)?.let { if (it.isJapan) it.chipLabel else it.call } ?: fmtMhz(hit.freqKHz)
                     lastHitKhz = hit.freqKHz; lastHitAt = now
                 }
             }

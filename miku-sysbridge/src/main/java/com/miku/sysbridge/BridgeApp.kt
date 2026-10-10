@@ -15,6 +15,8 @@ class BridgeApp : Application() {
         AudioReceiver.publishState(this)
         // Auto reboot after long locked, USB data off while locked, lockdown (see SecurityGuard).
         SecurityGuard.start(this)
+        // MikuOS system sounds: charger, battery, USB DAC, headphones, lock, screenshot, boot, shutdown.
+        SoundEvents.start(this)
         // Boot settings, grants and app-ops that miku_ime.rc could never apply (see BootSeeds).
         BootSeeds.applyAsync(this, "app start")
     }

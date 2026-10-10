@@ -113,4 +113,6 @@ dependencies {
     implementation("androidx.activity:activity-compose:1.9.2")
     implementation("androidx.core:core-ktx:1.13.1")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.6")
+    // DacFilterModelTest: the DAC graph's filter models checked against the CS43198 datasheet.
+    testImplementation("junit:junit:4.13.2")
 }

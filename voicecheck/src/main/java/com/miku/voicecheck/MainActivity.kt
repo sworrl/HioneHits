@@ -108,8 +108,40 @@ class MainActivity : ComponentActivity() {
             val path = r.getString("file")
             out += Clip(path, r.getString("app"), r.getString("id"), null, "(sound effect)", path)
         }
+        out += loadOsSounds()
         return out
     }
+
+    /**
+     * MikuOS system sounds (charger, lock, screenshot, ringtones...), from os_sounds/index.json.
+     * app is "os:<category>"; voiced options carry their voice name, chimes show as sfx.
+     */
+    private fun loadOsSounds(): List<Clip> = runCatching {
+        val idx = JSONObject(assets.open("os_sounds/index.json").bufferedReader().readText())
+        val cats = idx.getJSONObject("categories")
+        val out = ArrayList<Clip>()
+        for (cid in cats.keys()) {
+            val c = cats.getJSONObject(cid)
+            val opts = c.getJSONArray("options")
+            for (i in 0 until opts.length()) {
+                val o = opts.getJSONObject(i)
+                val voice = o.optString("voice").takeIf { it.isNotBlank() && it != "null" }?.lowercase()
+                val pack = o.optJSONObject("pack")
+                if (pack != null) {
+                    for (f in pack.keys()) {
+                        val path = "os_sounds/" + pack.getJSONObject(f).getString("file")
+                        out += Clip(path, "os:$cid", "${o.getString("id")}/$f", null, "${o.optString("name")} ($f)", path)
+                    }
+                    continue
+                }
+                val path = "os_sounds/" + o.getString("file")
+                val text = if (voice != null) o.optString("text") + (o.optString("style").takeIf { it == "sung" || it == "bank" }?.let { " (sung)" }
+                    ?: if (o.optString("style") == "chime") " (with chime)" else "") else o.optString("name")
+                out += Clip(path, "os:$cid", o.getString("id"), voice, text, path)
+            }
+        }
+        out
+    }.getOrDefault(emptyList())
 
     private val store by lazy { File(getExternalFilesDir(null), "verdicts.json") }
 
@@ -138,7 +170,7 @@ class MainActivity : ComponentActivity() {
             var voiceFilter by remember { mutableStateOf("all") }
             var editing by remember { mutableStateOf<String?>(null) }
             val shown = clips.filter {
-                (voiceFilter == "all" || (it.voice ?: "sfx") == voiceFilter) && when (filter) {
+                (voiceFilter == "all" || (it.voice ?: "sfx") == voiceFilter || (voiceFilter == "os" && it.app.startsWith("os:"))) && when (filter) {
                     "todo" -> verdicts[it.key] == null
                     "like" -> verdicts[it.key]?.state == "like"
                     "fix" -> verdicts[it.key]?.state == "fix"
@@ -164,7 +196,11 @@ class MainActivity : ComponentActivity() {
                 }
                 Spacer(Modifier.height(6.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    listOf("all", "mirai", "hoshi", "cyber", "sfx").forEach { k -> Chip(k.replaceFirstChar { it.uppercase() }, voiceFilter == k) { voiceFilter = k } }
+                    // Voices come from the clips, so a new voicebank gets its own chip. "os" is every MikuOS system sound.
+                    val chips = remember { listOf("all", "os") + clips.map { it.voice ?: "sfx" }.distinct().sortedBy { it == "sfx" } }
+                    androidx.compose.foundation.lazy.LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        items(chips) { k -> Chip(if (k == "os") "OS sounds" else k.replaceFirstChar { it.uppercase() }, voiceFilter == k) { voiceFilter = k } }
+                    }
                 }
                 Spacer(Modifier.height(8.dp))
                 LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {

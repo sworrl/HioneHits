@@ -252,7 +252,8 @@ object MikuApiServer {
             if (headers["sec-fetch-site"] == "cross-site") throw BadRequest(403, "Cross-site request refused")
         }
 
-        if (MikuApiSecurity.isBlocked(ip)) {
+        // The page shell stays reachable so a blocked browser can still show what is wrong.
+        if (!isPublicPage && MikuApiSecurity.isBlocked(ip)) {
             send(output, ApiResponse.error(429, "Too many failed attempts. Try again in a few minutes."))
             return
         }

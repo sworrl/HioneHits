@@ -55,6 +55,13 @@ object MikuLiveBeatDetector {
                     MikuPowerProfile.awaitVisible()   // suspends — no polling at all while hidden
                     continue
                 }
+                // Miku Music is publishing phase-locked beats from its own PCM: nothing to add,
+                // and the Visualizer would only hear the mixer, not its DIRECT output.
+                if (MikuBpmEngine.playerOwnsGrid()) {
+                    if (vis != null) detach()
+                    delay(1_000L)
+                    continue
+                }
                 val activeLink = com.miku.launcher.lockscreen.MikuMediaLink.active(app)
                 val isLinkPlaying = activeLink?.isPlaying == true
                 val musicOut = (try { am?.isMusicActive == true } catch (_: Throwable) { false }) || isLinkPlaying

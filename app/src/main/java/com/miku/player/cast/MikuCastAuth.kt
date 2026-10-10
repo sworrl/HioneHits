@@ -61,7 +61,7 @@ object MikuCastAuth {
         val id = msg.optString("id")
         val mac = msg.optString("mac")
         if (id.isNotEmpty() && mac.isNotEmpty()) {
-            val tv = tvs.firstOrNull { it.optString("id") == id }
+            val tv = (0 until tvs.length()).mapNotNull { tvs.optJSONObject(it) }.firstOrNull { it.optString("id") == id }
                 ?: return Verdict.Refused(err("unknown-tv"), true)
             val want = MikuApiSecurity.hex(
                 MikuApiSecurity.hmac(tv.optString("token").toByteArray(Charsets.UTF_8), challenge.toByteArray(Charsets.UTF_8))

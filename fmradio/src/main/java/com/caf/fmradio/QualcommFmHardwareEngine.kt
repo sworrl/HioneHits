@@ -297,6 +297,15 @@ class QualcommFmHardwareEngine(private val context: Context) {
             .getOrDefault(FmBandPlan.US)
     )
 
+    /**
+     * Whether the band follows the device. On by default, and for anyone who never picked a
+     * region by hand before this existed (no "band" preference saved). Picking a region in the
+     * settings sheet turns it off; choosing Automatic there turns it back on.
+     */
+    val bandAuto = MutableStateFlow(prefs.getBoolean("band_auto", !prefs.contains("band")))
+    /** What automatic based its choice on, for the settings sheet. Null until it has decided. */
+    val bandAutoReason = MutableStateFlow<String?>(null)
+
     val isPoweredOn = MutableStateFlow(false)
     /** True only once the chip acknowledged enable (FmRxEvEnableReceiver). */
     val hardwareOnline = MutableStateFlow(false)
@@ -368,8 +377,14 @@ class QualcommFmHardwareEngine(private val context: Context) {
             if (!force && !moved) return@launch
             listenerPlace.value = pos
             catalogueSize.value = FmStationCatalogue.size()
-            val svc = if (band.value == FmBandPlan.US) listOf("FM", "FX", "FL") else listOf("FM")
+            if (bandAuto.value) autoRegionFromPosition(pos)
+            val plan = band.value
+            // Translators/relays and LPFM/community rows exist for North America and Japan.
+            val svc = if (plan == FmBandPlan.EUROPE) listOf("FM") else listOf("FM", "FX", "FL")
+            // Only what this band can tune: a Japanese 76-90 MHz station is not on a US dial,
+            // and nothing above 95 MHz is on a Japanese one.
             val list = FmStationCatalogue.near(pos.first, pos.second, services = svc)
+                .filter { it.khz in plan.lowKHz..plan.highKHz }
             rawNearby = list
             if (prev != null && haversineApproxKm(prev, pos) > 2.0) {
                 // Somewhere else now: a sweep from the old spot says nothing about this one.
@@ -768,7 +783,7 @@ class QualcommFmHardwareEngine(private val context: Context) {
     private fun publishFmStatus() {
         val text = if (!isPoweredOn.value) "off" else
             "%.1f".format(java.util.Locale.US, currentFrequencyKHz.value / 1000.0) +
-                (stationName.value.ifBlank { tunedStation.value?.call ?: "" }.let { if (it.isBlank()) "" else " $it" })
+                (stationName.value.ifBlank { tunedStation.value?.label ?: "" }.let { if (it.isBlank()) "" else " $it" })
         runCatching { android.provider.Settings.Global.putString(context.contentResolver, "miku_fm_status", text) }
     }
 
@@ -800,6 +815,12 @@ class QualcommFmHardwareEngine(private val context: Context) {
         FmStationCatalogue.prepare(context)
         registerRouteWatcher()
         registerDebugReceiver()
+        // Persist the computed default, or the first automatic switch (which saves "band")
+        // would read as a manual choice on the next start and switch automatic off.
+        if (!prefs.contains("band_auto")) prefs.edit().putBoolean("band_auto", bandAuto.value).apply()
+        // Nothing has placed the device yet: decide the band from the SIM or locale until a
+        // position arrives, which then takes over (see refreshNearby).
+        if (bandAuto.value && FmStationCatalogue.listenerPosition(context) == null) autoRegionFromDevice()
         refreshNearby(force = true)
         watchPosition()
     }
@@ -1523,13 +1544,49 @@ class QualcommFmHardwareEngine(private val context: Context) {
      * Band plans are given to the chip in FmConfig at enable() time, so changing one on a live
      * tuner means a power cycle. Doing that silently is better than pretending the new plan took
      * effect while the chip is still on the old one.
+     *
+     * This is the user picking a region by hand, so it also stops the band following location.
      */
     fun setBand(plan: FmBandPlan) {
+        if (bandAuto.value) {
+            bandAuto.value = false
+            prefs.edit().putBoolean("band_auto", false).apply()
+        }
+        applyBand(plan)
+    }
+
+    /** Follow the device again: decide from position now, or from the SIM/locale without one. */
+    fun setBandAuto() {
+        bandAuto.value = true
+        prefs.edit().putBoolean("band_auto", true).apply()
+        val pos = FmStationCatalogue.listenerPosition(context)
+        scope.launch {
+            if (pos != null) autoRegionFromPosition(pos) else autoRegionFromDevice()
+            refreshNearby(force = true)
+        }
+    }
+
+    private fun applyBand(plan: FmBandPlan) {
         if (plan == band.value) return
+        val old = band.value
         band.value = plan
         prefs.edit().putString("band", plan.name).apply()
-        currentFrequencyKHz.value = currentFrequencyKHz.value.coerceIn(plan.lowKHz, plan.highKHz)
+        // A frequency from the old plan's dial means nothing on the new one (101.1 is not a
+        // Japanese channel): land on the strongest predicted station in the new band, or the
+        // bottom of it, and snap to the new grid.
+        val cur = currentFrequencyKHz.value
+        if (cur !in plan.lowKHz..plan.highKHz) {
+            val best = nearbyStations.value.filter { it.khz in plan.lowKHz..plan.highKHz }.maxByOrNull { it.score }
+            currentFrequencyKHz.value = snapToGrid(best?.khz ?: plan.lowKHz)
+            prefs.edit().putInt("last_freq", currentFrequencyKHz.value).apply()
+        }
+        // A sweep is indexed from the old band's low edge; its readings do not line up any more.
         scanResults.value = emptyList()
+        bandRssi.value = IntArray(0)
+        bandProfile.value = FloatArray(0)
+        sweepPlace = null
+        lastSweepHits = emptyList()
+        Log.i(TAG, "band ${old.name} -> ${plan.name}${if (bandAuto.value) " (automatic: ${bandAutoReason.value})" else ""}")
         if (isPoweredOn.value) {
             scope.launch {
                 powerOff()
@@ -1537,6 +1594,50 @@ class QualcommFmHardwareEngine(private val context: Context) {
                 powerOn()
             }
         }
+        refreshNearby(force = true)
+    }
+
+    /**
+     * The band for where the device is. The catalogue answers it: whichever country's
+     * transmitters are nearest wins (Japan -> the Japanese plan, US/Canada/Mexico -> the North
+     * American one). Anywhere else, or with no catalogue near, the band is left alone, so a US
+     * listener is only ever moved by actually being among Japanese transmitters.
+     */
+    private fun autoRegionFromPosition(pos: Pair<Double, Double>) {
+        val country = FmStationCatalogue.countryNear(pos.first, pos.second) ?: return
+        val plan = planForCountry(country) ?: return
+        bandAutoReason.value = "location: $country"
+        if (plan != band.value) applyBand(plan)
+    }
+
+    /**
+     * Before anything has placed the device: the SIM or network country if there is one, and
+     * failing that a Japanese locale only together with a Japanese time zone. A locale alone is
+     * not enough; plenty of people outside Japan run their phone in Japanese.
+     */
+    private fun autoRegionFromDevice() {
+        val tm = runCatching { context.getSystemService(android.telephony.TelephonyManager::class.java) }.getOrNull()
+        val sim = runCatching { tm?.simCountryIso }.getOrNull()?.takeIf { it.isNotBlank() }
+            ?: runCatching { tm?.networkCountryIso }.getOrNull()?.takeIf { it.isNotBlank() }
+        val country: String?
+        val why: String
+        if (sim != null) {
+            country = sim.uppercase(java.util.Locale.US); why = "SIM: $country"
+        } else {
+            val loc = java.util.Locale.getDefault().country
+            val tz = java.util.TimeZone.getDefault().id
+            country = if (loc == "JP" && tz == "Asia/Tokyo") "JP" else null
+            why = "locale $loc, time zone $tz"
+        }
+        val plan = country?.let { planForCountry(it) } ?: return
+        bandAutoReason.value = why
+        if (plan != band.value) applyBand(plan)
+    }
+
+    private fun planForCountry(cc: String): FmBandPlan? = when (cc.uppercase(java.util.Locale.US)) {
+        "JP" -> FmBandPlan.JAPAN
+        "US", "CA", "MX" -> FmBandPlan.US
+        else -> null
     }
 
     // ------------------------------------------------------------------ polling

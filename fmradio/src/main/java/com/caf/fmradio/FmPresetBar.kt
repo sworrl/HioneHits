@@ -161,7 +161,7 @@ private fun PresetChip(t: PresetTarget, selected: Boolean, onDetails: (PresetTar
             Column(Modifier.weight(1f)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
-                        stn?.call?.substringBefore("-FM") ?: fmtMhz(t.khz),
+                        stn?.chipLabel ?: fmtMhz(t.khz),
                         color = if (selected) Color.White else color,
                         fontSize = 11.sp, fontWeight = FontWeight.Bold, fontFamily = AudiowideFont,
                         maxLines = 1, overflow = TextOverflow.Clip, modifier = Modifier.weight(1f, fill = false)

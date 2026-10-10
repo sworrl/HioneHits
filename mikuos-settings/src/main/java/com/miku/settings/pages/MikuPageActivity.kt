@@ -133,6 +133,8 @@ fun pageTitle(route: String): String = when (route.substringBefore('/')) {
     "notifications" -> "Notifications"
     "dnd" -> "Do Not Disturb"
     "sound" -> "Sound & vibration"
+    "miku_sounds" -> "MikuOS sounds"
+    "miku_sound" -> soundCategoryTitle(seg(route, 1))
     "display_more" -> "More display settings"
     "storage" -> "Storage"
     "location" -> "Location"
@@ -178,6 +180,8 @@ private fun PageContent(route: String) {
         "notifications" -> NotificationsPage()
         "dnd" -> DndPage()
         "sound" -> SoundPage()
+        "miku_sounds" -> MikuSoundsPage()
+        "miku_sound" -> MikuSoundCategoryPage(seg(route, 1) ?: "")
         "display_more" -> DisplayMorePage()
         "storage" -> StoragePage()
         "location" -> LocationPage()

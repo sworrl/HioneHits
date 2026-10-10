@@ -73,4 +73,32 @@ class Prefs(ctx: Context) {
     fun heldVersion(pkg: String): Long = sp.getLong("held_$pkg", 0L)
     fun setHeldVersion(pkg: String, vc: Long) = sp.edit().putLong("held_$pkg", vc).apply()
     fun clearHeld(pkg: String) = sp.edit().remove("held_$pkg").apply()
+
+    // A/B system update bookkeeping (AbUpdater). Kept across restarts so the app can tell after
+    // a reboot whether the new slot came up, the bootloader went back, or the write was cut off.
+
+    /** Build being installed through update_engine. Blank when nothing is pending. */
+    var abPendingBuild: String
+        get() = sp.getString("ab_pending_build", "") ?: ""
+        set(v) = sp.edit().putString("ab_pending_build", v).commit().let { }
+
+    /** Build the device ran when the install started. */
+    var abFromBuild: String
+        get() = sp.getString("ab_from_build", "") ?: ""
+        set(v) = sp.edit().putString("ab_from_build", v).commit().let { }
+
+    /** The payload file in /data/ota_package, deleted once the new build is up. */
+    var abFile: String
+        get() = sp.getString("ab_file", "") ?: ""
+        set(v) = sp.edit().putString("ab_file", v).commit().let { }
+
+    /** update_engine finished writing the other slot (UPDATED_NEED_REBOOT was reached). */
+    var abApplied: Boolean
+        get() = sp.getBoolean("ab_applied", false)
+        set(v) = sp.edit().putBoolean("ab_applied", v).commit().let { }
+
+    /** Settings.Global.BOOT_COUNT when the install started, to spot a restart. */
+    var abBootCount: Int
+        get() = sp.getInt("ab_boot_count", -1)
+        set(v) = sp.edit().putInt("ab_boot_count", v).commit().let { }
 }

@@ -4,18 +4,33 @@ import com.miku.player.safeQuery
 import com.miku.player.MikuPowerGovernor
 import android.content.Context
 import android.content.Intent
-import android.media.MediaMetadataRetriever
-import android.net.Uri
+import android.os.SystemClock
 import android.provider.Settings
-import android.util.Log
 import androidx.media3.common.MediaItem
 import kotlinx.coroutines.*
 import java.util.concurrent.ConcurrentHashMap
 
 /**
- * OS-Level Real-Time BPM Engine & Public System API for MikuOS.
- * Analyzes track tempo, ID3 TBPM metadata, and broadcasts system-wide beat events
- * to drive hardware Pulsar LED, homescreen rainbow ring, and visualizers.
+ * Miku Music's tempo and beat publisher for the rest of MikuOS.
+ *
+ * TEMPO. Per track, from [MikuTempoAnalyzer]: the cached result, the file's BPM tag when it reads
+ * 60..200, or a whole-track QM-DSP TempoTrackV2 analysis, folded into 70..180 BPM. Constant for
+ * the track. While that is still running for a new track, the tempo comes from the live beat
+ * tracker instead (see below), so the readout fills in within a few seconds either way.
+ *
+ * BEAT PHASE. From [MikuBeatClock], which BTrack drives from the PCM the player is writing
+ * ([MikuBeatTap]), seeded with the file tempo. The pulse loop fires BPM_PULSE on that grid, at
+ * the moment each beat leaves the DAC, and each pulse carries the beat's exact time so a receiver
+ * does not have to trust broadcast delivery time.
+ *
+ * PUBLISHED.
+ *  - Settings.Global miku_live_bpm, miku_beat_interval_ms, miku_is_playing (as before) and
+ *    miku_now_playing_bpm, the track tempo the lockscreen badge reads. Nothing wrote that key
+ *    before, so the lockscreen badge always showed "— BPM".
+ *  - BPM_UPDATE on tempo or play-state change. BPM_PULSE on every beat with extras
+ *    beat_epoch_ms (System.currentTimeMillis time of the beat), beat_elapsed_nanos,
+ *    phase_locked (true when the grid follows the audio) and tempo_source.
+ *  - [beatAnchorElapsedNanos] / [beatGridIntervalNanos] for in-app beat visuals.
  */
 object MikuBpmEngine {
     private const val TAG = "MikuBpmEngine"
@@ -25,14 +40,20 @@ object MikuBpmEngine {
     const val EXTRA_BEAT_INTERVAL_MS = "beat_interval_ms"
     const val EXTRA_IS_PLAYING = "is_playing"
     const val EXTRA_DOMINANT_COLOR = "dominant_color"
+    const val EXTRA_BEAT_EPOCH_MS = "beat_epoch_ms"
+    const val EXTRA_BEAT_ELAPSED_NANOS = "beat_elapsed_nanos"
+    const val EXTRA_PHASE_LOCKED = "phase_locked"
+    const val EXTRA_TEMPO_SOURCE = "tempo_source"
 
-    private val bpmCache = ConcurrentHashMap<String, Float>()
+    /** File confidence at which BTrack is held on the file tempo instead of only started there. */
+    private const val FIX_TEMPO_CONFIDENCE = 0.6f
+
+    private val bpmCache = ConcurrentHashMap<String, MikuTempoDb.Row>()
     private var beatJob: Job? = null
+    private var resolveJob: Job? = null
     private val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
 
-    // FAKE-DATA FIX: these used to start at 120 BPM / 500 ms, and that invented tempo was written
-    // straight into Settings.Global miku_live_bpm (and broadcast) on the first pause, before any
-    // track had ever been analysed. 0 = "no tempo known"; OS surfaces render that as "—".
+    // 0 = "no tempo known"; OS surfaces render that as "—". Never a placeholder 120.
     @Volatile var currentBpm: Float = 0f
         private set
     @Volatile var beatIntervalMs: Long = 0L
@@ -47,7 +68,7 @@ object MikuBpmEngine {
      * together with them: beat n fires at [beatAnchorElapsedNanos] + n * [beatGridIntervalNanos]
      * (SystemClock.elapsedRealtimeNanos time base). [beatGridIntervalNanos] is 0 whenever no pulse
      * is running (paused, unknown tempo, screen-off governor), and a consumer must then show no
-     * beat at all. Set when the pulse job starts, cleared when it stops.
+     * beat at all.
      */
     @Volatile var beatAnchorElapsedNanos: Long = 0L
         private set
@@ -57,25 +78,31 @@ object MikuBpmEngine {
     @Volatile private var npTitle: String = ""
     @Volatile private var npArtist: String = ""
 
-    /** Last item handed to [onPlaybackChanged] — replayed when the power governor lets analysis run again. */
+    /** Last item handed to [onPlaybackChanged], replayed when the power governor lets work run again. */
     @Volatile private var lastMediaItem: MediaItem? = null
     @Volatile private var governorListenerArmed = false
+    @Volatile private var scanScheduled = false
+    /** Track key the clock and tap were last reset for. */
+    @Volatile private var clockTrackKey: String? = null
+    /** File row of the current track, for re-seeding the phase after a seek. */
+    @Volatile private var currentRow: MikuTempoDb.Row? = null
 
-    /**
-     * Once: when the governor leaves AUDIO_ONLY/IDLE (screen back on) while we're playing, redo
-     * the deferred analysis + beat pulse. Without this the launcher's BPM game sat on "ALSA
-     * Standby" for a track that started while the screen was off — the state was never
-     * published and nothing ever retried.
-     */
     private fun armGovernorListener(context: Context) {
         if (governorListenerArmed) return
         governorListenerArmed = true
         val app = context.applicationContext
         MikuPowerGovernor.addListener { _ ->
-            if (MikuPowerGovernor.allowBackgroundWork && isPlaying && beatJob?.isActive != true) {
+            val allow = MikuPowerGovernor.allowBackgroundWork
+            MikuBeatTap.setWanted(allow && isPlaying)
+            if (allow && isPlaying && beatJob?.isActive != true) {
                 lastMediaItem?.let { onPlaybackChanged(app, it, true) }
             }
         }
+    }
+
+    private fun keyOf(item: MediaItem): String {
+        val clip = item.clippingConfiguration.startPositionMs
+        return item.mediaId + "#" + clip
     }
 
     fun onPlaybackChanged(
@@ -85,15 +112,32 @@ object MikuBpmEngine {
         albumArtColor: Int? = null
     ) {
         armGovernorListener(context)
+        MikuTempoAnalyzer.attach(context)
+        if (!scanScheduled) {
+            scanScheduled = true
+            MikuBpmScanJob.schedule(context.applicationContext)
+        }
         isPlaying = playing
         lastMediaItem = mediaItem
-        if (albumArtColor != null) {
-            dominantColor = albumArtColor
-        }
+        if (albumArtColor != null) dominantColor = albumArtColor
         npTitle = mediaItem?.mediaMetadata?.title?.toString() ?: ""
         npArtist = mediaItem?.mediaMetadata?.artist?.toString() ?: ""
 
+        // A different track: the old phase and the old tempo are meaningless now.
+        val key = mediaItem?.let { keyOf(it) }
+        if (key != clockTrackKey) {
+            clockTrackKey = key
+            currentRow = null
+            val cached = key?.let { bpmCache[it] }
+            val bpm = MikuTempoAnalyzer.shownBpm(cached)
+            MikuBeatClock.reset(bpm)
+            MikuBeatTap.seed(bpm, bpm > 0f && (cached?.confidence ?: 0f) >= FIX_TEMPO_CONFIDENCE)
+            currentRow = cached
+            currentBpm = bpm
+        }
+
         if (mediaItem == null || !playing) {
+            MikuBeatTap.setWanted(false)
             stopBeatPulse(context)
             // Nothing loaded means there is no output format to report. The sink publishes
             // miku_now_playing_format when it builds an AudioTrack but has no stop hook of its
@@ -103,65 +147,67 @@ object MikuBpmEngine {
             publishState(context, currentBpm, false)
             return
         }
-        // Power governor: BPM *analysis* and the beat pulse are screen-facing work — skipped
-        // while the screen is off (AUDIO_ONLY/IDLE) and replayed by [armGovernorListener] when
-        // the profile returns. The play/pause STATE itself is always published (a few Settings
-        // writes + one broadcast) so OS surfaces never show "standby" for a live stream.
+        // Power governor: analysis, the live tracker and the beat pulse are screen-facing work,
+        // skipped while the screen is off and replayed by [armGovernorListener] when it is back.
+        // The play state itself is always published.
         if (!MikuPowerGovernor.allowBackgroundWork) {
+            MikuBeatTap.setWanted(false)
             stopBeatPulse(context)
             publishState(context, currentBpm, true)
             return
         }
 
-        scope.launch {
-            val bpm = resolveBpm(context, mediaItem)
-            currentBpm = bpm
-            if (bpm <= 0f) {
-                // No real tempo for this track: publish "unknown" and run no beat pulse at all,
-                // rather than driving the LED / ring / visualizers off an invented tempo.
-                beatIntervalMs = 0L
-                stopBeatPulse(context)
-                publishState(context, 0f, true)
-                return@launch
-            }
-            beatIntervalMs = (60_000f / bpm).toLong().coerceIn(60L, 4000L)
+        MikuBeatTap.setWanted(true)
+        // The player's position right now, for placing the file grid. Read here because this
+        // runs on the player's thread; the analysis below may finish seconds later.
+        val posMs = runCatching { com.miku.player.PlayerHolder.player?.currentPosition }.getOrNull() ?: -1L
+        val posAtNs = SystemClock.elapsedRealtimeNanos()
 
-            publishState(context, bpm, true)
-            startBeatPulse(context)
+        publishState(context, currentBpm, true)
+        startBeatPulse(context)
+
+        resolveJob?.cancel()
+        resolveJob = scope.launch {
+            val row = withContext(Dispatchers.IO) { resolveRow(context, mediaItem) }
+            if (key != clockTrackKey) return@launch
+            currentRow = row
+            val bpm = MikuTempoAnalyzer.shownBpm(row) .takeIf { it > 0f } ?: dictionaryBpm(row, mediaItem)
+            if (bpm != currentBpm || MikuBeatClock.grid.bpm != bpm) {
+                MikuBeatClock.reset(bpm)
+                MikuBeatTap.seed(bpm, bpm > 0f && (row?.confidence ?: 0f) >= FIX_TEMPO_CONFIDENCE)
+            }
+            currentBpm = bpm
+            if (row != null && bpm > 0f && row.firstBeatMs >= 0 && posMs >= 0 && isPlaying) {
+                val nowNs = SystemClock.elapsedRealtimeNanos()
+                val positionNow = posMs + (nowNs - posAtNs) / 1_000_000L
+                MikuBeatClock.seedFromFileGrid(row.firstBeatMs, positionNow, nowNs)
+            }
+            beatIntervalMs = if (bpm > 0f) (60_000f / bpm).toLong().coerceIn(60L, 4000L) else 0L
+            publishState(context, bpm, isPlaying)
         }
     }
 
-    private fun resolveBpm(context: Context, mediaItem: MediaItem): Float {
-        val key = mediaItem.mediaId
+    private fun resolveRow(context: Context, mediaItem: MediaItem): MikuTempoDb.Row? {
+        val key = keyOf(mediaItem)
         bpmCache[key]?.let { return it }
-        loadPersistedBpm(context, key)?.let { bpmCache[key] = it; return it }
+        val path = resolvePath(context, mediaItem) ?: return null
+        val clip = mediaItem.clippingConfiguration
+        val start = clip.startPositionMs.coerceAtLeast(0L)
+        val end = if (clip.endPositionMs == Long.MIN_VALUE || clip.endPositionMs <= 0L) 0L else clip.endPositionMs
+        val row = MikuTempoAnalyzer.resolve(context, path, start, end) ?: return null
+        bpmCache[key] = row
+        return row
+    }
 
-        val title = mediaItem.mediaMetadata.title?.toString() ?: ""
-        val artist = mediaItem.mediaMetadata.artist?.toString() ?: ""
-        findPreseededBpm(artist, title)?.let { dictBpm ->
-            bpmCache[key] = dictBpm
-            persistBpm(context, key, dictBpm)
-            return dictBpm
-        }
-
-        // REAL tempo analysis — decode + onset autocorrelation with octave disambiguation (MikuBpmAnalyzer).
-        var extractedBpm = 0f
-        val path = resolvePath(context, mediaItem)
-        if (path != null) {
-            MikuBpmAnalyzer.analyze(path)?.let { extractedBpm = it }
-        }
-
-        // FAKE-DATA FIX: when the analyzer found nothing this used to call estimateTempo(), which
-        // made a BPM up out of words in the title ("dance" -> 132, "rock" -> 145, anything else ->
-        // 120), cached it, PERSISTED it, and published it to Settings.Global as this track's tempo.
-        // No tempo found is now 0f — unknown — and 0 is never persisted, so a later real analysis
-        // still gets its chance.
-        if (extractedBpm <= 0f) return 0f
-
-        val finalBpm = extractedBpm.coerceIn(20f, 999f)
-        bpmCache[key] = finalBpm
-        persistBpm(context, key, finalBpm)
-        return finalBpm
+    /**
+     * Hand-entered tempos for a few songs, used only when neither a tag nor the analysis produced
+     * one. These are the songs' published tempos, so they are not folded.
+     */
+    private fun dictionaryBpm(row: MikuTempoDb.Row?, item: MediaItem): Float {
+        if (row != null && row.bpm > 0f && row.confidence >= MikuTempoAnalyzer.MIN_SHOW_CONFIDENCE) return row.bpm
+        val title = item.mediaMetadata.title?.toString() ?: ""
+        val artist = item.mediaMetadata.artist?.toString() ?: ""
+        return findPreseededBpm(artist, title) ?: 0f
     }
 
     /** File path for the item: direct file URI, or resolve a content:// MediaStore uri to DATA. */
@@ -178,33 +224,15 @@ object MikuBpmEngine {
         return null
     }
 
-    // Analysis is expensive (a decode) — persist results so each track is analyzed once EVER,
-    // not once per process. Plain prefs keyed by mediaId.
-    private fun bpmPrefs(context: Context) =
-        context.applicationContext.getSharedPreferences("miku_bpm_cache", Context.MODE_PRIVATE)
-
-    private fun loadPersistedBpm(context: Context, key: String): Float? {
-        val v = bpmPrefs(context).getFloat("bpm_$key", 0f)
-        return if (v in 40f..320f) v else null
-    }
-
-    private fun persistBpm(context: Context, key: String, bpm: Float) {
-        runCatching { bpmPrefs(context).edit().putFloat("bpm_$key", bpm).apply() }
-    }
-
+    /** A user-entered tempo for the playing track; holds until the track changes. */
     fun calibrateBpm(context: Context, newBpm: Float) {
         val sanitized = newBpm.coerceIn(20f, 999f)
         currentBpm = sanitized
         beatIntervalMs = (60_000f / sanitized).toLong().coerceIn(60L, 4000L)
-        val key = npTitle + npArtist
-        if (key.isNotBlank()) {
-            bpmCache[key] = sanitized
-            persistBpm(context, key, sanitized)
-        }
+        MikuBeatClock.reset(sanitized)
+        MikuBeatTap.seed(sanitized, true)
         publishState(context, sanitized, isPlaying)
-        if (isPlaying) {
-            startBeatPulse(context)
-        }
+        if (isPlaying) startBeatPulse(context)
     }
 
     private val PRESEEDED_BPM_DICTIONARY = mapOf(
@@ -243,74 +271,90 @@ object MikuBpmEngine {
     private fun findPreseededBpm(artist: String, title: String): Float? {
         val a = artist.trim().lowercase()
         val t = title.trim().lowercase()
-        if (a.isBlank() && t.isBlank()) return null
-        val directKey = "$a|$t"
-        PRESEEDED_BPM_DICTIONARY[directKey]?.let { return it }
-        // FAKE-DATA FIX: the fuzzy pass used to run with a blank artist, and `dictA.contains("")`
-        // is always true — so ANY artist-less track whose title merely contained "melt" was given
-        // supercell's 165/170 BPM as a measured tempo. Both sides must be real text now.
         if (a.isBlank() || t.isBlank()) return null
+        PRESEEDED_BPM_DICTIONARY["$a|$t"]?.let { return it }
         for ((k, bpm) in PRESEEDED_BPM_DICTIONARY) {
             val parts = k.split("|")
             if (parts.size == 2) {
                 val dictA = parts[0]
                 val dictT = parts[1]
                 if (dictA.isBlank() || dictT.isBlank()) continue
-                if (t.contains(dictT) && (a.contains(dictA) || dictA.contains(a))) {
-                    return bpm
-                }
+                if (t.contains(dictT) && (a.contains(dictA) || dictA.contains(a))) return bpm
             }
         }
         return null
     }
 
+    /**
+     * Fires BPM_PULSE on [MikuBeatClock]'s grid. The grid is re-read before every beat, so phase
+     * corrections from the live tracker apply on the next beat without restarting anything.
+     */
     private fun startBeatPulse(context: Context) {
-        beatJob?.cancel()
+        if (beatJob?.isActive == true) return
         beatJob = scope.launch {
-            // Beats are scheduled against a fixed anchor, not chained with delay(interval) after
-            // each broadcast. The chained version added the broadcast + scheduling overhead to
-            // every beat, so the pulse slid a few ms per beat behind the music, and the launcher's
-            // rhythm game (which judges taps against these pulses) drifted off the song over a
-            // few minutes. Beat n is due at anchor + n * interval; lateness on one beat no longer
-            // carries into the next.
-            //
-            // The interval comes from the float BPM rather than the whole-ms beatIntervalMs (which
-            // is still what the broadcast carries): at 165 BPM the rounded 363 ms is 0.64 ms short
-            // per beat, which is its own slow drift. Every tempo change restarts this job, so a
-            // fresh anchor is taken whenever the interval changes.
-            val bpm = currentBpm
-            val intervalNs: Double = if (bpm > 0f) 60_000_000_000.0 / bpm else beatIntervalMs * 1_000_000.0
-            if (intervalNs <= 0.0) return@launch
-            val anchorNs = android.os.SystemClock.elapsedRealtimeNanos()
-            beatAnchorElapsedNanos = anchorNs
-            beatGridIntervalNanos = intervalNs
-            var beat = 0L
-            while (isActive && isPlaying) {
-                val intent = Intent(ACTION_BPM_PULSE).apply {
-                    putExtra(EXTRA_BPM, currentBpm)
-                    putExtra(EXTRA_BEAT_INTERVAL_MS, beatIntervalMs)
-                    putExtra(EXTRA_IS_PLAYING, isPlaying)
-                    putExtra(EXTRA_DOMINANT_COLOR, dominantColor)
+            var lastBeatNs = 0L
+            var flushEpoch = MikuBeatTap.flushCount
+            var freeAnchorNs = 0L
+            var lastPublishedBpm = currentBpm
+            try {
+                while (isActive && isPlaying) {
+                    // A seek: put the file grid back under the new position until BTrack relocks.
+                    if (MikuBeatTap.flushCount != flushEpoch) {
+                        flushEpoch = MikuBeatTap.flushCount
+                        MikuBeatClock.onDiscontinuity()
+                        val row = currentRow
+                        if (row != null && row.firstBeatMs >= 0 && currentBpm > 0f) {
+                            val pos = withContext(Dispatchers.Main) {
+                                runCatching { com.miku.player.PlayerHolder.player?.currentPosition }.getOrNull()
+                            }
+                            if (pos != null && pos >= 0) MikuBeatClock.seedFromFileGrid(row.firstBeatMs, pos, SystemClock.elapsedRealtimeNanos())
+                        }
+                    }
+                    var g = MikuBeatClock.grid
+                    // No file tempo yet: the live tracker's own tempo, once it has one.
+                    if (currentBpm <= 0f && g.bpm > 0f && g.bpm != lastPublishedBpm) {
+                        lastPublishedBpm = g.bpm
+                        beatIntervalMs = (60_000f / g.bpm).toLong().coerceIn(60L, 4000L)
+                        publishState(context, g.bpm, true)
+                    }
+                    if (g.periodNs <= 0.0) {
+                        beatGridIntervalNanos = 0.0
+                        delay(100)
+                        continue
+                    }
+                    val now = SystemClock.elapsedRealtimeNanos()
+                    if (g.anchorNs == 0L) {
+                        // A tempo but no phase yet: run free from now, flagged as not phase-locked.
+                        if (freeAnchorNs == 0L) freeAnchorNs = now
+                        g = g.copy(anchorNs = freeAnchorNs)
+                    } else {
+                        freeAnchorNs = 0L
+                    }
+                    beatAnchorElapsedNanos = g.anchorNs
+                    beatGridIntervalNanos = g.periodNs
+                    var next = g.nextBeatAtOrAfter(now + 1_000_000L)
+                    if (lastBeatNs != 0L && next - lastBeatNs < g.periodNs * 0.5) next = (next + g.periodNs).toLong()
+                    val waitNs = next - SystemClock.elapsedRealtimeNanos()
+                    if (waitNs > 0) delay((waitNs + 999_999L) / 1_000_000L)
+                    if (!isActive || !isPlaying) break
+                    lastBeatNs = next
+                    val bpm = if (currentBpm > 0f) currentBpm else g.bpm
+                    val epochMs = System.currentTimeMillis() + (next - SystemClock.elapsedRealtimeNanos()) / 1_000_000L
+                    val intent = Intent(ACTION_BPM_PULSE).apply {
+                        putExtra(EXTRA_BPM, bpm)
+                        putExtra(EXTRA_BEAT_INTERVAL_MS, (g.periodNs / 1e6).toLong())
+                        putExtra(EXTRA_IS_PLAYING, isPlaying)
+                        putExtra(EXTRA_DOMINANT_COLOR, dominantColor)
+                        putExtra(EXTRA_BEAT_EPOCH_MS, epochMs)
+                        putExtra(EXTRA_BEAT_ELAPSED_NANOS, next)
+                        putExtra(EXTRA_PHASE_LOCKED, g.phaseLocked && freeAnchorNs == 0L)
+                        putExtra(EXTRA_TEMPO_SOURCE, g.source)
+                    }
+                    context.sendBroadcast(intent)
                 }
-                context.sendBroadcast(intent)
-                beat++
-                val now = android.os.SystemClock.elapsedRealtimeNanos()
-                var dueNs = anchorNs + (beat * intervalNs).toLong()
-                if (now - dueNs > intervalNs) {
-                    // More than a whole beat behind (the process was starved, or the device slept):
-                    // rejoin the grid at the next beat still in the future instead of firing the
-                    // missed ones back to back, which the game would read as a burst of notes.
-                    beat = ((now - anchorNs) / intervalNs).toLong() + 1
-                    dueNs = anchorNs + (beat * intervalNs).toLong()
-                }
-                val waitNs = dueNs - now
-                // Round up to whole ms so a pulse never lands before its grid point; the rounding
-                // is per beat and does not accumulate, because the next target is again absolute.
-                if (waitNs > 0) delay((waitNs + 999_999L) / 1_000_000L)
+            } finally {
+                beatGridIntervalNanos = 0.0
             }
-            // Ran out because playback stopped: retract the grid, unless a newer job already
-            // replaced it with its own anchor.
-            if (beatAnchorElapsedNanos == anchorNs) beatGridIntervalNanos = 0.0
         }
     }
 
@@ -324,12 +368,14 @@ object MikuBpmEngine {
         try {
             val cr = context.contentResolver
             // bpm <= 0 means "not known": publish 0 for both so a consumer renders "—" instead of
-            // dividing by zero (this used to produce Int.MAX_VALUE as a beat interval).
+            // dividing by zero.
             val intervalMs = if (bpm > 0f) (60000f / bpm).toInt() else 0
             Settings.Global.putFloat(cr, "miku_live_bpm", if (bpm > 0f) bpm else 0f)
             Settings.Global.putInt(cr, "miku_beat_interval_ms", intervalMs)
             Settings.Global.putInt(cr, "miku_is_playing", if (playing) 1 else 0)
             Settings.Global.putInt(cr, "miku_album_dominant_color", dominantColor)
+            // The track's own tempo, for the lockscreen BPM badge and the anatomical observatory.
+            Settings.Global.putFloat(cr, "miku_now_playing_bpm", if (bpm > 0f) bpm else 0f)
             // Now-playing metadata for OS surfaces (launcher AOD face, BPM observatory).
             Settings.Global.putString(cr, "miku_now_playing_title", npTitle)
             Settings.Global.putString(cr, "miku_now_playing_artist", npArtist)
@@ -340,6 +386,7 @@ object MikuBpmEngine {
             putExtra(EXTRA_BEAT_INTERVAL_MS, if (bpm > 0f) (60000f / bpm).toLong() else 0L)
             putExtra(EXTRA_IS_PLAYING, playing)
             putExtra(EXTRA_DOMINANT_COLOR, dominantColor)
+            putExtra(EXTRA_TEMPO_SOURCE, currentRow?.source ?: if (bpm > 0f) "live" else "none")
         }
         context.sendBroadcast(intent)
     }

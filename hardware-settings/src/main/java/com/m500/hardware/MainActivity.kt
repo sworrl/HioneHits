@@ -409,6 +409,9 @@ fun HardwareSettingsScreen(onBack: () -> Unit) {
                 }
             }
 
+            // The selected filter's frequency response and impulse, per jack (DacResponseCard.kt).
+            item { DacResponseCard(csFilter?.id, csGain?.id, csDre, csTurbo, dacPrimary, dacSecondary, dacBg) }
+
             // Section 2: Hardware Fn Switch & Pocket Lock
             item {
                 HwSettingsSection("Hardware Fn Switch & Touch Lock")

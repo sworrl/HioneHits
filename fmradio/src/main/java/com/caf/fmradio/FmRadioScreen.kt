@@ -341,7 +341,8 @@ private fun FmFrequencyCard(st: FmState, onKeypad: () -> Unit, onStation: (FmSta
             st.stationName.isNotEmpty() && pty != null -> "${st.stationName} · $pty"
             st.stationName.isNotEmpty() -> st.stationName
             tuned != null -> buildString {
-                append(tuned.call)
+                append(tuned.label)
+                tuned.altName?.let { append(" (").append(it).append(")") }
                 listOfNotNull(tuned.city, tuned.state).joinToString(", ").takeIf { it.isNotBlank() }?.let { append(" · ").append(it) }
             }
             st.rdsAvailable == false -> "No RDS on this station"
@@ -406,7 +407,7 @@ private fun FmPathStrip(
         Spacer(Modifier.width(8.dp))
         Column(Modifier.weight(1f)) {
             Text(
-                "PATH TO ${prof.station.call} · ${"%.1f".format(Locale.US, prof.distanceKm)} km · ${prof.verdict}",
+                "PATH TO ${prof.station.label} · ${"%.1f".format(Locale.US, prof.distanceKm)} km · ${prof.verdict}",
                 color = MikuTeal.copy(alpha = 0.9f), fontSize = 8.sp, fontWeight = FontWeight.Bold,
                 maxLines = 1, overflow = TextOverflow.Ellipsis,
             )

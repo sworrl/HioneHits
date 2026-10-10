@@ -23,6 +23,8 @@ object MikuBpmEngine {
     const val EXTRA_BEAT_INTERVAL_MS = "beat_interval_ms"
     const val EXTRA_IS_PLAYING = "is_playing"
     const val EXTRA_DOMINANT_COLOR = "dominant_color"
+    const val EXTRA_BEAT_EPOCH_MS = "beat_epoch_ms"
+    const val EXTRA_PHASE_LOCKED = "phase_locked"
 
     // Every value that enters BpmState is clamped to these — the receiver is necessarily
     // RECEIVER_EXPORTED (pulses come from com.miku.player), so ANY app can broadcast these
@@ -111,11 +113,27 @@ object MikuBpmEngine {
     private const val PHASE_GAIN = 0.25
 
     private fun liveOwnsGrid(): Boolean =
-        lastLiveLockMs != 0L && System.currentTimeMillis() - lastLiveLockMs < LIVE_OWNERSHIP_MS &&
+        !playerOwnsGrid() &&
+            lastLiveLockMs != 0L && System.currentTimeMillis() - lastLiveLockMs < LIVE_OWNERSHIP_MS &&
             MikuTempoLock.tempo.value.isLocked
+
+    /**
+     * When the last phase-locked pulse from com.miku.player arrived. Miku Music now tracks beats
+     * on its own decoded PCM (BTrack, seeded with the track's analysed tempo) and stamps every
+     * pulse with the time the beat leaves the DAC. That beats anything this process can infer
+     * from the Visualizer's 20 Hz FFT, and the Visualizer cannot hear Miku Music's bit-perfect
+     * DIRECT output at all. While such pulses keep coming the player owns the grid and the live
+     * detector stands down.
+     */
+    @Volatile private var lastPlayerLockMs = 0L
+    private const val PLAYER_OWNERSHIP_MS = 4_000L
+
+    fun playerOwnsGrid(): Boolean =
+        lastPlayerLockMs != 0L && System.currentTimeMillis() - lastPlayerLockMs < PLAYER_OWNERSHIP_MS
 
     /** Live output-mix detector reports a beat at [bpm] — authoritative "audio is playing". */
     fun pushLivePulse(bpm: Float) {
+        if (playerOwnsGrid()) { pushLivePlaying(true); return }
         val prev = _state.value
         val b = sanitizeBpm(bpm, prev.bpm)
         lastTempoFromLiveDetector = true
@@ -209,6 +227,12 @@ object MikuBpmEngine {
                         }
                         ACTION_BPM_PULSE -> {
                             val prev = _state.value
+                            // Claim the grid before the ownership test below, or a live lock taken
+                            // a moment earlier would keep the player's exact pulses out for good.
+                            if (intent.getBooleanExtra(EXTRA_PHASE_LOCKED, false) &&
+                                intent.getLongExtra(EXTRA_BEAT_EPOCH_MS, 0L) > 0L) {
+                                lastPlayerLockMs = System.currentTimeMillis()
+                            }
                             if (liveOwnsGrid()) {
                                 // Ignored: a second phase source would drag the beat grid back and
                                 // forth between two clocks. See lastLiveLockMs.
@@ -221,12 +245,21 @@ object MikuBpmEngine {
                             )
                             val playing = intent.getBooleanExtra(EXTRA_IS_PLAYING, true)
                             val color = intent.getIntExtra(EXTRA_DOMINANT_COLOR, prev.dominantColor)
+                            // A phase-locked pulse says exactly when its beat is heard. Use that
+                            // time as the anchor: it is already smoothed on the player's side, and
+                            // the broadcast's own delivery delay is not part of it.
+                            val beatEpoch = intent.getLongExtra(EXTRA_BEAT_EPOCH_MS, 0L)
+                            val locked = intent.getBooleanExtra(EXTRA_PHASE_LOCKED, false)
+                            val now = System.currentTimeMillis()
+                            val exact = locked && beatEpoch > 0L && kotlin.math.abs(now - beatEpoch) < 2_000L
+                            if (exact) lastPlayerLockMs = now
                             _state.value = prev.copy(
                                 bpm = bpm,
                                 beatIntervalMs = interval,
                                 isPlaying = playing,
                                 dominantColor = color,
-                                lastPulseEpochMs = smoothedAnchor(prev.lastPulseEpochMs, prev.beatIntervalMs, interval, System.currentTimeMillis())
+                                lastPulseEpochMs = if (exact) beatEpoch
+                                    else smoothedAnchor(prev.lastPulseEpochMs, prev.beatIntervalMs, interval, now)
                             )
                             if (bpm > 0f) _source.value = TempoSource.PLAYER_ANALYSIS
                         }

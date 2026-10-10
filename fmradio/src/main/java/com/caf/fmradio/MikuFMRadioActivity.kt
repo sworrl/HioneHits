@@ -27,6 +27,10 @@ data class FmState(
     val isHardwareOnline: Boolean = false,
     val hardwareError: String? = null,
     val band: FmBandPlan = FmBandPlan.US,
+    /** True when the band follows where the device is (Japan or North America). */
+    val bandAuto: Boolean = true,
+    /** Why automatic picked the band it did, for the settings sheet ("location: JP"). */
+    val bandAutoReason: String? = null,
     val frequencyKHz: Int = 101100,
     /** What the chip reports. null = it has not said. */
     val isStereo: Boolean? = null,
@@ -94,6 +98,7 @@ data class FmState(
         if (other !is FmState) return false
         return isPowerOn == other.isPowerOn && isHardwareOnline == other.isHardwareOnline &&
             hardwareError == other.hardwareError && band == other.band &&
+            bandAuto == other.bandAuto && bandAutoReason == other.bandAutoReason &&
             frequencyKHz == other.frequencyKHz && isStereo == other.isStereo &&
             stereoRequested == other.stereoRequested && isMuted == other.isMuted &&
             isRecording == other.isRecording && recordedBytes == other.recordedBytes &&
@@ -198,6 +203,8 @@ object FmRadioManager {
             launch { eng.hardwareOnline.collect { v -> _state.update { it.copy(isHardwareOnline = v) } } }
             launch { eng.hardwareError.collect { v -> _state.update { it.copy(hardwareError = v) } } }
             launch { eng.band.collect { v -> _state.update { it.copy(band = v) } } }
+            launch { eng.bandAuto.collect { v -> _state.update { it.copy(bandAuto = v) } } }
+            launch { eng.bandAutoReason.collect { v -> _state.update { it.copy(bandAutoReason = v) } } }
             // The live spectrum is NOT folded into state any more: it is published on its own
             // flow below and read only by the analyser's draw phase. At 25 fps in here it made
             // the whole screen recompose every frame.
@@ -322,6 +329,8 @@ object FmRadioManager {
     fun toggleMute() { engine?.toggleMute() }
     fun setStereo(on: Boolean) { engine?.setStereo(on) }
     fun setBand(plan: FmBandPlan) { engine?.setBand(plan) }
+    /** Let the band follow the device's location again (Japan or North America). */
+    fun setBandAuto() { engine?.setBandAuto() }
     fun setFmVolumeLevel(l: Int) { engine?.setFmVolumeLevel(l) }
     fun cycleSdrSkin() { engine?.cycleSdrSkin() }
     fun setViewMode(m: QualcommFmHardwareEngine.ViewMode) { engine?.setViewMode(m) }
@@ -337,7 +346,7 @@ object FmRadioManager {
      * Miku Music as a liked track to acquire. Returns the new liked state.
      */
     fun toggleLikeSong(ctx: Context, m: FmSongId.Match): Boolean =
-        FmLikes.toggle(ctx, m, _state.value.stationName.ifBlank { _state.value.tunedStation?.call ?: "FM" })
+        FmLikes.toggle(ctx, m, _state.value.stationName.ifBlank { _state.value.tunedStation?.label ?: "FM" })
     fun isSongLiked(ctx: Context, m: FmSongId.Match): Boolean = FmLikes.isLiked(ctx, m.title, m.artist)
 
     /**

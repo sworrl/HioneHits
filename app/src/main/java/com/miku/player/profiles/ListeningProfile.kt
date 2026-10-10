@@ -58,6 +58,8 @@ enum class HardwareType(val id: String, val label: String) {
     TWS("tws", "True wireless"),
     OVER_EAR("over-ear", "Over-ear"),
     ON_EAR("on-ear", "On-ear"),
+    /** A car or stereo aux input, an external amp: line level, no headphone curve. */
+    LINE_OUT("line-out", "Line out / car aux"),
     SPEAKER("speaker", "Speaker"),
     OTHER("other", "Other");
 
