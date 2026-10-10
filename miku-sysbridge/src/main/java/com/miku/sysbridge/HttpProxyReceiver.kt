@@ -35,22 +35,35 @@ class HttpProxyReceiver : BroadcastReceiver() {
         Thread({
             val reply = Intent("$replyPkg.HTTP_RESULT").setPackage(replyPkg).putExtra("id", id)
             try {
-                val url = URL(intent.getStringExtra("url") ?: throw IllegalArgumentException("no url"))
-                require(url.protocol == "https") { "https only" }
-                require(HOSTS.any { url.host == it || url.host.endsWith(".$it") }) { "host ${url.host} not allowed" }
-                val c = url.openConnection() as HttpURLConnection
+                var url = URL(intent.getStringExtra("url") ?: throw IllegalArgumentException("no url"))
+                checkAllowed(url)
+                var c = url.openConnection() as HttpURLConnection
                 try {
-                    c.requestMethod = intent.getStringExtra("method") ?: "GET"
-                    c.connectTimeout = 10_000
-                    c.readTimeout = 15_000
-                    intent.getBundleExtra("headers")?.let { h ->
-                        for (k in h.keySet()) h.getString(k)?.let { c.setRequestProperty(k, it) }
+                    // Redirects are followed by hand so every hop is held to the same https and
+                    // host list. HttpURLConnection on its own follows https redirects to any host.
+                    var hops = 0
+                    var code = -1
+                    while (true) {
+                        c.instanceFollowRedirects = false
+                        c.requestMethod = intent.getStringExtra("method") ?: "GET"
+                        c.connectTimeout = 10_000
+                        c.readTimeout = 15_000
+                        intent.getBundleExtra("headers")?.let { h ->
+                            for (k in h.keySet()) h.getString(k)?.let { c.setRequestProperty(k, it) }
+                        }
+                        intent.getByteArrayExtra("body")?.let { b ->
+                            c.doOutput = true
+                            c.outputStream.use { it.write(b) }
+                        }
+                        code = c.responseCode
+                        val loc = c.getHeaderField("Location")
+                        if (code !in 300..399 || loc == null || hops >= MAX_REDIRECTS) break
+                        url = URL(url, loc)
+                        checkAllowed(url)
+                        c.disconnect()
+                        c = url.openConnection() as HttpURLConnection
+                        hops++
                     }
-                    intent.getByteArrayExtra("body")?.let { b ->
-                        c.doOutput = true
-                        c.outputStream.use { it.write(b) }
-                    }
-                    val code = c.responseCode
                     val stream = if (code in 200..399) c.inputStream else c.errorStream
                     val body = stream?.use { readCapped(it) } ?: ByteArray(0)
                     if (body.size > MAX_BODY) throw java.io.IOException("response over ${MAX_BODY / 1024} KB")
@@ -66,6 +79,11 @@ class HttpProxyReceiver : BroadcastReceiver() {
                 pending.finish()
             }
         }, "MikuSysBridgeHttp").start()
+    }
+
+    private fun checkAllowed(url: URL) {
+        require(url.protocol == "https") { "https only" }
+        require(HOSTS.any { url.host == it || url.host.endsWith(".$it") }) { "host ${url.host} not allowed" }
     }
 
     private fun readCapped(s: java.io.InputStream): ByteArray {
@@ -87,5 +105,6 @@ class HttpProxyReceiver : BroadcastReceiver() {
         private val HOSTS = listOf("open-meteo.com", "shazam.com", "mzstatic.com", "weather.gov")
         /** Replies travel as a broadcast extra; binder transactions top out at 1 MB. */
         const val MAX_BODY = 600 * 1024
+        private const val MAX_REDIRECTS = 3
     }
 }

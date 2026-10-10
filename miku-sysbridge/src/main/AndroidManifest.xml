@@ -19,6 +19,13 @@
     <uses-permission android:name="com.miku.permission.SYSTEM_BRIDGE" />
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.WRITE_SECURE_SETTINGS" />
+    <!-- BootSeeds. The system uid passes these checks anyway, they are listed for readers. -->
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <uses-permission android:name="android.permission.WRITE_SETTINGS" />
+    <uses-permission android:name="android.permission.GRANT_RUNTIME_PERMISSIONS" />
+    <uses-permission android:name="android.permission.MANAGE_APP_OPS_MODES" />
+    <uses-permission android:name="android.permission.CHANGE_COMPONENT_ENABLED_STATE" />
+    <uses-permission android:name="android.permission.CHANGE_OVERLAY_PACKAGES" />
 
     <application
         android:name=".BridgeApp"
@@ -47,6 +54,15 @@
             android:permission="com.miku.permission.SYSTEM_BRIDGE">
             <intent-filter>
                 <action android:name="com.miku.sysbridge.HTTP" />
+            </intent-filter>
+        </receiver>
+        <receiver
+            android:name=".BootSeedsReceiver"
+            android:exported="true"
+            android:permission="android.permission.RECEIVE_BOOT_COMPLETED">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.LOCKED_BOOT_COMPLETED" />
             </intent-filter>
         </receiver>
     </application>
