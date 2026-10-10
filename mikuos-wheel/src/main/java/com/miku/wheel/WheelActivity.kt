@@ -34,7 +34,7 @@ import kotlinx.coroutines.withContext
  * Intents:
  *  - MAIN/LAUNCHER, MAIN/HOME: the last era used (if still unlocked), else the picker.
  *  - com.miku.wheel.action.ENTER: extra "era" = 2001 | 2004 | 2005 | 2007 opens that era;
- *    extra "force" = true skips the unlock check (debug).
+ *    extra "force" = true skips the unlock check (debug). Extra "open" = "radio" opens the tuner.
  */
 class WheelActivity : ComponentActivity() {
 
@@ -197,7 +197,11 @@ class WheelActivity : ComponentActivity() {
         if (truthy(i, "force")) forced = true
         val wanted = Era.byId(i.getStringExtra("era") ?: i.getIntExtra("era", 0).takeIf { it > 0 }?.toString())
         when {
-            wanted != null && (forced || wanted in unlocked.value) -> enter(wanted)
+            wanted != null && (forced || wanted in unlocked.value) -> {
+                enter(wanted)
+                // extra "open" = "radio" goes straight to the tuner.
+                if (i.getStringExtra("open") == "radio") skin?.let { it.toRoot(); it.openRadio(); frame.intValue++ }
+            }
             i.action == ACTION_ENTER -> showPicker()
             era.value == null -> {
                 val last = Era.byId(prefs.lastEra)

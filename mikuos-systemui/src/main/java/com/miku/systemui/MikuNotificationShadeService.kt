@@ -426,7 +426,14 @@ class MikuNotificationShadeService : AccessibilityService() {
 
         topStripView = ShadePullView(this).also { v ->
             topParams = overlayParams(WindowManager.LayoutParams.MATCH_PARENT, topPx, Gravity.TOP or Gravity.CENTER_HORIZONTAL)
-            runCatching { windowManager.addView(v, topParams) }.onFailure { Log.w(TAG, "top strip add: $it") }
+            // Spy first (see stripIsSpy). If the window manager refuses it, a plain overlay.
+            stripIsSpy = makeSpy(topParams!!) &&
+                runCatching { windowManager.addView(v, topParams) }.onFailure { Log.w(TAG, "top strip add as spy: $it") }.isSuccess
+            if (!stripIsSpy) {
+                topParams = overlayParams(WindowManager.LayoutParams.MATCH_PARENT, topPx, Gravity.TOP or Gravity.CENTER_HORIZONTAL)
+                runCatching { windowManager.addView(v, topParams) }.onFailure { Log.w(TAG, "top strip add: $it") }
+            }
+            Log.i(TAG, "top strip is ${if (stripIsSpy) "an input spy" else "a plain overlay"}")
         }
         pillView = HomePillView(this).also { v ->
             // Full width so the home swipe is catchable across the whole bottom edge, not only the
@@ -803,10 +810,46 @@ class MikuNotificationShadeService : AccessibilityService() {
 
     // ================================================================== TOP SHADE PULL
 
+    /**
+     * The top strip is an input SPY window when the platform lets us (INPUT_FEATURE_SPY needs
+     * MONITOR_INPUT, a signature permission we hold as a platform app).
+     *
+     * Why: Android 14's DisplayPolicy watches every touch on the screen. When it sees a swipe down
+     * from the top edge over an app that shows its status bar, it calls transferTouch() and hands
+     * the rest of the finger to the stock StatusBar window, so the stock shade can follow it
+     * (DisplayPolicy.requestTransientBars). A normal overlay then only gets ACTION_CANCEL, and with
+     * stock expansion disabled the pull did nothing at all in apps like Google Play. The launcher
+     * hides the bars, takes the transient-bars path instead and never lost the touch, which is why
+     * the pull only ever worked on home.
+     *
+     * A spy window receives the whole gesture alongside whatever window is touched, and a transfer
+     * does not take it away. Once the drag is clearly a pull it calls pilferPointers(), which
+     * cancels the touch for the status bar and the app, and the shade follows the finger from there.
+     * Taps are not taken at all, so the app under the strip gets them directly, with no replay.
+     */
+    private var stripIsSpy = false
+
+    private fun makeSpy(lp: WindowManager.LayoutParams): Boolean = runCatching {
+        val spy = WindowManager.LayoutParams::class.java.getField("INPUT_FEATURE_SPY").getInt(null)
+        val f = WindowManager.LayoutParams::class.java.getField("inputFeatures")
+        f.setInt(lp, f.getInt(lp) or spy)
+        true
+    }.onFailure { Log.w(TAG, "spy flag: $it") }.getOrDefault(false)
+
+    /** Cancel the touch for every other window; this spy keeps the stream. */
+    private fun pilfer(view: View): Boolean = runCatching {
+        val vri = View::class.java.getMethod("getViewRootImpl").invoke(view) ?: return@runCatching false
+        val token = vri.javaClass.getMethod("getInputToken").invoke(vri) as? android.os.IBinder ?: return@runCatching false
+        val im = getSystemService(Context.INPUT_SERVICE)
+        im.javaClass.getMethod("pilferPointers", android.os.IBinder::class.java).invoke(im, token)
+        true
+    }.onFailure { Log.w(TAG, "pilferPointers: $it") }.getOrDefault(false)
+
     inner class ShadePullView(context: Context) : View(context) {
         private var down = false
         private var opened = false
         private var startX = 0f; private var startY = 0f
+        private var lastY = 0f
         private var velocity: VelocityTracker? = null
         private val points = ArrayList<TouchPt>(64)
 
@@ -816,7 +859,7 @@ class MikuNotificationShadeService : AccessibilityService() {
                 MotionEvent.ACTION_DOWN -> {
                     if (replayInFlight) return false          // our own injected touch
                     down = true; opened = false
-                    startX = event.rawX; startY = event.rawY
+                    startX = event.rawX; startY = event.rawY; lastY = startY
                     velocity?.recycle(); velocity = VelocityTracker.obtain().also { it.addMovement(event) }
                     points.clear(); points += TouchPt(startX, startY, now)
                     return true
@@ -825,12 +868,14 @@ class MikuNotificationShadeService : AccessibilityService() {
                     if (!down) return false
                     velocity?.addMovement(event)
                     if (points.size < 400) points += TouchPt(event.rawX, event.rawY, now)
+                    lastY = event.rawY
                     val dy = event.rawY - startY
                     if (!opened) {
                         val dx = abs(event.rawX - startX)
                         if (dy >= dp(SHADE_PULL_DP) && dx < dy) {
                             opened = true
-                            Log.i(TAG, "top strip pull -> shade (dy=${dy.toInt()})")
+                            val took = if (stripIsSpy) pilfer(this) else true
+                            Log.i(TAG, "top strip pull -> shade (dy=${dy.toInt()}, spy=$stripIsSpy, pilfered=$took)")
                             MikuHaptics.tick(this)
                             MikuShadeDrag.begin(dy)                  // the shade follows this finger 1:1
                             openShadeActivity(dy.toInt())
@@ -848,13 +893,20 @@ class MikuNotificationShadeService : AccessibilityService() {
                     val vy = velocity?.yVelocity ?: 0f
                     velocity?.recycle(); velocity = null
                     if (opened) MikuShadeDrag.release(vy)
-                    else replayTouch(ArrayList(points), topStripView, topParams)
+                    // A spy never took the touch, so the app already had it. Only a plain overlay
+                    // has to replay what it swallowed.
+                    else if (!stripIsSpy) replayTouch(ArrayList(points), topStripView, topParams)
                     return true
                 }
                 MotionEvent.ACTION_CANCEL -> {
+                    // Something else took the finger (the back-gesture spy, or the status bar
+                    // transfer on a plain overlay). A pull that got going still opens the shade.
+                    val pullingDown = down && (lastY - startY) >= dp(8f)
                     down = false
                     velocity?.recycle(); velocity = null
-                    if (opened) MikuShadeDrag.release(0f)
+                    if (opened) MikuShadeDrag.release(if (pullingDown) 2000f else 0f)
+                    else if (pullingDown && !retroInFront) openShadeActivity(-1)
+                    Log.i(TAG, "top strip: touch cancelled (opened=$opened, dy=${(lastY - startY).toInt()})")
                     return true
                 }
             }

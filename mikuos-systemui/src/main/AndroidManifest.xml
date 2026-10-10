@@ -30,6 +30,9 @@
     <!-- Grants our own notification listener access. Writing enabled_notification_listeners is
          ignored by NotificationManagerService on Android 14, so the shade had no notifications. -->
     <uses-permission android:name="android.permission.MANAGE_NOTIFICATION_LISTENERS" tools:ignore="ProtectedPermissions" />
+    <!-- Lets the top pull strip be an input spy window, so the stock status bar cannot take the
+         pull away from it (see MikuNotificationShadeService.stripIsSpy). -->
+    <uses-permission android:name="android.permission.MONITOR_INPUT" tools:ignore="ProtectedPermissions" />
     <uses-permission android:name="android.permission.CAMERA" />
     <!-- Navigation layer (quick switch + Miku Recents). All signature|privileged: granted by the
          platform signature, no priv-app whitelist needed. Hidden APIs reached via reflection. -->

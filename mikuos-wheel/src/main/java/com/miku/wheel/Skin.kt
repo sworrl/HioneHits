@@ -254,7 +254,8 @@ class Skin(
     // ---- radio -------------------------------------------------------------------------------
 
     /** Main menu > Radio: the Radio menu with the tuner screen on top, and the radio on. */
-    private fun openRadio() {
+    fun openRadio() {
+        skipBoot()
         radio.connect()
         push(radioMenu())
         push(RadioScreen())

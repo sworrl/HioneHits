@@ -105,7 +105,13 @@ class RadioLink(private val ctx: Context, private val prefs: WheelPrefs, private
 
     // ---- commands ----------------------------------------------------------------------------
 
-    fun play() { controller?.transportControls?.play() ?: connect() }
+    /** Asked to play before the session connected: play as soon as it does. */
+    private var playOnConnect = false
+
+    fun play() {
+        val c = controller
+        if (c != null) c.transportControls.play() else { playOnConnect = true; connect() }
+    }
     fun stop() { controller?.transportControls?.stop() }
     fun powerToggle() = if (on) stop() else play()
 
@@ -182,6 +188,7 @@ class RadioLink(private val ctx: Context, private val prefs: WheelPrefs, private
         md?.getString(MediaMetadata.METADATA_KEY_MEDIA_ID)?.removePrefix(FREQ)?.toIntOrNull()?.let { khz = it }
         station = md?.getString(MediaMetadata.METADATA_KEY_TITLE).orEmpty()
         text = md?.getString(MediaMetadata.METADATA_KEY_ARTIST).orEmpty()
+        if (Log.isLoggable(TAG, Log.DEBUG)) Log.d(TAG, "state=$s on=$on online=$online khz=$khz station=$station text=$text")
         changed()
     }
 
@@ -229,7 +236,10 @@ class RadioLink(private val ctx: Context, private val prefs: WheelPrefs, private
             b.subscribe(PRESETS, presets)
             mergeFavorites()
             read()
-            Log.i(TAG, "connected to the FM session")
+            if (target > 0 && System.currentTimeMillis() - targetAt < 3000) send()
+            else if (playOnConnect && !on) c.transportControls.play()
+            playOnConnect = false
+            Log.i(TAG, "connected to the FM session: on=$on khz=$khz")
         }
 
         override fun onConnectionSuspended() {
