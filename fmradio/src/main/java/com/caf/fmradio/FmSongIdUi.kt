@@ -208,7 +208,7 @@ fun SongIdCard(state: FmSongId.State, onHistory: () -> Unit, modifier: Modifier 
             FmSongId.Phase.LISTENING, FmSongId.Phase.MATCHING -> Column(Modifier.padding(end = 40.dp)) {
                 Text(
                     if (state.phase == FmSongId.Phase.LISTENING) "LISTENING · ${state.bufferedSeconds} s OF AUDIO"
-                    else "MATCHING ${state.bufferedSeconds} s AGAINST THE CATALOGUE…",
+                    else "MATCHING ${state.bufferedSeconds} s AGAINST THE CATALOG…",
                     color = MikuPink, fontSize = 8.5.sp, fontWeight = FontWeight.Bold, fontFamily = AudiowideFont,
                 )
                 Spacer(Modifier.height(6.dp))
@@ -369,7 +369,7 @@ fun LikeButton(m: FmSongId.Match, compact: Boolean = false) {
             val now = withContext(Dispatchers.IO) { runCatching { FmRadioManager.toggleLikeSong(ctx, m) }.getOrNull() }
             if (now != null) {
                 liked = now
-                Toast.makeText(ctx, if (now) "Saved to Miku Music · to get" else "Removed from Miku Music likes",
+                Toast.makeText(ctx, if (now) "Liked. Added to Miku Music's to-get list" else "Removed from Miku Music likes",
                     Toast.LENGTH_SHORT).show()
             } else {
                 Toast.makeText(ctx, "Could not save the like", Toast.LENGTH_SHORT).show()

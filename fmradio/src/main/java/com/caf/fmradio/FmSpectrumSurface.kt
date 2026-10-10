@@ -406,7 +406,7 @@ class FmSpectrumSurfaceView(context: Context) : SurfaceView(context), SurfaceHol
          */
         private fun drawFallback(c: Canvas, hist: FloatArray, w: Int, h: Int) {
             val d = density
-            c.drawText("LIVE · SIGNAL OF THE TUNED STATION · NO AUDIO TO ANALYSE ON THIS OUTPUT", 4f * d, 9f * d, titlePaint)
+            c.drawText("LIVE · SIGNAL OF THE TUNED STATION · NO AUDIO TO ANALYZE ON THIS OUTPUT", 4f * d, 9f * d, titlePaint)
             val t = 16f * d
             val traceH = h * 0.42f
             for (g in 1..3) {

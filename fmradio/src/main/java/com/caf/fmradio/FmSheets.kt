@@ -97,7 +97,7 @@ fun ColumnScope.FmScanResults(st: FmState, onTuned: () -> Unit) {
     if (st.scanResults.isEmpty()) {
         SheetNote(
             "Nothing yet. Tap the scan key to sweep the band. With no antenna attached a sweep " +
-                "will find nothing, which is the honest result."
+                "finds nothing."
         )
         return
     }
@@ -122,7 +122,7 @@ fun ColumnScope.FmScanResults(st: FmState, onTuned: () -> Unit) {
                     modifier = Modifier.width(64.dp)
                 )
                 Column(Modifier.weight(1f)) {
-                    Text(stn?.call ?: "not in the catalogue here", color = if (stn != null) color else MikuTextSecondary,
+                    Text(stn?.call ?: "not in the catalog here", color = if (stn != null) color else MikuTextSecondary,
                          fontSize = 9.5.sp, fontWeight = FontWeight.Bold)
                     Text(
                         buildString {
@@ -249,7 +249,7 @@ fun FmSettings(st: FmState) {
 
         SettingSwitch(
             "Follow alternative frequencies",
-            "Use the RDS AF list to hop to a stronger transmitter carrying the same programme. " +
+            "Use the RDS AF list to hop to a stronger transmitter carrying the same program. " +
                 "Off by default: it retunes without being asked, which is not always wanted.",
             st.afJump
         ) { FmRadioManager.setAfJump(it) }

@@ -204,7 +204,7 @@ private fun ColumnScope.StationsTabContent(
     Spacer(Modifier.height(4.dp))
     Text(
         when {
-            searching -> "Searching the catalogue…"
+            searching -> "Searching the catalog…"
             searched != null -> "${source.size} match${if (source.size == 1) "" else "es"} for \"${query.trim()}\""
             st.listenerPlace == null -> "No position yet, so nothing is rated for reach."
             else -> buildString {
@@ -213,7 +213,7 @@ private fun ColumnScope.StationsTabContent(
                     append(String.format(Locale.US, " · reach calibrated on %d heard (%+.0f dB)",
                         st.reachCalibratedFrom, st.reachOffsetDb))
                 }
-                if (genres.isEmpty() && source.isNotEmpty()) append(" · formats not in this catalogue yet")
+                if (genres.isEmpty() && source.isNotEmpty()) append(" · formats not in this catalog yet")
             }
         },
         color = MikuTextSecondary, fontSize = 7.5.sp, maxLines = 1, overflow = TextOverflow.Ellipsis,
@@ -240,7 +240,7 @@ private fun ColumnScope.StationsTabContent(
         if (filtered.isEmpty() && !searching) {
             item {
                 Text(
-                    if (searched != null) "Nothing in the catalogue matches." else "No stations listed near here yet.",
+                    if (searched != null) "Nothing in the catalog matches." else "No stations listed near here yet.",
                     color = MikuTextPrimary, fontSize = 9.sp, modifier = Modifier.padding(vertical = 12.dp)
                 )
             }
@@ -386,7 +386,7 @@ fun ColumnScope.FmStationDetail(st: FmState, target: PresetTarget, onClose: () -
                  fontWeight = FontWeight.Bold, fontFamily = AudiowideFont)
             Text(
                 if (s != null) "${fmtMhz(s.khz)} MHz · ${s.kind} · ${listOfNotNull(s.city, s.state).joinToString(", ")}"
-                else "A preset the station catalogue has no entry for here.",
+                else "A preset the station catalog has no entry for here.",
                 color = MikuTextPrimary, fontSize = 9.sp,
             )
         }
@@ -425,7 +425,7 @@ fun ColumnScope.FmStationDetail(st: FmState, target: PresetTarget, onClose: () -
         Spacer(Modifier.height(4.dp))
         Text(
             "Reach is a calibrated prediction from power, height, distance and (when fetched) the " +
-                "terrain profile; a sweep that actually hears it here overrides it.",
+                "terrain profile. A sweep that actually hears it here overrides it.",
             color = MikuTextSecondary, fontSize = 7.5.sp, lineHeight = 10.sp,
         )
     }

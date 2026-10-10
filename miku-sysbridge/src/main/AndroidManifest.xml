@@ -30,6 +30,14 @@
             </intent-filter>
         </receiver>
         <receiver
+            android:name=".AudioReceiver"
+            android:exported="true"
+            android:permission="com.miku.permission.SYSTEM_BRIDGE">
+            <intent-filter>
+                <action android:name="com.miku.sysbridge.AUDIO" />
+            </intent-filter>
+        </receiver>
+        <receiver
             android:name=".HttpProxyReceiver"
             android:exported="true"
             android:permission="com.miku.permission.SYSTEM_BRIDGE">

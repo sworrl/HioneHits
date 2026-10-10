@@ -149,7 +149,7 @@ object FmSongId {
         val track = json.optJSONObject("track")
         if (track == null) {
             state.value = state.value.copy(phase = Phase.NOT_FOUND,
-                message = "No match. Talk, ads and station IDs never match; try again during a song.")
+                message = "No match. Talk, ads and station IDs never match. Try again during a song.")
             return
         }
         var album: String? = null

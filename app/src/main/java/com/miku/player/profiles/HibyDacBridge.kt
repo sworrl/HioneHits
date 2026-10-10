@@ -21,7 +21,13 @@ import java.util.concurrent.ConcurrentHashMap
  * allowed vendor_audio_prop (HiBy's own boot code sets vendor.audio.hiby.high_power from there).
  * IAudioService is a hidden API; platform-signed apps are exempt from the hidden-API block.
  *
- * STATUS: found by reading the firmware, NOT yet confirmed on hardware. [set] reads the property
+ * 2026-10-10 UPDATE: IAudioService.setProperties does not exist in the v1.00 framework MikuOS
+ * ships (it is in a newer HiBy build), so this route returned UNAVAILABLE everywhere. The working
+ * route is com.miku.sysbridge (system_app, allowed vendor_audio_prop): it sets
+ * persist.vendor.audio.miku.<knob> from a whitelist and the image's miku_audio.rc writes the
+ * sysfs node, now and at every boot. See mikuos/docs/hiby-audio-knobs.md.
+ *
+ * STATUS (old route, kept for reference): found by reading the firmware, NOT confirmed. [set] reads the property
  * back through IAudioService.getProperties, so the UI can say "property set" truthfully; whether
  * init then wrote the node (and whether the DAC changed audibly) still needs an on-device check:
  *     adb shell getprop vendor.audio.hiby.digital_filter
@@ -33,49 +39,60 @@ object HibyDacBridge {
     const val PROP_HIGH_POWER = "vendor.audio.hiby.high_power"
     const val PROP_DRE = "vendor.audio.hiby.dre_mode"
     const val PROP_FILTER = "vendor.audio.hiby.digital_filter"
+    const val PROP_GAIN = "vendor.audio.hiby.gain"
 
-    enum class Result { CONFIRMED, NOT_CONFIRMED, UNAVAILABLE }
+    /** UNSUPPORTED: the value is not one the DAC driver acts on. */
+    enum class Result { CONFIRMED, NOT_CONFIRMED, UNAVAILABLE, UNSUPPORTED }
 
     /** Last outcome per property, for the profile screen's honesty line. */
     val lastResults: MutableMap<String, Result> = ConcurrentHashMap()
 
-    private val service: Any? by lazy {
-        runCatching {
-            val binder = Class.forName("android.os.ServiceManager")
-                .getMethod("getService", String::class.java)
-                .invoke(null, "audio") as IBinder
-            Class.forName("android.media.IAudioService\$Stub")
-                .getMethod("asInterface", IBinder::class.java)
-                .invoke(null, binder)
-        }.onFailure { Log.w(TAG, "IAudioService unavailable", it) }.getOrNull()
-    }
+    @Volatile private var app: android.content.Context? = null
+    fun init(ctx: android.content.Context) { if (app == null) app = ctx.applicationContext }
 
-    private val setMethod by lazy {
-        runCatching { service?.javaClass?.getMethod("setProperties", String::class.java, String::class.java) }
-            .onFailure { Log.w(TAG, "setProperties not on this framework (not a HiBy ROM?)", it) }.getOrNull()
-    }
+    private const val BRIDGE = "com.miku.sysbridge"
+    private const val ACTION = "com.miku.sysbridge.AUDIO"
 
-    private val getMethod by lazy {
-        runCatching { service?.javaClass?.getMethod("getProperties", String::class.java, String::class.java) }
-            .getOrNull()
-    }
+    /** Our property name -> the sysbridge extra / persist.vendor.audio.miku.<extra> knob. */
+    private val KNOB = mapOf(PROP_HIGH_POWER to "high_power", PROP_DRE to "dre_mode",
+        PROP_FILTER to "digital_filter", PROP_GAIN to "gain")
 
-    val available: Boolean get() = setMethod != null
+    private val REAL_FILTERS = setOf("fast_rolloff_low_latency", "fast_rolloff_phase_compensated",
+        "slow_rolloff_low_latency", "slow_rolloff_phase_compensated", "nos")
 
-    /** Current value as system_server sees it, or null when the bridge is not there. */
-    fun get(key: String): String? = runCatching {
-        getMethod?.invoke(service, key, "") as String?
-    }.getOrNull()
+    val available: Boolean get() = app?.let { a ->
+        runCatching { a.packageManager.getPackageInfo(BRIDGE, 0); true }.getOrDefault(false)
+    } ?: false
 
-    /** Set [key] to [value] and read it back. Blocking binder calls: call off the main thread. */
+    private fun sysprop(key: String): String? = runCatching {
+        Class.forName("android.os.SystemProperties").getMethod("get", String::class.java)
+            .invoke(null, key) as String
+    }.getOrNull()?.ifBlank { null }
+
+    /** What the hardware was last told for [key], or null when never set. */
+    fun get(key: String): String? = KNOB[key]?.let { sysprop("persist.vendor.audio.miku.$it") }
+
+    /**
+     * Send [value] for [key] through the system bridge and read the property back. Blocking (it
+     * polls for up to a second): call off the main thread.
+     */
     fun set(key: String, value: String): Result {
-        val m = setMethod
-        val r = if (m == null) {
-            Result.UNAVAILABLE
-        } else {
-            runCatching { m.invoke(service, key, value) }
-                .onFailure { Log.w(TAG, "setProperties($key) failed", it) }
-            if (get(key) == value) Result.CONFIRMED else Result.NOT_CONFIRMED
+        val knob = KNOB[key]
+        val a = app
+        val r = when {
+            knob == null || a == null || !available -> Result.UNAVAILABLE
+            key == PROP_FILTER && value !in REAL_FILTERS -> Result.UNSUPPORTED
+            else -> {
+                runCatching {
+                    a.sendBroadcast(android.content.Intent(ACTION).setPackage(BRIDGE).putExtra(knob, value))
+                }.onFailure { Log.w(TAG, "bridge broadcast failed: $it") }
+                var ok = false
+                for (i in 0 until 10) {
+                    if (get(key) == value) { ok = true; break }
+                    Thread.sleep(100)
+                }
+                if (ok) Result.CONFIRMED else Result.NOT_CONFIRMED
+            }
         }
         lastResults[key] = r
         Log.i(TAG, "$key=$value -> $r")

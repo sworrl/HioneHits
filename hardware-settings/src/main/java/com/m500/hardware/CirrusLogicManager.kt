@@ -18,21 +18,21 @@ object CirrusLogicManager {
     const val SYSFS_BASE = "/sys/devices/platform/sa_sound_setting"
 
     enum class DigitalFilter(val id: String, val label: String, val description: String) {
-        FAST_LINEAR("fast_rolloff_phase_compensated", "Fast Roll-off, Phase Compensated", "Reference linear phase, wide soundstage and precise imaging"),
-        FAST_MINIMUM("fast_rolloff_low_latency", "Fast Roll-off, Low Latency", "Minimum phase with ultra-low group delay and punchy dynamics"),
-        SLOW_LINEAR("slow_rolloff_phase_compensated", "Slow Roll-off, Phase Compensated", "Smooth linear decay with zero phase distortion"),
-        SLOW_MINIMUM("slow_rolloff_low_latency", "Slow Roll-off, Low Latency", "Warm acoustic roll-off with minimal pre-ringing"),
-        NOS("nos", "Non-Oversampling (NOS)", "Bypasses internal digital oversampling for raw, analog-like fidelity")
+        FAST_LINEAR("fast_rolloff_phase_compensated", "Fast Roll-off, Phase Compensated", "Linear phase. The standard reference filter"),
+        FAST_MINIMUM("fast_rolloff_low_latency", "Fast Roll-off, Low Latency", "Minimum phase with low group delay"),
+        SLOW_LINEAR("slow_rolloff_phase_compensated", "Slow Roll-off, Phase Compensated", "Linear phase with a gentler roll-off"),
+        SLOW_MINIMUM("slow_rolloff_low_latency", "Slow Roll-off, Low Latency", "Minimum phase, gentle roll-off, little pre-ringing"),
+        NOS("nos", "Non-Oversampling (NOS)", "Skips the DAC's digital oversampling filter")
     }
 
     enum class GainMode(val id: String, val label: String, val description: String) {
-        LOW("low", "Low Gain (0 dB)", "Optimized for ultra-sensitive in-ear monitors (zero noise floor)"),
-        HIGH("high", "High Gain (+6 dB)", "High voltage swing for planar and high-impedance headphones")
+        LOW("low", "Low Gain (0 dB)", "For sensitive IEMs and low-impedance earphones"),
+        HIGH("high", "High Gain (+6 dB)", "More voltage swing for planars and high-impedance headphones")
     }
 
     enum class OutputMode(val id: String, val label: String, val description: String) {
         HEADPHONE_OUT("bal_po", "Headphone Out (PO)", "Variable output with volume control for 3.5mm SE & 4.4mm BAL"),
-        LINE_OUT("bal_lo", "Line Out (LO)", "Clean unamplified line-level bypass for external desktop amps")
+        LINE_OUT("bal_lo", "Line Out (LO)", "Fixed line level for an external amp")
     }
 
     /**

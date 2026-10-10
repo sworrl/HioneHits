@@ -60,6 +60,7 @@ object ListeningProfileManager {
     val connectedOutputs: StateFlow<List<Output>> = _connectedOutputs
 
     fun init(ctx: Context) {
+        HibyDacBridge.init(ctx)
         if (app != null) return
         val a = ctx.applicationContext
         app = a

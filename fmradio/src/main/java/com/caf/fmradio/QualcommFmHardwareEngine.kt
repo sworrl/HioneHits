@@ -79,9 +79,9 @@ enum class FmBandPlan(
  */
 enum class FmChannelGrid(val label: String, val detail: String) {
     AUTO("Automatic", "Follow the selected region's channel plan"),
-    ODD_TENTHS("Odd tenths", "87.9, 88.1, 88.3 … — North America"),
-    EVEN_TENTHS("Even tenths", "88.0, 88.2, 88.4 … — rare, for odd allocations"),
-    EVERY_TENTH("Every tenth", "87.5, 87.6, 87.7 … — Europe, Japan, 100 kHz"),
+    ODD_TENTHS("Odd tenths", "87.9, 88.1, 88.3 … (North America)"),
+    EVEN_TENTHS("Even tenths", "88.0, 88.2, 88.4 … (rare, for odd allocations)"),
+    EVERY_TENTH("Every tenth", "87.5, 87.6, 87.7 … (Europe, Japan, 100 kHz)"),
     FREE("Off", "Tune anywhere the chip will go, no snapping"),
 }
 
@@ -1643,7 +1643,7 @@ class QualcommFmHardwareEngine(private val context: Context) {
     init {
         prefs.getString(siphonKey(), null)?.let {
             siphonState.value = SiphonState.FAILED
-            siphonReason.value = "$it (on this firmware; retry from diagnostics)"
+            siphonReason.value = "$it (on this firmware, retry from diagnostics)"
         }
     }
 

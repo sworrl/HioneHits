@@ -25,12 +25,12 @@ object CirrusLogicManager {
         FAST_MINIMUM("fast_rolloff_low_latency", "Fast Roll-off, Low Latency", "Minimum phase with ultra-low group delay and punchy dynamics"),
         SLOW_LINEAR("slow_rolloff_phase_compensated", "Slow Roll-off, Phase Compensated", "Smooth linear decay with zero phase distortion"),
         SLOW_MINIMUM("slow_rolloff_low_latency", "Slow Roll-off, Low Latency", "Warm acoustic roll-off with minimal pre-ringing"),
-        NOS("nos", "Non-Oversampling (NOS)", "Bypasses internal digital oversampling for raw, analog-like fidelity")
+        NOS("nos", "NOS (non-oversampling)", "Skips the DAC's oversampling filter. Softer top end, no pre-ringing. HiBy's stock driver masked this off; MikuOS 0.2.0 patches it in.")
     }
 
     enum class GainMode(val id: String, val label: String, val sysfsValue: String, val description: String) {
-        LOW("low", "Low Gain (0 dB)", "low", "Optimized for ultra-sensitive in-ear monitors (zero noise floor)"),
-        HIGH("high", "High Gain (+6 dB)", "high", "High voltage swing for planar and high-impedance headphones")
+        LOW("low", "Low (-12 dB)", "low", "Digital offset of -12 dB on the 3.5 and 4.4 mm outputs. More volume steps for sensitive IEMs. Same noise floor."),
+        HIGH("high", "High (0 dB)", "high", "No digital offset. For louder output use High power, which switches in the external amp stage.")
     }
 
     enum class OutputMode(val id: String, val label: String, val sysfsValue: String, val icon: String, val description: String) {
@@ -145,6 +145,7 @@ object CirrusLogicManager {
         // nothing reads, and the HAL ignores the other. The node is written by init when
         // vendor.audio.hiby.digital_filter (no "hw") changes, which only system_server may set.
         // UNVERIFIED on hardware - see com.miku.player.profiles.HibyDacBridge / DspKnob.FILTER.
+        com.miku.player.profiles.HibyDacBridge.init(ctx)
         com.miku.player.profiles.HibyDacBridge.set(com.miku.player.profiles.HibyDacBridge.PROP_FILTER, filter.id)
     }
 
@@ -165,6 +166,8 @@ object CirrusLogicManager {
         MikuDirectAudio.rememberUserGain(ctx, gain.sysfsValue)
         runCatching { Settings.Global.putString(cr, "vendor.audio.hiby.hw.gain", gain.sysfsValue) }
         runCatching { Settings.Global.putString(cr, "vendor.audio.hiby.gain", gain.sysfsValue) }
+        com.miku.player.profiles.HibyDacBridge.init(ctx)
+        com.miku.player.profiles.HibyDacBridge.set(com.miku.player.profiles.HibyDacBridge.PROP_GAIN, gain.sysfsValue)
 
         // Apply it for real. The old path shelled out to su (echo > sysfs / setprop) which is a
         // guaranteed no-op on MikuOS (no root) - the Settings rows changed but the DAC stayed on
@@ -302,6 +305,7 @@ object CirrusLogicManager {
         // The real switch (init -> sa_sound_setting/dre_mode). The Global row is what HiBy's
         // AudioService re-applies at boot; the bridge applies it now. See HibyDacBridge.
         runCatching { Settings.Global.putString(cr, "vendor.audio.hiby.dre_mode", sysfsStr) }
+        com.miku.player.profiles.HibyDacBridge.init(ctx)
         com.miku.player.profiles.HibyDacBridge.set(com.miku.player.profiles.HibyDacBridge.PROP_DRE, sysfsStr)
     }
 
@@ -322,6 +326,7 @@ object CirrusLogicManager {
         MikuDirectAudio.pushToHal(ctx, "vendor.audio.hiby.hw.high_power_mode", sysfsStr)
         // The real switch (init -> sa_sound_setting/high_power_mode), live now and at boot.
         runCatching { Settings.Global.putString(cr, "vendor.audio.hiby.high_power", sysfsStr) }
+        com.miku.player.profiles.HibyDacBridge.init(ctx)
         com.miku.player.profiles.HibyDacBridge.set(com.miku.player.profiles.HibyDacBridge.PROP_HIGH_POWER, sysfsStr)
     }
 

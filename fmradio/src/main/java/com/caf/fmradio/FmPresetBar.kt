@@ -75,8 +75,8 @@ fun FmPresetBar(
     if (presets.isEmpty() && predicted.isEmpty()) {
         Row(Modifier.fillMaxWidth().height(56.dp), verticalAlignment = Alignment.CenterVertically) {
             Text(
-                if (!hasPosition) "No presets yet. Tap ☆ to save a station; local stations appear once the device knows where it is."
-                else "No presets yet. Tap ☆ on the dial to save the current station.",
+                if (!hasPosition) "No presets yet. Tap the star to save a station. Local stations show up once the device knows where it is."
+                else "No presets yet. Tap the star on the dial to save the current station.",
                 color = MikuTextSecondary, fontSize = 8.sp, lineHeight = 11.sp,
                 modifier = Modifier.weight(1f).padding(end = 8.dp), maxLines = 3
             )

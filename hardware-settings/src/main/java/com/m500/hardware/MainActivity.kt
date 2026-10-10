@@ -10,6 +10,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -152,13 +153,13 @@ fun HardwareSettingsScreen(onBack: () -> Unit) {
                     // Status reflects what was ACTUALLY probed: the DAC sysfs directory and the
                     // process's privilege. No unconditional "online / active" claims.
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(when (sysfsReachable) { true -> "🟢"; false -> "🟡"; null -> "⚪" }, fontSize = 16.sp)
+                        Box(Modifier.size(10.dp).clip(CircleShape).background(when (sysfsReachable) { true -> Color(0xFF1ABC9C); false -> Color(0xFFF1C40F); null -> HwMuted }))
                         Spacer(Modifier.width(8.dp))
                         Text(
                             when (sysfsReachable) {
                                 null -> "Probing DAC control path…"
                                 true -> if (isRooted) "CS43198 DAC sysfs reachable (privileged)" else "CS43198 DAC sysfs reachable"
-                                false -> "DAC sysfs not readable — Settings.Global fallback"
+                                false -> "DAC sysfs not readable, using Settings.Global"
                             },
                             color = if (sysfsReachable == true) HwMikuTeal else HwMuted,
                             fontSize = 14.sp,
@@ -168,8 +169,8 @@ fun HardwareSettingsScreen(onBack: () -> Unit) {
                     Spacer(Modifier.height(6.dp))
                     Text(
                         when (sysfsReachable) {
-                            true -> "Filter, gain, DRE, output and balance are read from and written to ${CirrusLogicManager.SYSFS_BASE}. Controls below show the value the kernel reports; \"unknown\" means neither the kernel nor Settings.Global answered."
-                            false -> "${CirrusLogicManager.SYSFS_BASE} is not readable by this process; controls show the last value persisted in Settings.Global (vendor.audio.hiby.*) and writes go through the shell path. \"unknown\" means no value has been set."
+                            true -> "Filter, gain, DRE, output and balance are read from and written to ${CirrusLogicManager.SYSFS_BASE}. Controls below show the value the kernel reports. \"unknown\" means neither the kernel nor Settings.Global answered."
+                            false -> "${CirrusLogicManager.SYSFS_BASE} is not readable by this process. Controls show the last value persisted in Settings.Global (vendor.audio.hiby.*) and writes go through the shell path. \"unknown\" means no value has been set."
                             null -> "Reading kernel DAC nodes and HiBy audio settings…"
                         },
                         color = HwMuted,
@@ -181,7 +182,7 @@ fun HardwareSettingsScreen(onBack: () -> Unit) {
 
             // Section 1: Cirrus Logic Dual CS43198 MasterHIFI™ Audio Architecture
             item {
-                HwSettingsSection("Cirrus Logic Dual CS43198 Architecture")
+                HwSettingsSection("Cirrus Logic Dual CS43198 DAC")
 
                 Column(
                     Modifier
@@ -191,7 +192,7 @@ fun HardwareSettingsScreen(onBack: () -> Unit) {
                         .border(1.dp, HwMikuTeal.copy(alpha = 0.2f), RoundedCornerShape(14.dp))
                         .padding(14.dp)
                 ) {
-                    Text("DIGITAL RECONSTRUCTION FILTER", color = HwMikuTeal, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    Text("DIGITAL FILTER", color = HwMikuTeal, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                     Spacer(Modifier.height(8.dp))
 
                     CirrusLogicManager.DigitalFilter.values().forEach { filter ->
@@ -222,7 +223,7 @@ fun HardwareSettingsScreen(onBack: () -> Unit) {
                     }
 
                     Spacer(Modifier.height(14.dp))
-                    Text("ANALOG HEADPHONE GAIN", color = HwMikuTeal, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    Text("HEADPHONE GAIN", color = HwMikuTeal, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                     Spacer(Modifier.height(8.dp))
 
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -271,7 +272,7 @@ fun HardwareSettingsScreen(onBack: () -> Unit) {
 
                     HwSettingsToggleRow(
                         title = "Dynamic Range Enhancement (DRE)",
-                        subtitle = if (csDre == null) "Reading state…" else "Dynamically boosts SNR to 130dB+ for inaudible noise floor",
+                        subtitle = if (csDre == null) "Reading state…" else "Lowers the noise floor at low volume",
                         checked = csDre == true
                     ) { enabled ->
                         csDre = enabled
@@ -279,8 +280,8 @@ fun HardwareSettingsScreen(onBack: () -> Unit) {
                     }
 
                     HwSettingsToggleRow(
-                        title = "Audio Turbo High Power",
-                        subtitle = if (csTurbo == null) "Reading state…" else "Increases current rails for demanding dynamic peaks",
+                        title = "High power mode",
+                        subtitle = if (csTurbo == null) "Reading state…" else "More current for hard-to-drive headphones",
                         checked = csTurbo == true
                     ) { enabled ->
                         csTurbo = enabled
@@ -291,7 +292,7 @@ fun HardwareSettingsScreen(onBack: () -> Unit) {
                     Text(if (csDsdComp == null) "DSD GAIN COMPENSATION (not set)" else "DSD GAIN COMPENSATION", color = HwMikuTeal, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                     Spacer(Modifier.height(8.dp))
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        listOf(0 to "0 dB (Direct)", 6 to "+6 dB (SACD Standard)").forEach { (db, label) ->
+                        listOf(0 to "0 dB (Direct)", 6 to "+6 dB (SACD level)").forEach { (db, label) ->
                             Box(
                                 Modifier
                                     .weight(1f)
@@ -311,7 +312,7 @@ fun HardwareSettingsScreen(onBack: () -> Unit) {
 
                     Spacer(Modifier.height(14.dp))
                     val bal = csBalance
-                    Text("HARDWARE L/R BALANCE (${when { bal == null -> "unknown"; bal.toInt() == 0 -> "Center"; bal > 0 -> "+${bal.toInt()} R"; else -> "${bal.toInt()} L" }})", color = HwMikuTeal, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    Text("L/R BALANCE (${when { bal == null -> "unknown"; bal.toInt() == 0 -> "Center"; bal > 0 -> "+${bal.toInt()} R"; else -> "${bal.toInt()} L" }})", color = HwMikuTeal, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                     Slider(
                         value = bal ?: 0f,
                         enabled = bal != null,
@@ -342,7 +343,7 @@ fun HardwareSettingsScreen(onBack: () -> Unit) {
                 ) {
                     HwSettingsToggleRow(
                         title = "Pocket Lock (Touch & Key Lock)",
-                        subtitle = "Hardware-inhibits touchscreen digitizer and side buttons simultaneously",
+                        subtitle = "Locks the touchscreen and side buttons at the hardware level",
                         checked = isPocket
                     ) { enabled ->
                         val next = if (enabled) "touch_and_key_lock" else "key_lock"
@@ -353,8 +354,8 @@ fun HardwareSettingsScreen(onBack: () -> Unit) {
                     if (isPocket) {
                         Spacer(Modifier.height(8.dp))
                         HwSettingsToggleRow(
-                            title = "Allow Volume Wheel in Pocket",
-                            subtitle = "Keep physical rotary knob active while screen and side buttons are locked",
+                            title = "Volume Wheel Works in Pocket",
+                            subtitle = "Keep the volume wheel working while the screen and side buttons are locked",
                             checked = allowVolumeWheel
                         ) { enabled ->
                             allowVolumeWheel = enabled
@@ -367,7 +368,7 @@ fun HardwareSettingsScreen(onBack: () -> Unit) {
 
             // Section 4: USB DAC UAC2 Bit-Perfect Subsystem
             item {
-                HwSettingsSection("USB DAC (UAC2 Desktop Receiver)")
+                HwSettingsSection("USB DAC (UAC2)")
 
                 Column(
                     Modifier
@@ -457,7 +458,7 @@ fun HardwareSettingsScreen(onBack: () -> Unit) {
 
             // Section 5: Snapdragon 680 Audiophile Governor
             item {
-                HwSettingsSection("Snapdragon 680 Audiophile Governor")
+                HwSettingsSection("CPU Governor")
 
                 Column(
                     Modifier
@@ -472,8 +473,8 @@ fun HardwareSettingsScreen(onBack: () -> Unit) {
                     // normal state here) - so the row claimed the cores were pinned when the
                     // governor had not moved. Now re-read from cpu0/cpufreq/scaling_governor.
                     HwSettingsToggleRow(
-                        title = "Peak Clock Performance Governor",
-                        subtitle = "Sets every CPU core's scaling_governor to \"performance\". Needs root on this build; the switch follows the governor the kernel actually reports.",
+                        title = "Performance Governor",
+                        subtitle = "Sets every CPU core's scaling_governor to \"performance\". Needs root on this build. The switch follows the governor the kernel actually reports.",
                         checked = cpuGovernorOn
                     ) { enabled ->
                         scope.launch {
