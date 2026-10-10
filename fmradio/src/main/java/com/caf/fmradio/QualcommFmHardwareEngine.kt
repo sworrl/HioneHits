@@ -15,6 +15,7 @@ import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.os.Process
+import android.os.SystemClock
 import android.util.Log
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.android.asCoroutineDispatcher
@@ -182,6 +183,11 @@ class QualcommFmHardwareEngine(private val context: Context) {
 
         /** Si4705 RX volume is a 6-bit field, so full scale is 63. */
         private const val SI4705_MAX_VOLUME = 63
+
+        /** Re-arm RDS (poll the node) after this long without a group. */
+        private const val RDS_REARM_MS = 1000L
+        /** Tuned this long without one clean group: report no RDS, while still listening. */
+        private const val RDS_ABSENT_MS = 10_000L
 
         /**
          * The HAL gain stock FM2 sends on this hardware, captured from a live stock session
@@ -536,10 +542,15 @@ class QualcommFmHardwareEngine(private val context: Context) {
         override fun FmRxEvSearchListComplete() {
             Log.i(TAG, "cb: SearchListComplete")
         }
-        override fun FmRxEvStereoStatus(stereo: Boolean) { isStereo.value = stereo }
+        // The next two come from the Qualcomm WCN core, which has no antenna on this board, so
+        // they always report mono and no RDS whatever the Si4705 is receiving. They were the
+        // source of a permanent MONO pill and "No RDS on this station". Stereo now comes from
+        // the Si4705's own pilot report (refreshSignal) and RDS from FmRdsReader.
+        override fun FmRxEvStereoStatus(stereo: Boolean) {
+            Log.d(TAG, "cb: StereoStatus $stereo (WCN core, ignored)")
+        }
         override fun FmRxEvRdsLockStatus(rdsAvail: Boolean) {
-            rdsAvailable.value = rdsAvail
-            if (!rdsAvail) radioText.value = "No RDS on ${mhz(currentFrequencyKHz.value)}"
+            Log.d(TAG, "cb: RdsLockStatus $rdsAvail (WCN core, ignored)")
         }
         override fun FmRxEvRdsPsInfo() {
             val ps = runCatching { receiver?.psInfo }.getOrNull() ?: return
@@ -566,6 +577,8 @@ class QualcommFmHardwareEngine(private val context: Context) {
     private fun onNewStation() {
         updateTunedStation()
         FmRdsReader.newStation()
+        rdsTunedAt = SystemClock.elapsedRealtime()
+        rdsAvailable.value = null
         rdsArtist.value = null
         rdsTitle.value = null
         rdsGroups.value = 0
@@ -1327,6 +1340,7 @@ class QualcommFmHardwareEngine(private val context: Context) {
         val s = FmV4L2.signal() ?: return
         signal.value = s
         s.rssi?.let { rssi.value = it }
+        s.stereo?.let { isStereo.value = it }
         diagnostics.value = diagnostics.value.copy(rssiSi4705 = s.rssi)
         val now = (s.rssi ?: 0).let { (it / SWEEP_RSSI_FULL_SCALE).coerceIn(0f, 1f) }
         histBuf.addFirst(now)
@@ -1503,14 +1517,21 @@ class QualcommFmHardwareEngine(private val context: Context) {
     val rdsGroups = MutableStateFlow(0)
 
     /**
-     * Read RDS straight off /dev/radio0.
+     * Read RDS straight off /dev/radio0, the way HiBy's driver actually serves it.
      *
      * The HCI RDS callbacks belong to the Qualcomm core, which has no antenna on this board, so
-     * they were never going to deliver anything. The Si4705 is the part receiving and HiBy's JNI
-     * exposes no RDS accessor for it, but the device node is mode 0666 and V4L2 drivers that
-     * support RDS deliver it as three-byte blocks. If this driver does not, the read fails and
-     * [rdsSupported] goes false instead of the UI showing a blank station name forever.
+     * they were never going to deliver anything. The Si4705 is the part receiving. Its driver
+     * only switches RDS on from poll(), hands out one whole group per read(), and returns 0 from
+     * read() either way; FmRdsReader has the details. So the loop is: arm, then read until the
+     * chip has nothing, sleep a little, and re-arm whenever groups stop for a second (a retune or
+     * a fade loses sync, and only poll() turns reception back on).
+     *
+     * It runs for as long as the tuner is on. A station with no RDS, or a signal too weak to
+     * carry it, just costs one I2C status read per 80 ms.
      */
+    /** When the current station was tuned, so "no RDS" is timed from the tune, not from power-on. */
+    @Volatile private var rdsTunedAt = 0L
+
     private fun startRdsReader() {
         if (rdsRunning) return
         rdsRunning = true
@@ -1522,60 +1543,63 @@ class QualcommFmHardwareEngine(private val context: Context) {
                 rdsRunning = false
                 return@Thread
             }
-            val buf = ByteArray(3 * 64)
-            var sawAny = false
-            var quietPolls = 0
+            rdsSupported.value = true
+            val buf = ByteArray(FmRdsReader.GROUP_BYTES)
+            rdsTunedAt = SystemClock.elapsedRealtime()
+            var lastGroupAt = 0L
+            var lastArmAt = 0L
             try {
                 while (rdsRunning && isPoweredOn.value) {
-                    val n = FmRdsReader.read(fd, buf)
-                    if (n < 0) break
-                    if (n == 0) {
-                        // The node is non-blocking, so nothing-yet is the common answer. Give a
-                        // driver that never delivers a bounded run rather than spinning on it
-                        // forever: at 120 ms a tuned station's first group arrives well inside
-                        // this, and silence past it means this driver does not do RDS capture.
-                        if (++quietPolls > 250 && !sawAny) {
-                            Log.i(TAG, "no RDS in 30s on a tuned station; this driver does not " +
-                                "appear to support RDS capture")
-                            break
-                        }
-                        Thread.sleep(120)
-                        continue
+                    val now = SystemClock.elapsedRealtime()
+                    if (now - lastGroupAt > RDS_REARM_MS && now - lastArmAt > RDS_REARM_MS) {
+                        FmRdsReader.arm(fd)
+                        lastArmAt = now
                     }
-                    quietPolls = 0
                     var changed = false
-                    var i = 0
-                    while (i + 2 < n) {
-                        if (FmRdsReader.offerBlock(
-                                buf[i].toInt() and 0xFF,
-                                buf[i + 1].toInt() and 0xFF,
-                                buf[i + 2].toInt() and 0xFF)) changed = true
-                        i += 3
+                    var drained = 0
+                    // The chip's FIFO holds a handful of groups; empty it, then rest.
+                    while (drained < 16 && FmRdsReader.readGroup(fd, buf)) {
+                        drained++
+                        if (FmRdsReader.offerGroup(buf)) changed = true
                     }
-                    if (changed) {
-                        if (!sawAny) { sawAny = true; FmRdsReader.markAvailable(); rdsSupported.value = true }
-                        publishRds()
+                    if (drained > 0) {
+                        lastGroupAt = now
+                        rdsGroups.value = FmRdsReader.state.groups
+                        rdsAvailable.value = true
+                    } else if (now - maxOf(lastGroupAt, rdsTunedAt) > RDS_ABSENT_MS &&
+                        rdsAvailable.value != false && FmRdsReader.state.groups == 0) {
+                        // Ten seconds tuned with not one clean group: say so, but keep listening,
+                        // because the signal can come up.
+                        rdsAvailable.value = false
                     }
+                    if (changed) publishRds()
+                    Thread.sleep(if (drained > 0) 40 else 80)
                 }
+            } catch (_: InterruptedException) {
+            } catch (e: android.system.ErrnoException) {
+                Log.w(TAG, "RDS read failed: ${android.system.OsConstants.errnoName(e.errno)}")
             } finally {
                 FmRdsReader.close(fd)
                 rdsRunning = false
-                if (!sawAny && rdsSupported.value == null) rdsSupported.value = false
-                Log.i(TAG, "RDS reader stopped (decoded ${FmRdsReader.state.groups} group(s))")
+                Log.i(TAG, "RDS reader stopped (${FmRdsReader.state.groups} group(s), " +
+                    "whole=${FmRdsReader.wholeGroups})")
             }
         }, "MikuFmRdsReader").apply { isDaemon = true; start() }
     }
 
     private fun publishRds() {
         val r = FmRdsReader.state
-        rdsGroups.value = r.groups
-        if (r.ps.isNotEmpty()) stationName.value = r.ps
+        when {
+            r.ps.isNotEmpty() -> stationName.value = r.ps
+            // No PS yet (or a driver that cannot deliver it): the call letters are in the PI
+            // code itself, so the station can still be named by what it actually transmits.
+            r.callSign != null && stationName.value.isEmpty() -> stationName.value = r.callSign
+        }
         if (r.rt.isNotEmpty()) radioText.value = r.rt
         r.pty?.let { if (it > 0) programmeType.value = it }
         r.pi?.let { if (it != 0) programmeId.value = it }
         rdsArtist.value = r.rtPlusArtist
         rdsTitle.value = r.rtPlusTitle
-        rdsAvailable.value = r.groups > 0
     }
 
     private fun stopRdsReader() {

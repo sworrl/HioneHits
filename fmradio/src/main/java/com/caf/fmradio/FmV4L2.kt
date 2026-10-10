@@ -88,6 +88,12 @@ object FmV4L2 {
      * One signal reading straight off the tuner. Element order is stock FM2's own labelling of
      * the same array; anything the array is too short to contain comes back null rather than 0,
      * because 0 is a legitimate value for most of these.
+     *
+     * Element 6 is NOT what stock calls it. The stock driver put FM_RSQ_STATUS's VALID bit
+     * there; MikuOS's patched driver (mikuos/build/patch_si4705_rds.py) puts the chip's stereo
+     * report there instead, as `pilot << 3 | STBLEND / 16`, because the stock driver reads
+     * the pilot and blend and then throws them away, leaving nothing in userspace that can
+     * tell stereo from mono.
      */
     data class Reading(
         val signal: Int?,
@@ -96,9 +102,21 @@ object FmV4L2 {
         val multipath: Int?,
         val freqOffset: Int?,
         val freqKHz: Int?,
-        val valid: Boolean?,
+        /** A stereo pilot is present on this carrier. Says the station is stereo, not that we are. */
+        val pilot: Boolean?,
+        /**
+         * How far the chip has blended toward stereo, 0 (full mono) to 100 (full stereo), to
+         * the nearest 16 %. This is the one that answers "am I hearing stereo".
+         */
+        val stereoBlendPct: Int?,
     ) {
-        companion object { val EMPTY = Reading(null, null, null, null, null, null, null) }
+        /** Locked, by the driver's own test for it (its audmode): any RSSI and a nonzero SNR. */
+        val valid: Boolean? get() = if (rssi == null || snr == null) null else rssi > 1 && snr != 0
+
+        /** Stereo as heard: pilot present and the blend more than half way to stereo. */
+        val stereo: Boolean? get() = if (pilot == null) null else pilot && (stereoBlendPct ?: 0) >= 50
+
+        companion object { val EMPTY = Reading(null, null, null, null, null, null, null, null) }
     }
 
     fun signal(): Reading? = guard("getV4L2RadioFmSignal") {
@@ -111,7 +129,9 @@ object FmV4L2 {
             multipath = at(3),
             freqOffset = at(4),
             freqKHz = at(5)?.let { if (it > 0) it / 16 else null },
-            valid = at(6)?.let { it != 0 },
+            pilot = at(6)?.let { it and 0x8 != 0 },
+            // Three bits of STBLEND's seven; 6 is the top step (96-100 %), so call it 100.
+            stereoBlendPct = at(6)?.let { ((it and 0x7) * 16).let { p -> if (p >= 96) 100 else p } },
         )
     }
 }

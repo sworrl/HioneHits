@@ -169,7 +169,12 @@ private fun FmSignalPills(st: FmState) {
             s.valid == true
         )
         CyberChip(
-            when (st.isStereo) { true -> "STEREO"; false -> "MONO"; null -> "MONO ?" },
+            when {
+                st.isStereo == true -> "STEREO ${s.stereoBlendPct ?: 100}%"
+                s.pilot == true -> "PILOT · ${s.stereoBlendPct ?: 0}%"
+                st.isStereo == false -> "MONO"
+                else -> "STEREO ?"
+            },
             st.isStereo == true, MikuPurple
         )
         CyberChip(
