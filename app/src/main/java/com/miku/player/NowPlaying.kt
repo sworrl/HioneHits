@@ -1212,30 +1212,9 @@ private fun StageVisualizer(
 @Composable
 fun MikuConnectModal(context: android.content.Context, onClose: () -> Unit) {
     androidx.activity.compose.BackHandler(onBack = onClose)
-    // Real Wi-Fi IPv4 or null — never a made-up address the user could try to open.
-    val ip = remember {
-        try {
-            val wm = context.applicationContext.getSystemService(android.content.Context.WIFI_SERVICE) as? android.net.wifi.WifiManager
-            val raw = wm?.connectionInfo?.ipAddress ?: 0
-            if (raw != 0) {
-                String.format(
-                    java.util.Locale.US,
-                    "%d.%d.%d.%d",
-                    raw and 0xff,
-                    raw shr 8 and 0xff,
-                    raw shr 16 and 0xff,
-                    raw shr 24 and 0xff
-                )
-            } else null
-        } catch (_: Throwable) { null }
-    }
-    val port = remember { com.miku.player.api.MikuApiSecurity.getApiPort(context) }
-    // Real server state, polled while the sheet is open.
-    var serverUp by remember { mutableStateOf(com.miku.player.api.MikuApiServer.isServerRunning()) }
-    LaunchedEffect(Unit) { while (true) { serverUp = com.miku.player.api.MikuApiServer.isServerRunning(); delay(1500) } }
-
-    val remoteUrl = if (ip != null) "http://$ip:$port" else "No Wi-Fi address. Connect to Wi-Fi first."
-    val tvUrl = if (ip != null) "http://$ip:$port/tv" else "No Wi-Fi address. Connect to Wi-Fi first."
+    // Status dot = the API server's real running state (green up / grey down).
+    val apiState by com.miku.player.api.MikuApiServer.state.collectAsState()
+    val serverUp = apiState.running
 
     Box(
         Modifier
@@ -1287,7 +1266,7 @@ fun MikuConnectModal(context: android.content.Context, onClose: () -> Unit) {
             }
 
             Text(
-                "Control playback from a phone or play on a TV.",
+                "Control playback from a phone or play on a TV. Both are off until you turn them on here.",
                 color = Muted,
                 fontSize = 11.5.sp,
                 modifier = Modifier.padding(vertical = 4.dp)
@@ -1295,58 +1274,9 @@ fun MikuConnectModal(context: android.content.Context, onClose: () -> Unit) {
 
             Spacer(Modifier.height(12.dp))
 
-            // Card 1: Mobile Remote
-            Column(
-                Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(Color(0xFF08202D))
-                    .border(1.dp, MikuTeal.copy(alpha = 0.4f), RoundedCornerShape(12.dp))
-                    .padding(12.dp)
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.PhoneAndroid, null, tint = MikuTeal, modifier = Modifier.size(18.dp))
-                    Spacer(Modifier.width(8.dp))
-                    Text("PHONE / WEB REMOTE", color = MikuTealBright, fontSize = 12.sp, fontWeight = FontWeight.Bold, fontFamily = AudiowideFont)
-                }
-                Spacer(Modifier.height(4.dp))
-                Text(remoteUrl, color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
-                Text("Open on your phone or laptop browser to control playback, adjust volume, and view queue.", color = Muted, fontSize = 11.sp)
-            }
-
-            Spacer(Modifier.height(10.dp))
-
-            // Card 2: TV Big Screen
-            Column(
-                Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(Color(0xFF08202D))
-                    .border(1.dp, MikuPink.copy(alpha = 0.4f), RoundedCornerShape(12.dp))
-                    .padding(12.dp)
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.Tv, null, tint = MikuPink, modifier = Modifier.size(18.dp))
-                    Spacer(Modifier.width(8.dp))
-                    Text("TV", color = MikuPink, fontSize = 12.sp, fontWeight = FontWeight.Bold, fontFamily = AudiowideFont)
-                }
-                Spacer(Modifier.height(4.dp))
-                Text(tvUrl, color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
-                Text("Open this in your TV's browser to show album art and a live spectrum, and to play audio through the TV.", color = Muted, fontSize = 11.sp)
-            }
-
-            Spacer(Modifier.height(14.dp))
-
-            Row(
-                Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.End
-            ) {
-                Text(
-                    if (serverUp) "Port $port · server running" else "Port $port · server not running",
-                    color = MikuTeal.copy(alpha = 0.75f),
-                    fontSize = 10.5.sp,
-                    fontFamily = AudiowideFont
-                )
+            // The same card as Settings, Wi-Fi Remote: on/off, pairing code and QR, TV cast.
+            Column(Modifier.verticalScroll(rememberScrollState())) {
+                com.miku.player.api.MikuApiSettingsCard(context)
             }
         }
     }

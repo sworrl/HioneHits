@@ -94,8 +94,33 @@ fun HardwareSettingsScreen(onBack: () -> Unit) {
     var usbDacRate by remember { mutableStateOf<Int?>(UsbDacManager.getSampleRateOrNull(ctx)) }
     var usbDacBits by remember { mutableStateOf<Int?>(UsbDacManager.getBitDepthOrNull(ctx)) }
 
-    // CPU Performance
-    var cpuGovernorOn by remember { mutableStateOf(CpuPerformance.isEnabled(ctx)) }
+    // CPU power profile: the Settings.Global row, the charger, and the caps the kernel reports.
+    var cpuProfile by remember { mutableStateOf(CpuPerformance.current(ctx)) }
+    var cpuCharging by remember { mutableStateOf(CpuPerformance.isCharging(ctx)) }
+    var cpuCaps by remember { mutableStateOf(CpuPerformance.caps()) }
+    var cpuProblem by remember { mutableStateOf<String?>(null) }
+
+    // init applies the caps in the background after sysbridge sets the property, so read the
+    // caps again a moment later as well.
+    suspend fun reloadCpu() {
+        repeat(3) { n ->
+            withContext(Dispatchers.IO) {
+                cpuProfile = CpuPerformance.current(ctx)
+                cpuCharging = CpuPerformance.isCharging(ctx)
+                cpuCaps = CpuPerformance.caps()
+            }
+            if (n < 2) kotlinx.coroutines.delay(if (n == 0) 400L else 1200L)
+        }
+    }
+
+    // Miku Music changes the profile on its own (playback, screen, charger).
+    DisposableEffect(Unit) {
+        val obs = object : android.database.ContentObserver(android.os.Handler(android.os.Looper.getMainLooper())) {
+            override fun onChange(selfChange: Boolean) { scope.launch { reloadCpu() } }
+        }
+        runCatching { ctx.contentResolver.registerContentObserver(Settings.Global.getUriFor(CpuPerformance.KEY_PROFILE), false, obs) }
+        onDispose { runCatching { ctx.contentResolver.unregisterContentObserver(obs) } }
+    }
 
     // Re-read the four live knobs. Runs after every set, so a control that did not apply snaps
     // back to what the DAC actually has.
@@ -513,9 +538,9 @@ fun HardwareSettingsScreen(onBack: () -> Unit) {
                 }
             }
 
-            // Section 5: Snapdragon 680 Audiophile Governor
+            // Section 5: CPU power profile (no root: Settings.Global -> sysbridge -> miku_powerd.rc)
             item {
-                HwSettingsSection("CPU Governor")
+                HwSettingsSection("CPU Power Profile")
 
                 Column(
                     Modifier
@@ -525,20 +550,54 @@ fun HardwareSettingsScreen(onBack: () -> Unit) {
                         .border(1.dp, HwMikuTeal.copy(alpha = 0.2f), RoundedCornerShape(14.dp))
                         .padding(14.dp)
                 ) {
-                    // Was optimistic: the switch was set from the tap and never re-checked, while
-                    // CpuPerformance.setEnabled() returns immediately when there is no su (the
-                    // normal state here) - so the row claimed the cores were pinned when the
-                    // governor had not moved. Now re-read from cpu0/cpufreq/scaling_governor.
-                    HwSettingsToggleRow(
-                        title = "Performance Governor",
-                        subtitle = "Sets every CPU core's scaling_governor to \"performance\". Needs root on this build. The switch follows the governor the kernel actually reports.",
-                        checked = cpuGovernorOn
-                    ) { enabled ->
-                        scope.launch {
-                            CpuPerformance.setEnabled(ctx, enabled)
-                            cpuGovernorOn = withContext(Dispatchers.IO) { CpuPerformance.isEnabled(ctx) }
+                    val effective = CpuPerformance.effective(cpuProfile, cpuCharging)
+                    val nowLine = when {
+                        cpuProfile == null -> "Now: not set, runs as Balanced"
+                        effective != cpuProfile -> "Now: ${CpuPerformance.label(cpuProfile)}, running as Balanced while charging"
+                        else -> "Now: ${CpuPerformance.label(cpuProfile)}"
+                    }
+                    Text(nowLine, color = Color.White, fontSize = 13.5.sp, fontWeight = FontWeight.SemiBold)
+                    Text(
+                        "Max speed: little cores ${CpuPerformance.formatKhz(cpuCaps.first)}, big cores ${CpuPerformance.formatKhz(cpuCaps.second)}",
+                        color = HwMuted, fontSize = 11.5.sp, lineHeight = 15.sp
+                    )
+                    Spacer(Modifier.height(10.dp))
+
+                    CpuPerformance.PROFILES.forEach { p ->
+                        val selected = cpuProfile == p.id
+                        Row(
+                            Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 3.dp)
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(if (selected) HwMikuTeal.copy(alpha = 0.18f) else HwSurface2)
+                                .border(1.dp, if (selected) HwMikuTeal else Color.Transparent, RoundedCornerShape(8.dp))
+                                .clickable {
+                                    scope.launch {
+                                        val ok = withContext(Dispatchers.IO) { CpuPerformance.set(ctx, p.id) }
+                                        cpuProblem = if (ok) null else "The profile was not changed."
+                                        reloadCpu()
+                                    }
+                                }
+                                .padding(horizontal = 12.dp, vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(Modifier.weight(1f)) {
+                                Text(p.label, color = if (selected) HwMikuTeal else Color.White, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                                Text(p.summary, color = HwMuted, fontSize = 11.sp, lineHeight = 14.sp)
+                            }
                         }
                     }
+
+                    cpuProblem?.let {
+                        Spacer(Modifier.height(6.dp))
+                        Text(it, color = HwMikuPink, fontSize = 11.5.sp)
+                    }
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        "Miku Music picks a profile on its own when playback, the screen or the charger changes, so a choice here lasts until then. While charging, Audio only and Idle run as Balanced.",
+                        color = HwMuted, fontSize = 11.sp, lineHeight = 14.sp
+                    )
                 }
             }
             item { Spacer(Modifier.height(24.dp)) }

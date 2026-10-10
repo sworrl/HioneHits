@@ -46,7 +46,7 @@ import kotlinx.coroutines.withContext
  *  - play: power the tuner on (or unmute it if a focus loss muted it)
  *  - pause / stop: power it off, the same as the power button
  *  - next / previous: next or previous preset, or a hardware seek when there are no presets
- *  - custom actions: seek up and seek down
+ *  - custom actions: seek up and seek down, and add or remove a preset (MikuPod, Riot mode, the car)
  *  - play from media id: tune to that frequency, powering on if needed
  *  - play from search: a frequency ("101.1") or anything the station catalogue matches
  *
@@ -64,6 +64,19 @@ object FmMediaSession {
 
     private const val ACTION_SEEK_UP = "com.caf.fmradio.media.SEEK_UP"
     private const val ACTION_SEEK_DOWN = "com.caf.fmradio.media.SEEK_DOWN"
+
+    /**
+     * Add or remove a preset, in the same store the tuner screen's star uses. Offered whether or
+     * not the tuner is on, so MikuPod and Riot mode can tell this FM app takes presets from them.
+     *
+     * Extras (both optional):
+     *  - [EXTRA_KHZ] (int): the frequency. Without it, the tuned frequency.
+     *  - [EXTRA_ADD] (boolean): true adds, false removes, and either is a no-op when the preset
+     *    is already that way. Without it, the frequency is toggled.
+     */
+    const val ACTION_TOGGLE_FAVORITE = "com.caf.fmradio.media.TOGGLE_FAVORITE"
+    const val EXTRA_KHZ = "khz"
+    const val EXTRA_ADD = "add"
 
     /** Enough for a car screen. Each item carries a small bitmap over binder. */
     private const val MAX_NEARBY = 40
@@ -103,6 +116,8 @@ object FmMediaSession {
         val ps: String, val radioText: String?, val rtArtist: String?, val rtTitle: String?,
         val ptyName: String?, val stereo: Boolean?, val rssi: Int?,
         val songTitle: String?, val songArtist: String?, val songStatus: String,
+        /** Presets in kHz, sorted. A change republishes the state (extras and the star action). */
+        val presets: List<Int>,
     ) {
         /** What the metadata (and its art tile) is built from; extras-only changes skip it. */
         val metaKey: List<Any?> get() = listOf(khz, title, subtitle, detail, call, genre)
@@ -122,6 +137,8 @@ object FmMediaSession {
     const val EXTRA_SONGID_ARTIST = "com.caf.fmradio.extra.SONGID_ARTIST"
     /** "idle", "listening", "matching", "found", "not found", "unavailable", or the failure in words. */
     const val EXTRA_SONGID_STATUS = "com.caf.fmradio.extra.SONGID_STATUS"
+    /** IntArray, kHz, sorted: the presets, the same list as the browse tree's Presets folder. */
+    const val EXTRA_PRESETS = "com.caf.fmradio.extra.PRESETS"
     private const val RSSI_MIN_INTERVAL_MS = 1000L
 
     private var rssiShown: Int? = null
@@ -233,6 +250,7 @@ object FmMediaSession {
             ptyName = FmRadioManager.programmeTypeName(st.programmeType, st.band),
             stereo = st.isStereo, rssi = if (st.isPowerOn) rssiShown else null,
             songTitle = sid.match?.title, songArtist = sid.match?.artist, songStatus = songStatus,
+            presets = st.favorites.distinct().sorted(),
         )
     }
 
@@ -267,7 +285,17 @@ object FmMediaSession {
             v.songTitle?.let { putString(EXTRA_SONGID_TITLE, it) }
             v.songArtist?.let { putString(EXTRA_SONGID_ARTIST, it) }
             putString(EXTRA_SONGID_STATUS, v.songStatus)
+            putIntArray(EXTRA_PRESETS, v.presets.toIntArray())
         })
+        // Always offered: it only edits the preset list, which needs no tuner.
+        val starred = v.khz in v.presets
+        pb.addCustomAction(
+            PlaybackState.CustomAction.Builder(
+                ACTION_TOGGLE_FAVORITE,
+                if (starred) "Remove from presets" else "Add to presets",
+                if (starred) R.drawable.ic_fm_star else R.drawable.ic_fm_star_border,
+            ).build()
+        )
         // Seeking needs the chip up; offering it before then would do nothing.
         if (v.online) {
             pb.addCustomAction(
@@ -337,8 +365,29 @@ object FmMediaSession {
             when (action) {
                 ACTION_SEEK_UP -> FmRadioManager.seek(true)
                 ACTION_SEEK_DOWN -> FmRadioManager.seek(false)
+                ACTION_TOGGLE_FAVORITE -> setFavorite(extras)
             }
         }
+    }
+
+    /**
+     * See [ACTION_TOGGLE_FAVORITE]. Reads the engine's own list rather than [FmRadioManager.state],
+     * which trails it by a main-thread hop, so a burst of adds (a client handing over its
+     * favorites) cannot read a stale list and undo one of its own.
+     */
+    private fun setFavorite(extras: Bundle?) {
+        val a = ctx() ?: return
+        val eng = FmRadioManager.ensure(a)
+        val khz = extras?.takeIf { it.containsKey(EXTRA_KHZ) }?.getInt(EXTRA_KHZ)
+            ?: FmRadioManager.state.value.frequencyKHz
+        if (khz !in QualcommFmHardwareEngine.CHIP_LOW_KHZ..QualcommFmHardwareEngine.CHIP_HIGH_KHZ) {
+            Log.w(TAG, "preset $khz kHz is outside what the chip tunes, ignored")
+            return
+        }
+        val has = khz in eng.presets.value
+        val want = if (extras?.containsKey(EXTRA_ADD) == true) extras.getBoolean(EXTRA_ADD) else !has
+        if (want != has) FmRadioManager.togglePreset(khz)
+        Log.i(TAG, "preset $khz kHz ${if (want) "on" else "off"} (from a session client)")
     }
 
     private fun ctx(): Context? = app

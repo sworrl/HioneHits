@@ -235,6 +235,10 @@ class RiotPrefs(ctx: Context) {
     var presetsSeeded: Boolean
         get() = p.getBoolean("presets_seeded", false)
         set(v) = p.edit().putBoolean("presets_seeded", v).apply()
+    /** Set once every slot has shown up in the FM app's presets (an FM app that takes them). */
+    var presetsSynced: Boolean
+        get() = p.getBoolean("presets_synced", false)
+        set(v) = p.edit().putBoolean("presets_synced", v).apply()
 
     fun playlists(): MutableList<Playlist> = runCatching {
         val a = JSONArray(p.getString("playlists", "[]"))

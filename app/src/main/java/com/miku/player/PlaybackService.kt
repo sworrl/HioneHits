@@ -43,14 +43,9 @@ class PlaybackService : MediaLibraryService() {
             android.util.Log.e("PlaybackService", "Failed to start MikuApiServer", e)
         }
 
-        // Listen for a TV companion. Starting the listener costs a socket and nothing else: the
-        // PCM tap stays switched off, and therefore free, until a TV actually connects. Started
-        // here rather than from an Activity so a cast survives the UI being swiped away.
-        try {
-            com.miku.player.cast.MikuCastServer.start(this)
-        } catch (e: Throwable) {
-            android.util.Log.e("PlaybackService", "Failed to start MikuCastServer", e)
-        }
+        // The TV cast listener is NOT started here any more. It runs only while the user has
+        // casting turned on (Settings, Wi-Fi Remote) and stops itself after 15 minutes with no
+        // TV. It lives in the process, not the Activity, so a cast still survives a swipe-away.
 
         // Feed the TV now-playing metadata and act on the transport it sends back.
         com.miku.player.cast.MikuCastBridge.attach(this)
@@ -121,6 +116,7 @@ class PlaybackService : MediaLibraryService() {
             try {
                 com.miku.player.api.MikuApiServer.stop(this)
             } catch (_: Throwable) {}
+            try { com.miku.player.cast.MikuCastServer.stop(this) } catch (_: Throwable) {}
             // Swipe-away with nothing playing also parks the BLE phone remote (its Settings
             // toggle stays on, so it re-arms on next launch via startIfEnabled).
             try { com.miku.player.remote.MikuRemoteGattService.stop(this) } catch (_: Throwable) {}

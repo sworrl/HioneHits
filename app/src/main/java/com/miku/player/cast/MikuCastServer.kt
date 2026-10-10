@@ -14,8 +14,11 @@ import kotlinx.coroutines.launch
 import org.json.JSONObject
 import java.io.DataInputStream
 import java.io.OutputStream
+import java.io.InputStream
+import java.net.InetSocketAddress
 import java.net.ServerSocket
 import java.net.Socket
+import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicLong
 
 /**
@@ -35,6 +38,11 @@ import java.util.concurrent.atomic.AtomicLong
  * this reads from it at its own pace. If the network cannot keep up the ring overruns, the tap
  * drops the OLDEST audio, and we send a SKIP frame so the TV can resync rather than drift. A
  * mirror that silently falls behind is worse than one that admits a gap.
+ *
+ * ACCESS. The listener runs only while the user has casting turned on (Settings, Wi-Fi Remote),
+ * binds only to the Wi-Fi address, and stops by itself after [IDLE_STOP_MS] with no TV. A TV
+ * must pass the [MikuCastProtocol.TYPE_AUTH] handshake ([MikuCastAuth]) before it gets a single
+ * byte of audio, and an unauthenticated connection can't displace the TV that is playing.
  */
 object MikuCastServer {
 
@@ -42,6 +50,15 @@ object MikuCastServer {
 
     /** Read chunk. ~21ms at 24/96 stereo: small enough to stay responsive, large enough to be cheap. */
     private const val CHUNK = 12 * 1024
+
+    /** Stop listening after this long with no TV attached. */
+    private const val IDLE_STOP_MS = 15 * 60_000L
+    private const val AUTH_TIMEOUT_MS = 10_000
+    private const val MAX_PENDING = 4
+    private val pending = AtomicInteger(0)
+    private var watchdog: Job? = null
+    private var netCallback: android.net.ConnectivityManager.NetworkCallback? = null
+    @Volatile private var boundIp: String = ""
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private var acceptJob: Job? = null
@@ -55,8 +72,12 @@ object MikuCastServer {
     val bytesSent = AtomicLong(0L)
 
     data class CastState(
+        /** The user turned casting on. The listener may still be waiting for Wi-Fi. */
+        val active: Boolean = false,
         val listening: Boolean = false,
+        val address: String = "",
         val clientAddress: String = "",
+        val clientLabel: String = "",
         val connected: Boolean = false,
         val lastError: String = "",
     )
@@ -68,34 +89,89 @@ object MikuCastServer {
     private val _commands = MutableStateFlow<JSONObject?>(null)
     val commands: StateFlow<JSONObject?> = _commands
 
+    /** Turn casting on: listen on the Wi-Fi address and show a fresh TV pairing code. */
     @Synchronized
     fun start(ctx: Context) {
-        if (acceptJob?.isActive == true) return
+        if (_state.value.active) return
         val app = ctx.applicationContext
-        acceptJob = scope.launch {
-            try {
-                val s = ServerSocket(MikuCastProtocol.PORT)
-                s.reuseAddress = true
-                server = s
-                _state.value = _state.value.copy(listening = true, lastError = "")
-                Log.i(TAG, "listening on ${MikuCastProtocol.PORT}")
-                advertise(app)
-                while (!s.isClosed) {
-                    val sock = try { s.accept() } catch (t: Throwable) { break }
-                    handleClient(sock)
+        if (MikuCastAuth.serverId(app) == null) {
+            _state.value = CastState(lastError = "Secure storage unavailable")
+            return
+        }
+        MikuCastAuth.newCode()
+        _state.value = CastState(active = true)
+        netCallback = com.miku.player.api.MikuLanBinding.watch(app) { rebindIfChanged(app) }
+        listen(app)
+        watchdog = scope.launch {
+            var idleSince = System.currentTimeMillis()
+            while (true) {
+                kotlinx.coroutines.delay(30_000)
+                if (_state.value.connected) idleSince = System.currentTimeMillis()
+                else if (System.currentTimeMillis() - idleSince > IDLE_STOP_MS) {
+                    Log.i(TAG, "no TV for ${IDLE_STOP_MS / 60_000} min, stopping cast")
+                    stop(app)
+                    _state.value = _state.value.copy(lastError = "Casting turned off after 15 minutes with no TV")
+                    break
                 }
-            } catch (t: Throwable) {
-                Log.w(TAG, "server failed: ${t.javaClass.simpleName}: ${t.message}")
-                _state.value = _state.value.copy(
-                    listening = false,
-                    lastError = t.localizedMessage ?: t.javaClass.simpleName
-                )
             }
         }
     }
 
     @Synchronized
-    fun stop() {
+    private fun rebindIfChanged(app: Context) {
+        if (!_state.value.active) return
+        val ip = com.miku.player.api.MikuLanBinding.wifiIpv4(app)?.hostAddress ?: ""
+        if (ip != boundIp) {
+            Log.i(TAG, "Wi-Fi address changed ($boundIp -> $ip), rebinding")
+            listen(app)
+        }
+    }
+
+    @Synchronized
+    private fun listen(app: Context) {
+        runCatching { server?.close() }
+        withdraw()
+        acceptJob?.cancel()
+        server = null
+        val wifi = com.miku.player.api.MikuLanBinding.wifiIpv4(app)
+        boundIp = wifi?.hostAddress ?: ""
+        if (wifi == null) {
+            _state.value = _state.value.copy(listening = false, address = "", lastError = "Waiting for Wi-Fi")
+            return
+        }
+        val s = try {
+            ServerSocket().apply { reuseAddress = true; bind(InetSocketAddress(wifi, MikuCastProtocol.PORT), 8) }
+        } catch (t: Throwable) {
+            Log.w(TAG, "server failed: ${t.javaClass.simpleName}: ${t.message}")
+            _state.value = _state.value.copy(listening = false, lastError = t.localizedMessage ?: t.javaClass.simpleName)
+            return
+        }
+        server = s
+        _state.value = _state.value.copy(listening = true, address = boundIp, lastError = "")
+        Log.i(TAG, "listening on $boundIp:${MikuCastProtocol.PORT}")
+        advertise(app)
+        acceptJob = scope.launch {
+            while (!s.isClosed) {
+                val sock = try { s.accept() } catch (t: Throwable) { break }
+                if (pending.incrementAndGet() > MAX_PENDING) {
+                    pending.decrementAndGet()
+                    runCatching { sock.close() }
+                    continue
+                }
+                scope.launch {
+                    try { authenticate(app, sock) } finally { pending.decrementAndGet() }
+                }
+            }
+        }
+    }
+
+    /** Turn casting off: drop the TV, close the listener, withdraw the mDNS record. */
+    @Synchronized
+    fun stop(ctx: Context? = null) {
+        ctx?.let { com.miku.player.api.MikuLanBinding.unwatch(it, netCallback) }
+        netCallback = null
+        watchdog?.cancel()
+        watchdog = null
         runCatching { client?.close() }
         runCatching { server?.close() }
         withdraw()
@@ -104,12 +180,65 @@ object MikuCastServer {
         server = null
         client = null
         clientOut = null
+        boundIp = ""
         MikuCastTap.setEnabled(false)
+        MikuCastAuth.clearCode()
         _state.value = CastState()
         Log.i(TAG, "stopped")
     }
 
-    private fun handleClient(sock: Socket) {
+    /** The handshake. Nothing but AUTH frames cross this socket until it succeeds. */
+    private fun authenticate(app: Context, sock: Socket) {
+        val ip = sock.inetAddress?.hostAddress ?: "?"
+        try {
+            if (com.miku.player.api.MikuApiSecurity.isBlocked(ip)) { sock.close(); return }
+            sock.soTimeout = AUTH_TIMEOUT_MS
+            val out = sock.getOutputStream()
+            val challenge = MikuCastAuth.challenge()
+            val hello = org.json.JSONObject()
+                .put("v", 1).put("server", MikuCastAuth.serverId(app) ?: "").put("challenge", challenge)
+                .toString().toByteArray()
+            out.write(MikuCastProtocol.header(MikuCastProtocol.TYPE_AUTH, hello.size)); out.write(hello); out.flush()
+
+            val msg = readAuthFrame(sock.getInputStream())
+            if (msg == null) {
+                com.miku.player.api.MikuApiSecurity.recordFailure(ip)
+                sock.close(); return
+            }
+            when (val v = MikuCastAuth.verify(app, msg, challenge)) {
+                is MikuCastAuth.Verdict.Ok -> {
+                    val reply = v.reply.toString().toByteArray()
+                    out.write(MikuCastProtocol.header(MikuCastProtocol.TYPE_AUTH, reply.size)); out.write(reply); out.flush()
+                    handleClient(sock, v.tvLabel)
+                }
+                is MikuCastAuth.Verdict.Refused -> {
+                    if (v.countsAsFailure) com.miku.player.api.MikuApiSecurity.recordFailure(ip)
+                    Log.w(TAG, "refused cast client $ip: ${v.reply.optString("error")}")
+                    val reply = v.reply.toString().toByteArray()
+                    runCatching { out.write(MikuCastProtocol.header(MikuCastProtocol.TYPE_AUTH, reply.size)); out.write(reply); out.flush() }
+                    sock.close()
+                }
+            }
+        } catch (t: Throwable) {
+            Log.i(TAG, "handshake with $ip failed: ${t.javaClass.simpleName}")
+            com.miku.player.api.MikuApiSecurity.recordFailure(ip)
+            runCatching { sock.close() }
+        }
+    }
+
+    private fun readAuthFrame(input: InputStream): org.json.JSONObject? {
+        val din = DataInputStream(input)
+        val head = ByteArray(MikuCastProtocol.HEADER_SIZE)
+        din.readFully(head)
+        if (!MikuCastProtocol.magicMatches(head) || head[4] != MikuCastProtocol.TYPE_AUTH) return null
+        val len = MikuCastProtocol.lengthOf(head)
+        if (len <= 0 || len > 4096) return null
+        val b = ByteArray(len)
+        din.readFully(b)
+        return runCatching { org.json.JSONObject(String(b, Charsets.UTF_8)) }.getOrNull()
+    }
+
+    private fun handleClient(sock: Socket, label: String) {
         // One client: displace any existing one so the newest TV wins, and say so rather than
         // leaving the old one silently dead.
         runCatching { client?.close() }
@@ -120,7 +249,7 @@ object MikuCastServer {
         client = sock
         clientOut = sock.getOutputStream()
         val who = sock.inetAddress?.hostAddress ?: "?"
-        _state.value = _state.value.copy(connected = true, clientAddress = who)
+        _state.value = _state.value.copy(connected = true, clientAddress = who, clientLabel = label)
         Log.i(TAG, "TV connected from $who")
 
         MikuCastTap.setEnabled(true)
@@ -220,7 +349,7 @@ object MikuCastServer {
         client = null
         clientOut = null
         MikuCastTap.setEnabled(false)
-        _state.value = _state.value.copy(connected = false, clientAddress = "")
+        _state.value = _state.value.copy(connected = false, clientAddress = "", clientLabel = "")
         Log.i(TAG, "TV disconnected")
     }
 

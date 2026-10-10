@@ -62,6 +62,21 @@ object MikuCastProtocol {
      */
     const val TYPE_SKIP: Byte = 6
 
+    /**
+     * Both directions, before anything else: the pairing and auth handshake. Nothing else is sent
+     * or accepted until it succeeds.
+     *
+     *     M500 to TV   {"v":1,"server":"<id>","challenge":"<64 hex>"}
+     *     TV to M500   {"id":"<tv id>","mac":"<hex HMAC-SHA256(tv token, challenge)>"}   paired TV
+     *                  {"code":"123456","name":"<label>"}                                  first time
+     *     M500 to TV   {"ok":true}  or  {"ok":true,"id":"..","token":".."} after a code
+     *                  {"ok":false,"error":"bad-code|locked|unknown-tv|no-code"}, then close
+     *
+     * A paired TV never sends its token, only an HMAC over a fresh challenge, so a recorded
+     * session can't be replayed. The token itself crosses the network once, at code pairing.
+     */
+    const val TYPE_AUTH: Byte = 7
+
     fun header(type: Byte, length: Int): ByteArray {
         val h = ByteArray(HEADER_SIZE)
         System.arraycopy(MAGIC, 0, h, 0, 4)

@@ -4,239 +4,256 @@ import android.content.Context
 import android.content.SharedPreferences
 import android.util.Base64
 import android.util.Log
-import java.io.ByteArrayInputStream
-import java.math.BigInteger
-import java.security.KeyPair
-import java.security.KeyPairGenerator
-import java.security.KeyStore
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import java.security.MessageDigest
 import java.security.SecureRandom
-import java.security.cert.CertificateFactory
-import java.security.cert.X509Certificate
-import java.util.Date
-import java.util.concurrent.ConcurrentHashMap
 import javax.crypto.Mac
 import javax.crypto.spec.SecretKeySpec
-import javax.net.ssl.KeyManagerFactory
-import javax.net.ssl.SSLContext
 
 /**
- * Enterprise-grade cryptographic security layer for Miku Music Remote API.
- * 
- * Features:
- * - Persistent 256-bit API Secret & Pair Token.
- * - HMAC-SHA256 request signature verification with payload integrity.
- * - Anti-replay protection (Timestamp window + Nonce cache).
- * - Constant-time signature comparison to eliminate timing attacks.
- * - Dynamic self-signed TLS SSLContext for on-the-wire HTTPS encryption.
+ * Access control for the Wi-Fi remote API.
+ *
+ * - The API is OFF unless the user turns it on in Settings. The old `api_enabled` key defaulted
+ *   to true, so it is dropped on first run of this version and the new key defaults to false.
+ * - One random 256-bit token per device, kept in [MikuSecureStore] (Keystore-backed). Every
+ *   route except the page shell and the pairing call needs `Authorization: Bearer <token>`.
+ * - `<img>` and `<audio>` can't send headers, so the server hands out signed URLs for artwork
+ *   and audio: `?exp=<unix s>&sig=HMAC-SHA256(k, path + "\n" + exp)`, where k is derived from the
+ *   token. They name one track id, expire, and stop working when the token is reset.
+ * - A browser gets the token by pairing: Settings opens a 5-minute window with a single-use
+ *   6-digit code (also in a QR code). Five wrong codes close the window and lock pairing for a
+ *   minute.
+ * - Failed auth from one address 10 times in a minute blocks that address for 5 minutes.
+ * - All secret comparisons are constant-time.
  */
 object MikuApiSecurity {
     private const val TAG = "MikuApiSecurity"
     private const val PREFS_NAME = "miku_api_security_prefs"
-    private const val KEY_API_SECRET = "api_secret_key"
-    private const val KEY_API_ENABLED = "api_enabled"
+
+    // Plain prefs (not secret).
+    private const val KEY_ENABLED = "remote_api_on"            // new key, default false
+    private const val KEY_MIGRATED = "migrated_v2"
     private const val KEY_API_PORT = "api_port"
-    private const val KEY_REQUIRE_AUTH = "api_require_auth"
     private const val KEY_USE_HTTPS = "api_use_https"
+    // Keys from the old version, removed by the migration.
+    private val LEGACY_KEYS = listOf("api_enabled", "api_secret_key", "api_require_auth")
 
-    private const val TIMESTAMP_WINDOW_MS = 60_000L // 60-second replay window
-    private val seenNonces = ConcurrentHashMap<String, Long>()
+    // Encrypted prefs.
+    private const val KEY_TOKEN = "api_token"
 
-    // Initialize or load API Secret
-    fun getOrCreateApiSecret(context: Context): String {
-        val prefs = getPrefs(context)
-        var secret = prefs.getString(KEY_API_SECRET, null)
-        if (secret.isNullOrEmpty()) {
-            secret = generateRandomHex(32) // 256-bit hex
-            prefs.edit().putString(KEY_API_SECRET, secret).apply()
-            Log.i(TAG, "Generated fresh 256-bit API Secret: ${secret.take(8)}...")
+    const val DEFAULT_PORT = 8765
+    const val PAIR_WINDOW_MS = 5 * 60_000L
+    private const val PAIR_MAX_WRONG = 5
+    private const val PAIR_LOCK_MS = 60_000L
+
+    private const val FAIL_WINDOW_MS = 60_000L
+    private const val FAIL_MAX = 10
+    private const val FAIL_BLOCK_MS = 5 * 60_000L
+
+    private val rng = SecureRandom()
+
+    // ------------------------------------------------------------------ settings
+
+    private fun prefs(context: Context): SharedPreferences {
+        val p = context.applicationContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        if (!p.getBoolean(KEY_MIGRATED, false)) {
+            // In-place update from a build where the API was on by default with a plaintext
+            // secret in this file: drop both. The user turns it on again if they want it.
+            p.edit().apply { LEGACY_KEYS.forEach { remove(it) } }.putBoolean(KEY_MIGRATED, true).apply()
+            Log.i(TAG, "migrated remote API prefs: off by default, legacy secret removed")
         }
-        return secret
+        return p
     }
 
-    fun regenerateApiSecret(context: Context): String {
-        val prefs = getPrefs(context)
-        val secret = generateRandomHex(32)
-        prefs.edit().putString(KEY_API_SECRET, secret).apply()
-        Log.i(TAG, "Regenerated API Secret")
-        return secret
-    }
-
-    fun isApiEnabled(context: Context): Boolean =
-        getPrefs(context).getBoolean(KEY_API_ENABLED, true)
+    fun isApiEnabled(context: Context): Boolean = prefs(context).getBoolean(KEY_ENABLED, false)
 
     fun setApiEnabled(context: Context, enabled: Boolean) {
-        getPrefs(context).edit().putBoolean(KEY_API_ENABLED, enabled).apply()
+        prefs(context).edit().putBoolean(KEY_ENABLED, enabled).apply()
     }
 
     fun getApiPort(context: Context): Int =
-        getPrefs(context).getInt(KEY_API_PORT, 8765)
+        prefs(context).getInt(KEY_API_PORT, DEFAULT_PORT).takeIf { it in 1024..65535 } ?: DEFAULT_PORT
 
-    fun setApiPort(context: Context, port: Int) {
-        getPrefs(context).edit().putInt(KEY_API_PORT, port).apply()
+    fun isHttpsEnabled(context: Context): Boolean = prefs(context).getBoolean(KEY_USE_HTTPS, false)
+
+    // ------------------------------------------------------------------ token
+
+    /** The device token, created on first use. Null only when the Keystore is unusable. */
+    @Synchronized
+    fun getOrCreateToken(context: Context): String? {
+        val sp = MikuSecureStore.get(context) ?: return null
+        sp.getString(KEY_TOKEN, null)?.takeIf { it.length >= 43 }?.let { return it }
+        val t = randomToken()
+        if (!sp.edit().putString(KEY_TOKEN, t).commit()) return null
+        signingKey = null
+        return t
     }
 
-    fun isHttpsEnabled(context: Context): Boolean =
-        getPrefs(context).getBoolean(KEY_USE_HTTPS, false)
-
-    fun setHttpsEnabled(context: Context, enabled: Boolean) {
-        getPrefs(context).edit().putBoolean(KEY_USE_HTTPS, enabled).apply()
+    /** New token: every paired browser and every outstanding signed URL stops working. */
+    @Synchronized
+    fun resetToken(context: Context) {
+        val sp = MikuSecureStore.get(context) ?: return
+        sp.edit().putString(KEY_TOKEN, randomToken()).commit()
+        signingKey = null
+        Log.i(TAG, "remote API token reset")
     }
 
-    fun isAuthRequired(context: Context): Boolean =
-        getPrefs(context).getBoolean(KEY_REQUIRE_AUTH, true)
-
-    fun setAuthRequired(context: Context, required: Boolean) {
-        getPrefs(context).edit().putBoolean(KEY_REQUIRE_AUTH, required).apply()
+    private fun randomToken(): String {
+        val b = ByteArray(32)
+        rng.nextBytes(b)
+        return Base64.encodeToString(b, Base64.URL_SAFE or Base64.NO_PADDING or Base64.NO_WRAP)
     }
 
-    /**
-     * Verifies request authentication. Supports:
-     * 1. Hardened HMAC-SHA256 Signature (X-Miku-Signature, X-Miku-Timestamp, X-Miku-Nonce)
-     * 2. Bearer Token Header (Authorization: Bearer <secret>)
-     * 3. URL Query Token (?token=<secret>)
-     */
-    fun verifyRequest(
-        context: Context,
-        method: String,
-        path: String,
-        headers: Map<String, String>,
-        body: ByteArray
-    ): AuthResult {
-        val cleanPath = path.substringBefore("?").trimEnd('/')
+    @Volatile private var signingKey: ByteArray? = null
 
-        // Allow public Web Remote, TV Stage, Artwork, and Audio streaming endpoints
-        if (cleanPath.isEmpty() ||
-            cleanPath == "/remote" ||
-            cleanPath == "/connect" ||
-            cleanPath == "/tv" ||
-            cleanPath == "/stage" ||
-            cleanPath == "/favicon.ico" ||
-            cleanPath.startsWith("/api/v1/artwork") ||
-            cleanPath.startsWith("/api/v1/audio") ||
-            cleanPath.startsWith("/api/v1/status") ||
-            cleanPath.startsWith("/api/v1/playback") ||
-            cleanPath.startsWith("/api/v1/queue") ||
-            cleanPath.startsWith("/api/v1/library")
-        ) {
-            return AuthResult(true, "Public Web Remote / Media endpoint")
-        }
-
-        if (!isAuthRequired(context)) {
-            return AuthResult(true, "Authentication disabled")
-        }
-
-        val secret = getOrCreateApiSecret(context)
-
-        // Case 1: Check HMAC-SHA256 Signature headers
-        val signatureHeader = headers["x-miku-signature"] ?: headers["X-Miku-Signature"]
-        val timestampStr = headers["x-miku-timestamp"] ?: headers["X-Miku-Timestamp"]
-        val nonce = headers["x-miku-nonce"] ?: headers["X-Miku-Nonce"]
-
-        if (!signatureHeader.isNullOrEmpty() && !timestampStr.isNullOrEmpty() && !nonce.isNullOrEmpty()) {
-            val timestamp = timestampStr.toLongOrNull()
-                ?: return AuthResult(false, "Invalid timestamp header")
-
-            // Replay Check 1: Timestamp drift
-            val now = System.currentTimeMillis()
-            if (Math.abs(now - timestamp) > TIMESTAMP_WINDOW_MS) {
-                return AuthResult(false, "Timestamp expired (drift > 60s)")
-            }
-
-            // Replay Check 2: Nonce reuse
-            cleanOldNonces(now)
-            if (seenNonces.putIfAbsent(nonce, now) != null) {
-                return AuthResult(false, "Nonce already used (replay attack detected)")
-            }
-
-            // Compute expected signature: HMAC-SHA256(secret, "$method\n$path\n$timestamp\n$nonce\n$bodyHex")
-            val bodyHash = sha256Hex(body)
-            val canonical = "$method\n$path\n$timestamp\n$nonce\n$bodyHash"
-            val expectedSig = hmacSha256Hex(secret, canonical)
-
-            val providedSig = signatureHeader.removePrefix("sha256=").trim()
-            if (constantTimeEquals(expectedSig, providedSig)) {
-                return AuthResult(true, "HMAC-SHA256 Verified")
-            } else {
-                return AuthResult(false, "Invalid HMAC-SHA256 signature")
-            }
-        }
-
-        // Case 2: Bearer Token in Authorization header
-        val authHeader = headers["authorization"] ?: headers["Authorization"]
-        if (!authHeader.isNullOrEmpty()) {
-            val token = authHeader.removePrefix("Bearer ").removePrefix("bearer ").trim()
-            if (constantTimeEquals(secret, token)) {
-                return AuthResult(true, "Bearer Token Verified")
-            }
-        }
-
-        // Case 3: Header Token (X-Miku-Key)
-        val keyHeader = headers["x-miku-key"] ?: headers["X-Miku-Key"]
-        if (!keyHeader.isNullOrEmpty()) {
-            if (constantTimeEquals(secret, keyHeader.trim())) {
-                return AuthResult(true, "API Key Verified")
-            }
-        }
-
-        return AuthResult(false, "Missing or invalid authentication credentials")
+    private fun urlKey(context: Context): ByteArray? {
+        signingKey?.let { return it }
+        val token = getOrCreateToken(context) ?: return null
+        val k = hmac(token.toByteArray(Charsets.UTF_8), "miku-url-sign-v1".toByteArray(Charsets.UTF_8))
+        signingKey = k
+        return k
     }
 
-    /**
-     * Computes HMAC-SHA256 of data using secret key.
-     */
-    fun hmacSha256Hex(secret: String, data: String): String {
-        val keySpec = SecretKeySpec(secret.toByteArray(Charsets.UTF_8), "HmacSHA256")
+    fun checkBearer(context: Context, headers: Map<String, String>): Boolean {
+        val h = headers["authorization"] ?: return false
+        if (!h.startsWith("Bearer ", ignoreCase = true)) return false
+        val presented = h.substring(7).trim()
+        val token = getOrCreateToken(context) ?: return false
+        return constantTimeEquals(token, presented)
+    }
+
+    // ------------------------------------------------------------------ signed URLs
+
+    private val SIGNABLE = Regex("^/api/v1/(artwork|audio/stream)/\\d+$")
+
+    /** `path?exp=..&sig=..`, or null if [path] is not a signable media path. */
+    fun signUrl(context: Context, path: String, ttlMs: Long): String? {
+        if (!SIGNABLE.matches(path)) return null
+        val key = urlKey(context) ?: return null
+        val exp = (System.currentTimeMillis() + ttlMs) / 1000
+        val sig = hex(hmac(key, "$path\n$exp".toByteArray(Charsets.UTF_8)))
+        return "$path?exp=$exp&sig=$sig"
+    }
+
+    fun checkSignedUrl(context: Context, method: String, path: String, query: Map<String, String>): Boolean {
+        if (method != "GET" && method != "HEAD") return false
+        if (!SIGNABLE.matches(path)) return false
+        val exp = query["exp"]?.toLongOrNull() ?: return false
+        val sig = query["sig"] ?: return false
+        if (exp * 1000 < System.currentTimeMillis()) return false
+        val key = urlKey(context) ?: return false
+        val want = hex(hmac(key, "$path\n$exp".toByteArray(Charsets.UTF_8)))
+        return constantTimeEquals(want, sig.lowercase())
+    }
+
+    // ------------------------------------------------------------------ failed-auth limiter
+
+    private class Fails(var windowStart: Long, var count: Int, var blockedUntil: Long)
+    private val fails = LinkedHashMap<String, Fails>()
+
+    @Synchronized
+    fun isBlocked(ip: String): Boolean {
+        val f = fails[ip] ?: return false
+        return f.blockedUntil > System.currentTimeMillis()
+    }
+
+    @Synchronized
+    fun recordFailure(ip: String) {
+        val now = System.currentTimeMillis()
+        val f = fails.getOrPut(ip) { Fails(now, 0, 0L) }
+        if (now - f.windowStart > FAIL_WINDOW_MS) { f.windowStart = now; f.count = 0 }
+        f.count++
+        if (f.count >= FAIL_MAX) {
+            f.blockedUntil = now + FAIL_BLOCK_MS
+            f.count = 0
+            Log.w(TAG, "blocking $ip for ${FAIL_BLOCK_MS / 1000}s after repeated failed auth")
+        }
+        // Bound the table so a flood of source addresses can't grow it forever.
+        while (fails.size > 256) fails.remove(fails.keys.first())
+    }
+
+    // ------------------------------------------------------------------ pairing
+
+    data class PairState(
+        val code: String = "",
+        val expiresAtMs: Long = 0L,
+        val lockedUntilMs: Long = 0L,
+        val pairedCount: Int = 0,
+    ) {
+        fun open(now: Long = System.currentTimeMillis()) = code.isNotEmpty() && expiresAtMs > now
+    }
+
+    private val _pair = MutableStateFlow(PairState())
+    val pairState: StateFlow<PairState> = _pair
+    private var wrongCodes = 0
+
+    @Synchronized
+    fun openPairing() {
+        val now = System.currentTimeMillis()
+        if (_pair.value.lockedUntilMs > now) return
+        wrongCodes = 0
+        _pair.value = _pair.value.copy(code = sixDigits(), expiresAtMs = now + PAIR_WINDOW_MS)
+    }
+
+    @Synchronized
+    fun closePairing() {
+        _pair.value = _pair.value.copy(code = "", expiresAtMs = 0L)
+    }
+
+    sealed class PairResult {
+        data class Ok(val token: String) : PairResult()
+        object BadCode : PairResult()
+        object Closed : PairResult()
+        object Locked : PairResult()
+        object Unavailable : PairResult()
+    }
+
+    @Synchronized
+    fun tryPair(context: Context, code: String): PairResult {
+        val now = System.currentTimeMillis()
+        val s = _pair.value
+        if (s.lockedUntilMs > now) return PairResult.Locked
+        if (!s.open(now)) return PairResult.Closed
+        if (!constantTimeEquals(s.code, code.trim())) {
+            wrongCodes++
+            if (wrongCodes >= PAIR_MAX_WRONG) {
+                wrongCodes = 0
+                _pair.value = s.copy(code = "", expiresAtMs = 0L, lockedUntilMs = now + PAIR_LOCK_MS)
+                Log.w(TAG, "pairing locked after $PAIR_MAX_WRONG wrong codes")
+                return PairResult.Locked
+            }
+            return PairResult.BadCode
+        }
+        val token = getOrCreateToken(context) ?: return PairResult.Unavailable
+        // Single use: the window closes as soon as one browser pairs.
+        _pair.value = s.copy(code = "", expiresAtMs = 0L, pairedCount = s.pairedCount + 1)
+        return PairResult.Ok(token)
+    }
+
+    fun sixDigits(): String = (rng.nextInt(1_000_000)).toString().padStart(6, '0')
+
+    // ------------------------------------------------------------------ helpers
+
+    fun hmac(key: ByteArray, data: ByteArray): ByteArray {
         val mac = Mac.getInstance("HmacSHA256")
-        mac.init(keySpec)
-        val hmacBytes = mac.doFinal(data.toByteArray(Charsets.UTF_8))
-        return bytesToHex(hmacBytes)
+        mac.init(SecretKeySpec(key, "HmacSHA256"))
+        return mac.doFinal(data)
     }
 
-    fun sha256Hex(data: ByteArray): String {
-        val md = MessageDigest.getInstance("SHA-256")
-        val digest = md.digest(data)
-        return bytesToHex(digest)
-    }
+    fun constantTimeEquals(a: String, b: String): Boolean =
+        MessageDigest.isEqual(a.toByteArray(Charsets.UTF_8), b.toByteArray(Charsets.UTF_8))
 
-    private fun constantTimeEquals(a: String, b: String): Boolean {
-        return MessageDigest.isEqual(a.toByteArray(Charsets.UTF_8), b.toByteArray(Charsets.UTF_8))
-    }
-
-    private fun generateRandomHex(bytesCount: Int): String {
-        val random = SecureRandom()
-        val bytes = ByteArray(bytesCount)
-        random.nextBytes(bytes)
-        return bytesToHex(bytes)
-    }
-
-    private fun bytesToHex(bytes: ByteArray): String {
-        val hexChars = CharArray(bytes.size * 2)
-        val hexArray = "0123456789abcdef".toCharArray()
+    fun hex(bytes: ByteArray): String {
+        val out = CharArray(bytes.size * 2)
+        val digits = "0123456789abcdef"
         for (i in bytes.indices) {
             val v = bytes[i].toInt() and 0xFF
-            hexChars[i * 2] = hexArray[v ushr 4]
-            hexChars[i * 2 + 1] = hexArray[v and 0x0F]
+            out[i * 2] = digits[v ushr 4]
+            out[i * 2 + 1] = digits[v and 0x0F]
         }
-        return String(hexChars)
+        return String(out)
     }
 
-    private fun cleanOldNonces(now: Long) {
-        val threshold = now - TIMESTAMP_WINDOW_MS
-        val iter = seenNonces.entries.iterator()
-        while (iter.hasNext()) {
-            if (iter.next().value < threshold) {
-                iter.remove()
-            }
-        }
-    }
-
-    private fun getPrefs(context: Context): SharedPreferences {
-        return context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-    }
-
-    data class AuthResult(
-        val isAuthorized: Boolean,
-        val message: String
-    )
+    fun randomHex(bytes: Int): String = ByteArray(bytes).also { rng.nextBytes(it) }.let { hex(it) }
 }

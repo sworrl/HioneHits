@@ -614,6 +614,8 @@ class RiotShell(private val activity: RiotActivity, unlocked: Boolean) {
             prefs.presetsSeeded = true
             if (prefs.presets().all { it == 0 }) st.presets.take(8).forEachIndexed { i, k -> prefs.setPreset(i, k) }
         }
+        // Once the FM app takes presets: hand it the slots saved before it could, once.
+        if (!prefs.presetsSynced && fm.handOver(prefs.presets())) prefs.presetsSynced = true
         dirty = true
     }
 
@@ -641,9 +643,21 @@ class RiotShell(private val activity: RiotActivity, unlocked: Boolean) {
     private fun savePreset(i: Int) {
         val cur = prefs.presets()[i]
         if (cur > 0 && cur != fmKHz) {
-            flash("Overwrite Preset?\nPress SELECT to save.", "Preset ${i + 1}") { prefs.setPreset(i, fmKHz); dirty = true }
-        } else prefs.setPreset(i, fmKHz)
+            flash("Overwrite Preset?\nPress SELECT to save.", "Preset ${i + 1}") { setSlot(i, fmKHz); dirty = true }
+        } else setSlot(i, fmKHz)
         dirty = true
+    }
+
+    /**
+     * Save (or with 0, clear) a slot, and mirror it into the FM app's presets when the FM app
+     * takes them: the new frequency is added, and the old one removed unless another slot holds it.
+     */
+    private fun setSlot(i: Int, khz: Int) {
+        val old = prefs.presets()[i]
+        prefs.setPreset(i, khz)
+        if (old == khz) { fm.setFavorite(khz, true); return }
+        if (old > 0 && old !in prefs.presets()) fm.setFavorite(old, false)
+        if (khz > 0) fm.setFavorite(khz, true)
     }
 
     // ---- loading music -------------------------------------------------------------------------
@@ -895,7 +909,7 @@ class RiotShell(private val activity: RiotActivity, unlocked: Boolean) {
         listOf(
             MenuItem("Select Preset") { push(presetList("Select Preset") { i -> prefs.presets()[i].takeIf { it > 0 }?.let { tune(it); presetSel = i; goHome() } }) },
             MenuItem("Set Preset") { push(presetList("Set Preset") { i -> savePreset(i); presetSel = i; goHome() }) },
-            MenuItem("Clear Preset") { push(presetList("Clear Preset") { i -> prefs.setPreset(i, 0); goHome() }) }
+            MenuItem("Clear Preset") { push(presetList("Clear Preset") { i -> setSlot(i, 0); goHome() }) }
         )
     })
 

@@ -189,7 +189,7 @@ class MikuApiRouter(private val context: Context) {
             // Library Search
             cleanPath == "/api/v1/library/search" && method == "GET" -> {
                 val query = queryParams["q"] ?: ""
-                val limit = queryParams["limit"]?.toIntOrNull() ?: 50
+                val limit = (queryParams["limit"]?.toIntOrNull() ?: 50).coerceIn(1, 500)
                 searchLibrary(query, limit)
             }
 
@@ -258,6 +258,17 @@ class MikuApiRouter(private val context: Context) {
                 put("is_dsd", dacRate > 768000)
                 put("position_formatted", formatTime(s?.positionMs ?: 0L))
                 put("duration_formatted", formatTime(s?.durationMs ?: 0L))
+            })
+
+            // Signed, expiring URLs for <img> and <audio>, which can't send the bearer token.
+            // Each names one track id, so a URL can't be replayed for a different file.
+            put("urls", JSONObject().apply {
+                val id = s?.trackId ?: -1L
+                if (id > 0) {
+                    MikuApiSecurity.signUrl(context, "/api/v1/artwork/$id", 30 * 60_000L)?.let { put("artwork", it) }
+                    val ttl = ((s?.durationMs ?: 0L).coerceAtLeast(0L) + 30 * 60_000L).coerceAtMost(12 * 3_600_000L)
+                    MikuApiSecurity.signUrl(context, "/api/v1/audio/stream/$id", ttl)?.let { put("stream", it) }
+                }
             })
 
             put("hardware", JSONObject().apply {
@@ -395,26 +406,26 @@ class MikuApiRouter(private val context: Context) {
         val trackId = if (path.endsWith("/current") || path.endsWith("/stream")) {
             getCurrentTrackId()
         } else {
-            path.substringAfterLast("/").toLongOrNull() ?: getCurrentTrackId()
+            path.substringAfterLast("/").toLongOrNull() ?: return ApiResponse.error(404, "Track audio file not found")
         }
 
         val cached = FastLibraryStore.loadSync(context) ?: emptyList()
-        val track = if (trackId != null && trackId > 0) cached.find { it.id == trackId } else null
+        val track = if (trackId > 0) cached.find { it.id == trackId } else null
         val trackPath = track?.path
 
         if (trackPath != null) {
             val file = java.io.File(trackPath)
-            if (file.exists() && file.canRead()) {
-                val bytes = file.readBytes()
+            if (file.isFile && file.canRead()) {
                 val mimeType = when {
                     trackPath.endsWith(".flac", ignoreCase = true) -> "audio/flac"
                     trackPath.endsWith(".mp3", ignoreCase = true) -> "audio/mpeg"
                     trackPath.endsWith(".wav", ignoreCase = true) -> "audio/wav"
                     trackPath.endsWith(".m4a", ignoreCase = true) || trackPath.endsWith(".aac", ignoreCase = true) -> "audio/mp4"
                     trackPath.endsWith(".dsf", ignoreCase = true) || trackPath.endsWith(".dff", ignoreCase = true) -> "audio/x-dsd"
-                    else -> "audio/octet-stream"
+                    else -> "application/octet-stream"
                 }
-                return ApiResponse.bytes(200, mimeType, bytes)
+                // Streamed from disk with Range support by the server, never read into memory.
+                return ApiResponse.file(mimeType, file)
             }
         }
         return ApiResponse.error(404, "Track audio file not found")
@@ -461,9 +472,15 @@ class MikuApiRouter(private val context: Context) {
 data class ApiResponse(
     val statusCode: Int,
     val contentType: String,
-    val body: ByteArray
+    val body: ByteArray,
+    /** When set, the server streams this file (with Range support) instead of [body]. */
+    val file: java.io.File? = null,
+    val extraHeaders: Map<String, String> = emptyMap(),
 ) {
     companion object {
+        fun file(contentType: String, file: java.io.File): ApiResponse =
+            ApiResponse(200, contentType, ByteArray(0), file, mapOf("Cache-Control" to "private, max-age=300"))
+
         fun json(code: Int, json: JSONObject): ApiResponse {
             val bytes = json.toString(2).toByteArray(Charsets.UTF_8)
             return ApiResponse(code, "application/json; charset=utf-8", bytes)

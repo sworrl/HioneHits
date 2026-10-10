@@ -8,6 +8,7 @@ import android.media.MediaMetadata
 import android.media.browse.MediaBrowser
 import android.media.session.MediaController
 import android.media.session.PlaybackState
+import android.os.Bundle
 import android.util.Log
 
 /**
@@ -34,6 +35,13 @@ class RiotFm(private val ctx: Context) {
         val error: String? = null,
         /** The FM app's starred frequencies, in kHz. */
         val presets: List<Int> = emptyList(),
+        /** [presets] has arrived from the FM app on this connection (it may be empty). */
+        val presetsLoaded: Boolean = false,
+        /**
+         * The FM app takes preset changes (its session offers TOGGLE_FAVORITE, builds after
+         * 0.3.0). Older FM apps do not, and Riot's slots then stay Riot's own.
+         */
+        val canFavorite: Boolean = false,
         /** Station genre or format from the FM app's catalogue. */
         val genre: String? = null,
         // Read from the session's PlaybackState extras when the FM app publishes them (see
@@ -82,7 +90,7 @@ class RiotFm(private val ctx: Context) {
     private val presetsCb = object : MediaBrowser.SubscriptionCallback() {
         override fun onChildrenLoaded(parentId: String, children: MutableList<MediaBrowser.MediaItem>) {
             val list = children.mapNotNull { it.mediaId?.removePrefix(FREQ)?.toIntOrNull() }
-            state = state.copy(presets = list)
+            state = state.copy(presets = list, presetsLoaded = true)
             onChange?.invoke()
         }
     }
@@ -96,6 +104,8 @@ class RiotFm(private val ctx: Context) {
                 controller?.unregisterCallback(controllerCb)
                 controller = c
                 c.registerCallback(controllerCb)
+                handedOver.clear()
+                state = state.copy(presetsLoaded = false)
                 runCatching { br.subscribe(PRESETS, presetsCb) }
                 refresh()
             }
@@ -139,6 +149,7 @@ class RiotFm(private val ctx: Context) {
             songIdTitle = str(EXTRA_SONGID_TITLE), songIdArtist = str(EXTRA_SONGID_ARTIST),
             songIdStatus = str(EXTRA_SONGID_STATUS), adBreak = bool(EXTRA_AD),
             connected = true,
+            canFavorite = pb?.customActions?.any { it.action == TOGGLE_FAVORITE } == true,
             on = st == PlaybackState.STATE_PLAYING || st == PlaybackState.STATE_PAUSED || st == PlaybackState.STATE_BUFFERING,
             tuned = st == PlaybackState.STATE_PLAYING,
             khz = khz,
@@ -156,6 +167,30 @@ class RiotFm(private val ctx: Context) {
     fun tune(khz: Int) { tc()?.playFromMediaId("$FREQ$khz", null) ?: connect() }
     fun seek(up: Boolean) { tc()?.sendCustomAction(if (up) SEEK_UP else SEEK_DOWN, null) }
 
+    /**
+     * Add or remove a preset in the FM app. Explicit, so sending it twice does no harm. Does
+     * nothing when the FM app cannot take it ([State.canFavorite]).
+     */
+    fun setFavorite(khz: Int, add: Boolean) {
+        if (khz <= 0 || !state.canFavorite) return
+        tc()?.sendCustomAction(TOGGLE_FAVORITE, Bundle().apply { putInt("khz", khz); putBoolean("add", add) })
+    }
+
+    /** Slot frequencies already sent by [handOver] on this connection. */
+    private val handedOver = HashSet<Int>()
+
+    /**
+     * Make sure every frequency in [slots] is an FM app preset, sending each missing one once
+     * per connection. True when the FM app's list shows them all, so the caller can stop asking.
+     */
+    fun handOver(slots: IntArray): Boolean {
+        val st = state
+        if (!st.canFavorite || !st.presetsLoaded) return false
+        val missing = slots.filter { it > 0 && it !in st.presets }.distinct()
+        for (k in missing) if (handedOver.add(k)) setFavorite(k, true)
+        return missing.isEmpty()
+    }
+
     /** The M500's FM antenna is the headphone cable. */
     fun hasAntenna(): Boolean {
         val am = ctx.getSystemService(AudioManager::class.java) ?: return true
@@ -172,6 +207,7 @@ class RiotFm(private val ctx: Context) {
         private const val PRESETS = "fm_presets"
         private const val SEEK_UP = "com.caf.fmradio.media.SEEK_UP"
         private const val SEEK_DOWN = "com.caf.fmradio.media.SEEK_DOWN"
+        private const val TOGGLE_FAVORITE = "com.caf.fmradio.media.TOGGLE_FAVORITE"
 
         // PlaybackState extras Riot mode reads if the FM app's session sets them.
         const val EXTRA_PS = "com.caf.fmradio.extra.PS"

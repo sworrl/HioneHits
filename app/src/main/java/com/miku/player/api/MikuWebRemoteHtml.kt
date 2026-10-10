@@ -329,6 +329,54 @@ object MikuWebRemoteHtml {
             border: 1px solid rgba(255, 255, 255, 0.15);
             font-family: 'Audiowide', cursive;
         }
+        .pair-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(1, 6, 10, 0.92);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 50;
+            padding: 16px;
+        }
+        .pair-overlay.show { display: flex; }
+        .pair-card {
+            width: 100%;
+            max-width: 380px;
+            background: #061621;
+            border: 1px solid var(--card-border);
+            border-radius: 16px;
+            padding: 20px;
+            text-align: center;
+        }
+        .pair-card h2 { font-family: 'Audiowide', cursive; font-size: 18px; margin-bottom: 8px; color: var(--miku-cyan); }
+        .pair-card p { font-size: 14px; color: rgba(255,255,255,0.75); margin-bottom: 14px; }
+        .pair-input {
+            width: 100%;
+            font-size: 28px;
+            letter-spacing: 8px;
+            text-align: center;
+            padding: 10px;
+            border-radius: 10px;
+            border: 1px solid var(--card-border);
+            background: #02090e;
+            color: #fff;
+            margin-bottom: 12px;
+            user-select: text;
+            -webkit-user-select: text;
+        }
+        .pair-btn {
+            width: 100%;
+            padding: 12px;
+            border-radius: 10px;
+            border: none;
+            font-size: 16px;
+            font-weight: 700;
+            color: #fff;
+            background: linear-gradient(135deg, var(--miku-teal), var(--miku-pink));
+            cursor: pointer;
+        }
+        .pair-msg { min-height: 18px; margin-top: 10px; font-size: 13px; color: var(--miku-pink); }
         .nav-link.active {
             background: rgba(0, 229, 255, 0.2);
             border-color: var(--miku-cyan);
@@ -352,7 +400,7 @@ object MikuWebRemoteHtml {
     <div class="container">
         <div class="art-wrapper">
             <div class="art-glow" id="artGlow"></div>
-            <img src="/api/v1/artwork/current" class="art-img" id="artImg" alt="Album Artwork">
+            <img src="data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==" class="art-img" id="artImg" alt="Album Artwork">
         </div>
 
         <div class="details-pane">
@@ -405,7 +453,80 @@ object MikuWebRemoteHtml {
 
     <audio id="tvAudioElement" preload="auto"></audio>
 
+    <div class="pair-overlay" id="pairOverlay">
+        <div class="pair-card">
+            <h2>Pair this browser</h2>
+            <p>On the M500, open Miku Music Settings, Wi-Fi Remote, and tap Pair a browser. Type the 6-digit code shown there, or scan its QR code.</p>
+            <input class="pair-input" id="pairCode" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="000000">
+            <button class="pair-btn" id="pairBtn" onclick="doPair()">Pair</button>
+            <div class="pair-msg" id="pairMsg"></div>
+        </div>
+    </div>
+
     <script>
+        // ---- pairing and auth. The token lives in this browser's localStorage for this
+        // address only. Media elements get signed, expiring URLs from /api/v1/status instead.
+        const TOKEN_KEY = 'miku_api_token';
+        let apiToken = null;
+        try { apiToken = localStorage.getItem(TOKEN_KEY); } catch (e) {}
+        const pairFromUrl = (location.hash.match(/[#&]pair=(\d{6})/) || [])[1] || '';
+        if (location.hash) history.replaceState(null, '', location.pathname + location.search);
+
+        function showPair(msg) {
+            document.getElementById('pairOverlay').classList.add('show');
+            document.getElementById('pairMsg').innerText = msg || '';
+        }
+        function hidePair() { document.getElementById('pairOverlay').classList.remove('show'); }
+        function dropToken() {
+            apiToken = null;
+            try { localStorage.removeItem(TOKEN_KEY); } catch (e) {}
+        }
+
+        async function doPair(codeArg) {
+            const code = (codeArg || document.getElementById('pairCode').value || '').replace(/\D/g, '');
+            if (code.length !== 6) { showPair('The code is 6 digits.'); return; }
+            document.getElementById('pairBtn').disabled = true;
+            try {
+                const res = await fetch('/api/v1/pair', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ code: code })
+                });
+                const j = await res.json().catch(() => ({}));
+                if (res.ok && j.token) {
+                    apiToken = j.token;
+                    try { localStorage.setItem(TOKEN_KEY, apiToken); } catch (e) {}
+                    hidePair();
+                    currentTrackId = -1;
+                    pollStatus();
+                    return;
+                }
+                showPair({
+                    'bad-code': 'Wrong code. Check the M500 screen.',
+                    'closed': 'Pairing is not open. Tap Pair a browser on the M500 first.',
+                    'locked': 'Too many wrong codes. Wait a minute, then open pairing again on the M500.'
+                }[j.error] || (res.status === 429 ? 'Too many attempts. Wait a few minutes.' : 'Pairing failed.'));
+            } catch (e) {
+                showPair('Could not reach the M500.');
+            } finally {
+                document.getElementById('pairBtn').disabled = false;
+            }
+        }
+        document.getElementById('pairCode').addEventListener('keydown', (e) => { if (e.key === 'Enter') doPair(); });
+
+        async function api(path, opts) {
+            if (!apiToken) { showPair(); throw new Error('not paired'); }
+            opts = opts || {};
+            opts.headers = Object.assign({}, opts.headers || {}, { 'Authorization': 'Bearer ' + apiToken });
+            const res = await fetch(path, opts);
+            if (res.status === 401) {
+                dropToken();
+                showPair('This browser is no longer paired. Pair it again.');
+                throw new Error('unauthorized');
+            }
+            return res;
+        }
+
         let isPlaying = false;
         let curDuration = 0;
         let curPosition = 0;
@@ -440,7 +561,8 @@ object MikuWebRemoteHtml {
 
         async function updateSpectrum() {
             try {
-                const res = await fetch('/api/v1/levels', { cache: 'no-store' });
+                if (!apiToken) return;
+                const res = await api('/api/v1/levels', { cache: 'no-store' });
                 if (!res.ok) { specCols.forEach(col => col.style.height = '4px'); return; }
                 const lv = await res.json();
                 if (!lv.active || !lv.is_playing || !Array.isArray(lv.fft) || lv.fft.length === 0) {
@@ -462,7 +584,8 @@ object MikuWebRemoteHtml {
 
         async function pollStatus() {
             try {
-                const res = await fetch('/api/v1/status');
+                if (!apiToken) return;
+                const res = await api('/api/v1/status', { cache: 'no-store' });
                 if (!res.ok) return;
                 const data = await res.json();
                 renderState(data);
@@ -504,11 +627,12 @@ object MikuWebRemoteHtml {
             if (data.track.id !== currentTrackId) {
                 currentTrackId = data.track.id;
                 const art = document.getElementById('artImg');
-                art.src = '/api/v1/artwork/current?t=' + (data.track.id || Date.now());
+                const urls = data.urls || {};
+                if (urls.artwork) art.src = urls.artwork;
 
                 // Sync TV Sound System Audio Stream
-                if (isTvMode && tvAudio && currentTrackId > 0) {
-                    tvAudio.src = '/api/v1/audio/stream/current?t=' + currentTrackId;
+                if (isTvMode && tvAudio && currentTrackId > 0 && urls.stream) {
+                    tvAudio.src = urls.stream;
                     if (data.playback.position_ms > 0) {
                         tvAudio.currentTime = data.playback.position_ms / 1000;
                     }
@@ -553,7 +677,7 @@ object MikuWebRemoteHtml {
 
         async function sendPost(path, body = {}) {
             try {
-                const res = await fetch(path, {
+                const res = await api(path, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(body)
@@ -602,7 +726,15 @@ object MikuWebRemoteHtml {
             }
         });
 
+        // A signed stream URL that expired (long pause) fails here; forget the track so the
+        // next status poll hands out a fresh URL.
+        if (tvAudio) tvAudio.addEventListener('error', () => { currentTrackId = -1; });
+
         // Fast poll loop
+        if (!apiToken) {
+            if (pairFromUrl) { document.getElementById('pairCode').value = pairFromUrl; doPair(pairFromUrl); }
+            else showPair();
+        }
         pollStatus();
         setInterval(pollStatus, 1500);
     </script>

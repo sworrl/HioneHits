@@ -1597,19 +1597,35 @@ class QualcommFmHardwareEngine(private val context: Context) {
             readQualcommOnce()
             var tick = 0
             while (isActive && isPoweredOn.value) {
-                // Only meter while someone is looking. Every tick is an I2C transaction on a
-                // chip that is demodulating, and in the background nothing reads the result:
-                // the radio plays through the hardware loopback whether we poll or not.
+                // Only meter at full rate while someone is looking. Every tick is an I2C
+                // transaction on a chip that is demodulating, and the radio plays through the
+                // hardware loopback whether we poll or not.
                 if (uiVisible) {
                     refreshSignal()
                     tick++
                     delay(SIGNAL_POLL_MS)
                 } else {
-                    delay(4000)
+                    // MikuPod, Riot mode and the car read RSSI and stereo from the media
+                    // session, so the background still gets a reading, but slowly: the same
+                    // single FmV4L2.signal() read (one ioctl, under chipLock) every
+                    // BACKGROUND_POLL_MS instead of every SIGNAL_POLL_MS. Nothing else is read,
+                    // and the meter history and reach calibration are left to the screen.
+                    if (hardwareOnline.value) FmV4L2.signal()?.let { s ->
+                        s.rssi?.let { rssi.value = it }
+                        s.stereo?.let { isStereo.value = it }
+                    }
+                    // Wake early when the screen comes back, so its meter does not sit stale.
+                    var waited = 0L
+                    while (waited < BACKGROUND_POLL_MS && !uiVisible && isPoweredOn.value) {
+                        delay(250); waited += 250
+                    }
                 }
             }
         }
     }
+
+    /** Background RSSI poll interval. See [startPolling]. */
+    private val BACKGROUND_POLL_MS = 5000L
 
     // ------------------------------------------------------------------ audio bridge
 

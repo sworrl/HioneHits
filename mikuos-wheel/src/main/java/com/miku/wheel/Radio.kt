@@ -44,7 +44,8 @@ fun fmtMhz(khz: Int): String = "%d.%d".format(khz / 1000, (khz % 1000) / 100)
  * opens the radio device itself: there is one tuner engine and it lives in the FM app.
  *
  * Commands used: play / stop (power), playFromMediaId("fm_freq:<kHz>") (tune, powers on),
- * the SEEK_UP / SEEK_DOWN custom actions, and the browse tree's Presets folder.
+ * the SEEK_UP / SEEK_DOWN custom actions, the TOGGLE_FAVORITE custom action when the FM app
+ * offers it, and the browse tree's Presets folder.
  * Main thread only.
  */
 class RadioLink(private val ctx: Context, private val prefs: WheelPrefs, private val changed: () -> Unit) {
@@ -63,9 +64,15 @@ class RadioLink(private val ctx: Context, private val prefs: WheelPrefs, private
     var station = ""; private set
     var text = ""; private set
     var error: String? = null; private set
-    /** Presets from the FM app plus any kept here when it cannot store them. */
+    /**
+     * Presets from the FM app plus any kept here. An FM app without TOGGLE_FAVORITE cannot take
+     * favorites, so they live in [WheelPrefs.radioFavorites]. Once it offers the action, each one
+     * kept here is handed over and dropped locally when the FM app's Presets list shows it.
+     */
     var favorites: List<Int> = emptyList(); private set
     private var fmPresets: List<Int> = emptyList()
+    /** The FM app's Presets list has arrived on this connection; until then it is not known. */
+    private var presetsLoaded = false
     /** Wired headphones in: the cord is the antenna. */
     var antenna = false; private set
 
@@ -162,17 +169,50 @@ class RadioLink(private val ctx: Context, private val prefs: WheelPrefs, private
     fun toggleFavorite(k: Int): Boolean {
         val c = controller
         val add = k !in favorites
-        val fmCan = c?.playbackState?.customActions?.any { it.action == TOGGLE_FAVORITE } == true
-        if (fmCan) {
-            c!!.transportControls.sendCustomAction(TOGGLE_FAVORITE, Bundle().apply { putInt("khz", k) })
+        val mine = prefs.radioFavorites.toMutableSet()
+        if (c != null && fmTakesFavorites(c)) {
+            sendFavorite(c, k, add)
+            // A removal also covers a copy still waiting to be handed over.
+            if (!add && mine.remove(k)) prefs.radioFavorites = mine
         } else {
-            val mine = prefs.radioFavorites.toMutableSet()
             if (add) mine.add(k) else mine.remove(k)
             prefs.radioFavorites = mine
         }
         favorites = if (add) (favorites + k).distinct().sorted() else favorites - k
         changed()
         return add
+    }
+
+    /** The FM app's session offers the preset action (FM app builds after 0.3.0). */
+    private fun fmTakesFavorites(c: MediaController) =
+        c.playbackState?.customActions?.any { it.action == TOGGLE_FAVORITE } == true
+
+    /** An explicit add or remove, so a repeat can never undo the first one. */
+    private fun sendFavorite(c: MediaController, k: Int, add: Boolean) {
+        c.transportControls.sendCustomAction(TOGGLE_FAVORITE, Bundle().apply {
+            putInt("khz", k); putBoolean("add", add)
+        })
+    }
+
+    /** Local favorites already sent to the FM app on this connection. */
+    private val handedOver = HashSet<Int>()
+
+    /**
+     * Move favorites kept here into the FM app, once it can take them. One is dropped here only
+     * when the FM app's Presets list shows it, so nothing is lost if a send goes missing: it is
+     * sent again on the next connection.
+     */
+    private fun migrateFavorites() {
+        val c = controller ?: return
+        if (!presetsLoaded || !fmTakesFavorites(c)) return
+        val mine = prefs.radioFavorites
+        if (mine.isEmpty()) return
+        val landed = mine.filter { it in fmPresets }
+        if (landed.isNotEmpty()) {
+            prefs.radioFavorites = mine - landed.toSet()
+            Log.i(TAG, "favorites now in the FM app: $landed")
+        }
+        for (k in mine) if (k !in fmPresets && handedOver.add(k)) sendFavorite(c, k, true)
     }
 
     // ---- state -------------------------------------------------------------------------------
@@ -189,6 +229,7 @@ class RadioLink(private val ctx: Context, private val prefs: WheelPrefs, private
         station = md?.getString(MediaMetadata.METADATA_KEY_TITLE).orEmpty()
         text = md?.getString(MediaMetadata.METADATA_KEY_ARTIST).orEmpty()
         if (Log.isLoggable(TAG, Log.DEBUG)) Log.d(TAG, "state=$s on=$on online=$online khz=$khz station=$station text=$text")
+        migrateFavorites()
         changed()
     }
 
@@ -222,6 +263,8 @@ class RadioLink(private val ctx: Context, private val prefs: WheelPrefs, private
     private val presets = object : MediaBrowser.SubscriptionCallback() {
         override fun onChildrenLoaded(parentId: String, children: MutableList<MediaBrowser.MediaItem>) {
             fmPresets = children.mapNotNull { it.mediaId?.removePrefix(FREQ)?.toIntOrNull() }
+            presetsLoaded = true
+            migrateFavorites()
             mergeFavorites()
         }
     }
@@ -233,6 +276,8 @@ class RadioLink(private val ctx: Context, private val prefs: WheelPrefs, private
             controller = c
             c.registerCallback(ctl, main)
             connected = true
+            presetsLoaded = false
+            handedOver.clear()
             b.subscribe(PRESETS, presets)
             mergeFavorites()
             read()
@@ -261,7 +306,7 @@ class RadioLink(private val ctx: Context, private val prefs: WheelPrefs, private
         private const val PRESETS = "fm_presets"
         private const val SEEK_UP = "com.caf.fmradio.media.SEEK_UP"
         private const val SEEK_DOWN = "com.caf.fmradio.media.SEEK_DOWN"
-        /** Not in the FM app yet; used as soon as its session offers it. */
+        /** Offered by FM app builds after 0.3.0. Older ones lack it and favorites stay here. */
         const val TOGGLE_FAVORITE = "com.caf.fmradio.media.TOGGLE_FAVORITE"
         private const val SEND_MS = 120L
     }

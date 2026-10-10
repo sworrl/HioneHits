@@ -372,6 +372,30 @@ object UsbOps {
     val options = listOf(0L to "No data transfer", 4L to "File transfer (MTP)", 16L to "Photos (PTP)", 32L to "USB tethering", 8L to "MIDI")
 }
 
+/**
+ * Android Auto ships in the image. It hides media apps that did not come from Play (Miku Music,
+ * Miku FM) until its own developer setting "Unknown sources" is on. That pref lives in gearhead's
+ * provider, which rejects callers that are not Google-signed, so the user has to flip it.
+ */
+object AndroidAutoOps {
+    const val PKG = "com.google.android.projection.gearhead"
+
+    fun installed(ctx: Context): Boolean =
+        try { ctx.packageManager.getApplicationInfo(PKG, 0); true } catch (_: Throwable) { false }
+
+    /** gearhead's DefaultSettingsActivity answers both of these (checked with resolve-activity on 0.3.0). */
+    fun openSettings(ctx: Context): Boolean {
+        val tries = listOf(
+            Intent("com.google.android.projection.gearhead.SETTINGS").setPackage(PKG),
+            Intent(Intent.ACTION_APPLICATION_PREFERENCES).setPackage(PKG),
+        )
+        for (i in tries) {
+            try { ctx.startActivity(i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)); return true } catch (_: Throwable) {}
+        }
+        return false
+    }
+}
+
 @SuppressLint("MissingPermission")
 @Composable
 fun ConnectedPrefsPage() {
@@ -383,12 +407,25 @@ fun ConnectedPrefsPage() {
     val usb = remember(refresh) { UsbOps.current(ctx) }
     var edit by remember { mutableStateOf(false) }
     var usbPick by remember { mutableStateOf(false) }
+    val autoInstalled = remember(refresh) { AndroidAutoOps.installed(ctx) }
     PageList {
         item {
             Section {
                 NavRow("Bluetooth device name", btName ?: UNKNOWN, Icons.Default.Bluetooth) { if (bt != null) edit = true }
                 NavRow("USB", UsbOps.options.firstOrNull { it.first == usb }?.second ?: if (usb == null) UNKNOWN else "Custom ($usb)", Icons.Default.Usb) { usbPick = true }
                 NavRow("NFC", null, Icons.Default.Nfc) { nav.push("nfc") }
+            }
+        }
+        if (autoInstalled) item {
+            Section("Android Auto") {
+                BodyText("Android Auto hides Miku Music and Miku FM until its \"Unknown sources\" setting is on. Only you can turn it on.")
+                Spacer(Modifier.height(8.dp))
+                BodyText("1. Open Android Auto settings.\n2. Tap Version about 10 times until developer settings unlock.\n3. Open the menu and pick Developer settings.\n4. Turn on Unknown sources.")
+                Spacer(Modifier.height(10.dp))
+                ActionButton("Open Android Auto settings") {
+                    // Falls back to our app info page, e.g. when Android Auto is disabled.
+                    if (!AndroidAutoOps.openSettings(ctx)) nav.push("app/${android.net.Uri.encode(AndroidAutoOps.PKG)}")
+                }
             }
         }
         item {
