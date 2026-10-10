@@ -307,6 +307,19 @@ fun FmDiagnosticsPanel(st: FmState) {
         DiagRow("Locked (RSSI>1, SNR>0)", when (s.valid) { true -> "yes"; false -> "no"; null -> "—" })
         DiagRow("Stereo pilot", when (s.pilot) { true -> "present"; false -> "absent"; null -> "—" })
         DiagRow("Stereo blend", s.stereoBlendPct?.let { "$it %" } ?: "—")
+        DiagRow("Audio siphon", when (st.siphonState) {
+            QualcommFmHardwareEngine.SiphonState.UNTRIED -> "not tried yet (LIVE view)"
+            QualcommFmHardwareEngine.SiphonState.PROBING -> "testing…"
+            QualcommFmHardwareEngine.SiphonState.ACTIVE -> "live, real audio"
+            QualcommFmHardwareEngine.SiphonState.FAILED -> "off: ${st.siphonReason ?: "failed"}"
+        })
+        if (st.siphonState == QualcommFmHardwareEngine.SiphonState.FAILED) {
+            Text(
+                "RETRY SIPHON",
+                color = MikuTeal, fontSize = 10.sp, fontWeight = FontWeight.Bold,
+                modifier = Modifier.clickable { FmRadioManager.retrySiphon() }.padding(vertical = 6.dp)
+            )
+        }
         DiagRow("RDS", when (st.rdsAvailable) { true -> "locked"; false -> "none"; null -> "—" })
         DiagRow("RDS PI", st.programmeId?.let { "0x${it.toString(16).uppercase(Locale.US)}" } ?: "—")
         DiagRow("RDS PTY", FmRadioManager.programmeTypeName(st.programmeType, st.band)

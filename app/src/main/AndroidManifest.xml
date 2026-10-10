@@ -52,6 +52,8 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
+    <!-- USB DAC mode is switched by com.miku.sysbridge (system UID); see UsbDacManager. -->
+    <uses-permission android:name="com.miku.permission.SYSTEM_BRIDGE" />
     <!-- Per-output volume while playing to several outputs (volume/MikuOutputVolumes):
          AudioManager.get/setDeviceVolume. Signature permissions; this app is platform-signed. -->
     <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS_PRIVILEGED"

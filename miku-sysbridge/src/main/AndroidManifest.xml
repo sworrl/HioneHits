@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  MikuOS system bridge. The one MikuOS package that runs as the system UID, so it gets the
+  system_app SELinux domain: HiBy's policy lets system_app set vendor_usb_prop, usb_control_prop
+  and vendor_audio_prop, and lets platform_app (every other Miku app) set almost nothing.
+  It has no UI and does exactly what the receiver below lists, only for callers holding the
+  signature permission, i.e. other apps signed with the platform key.
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:sharedUserId="android.uid.system"
+    tools:ignore="SharedUserId">
+
+    <permission
+        android:name="com.miku.permission.SYSTEM_BRIDGE"
+        android:protectionLevel="signature" />
+
+    <application
+        android:label="MikuOS system bridge"
+        android:allowBackup="false"
+        android:persistent="false">
+        <receiver
+            android:name=".BridgeReceiver"
+            android:exported="true"
+            android:permission="com.miku.permission.SYSTEM_BRIDGE">
+            <intent-filter>
+                <action android:name="com.miku.sysbridge.USB_DAC" />
+            </intent-filter>
+        </receiver>
+    </application>
+</manifest>

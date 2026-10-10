@@ -1,6 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
+    <!-- USB DAC mode is switched by com.miku.sysbridge (system UID); see UsbDacManager. -->
+    <uses-permission android:name="com.miku.permission.SYSTEM_BRIDGE" />
     <uses-permission android:name="android.permission.INTERNET" />
 
     <!--

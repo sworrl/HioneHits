@@ -64,6 +64,9 @@ data class FmState(
     val channelGrid: FmChannelGrid = FmChannelGrid.AUTO,
     val nearbyStations: List<FmStationCatalogue.Station> = emptyList(),
     val sdrSkin: SdrSkin = SdrSkin.CLASSIC,
+    val viewMode: QualcommFmHardwareEngine.ViewMode = QualcommFmHardwareEngine.ViewMode.LIVE,
+    val siphonState: QualcommFmHardwareEngine.SiphonState = QualcommFmHardwareEngine.SiphonState.UNTRIED,
+    val siphonReason: String? = null,
     val tunedProfile: FmFresnel.Profile? = null,
     val bandHistoryTimes: List<Long> = emptyList(),
     val tunedStation: FmStationCatalogue.Station? = null,
@@ -100,7 +103,8 @@ data class FmState(
             rdsArtist == other.rdsArtist && rdsTitle == other.rdsTitle &&
             rdsGroups == other.rdsGroups && channelGrid == other.channelGrid &&
             nearbyStations === other.nearbyStations && tunedStation == other.tunedStation &&
-            sdrSkin == other.sdrSkin && bandHistoryTimes === other.bandHistoryTimes &&
+            sdrSkin == other.sdrSkin && viewMode == other.viewMode &&
+            siphonState == other.siphonState && siphonReason == other.siphonReason && bandHistoryTimes === other.bandHistoryTimes &&
             tunedProfile === other.tunedProfile &&
             listenerPlace == other.listenerPlace && catalogueSize == other.catalogueSize
     }
@@ -180,6 +184,9 @@ object FmRadioManager {
             launch { eng.channelGrid.collect { v -> _state.update { it.copy(channelGrid = v) } } }
             launch { eng.nearbyStations.collect { v -> _state.update { it.copy(nearbyStations = v) } } }
             launch { eng.sdrSkin.collect { v -> _state.update { it.copy(sdrSkin = v) } } }
+            launch { eng.viewMode.collect { v -> _state.update { it.copy(viewMode = v) } } }
+            launch { eng.siphonState.collect { v -> _state.update { it.copy(siphonState = v) } } }
+            launch { eng.siphonReason.collect { v -> _state.update { it.copy(siphonReason = v) } } }
             launch { eng.tunedProfile.collect { v -> _state.update { it.copy(tunedProfile = v) } } }
             launch { eng.bandHistoryTimes.collect { v -> _state.update { it.copy(bandHistoryTimes = v) } } }
             launch { eng.tunedStation.collect { v -> _state.update { it.copy(tunedStation = v) } } }
@@ -257,6 +264,8 @@ object FmRadioManager {
     fun setBand(plan: FmBandPlan) { engine?.setBand(plan) }
     fun setFmVolumeLevel(l: Int) { engine?.setFmVolumeLevel(l) }
     fun cycleSdrSkin() { engine?.cycleSdrSkin() }
+    fun setViewMode(m: QualcommFmHardwareEngine.ViewMode) { engine?.setViewMode(m) }
+    fun retrySiphon() { engine?.retrySiphon() }
 
     fun nudgeFmVolume(up: Boolean) { engine?.nudgeFmVolume(up) }
     fun setAfJump(on: Boolean) { engine?.setAfJump(on) }
@@ -286,6 +295,10 @@ object FmRadioManager {
             return if (f != null) "Saved ${f.name}" else "Recording stopped"
         }
         if (!_state.value.isHardwareOnline) return "Turn the tuner on first"
+        // On wired outputs the radio plays through a hardware loopback the app cannot hear;
+        // recording there captured silence and could stop the radio. Only record real audio.
+        if (engine?.canRecord() != true) return "Recording works over Bluetooth, or once the live " +
+            "audio siphon has verified itself (Diagnostics)"
         val dir = java.io.File(
             android.os.Environment.getExternalStoragePublicDirectory(android.os.Environment.DIRECTORY_MUSIC),
             "FM Recordings"

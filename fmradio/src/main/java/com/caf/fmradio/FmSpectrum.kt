@@ -93,6 +93,12 @@ fun RadioWaterfallSpectrum(
     skin: SdrSkin = SdrSkin.CLASSIC,
     /** Sweep times, newest first, parallel to bandHistory. Empty when nothing has swept. */
     rowTimes: List<Long> = emptyList(),
+    /**
+     * LIVE draws what is playing now (the siphon's audio when verified, else the tuned
+     * station's own signal); BAND draws the swept band. A stale sweep used to take over the
+     * panel for good once one existed, which is why it looked frozen.
+     */
+    mode: QualcommFmHardwareEngine.ViewMode = QualcommFmHardwareEngine.ViewMode.LIVE,
     onCycleSkin: () -> Unit = {},
     onTuneFreq: (Int) -> Unit,
 ) {
@@ -108,11 +114,11 @@ fun RadioWaterfallSpectrum(
     // No capture means no spectrum. The panel says so rather than drawing a flat line that
     // could be read as "the radio is silent": on a wired route this device does not expose the
     // tuner audio to the app at all, so there is nothing here to measure.
-    val hasAudio = spectrum.size == binCount
+    val hasAudio = mode == QualcommFmHardwareEngine.ViewMode.LIVE && spectrum.size == binCount
     // A band sweep gives RSSI per channel across the whole band, which is the display this
     // panel wants: x is already frequency, so the sweep drops straight onto the same axis as
     // the tuning strip, the presets and the marker.
-    val hasBand = bandProfile.isNotEmpty()
+    val hasBand = mode == QualcommFmHardwareEngine.ViewMode.BAND && bandProfile.isNotEmpty()
 
     val low = band.lowKHz.toFloat()
     val span = (band.highKHz - band.lowKHz).toFloat()
@@ -346,9 +352,11 @@ fun RadioWaterfallSpectrum(
         ) {
             Text(
                 when {
-                    hasAudio -> "${skin.label} · AUDIO SPECTRUM · FM PCM 60 Hz–15 kHz"
+                    hasAudio -> "LIVE · AUDIO SPECTRUM 60 Hz–15 kHz"
                     hasBand -> "${skin.label} · RSSI vs FREQUENCY · TAP A PEAK TO TUNE"
-                    else -> "${skin.label} · ${band.lowKHz / 1000}–${band.highKHz / 1000} MHz · SWEEP TO MAP THE BAND"
+                    mode == QualcommFmHardwareEngine.ViewMode.BAND ->
+                        "${skin.label} · ${band.lowKHz / 1000}–${band.highKHz / 1000} MHz · FIRST SWEEP…"
+                    else -> "LIVE · SIGNAL OF THE TUNED STATION"
                 },
                 color = MikuTeal.copy(alpha = 0.85f), fontSize = 7.5.sp, fontWeight = FontWeight.Bold,
                 // The header doubles as the skin control. A dedicated row of buttons would eat

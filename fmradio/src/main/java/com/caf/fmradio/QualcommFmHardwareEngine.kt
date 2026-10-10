@@ -184,6 +184,13 @@ class QualcommFmHardwareEngine(private val context: Context) {
         /** Si4705 RX volume is a 6-bit field, so full scale is 63. */
         private const val SI4705_MAX_VOLUME = 63
 
+        /** The siphon must show real audio within this long of its first samples. */
+        private const val SIPHON_PROBE_MS = 3000L
+        /** Below this the capture is treated as silence, not as a quiet song. */
+        private const val SIPHON_FLOOR_DBFS = -75.0
+        /** Pause between continuous band sweeps, so the radio is heard between them. */
+        private const val BAND_LOOP_GAP_MS = 1500L
+
         /** Re-arm RDS (poll the node) after this long without a group. */
         private const val RDS_REARM_MS = 1000L
         /** Tuned this long without one clean group: report no RDS, while still listening. */
@@ -577,6 +584,7 @@ class QualcommFmHardwareEngine(private val context: Context) {
     private fun onNewStation() {
         updateTunedStation()
         FmRdsReader.newStation()
+        FmNowPlaying.newStation()
         rdsTunedAt = SystemClock.elapsedRealtime()
         rdsAvailable.value = null
         rdsArtist.value = null
@@ -843,6 +851,7 @@ class QualcommFmHardwareEngine(private val context: Context) {
 
                 startRdsReader()
                 startPolling()
+                reconcileBandLoop()
                 Log.i(TAG, "FM tuner ON at $freq kHz")
             } catch (t: Throwable) {
                 Log.e(TAG, "FM power-on FAILED", t)
@@ -1192,6 +1201,7 @@ class QualcommFmHardwareEngine(private val context: Context) {
             val hits = ArrayList<FmScanHit>()
             val wasMuted = isMuted.value
             sweeping = true
+            reconcileCapture()          // the siphon closes for the sweep (A2DP keeps its bridge)
             isScanning.value = true
             scanResults.value = emptyList()
             scanProgress.value = 0f
@@ -1232,6 +1242,7 @@ class QualcommFmHardwareEngine(private val context: Context) {
                 sweeping = false
                 isScanning.value = false
                 scanProgress.value = 0f
+                reconcileCapture()
                 // Back where we started, and unmuted only if it was unmuted before.
                 FmV4L2.setTunedKHz(startFreq)
                 currentFrequencyKHz.value = startFreq
@@ -1408,13 +1419,119 @@ class QualcommFmHardwareEngine(private val context: Context) {
      * and while recording, where the user asked for whatever is there.
      */
     private fun captureWanted(): Boolean =
-        isPoweredOn.value && hardwareOnline.value &&
-            (activeRouteCode == FmAudioRoute.DEV_A2DP || wav.isRecording())
+        isPoweredOn.value && hardwareOnline.value && !sweeping &&
+            (activeRouteCode == FmAudioRoute.DEV_A2DP || wav.isRecording() || siphonWanted())
+
+    // ------------------------------------------------------------------ the siphon
+
+    /**
+     * THE SIPHON: a read-only tap on the tuner's audio, for the VU meter, the live audio
+     * spectrum and recording, on outputs where the audio never passes through this app.
+     *
+     * On every output but Bluetooth the radio plays through the ADSP's hardware loopback, so the
+     * app has no samples. The RADIO_TUNER capture is the only door, and on this device it has
+     * been three different things: white noise (while the chip's output format was wrong), and
+     * on 0.1.15 constant digital silence that took ten seconds to open and coincided with the
+     * radio going silent. So the siphon never assumes; it tests, and backs off:
+     *
+     *   1. It only opens while the tuner screen is in front in LIVE mode, never in the
+     *      background and never during a band sweep.
+     *   2. Within [SIPHON_PROBE_MS] of the first samples it must see real audio: not a constant
+     *      value and above [SIPHON_FLOOR_DBFS]. And the HAL loopback must still be running
+     *      (fm_status), because a tap that stops the radio is worse than no tap.
+     *   3. Any failure closes it, restarts the loopback if it was disturbed, and records the
+     *      reason against this firmware build, so it is not retried on every power-on. The
+     *      diagnostics sheet shows the state and can clear it to try again.
+     */
+    enum class SiphonState { UNTRIED, PROBING, ACTIVE, FAILED }
+    val siphonState = MutableStateFlow(SiphonState.UNTRIED)
+    val siphonReason = MutableStateFlow<String?>(null)
+
+    private fun siphonKey() = "siphon_failed_" + android.os.Build.FINGERPRINT.hashCode()
+
+    private fun siphonWanted(): Boolean =
+        uiVisible && viewMode.value == ViewMode.LIVE && activeRouteCode != FmAudioRoute.DEV_A2DP &&
+            siphonState.value != SiphonState.FAILED
+
+    /** Forget a recorded siphon failure and try again (diagnostics sheet). */
+    fun retrySiphon() {
+        prefs.edit().remove(siphonKey()).apply()
+        siphonState.value = SiphonState.UNTRIED
+        siphonReason.value = null
+        reconcileCapture()
+    }
+
+    private fun siphonFailed(reason: String, loopbackDisturbed: Boolean) {
+        Log.w(TAG, "siphon off: $reason")
+        siphonReason.value = reason
+        siphonState.value = SiphonState.FAILED
+        prefs.edit().putString(siphonKey(), reason).apply()
+        isAudioRecordRunning = false            // the bridge thread sees this and closes the capture
+        if (loopbackDisturbed && isPoweredOn.value) {
+            scope.launch(tunerDispatcher) {
+                delay(300)
+                Log.w(TAG, "siphon disturbed the hardware loopback; restarting it")
+                stopHalAudio()
+                startHalAudio()
+            }
+        }
+    }
+
+    /** Recording needs samples that are the radio: Bluetooth, or a siphon that proved itself. */
+    fun canRecord(): Boolean =
+        activeRouteCode == FmAudioRoute.DEV_A2DP || siphonState.value == SiphonState.ACTIVE
+
+    // ------------------------------------------------------------------ view modes
+
+    /**
+     * LIVE: what you are listening to, as it happens (the siphon's audio spectrum when it is
+     * verified, otherwise the tuned station's own signal report). BAND: the whole band, swept
+     * continuously while selected, which mutes the radio for each sweep because the chip can
+     * only be on one frequency at a time.
+     */
+    enum class ViewMode { LIVE, BAND }
+    val viewMode = MutableStateFlow(
+        if (prefs.getString("view_mode", "live") == "band") ViewMode.BAND else ViewMode.LIVE)
+    private var bandLoopJob: Job? = null
+
+    init {
+        prefs.getString(siphonKey(), null)?.let {
+            siphonState.value = SiphonState.FAILED
+            siphonReason.value = "$it (on this firmware; retry from diagnostics)"
+        }
+    }
+
+    fun setViewMode(m: ViewMode) {
+        if (viewMode.value == m) return
+        viewMode.value = m
+        prefs.edit().putString("view_mode", if (m == ViewMode.BAND) "band" else "live").apply()
+        reconcileBandLoop()
+        reconcileCapture()
+    }
+
+    /** Keep sweeping while BAND is on screen and the tuner is on; stop the moment either ends. */
+    private fun reconcileBandLoop() {
+        val want = viewMode.value == ViewMode.BAND && uiVisible && isPoweredOn.value && hardwareOnline.value
+        if (!want) {
+            bandLoopJob?.cancel(); bandLoopJob = null
+            if (viewMode.value != ViewMode.BAND) scanJob?.cancel()   // its finally returns to the station
+            return
+        }
+        if (bandLoopJob?.isActive == true) return
+        bandLoopJob = scope.launch {
+            while (isActive && viewMode.value == ViewMode.BAND && uiVisible && isPoweredOn.value) {
+                if (scanJob?.isActive != true) scanBand()
+                scanJob?.join()
+                delay(BAND_LOOP_GAP_MS)
+            }
+        }
+    }
 
     fun setUiVisible(visible: Boolean) {
         if (uiVisible == visible) return
         uiVisible = visible
         reconcileCapture()
+        reconcileBandLoop()
     }
 
     private fun reconcileCapture() {
@@ -1452,6 +1569,12 @@ class QualcommFmHardwareEngine(private val context: Context) {
             val mono = ShortArray(minBuf / 4 + 2)
             var framePhase = FmCaptureFrame.PHASE_NONE
             var phaseChecked = false
+            // Siphon probe (wired only): real audio within the window, loopback still up.
+            val probing = !bridgeToTrack && !wav.isRecording()
+            if (probing) siphonState.value = SiphonState.PROBING
+            var probeStart = 0L
+            var probeMin = Int.MAX_VALUE; var probeMax = Int.MIN_VALUE; var probeSumSq = 0.0; var probeN = 0L
+            val openedAt = android.os.SystemClock.elapsedRealtime()
             try {
                 @Suppress("MissingPermission")
                 audioRecord = AudioRecord(AUDIO_SOURCE_RADIO_TUNER, sampleRate, channelIn, encoding, minBuf).apply {
@@ -1481,6 +1604,45 @@ class QualcommFmHardwareEngine(private val context: Context) {
                         }
                         val n = FmCaptureFrame.decode(buffer, read, framePhase, mono)
                         val rate = FmCaptureFrame.decodedRate(framePhase, sampleRate)
+                        if (probing && siphonState.value == SiphonState.PROBING && (isMuted.value || sweeping)) {
+                            // Muted on purpose: silence here proves nothing. Start the window over.
+                            probeStart = 0L; probeN = 0; probeSumSq = 0.0
+                            probeMin = Int.MAX_VALUE; probeMax = Int.MIN_VALUE
+                            continue
+                        }
+                        if (probing && siphonState.value == SiphonState.PROBING) {
+                            val now = android.os.SystemClock.elapsedRealtime()
+                            if (probeStart == 0L) {
+                                probeStart = now
+                                Log.i(TAG, "siphon: capture opened in ${now - openedAt} ms")
+                                if (activeRouteCode != null && FmAudioRoute.loopbackActive(audioManager) == false) {
+                                    siphonFailed("opening the capture stopped the hardware loopback", true)
+                                }
+                            }
+                            for (k in 0 until n) {
+                                val v = mono[k].toInt()
+                                if (v < probeMin) probeMin = v
+                                if (v > probeMax) probeMax = v
+                                probeSumSq += (v * v).toDouble()
+                            }
+                            probeN += n
+                            if (siphonState.value == SiphonState.PROBING && now - probeStart >= SIPHON_PROBE_MS) {
+                                val rmsDb = 20 * Math.log10(maxOf(Math.sqrt(probeSumSq / maxOf(1L, probeN)), 1e-3) / 32768.0)
+                                when {
+                                    probeMax - probeMin < 8 ->
+                                        siphonFailed("capture is a constant value (digital silence)", false)
+                                    rmsDb < SIPHON_FLOOR_DBFS ->
+                                        siphonFailed("capture is below %.0f dBFS".format(rmsDb), false)
+                                    FmAudioRoute.loopbackActive(audioManager) == false ->
+                                        siphonFailed("the hardware loopback stopped while capturing", true)
+                                    else -> {
+                                        siphonState.value = SiphonState.ACTIVE
+                                        Log.i(TAG, "siphon: real audio at %.1f dBFS, live spectrum on".format(rmsDb))
+                                    }
+                                }
+                            }
+                            if (siphonState.value != SiphonState.ACTIVE) continue   // do not draw unproven samples
+                        }
                         // The AudioTrack bridge is only the audio path on A2DP, and it is fed
                         // the decoded samples for the same reason: the raw buffer is noise.
                         if (bridgeToTrack) audioTrackHelper?.writeMono(mono, n)
@@ -1600,6 +1762,15 @@ class QualcommFmHardwareEngine(private val context: Context) {
         r.pi?.let { if (it != 0) programmeId.value = it }
         rdsArtist.value = r.rtPlusArtist
         rdsTitle.value = r.rtPlusTitle
+        // The rest of the OS (now-playing HUD, widgets, AOD) learns about radio songs here.
+        val freq = currentFrequencyKHz.value
+        FmNowPlaying.offer(
+            context,
+            station = r.ps.ifBlank { r.callSign ?: mhz(freq) },
+            freqLabel = mhz(freq),
+            artist = r.rtPlusArtist, title = r.rtPlusTitle, rt = r.rt,
+            stereo = isStereo.value,
+        )
     }
 
     private fun stopRdsReader() {

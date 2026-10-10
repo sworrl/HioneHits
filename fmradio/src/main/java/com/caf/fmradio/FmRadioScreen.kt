@@ -85,9 +85,11 @@ fun MikuFMRadioScreen(onBack: () -> Unit) {
                     cataloguedStations = st.nearbyStations,
                     skin = st.sdrSkin,
                     rowTimes = st.bandHistoryTimes,
+                    mode = st.viewMode,
                     onCycleSkin = { FmRadioManager.cycleSdrSkin() },
                     onTuneFreq = { FmRadioManager.tune(it) }
                 )
+                FmViewModeChips(st, Modifier.align(Alignment.TopEnd).padding(top = 18.dp, end = 6.dp))
                 if (st.isScanning) {
                     FmScanOverlay(st)
                 }
@@ -633,6 +635,33 @@ private fun FmVolumeHud(level: Int) {
             }
             Spacer(Modifier.height(4.dp))
             Text("independent of media volume", color = MikuTextSecondary, fontSize = 7.sp)
+        }
+    }
+}
+
+
+/**
+ * LIVE | BAND. BAND sweeps the whole band over and over while it is selected, and the radio is
+ * muted for each sweep (one chip, one frequency at a time), so it says so on the chip.
+ */
+@Composable
+private fun FmViewModeChips(st: FmState, modifier: Modifier = Modifier) {
+    Row(modifier, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+        for (m in QualcommFmHardwareEngine.ViewMode.values()) {
+            val on = st.viewMode == m
+            Text(
+                when (m) {
+                    QualcommFmHardwareEngine.ViewMode.LIVE -> "LIVE"
+                    QualcommFmHardwareEngine.ViewMode.BAND -> if (on) "BAND · SCANNING" else "BAND"
+                },
+                color = if (on) Color.Black else MikuTeal,
+                fontSize = 8.sp, fontWeight = FontWeight.Bold, fontFamily = AudiowideFont,
+                modifier = Modifier
+                    .clip(RoundedCornerShape(6.dp))
+                    .background(if (on) MikuTeal else Color(0xCC03141B))
+                    .clickable { FmRadioManager.setViewMode(m) }
+                    .padding(horizontal = 6.dp, vertical = 3.dp)
+            )
         }
     }
 }

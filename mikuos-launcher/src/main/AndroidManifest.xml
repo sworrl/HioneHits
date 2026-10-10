@@ -5,6 +5,8 @@
          on a data-only SIM whose PS registration is denied, so the zone comes from the
          weather fix instead. See MikuTimeZoneSync. Signature|privileged, held because
          the launcher is platform-signed. -->
+    <!-- USB DAC mode is switched by com.miku.sysbridge (system UID). -->
+    <uses-permission android:name="com.miku.permission.SYSTEM_BRIDGE" />
     <uses-permission android:name="android.permission.SET_TIME_ZONE" />
 
     <!-- Startup tuning does what a root shell used to: set an app op and grant a runtime

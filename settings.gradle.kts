@@ -15,6 +15,7 @@ dependencyResolutionManagement {
 rootProject.name = "MikuPlayer"
 include(":app")
 include(":hardware-settings")
+include(":miku-sysbridge")
 include(":mikuos-settings")
 include(":mikuos-systemui")
 include(":mikuos-launcher")

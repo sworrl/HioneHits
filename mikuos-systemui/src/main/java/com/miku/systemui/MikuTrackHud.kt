@@ -64,7 +64,10 @@ class MikuTrackHud(
         val title: String, val artist: String, val album: String,
         val durationMs: Long, val positionMs: Long, val artUri: String?,
         val quality: String?, val liked: Boolean, val isPlaying: Boolean,
-        val accent: Int = 0
+        val accent: Int = 0,
+        /** The app a tap opens and whose own screen already shows this. Miku Music unless the
+         *  sender says otherwise; the FM tuner (com.caf.fmradio) sends its own for radio songs. */
+        val openPackage: String = "com.miku.player",
     ) {
         companion object {
             fun from(i: Intent) = Payload(
@@ -77,7 +80,8 @@ class MikuTrackHud(
                 quality = i.getStringExtra("quality"),
                 liked = i.getBooleanExtra("liked", false),
                 isPlaying = i.getBooleanExtra("isPlaying", true),
-                accent = i.getIntExtra("accent", 0)
+                accent = i.getIntExtra("accent", 0),
+                openPackage = i.getStringExtra("openPackage")?.takeIf { it.isNotBlank() } ?: "com.miku.player",
             )
         }
     }
@@ -93,7 +97,7 @@ class MikuTrackHud(
         runCatching { Settings.Global.getInt(ctx.contentResolver, GLOBAL_ENABLED, 1) == 1 }.getOrDefault(true)
 
     /** Everything that should suppress a pop-over: screen off, keyguard, MikuOS lock/AOD, our own surfaces. */
-    private fun suppressed(): Boolean {
+    private fun suppressed(openPackage: String = "com.miku.player"): Boolean {
         val pm = ctx.getSystemService(Context.POWER_SERVICE) as? PowerManager
         if (pm?.isInteractive == false) return true
         val km = ctx.getSystemService(Context.KEYGUARD_SERVICE) as? android.app.KeyguardManager
@@ -101,14 +105,14 @@ class MikuTrackHud(
         val top = runCatching { MikuTaskStack.topTask(ctx)?.second }.getOrNull()
         val cls = top?.className ?: ""
         if (top?.packageName == ctx.packageName) return true            // shade / recents / power menu
-        if (top?.packageName == "com.miku.player") return true          // Miku Music itself is showing it already
+        if (top?.packageName == openPackage) return true                // the sending app is showing it already
         if (cls.contains("Lockscreen", true) || cls.contains("Aod", true)) return true
         return false
     }
 
     fun show(p: Payload) {
         if (!isEnabled()) { Log.i(TAG, "disabled — ignoring"); return }
-        if (suppressed()) { Log.i(TAG, "suppressed (screen/keyguard/own surface on top)"); return }
+        if (suppressed(p.openPackage)) { Log.i(TAG, "suppressed (screen/keyguard/own surface on top)"); return }
         main.post {
             val v = view ?: HudView(ctx).also { hv ->
                 val dm = ctx.resources.displayMetrics
@@ -332,7 +336,7 @@ class MikuTrackHud(
                         if (e.x > width - dp(44f)) hide()
                         else {
                             runCatching {
-                                context.packageManager.getLaunchIntentForPackage("com.miku.player")
+                                context.packageManager.getLaunchIntentForPackage(p?.openPackage ?: "com.miku.player")
                                     ?.apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) }?.let { context.startActivity(it) }
                             }
                             hide()
