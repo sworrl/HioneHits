@@ -552,15 +552,13 @@ object MikuIngestEngine {
             if (storageDir.exists() && storageDir.isDirectory) {
                 storageDir.listFiles()?.forEach { file ->
                     if (file.isDirectory && file.name != "emulated" && file.name != "self") {
-                        // Use the folder's real name. The card is exFAT, so File(card, "Music")
-                        // answers for a folder named MUSIC and the scan would submit
-                        // /storage/X/Music/... while MediaStore already holds /storage/X/MUSIC/...
-                        // MediaStore compares paths case-sensitively, so that is a second row
-                        // for every track on the card.
-                        val sdMusic = file.listFiles()?.firstOrNull {
-                            it.isDirectory && it.name.equals("music", ignoreCase = true)
-                        }
-                        if (sdMusic != null) scanPaths.add(sdMusic.absolutePath)
+                        // Keep "Music" as spelled here. The folder on the card is MUSIC, but exFAT
+                        // ignores case and every MediaStore row on this device (17,950 on
+                        // 2026-10-10) is stored as /storage/<id>/Music/... MediaStore matches paths
+                        // case-sensitively, so submitting the folder's on-disk spelling would add a
+                        // second row for every track.
+                        val sdMusic = File(file, "Music")
+                        if (sdMusic.exists()) scanPaths.add(sdMusic.absolutePath)
                         else scanPaths.add(file.absolutePath)
                     }
                 }

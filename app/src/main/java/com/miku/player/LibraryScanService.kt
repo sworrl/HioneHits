@@ -65,8 +65,15 @@ class LibraryScanService : Service() {
             android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_BACKGROUND + android.os.Process.THREAD_PRIORITY_LESS_FAVORABLE)
             val before = LibraryCounts.countTracks(app)
 
-            // 1. Load known tracks from MediaStore and crash checkpoint
-            val known = HashSet<String>()
+            // 1. Load known tracks from MediaStore and crash checkpoint.
+            // Compared lowercased. The card is exFAT and its music folder is MUSIC on disk, while
+            // every MediaStore row on the device spells it /Music/. With all-files access the walk
+            // below reads the card and sees MUSIC, so a case-sensitive check calls all ~18k card
+            // files "new" on every scan and sends each one back through MediaScanner.
+            val known = object : HashSet<String>() {
+                override fun add(element: String) = super.add(element.lowercase())
+                override fun contains(element: String) = super.contains(element.lowercase())
+            }
             try {
                 app.contentResolver.safeQuery(
                     MediaStore.Audio.Media.EXTERNAL_CONTENT_URI,
