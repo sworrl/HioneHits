@@ -269,13 +269,19 @@ object ResponseMath {
 
     /**
      * A gentle correction for a measured curve: cuts only, at most [maxCutDb] each, nothing below
-     * 40 Hz, up to [maxBands] peaking filters at the biggest bumps above the curve's own
-     * 1-octave trend. Never a boost, so it cannot clip and cannot push a small speaker into a dip
+     * 40 Hz, Q 0.7 to 2.5, up to [maxBands] peaking filters at the biggest bumps above the
+     * curve's own 2-octave trend (on a 1/3 octave view of it). Never a boost, so it cannot clip and cannot push a small speaker into a dip
      * it cannot fill.
      */
     fun suggestCuts(measured: Curve, maxBands: Int = 5, maxCutDb: Double = 6.0, minBumpDb: Double = 2.0): List<Band> {
         val grid = logGrid(40.0, 16000.0, 24)
-        val m = DoubleArray(grid.size) { measured.at(grid[it]) }
+        // Work on a 1/3 octave view (mean of +-1/6 octave): a phone mic's narrow wiggles are not
+        // worth an EQ band, and narrow cuts are the opposite of gentle.
+        val m = DoubleArray(grid.size) { i ->
+            var sum = 0.0
+            for (k in -4..4) sum += measured.at(grid[i] * 2.0.pow(k / 24.0))
+            sum / 9
+        }
         // Trend: the curve smoothed over 2 octaves. Bumps are what sticks out of it.
         val trend = DoubleArray(grid.size) { i ->
             var s = 0.0; var c = 0
@@ -293,8 +299,8 @@ object ResponseMath {
             // Width: where the bump falls to half its height (in dB) on each side.
             var lo = best; while (lo > 0 && excess[lo - 1] > h / 2) lo--
             var hi = best; while (hi < grid.size - 1 && excess[hi + 1] > h / 2) hi++
-            val octaves = max(1.0 / 6, (hi - lo + 1) / 24.0)
-            val q = (sqrt(2.0.pow(octaves)) / (2.0.pow(octaves) - 1)).coerceIn(0.5, 6.0)
+            val octaves = max(1.0 / 3, (hi - lo + 1) / 24.0)
+            val q = (sqrt(2.0.pow(octaves)) / (2.0.pow(octaves) - 1)).coerceIn(0.7, 2.5)
             bands.add(Band(BandType.PEAKING, Math.round(grid[best]).toDouble(), -min(maxCutDb, h).let { Math.round(it * 10) / 10.0 }, Math.round(q * 100) / 100.0))
             for (j in max(0, lo - 6)..min(grid.size - 1, hi + 6)) used[j] = true
         }

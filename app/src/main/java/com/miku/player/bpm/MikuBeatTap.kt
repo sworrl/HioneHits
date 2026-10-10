@@ -32,7 +32,8 @@ import java.util.concurrent.atomic.AtomicLong
  * They copy into a ring, bump a counter or swap a reference. They never block or allocate.
  *
  * COST. Nothing runs unless [setWanted] is on (Miku Music turns it on while playing with the
- * screen on). When on: one 1024-point FFT per 11.6 ms of audio, about 1 % of one core here.
+ * screen on). When on: one 1024-point FFT per 11.6 ms of audio plus BTrack's tempo update on each
+ * beat, measured at 3.5 to 4.5 % of one core on the M500 for a 16/44.1 file.
  */
 object MikuBeatTap {
     private const val TAG = "MikuBeatTap"

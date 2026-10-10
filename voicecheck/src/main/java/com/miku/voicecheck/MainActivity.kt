@@ -68,7 +68,10 @@ class MainActivity : ComponentActivity() {
         "cyber:fm_radio_on" to "new take, speech check hears \"FM radio on\"",
     )
 
-    private fun suspectNote(c: Clip): String? = suspect.entries.firstOrNull { (k, _) ->
+    /** Problems the off-device checks recorded for OS sounds (os_sounds/index.json), by clip key. */
+    private val osNotes = HashMap<String, String>()
+
+    private fun suspectNote(c: Clip): String? = osNotes[c.key] ?: suspect.entries.firstOrNull { (k, _) ->
         val (v, part) = k.split(":")
         c.voice == v && c.id.contains(part)
     }?.value
@@ -135,6 +138,9 @@ class MainActivity : ComponentActivity() {
                     continue
                 }
                 val path = "os_sounds/" + o.getString("file")
+                o.optJSONArray("problems")?.let { pr ->
+                    if (pr.length() > 0) osNotes[path] = "check: " + (0 until pr.length()).joinToString(" / ") { pr.getString(it) }
+                }
                 val text = if (voice != null) o.optString("text") + (o.optString("style").takeIf { it == "sung" || it == "bank" }?.let { " (sung)" }
                     ?: if (o.optString("style") == "chime") " (with chime)" else "") else o.optString("name")
                 out += Clip(path, "os:$cid", o.getString("id"), voice, text, path)

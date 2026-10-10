@@ -145,7 +145,7 @@ fun DacResponseCard(
     }
 
     val fromHz = if (range == GraphRange.TOP) 2000.0 else 20.0
-    val toHz = when (range) { GraphRange.FULL -> 2.0 * rate; GraphRange.TOP -> rate / 2.0; GraphRange.AUDIO -> 20000.0 }
+    val toHz = when (range) { GraphRange.FULL -> 2.0 * rate; GraphRange.TOP -> 0.6 * rate; GraphRange.AUDIO -> 20000.0 }
     val g by animateFloatAsState(gainDb(gain), tween(500), label = "gain")
 
     // Curves for the plot, cached per (models, range).
@@ -154,9 +154,10 @@ fun DacResponseCard(
     }
     // The transducer: a measurement beats an imported curve.
     val transducer = measured?.curve ?: headphone?.curve?.normalized()
-    val earsExtra: FloatArray? = remember(entry, transducer, range, rate) {
+    val earsExtra: FloatArray? = remember(entry, transducer, measured, range, rate) {
         val eqOn = entry?.eqAudible == true
-        if (!eqOn && transducer == null) null else FloatArray(POINTS) { i ->
+        // With the EQ off, "at your ears" would only repeat the measured line: skip it then.
+        if (!eqOn && (transducer == null || measured != null)) null else FloatArray(POINTS) { i ->
             val f = fromHz * (toHz / fromHz).pow(i / (POINTS - 1.0))
             var d = 0.0
             if (eqOn) d += ResponseMath.eqDb(entry!!.preampDb, entry.bands, min(f, 20000.0), 48000)
@@ -198,7 +199,7 @@ fun DacResponseCard(
         if (tab == 0) {
             Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 GraphRange.entries.forEach { r -> Chip(r.label, range == r, primary) { range = r } }
-                if (earsExtra != null) Chip("At your ears", showEars, secondary) { showEars = !showEars }
+                if (earsExtra != null || measuredArr != null) Chip(if (earsExtra != null) "At your ears" else "Measured", showEars, secondary) { showEars = !showEars }
             }
             Spacer(Modifier.height(6.dp))
             FrequencyGraph(
@@ -437,7 +438,7 @@ private fun FrequencyGraph(
         val gy = (y(gainDb) - gt.size.height - 2f).coerceIn(topPad, topPad + h - gt.size.height)
         drawText(gt, topLeft = Offset(left + 6f, gy))
         if (range != GraphRange.FULL) {
-            val nt = tm.measure("no smoothing", TextStyle(color = HwMuted, fontSize = 8.5.sp))
+            val nt = tm.measure(if (measured != null) "filters: no smoothing, measured: 1/6 octave" else "no smoothing", TextStyle(color = HwMuted, fontSize = 8.5.sp))
             drawText(nt, topLeft = Offset(left + 4f, topPad + h - nt.size.height - 2f))
         }
     }
@@ -517,7 +518,8 @@ private fun ImpulseGraph(m: DacFilterModel.Model?, shown: DacFilterModel.Filter,
             drawRect(amber.copy(alpha = 0.10f), Offset(a, topPad), Size(x(0.0) - a, h))
             bracket(tm, "Pre-ringing ${fmtMs(ring.preSeconds)}", a, x(0.0), topPad, amber, alignRight = true)
         }
-        if (ring.postSeconds > 2e-5) {
+        val isNos = shown == DacFilterModel.Filter.NOS && !m.choiceIgnored
+        if (ring.postSeconds > 2e-5 && !isNos) {
             val b = x(ring.postSeconds).coerceAtMost(left + w)
             drawRect(secondary.copy(alpha = 0.08f), Offset(x(0.0), topPad), Size(b - x(0.0), h))
             bracket(tm, "Post-ringing ${fmtMs(ring.postSeconds)}", x(0.0), b, topPad, secondary, alignRight = false)
@@ -532,8 +534,10 @@ private fun ImpulseGraph(m: DacFilterModel.Model?, shown: DacFilterModel.Filter,
                 drawPath(p, color, style = Stroke(width = 3f, join = StrokeJoin.Round))
             }
         }
-        if (shown == DacFilterModel.Filter.NOS && !m.choiceIgnored) {
-            val s = tm.measure("Each sample held for ${fmtUs(1.0 / m.rateHz)}. No ringing either side.", TextStyle(color = Color.White, fontSize = 10.sp))
+        val cap = tm.measure("Ringing counted while above 1% of the peak", TextStyle(color = HwMuted, fontSize = 8.5.sp))
+        drawText(cap, topLeft = Offset(left + w - cap.size.width - 4f, topPad + h - cap.size.height - 2f))
+        if (isNos) {
+            val s = tm.measure("Each sample held for ${fmtUs(1.0 / m.rateHz)}. No filter ringing, only a small overshoot.", TextStyle(color = Color.White, fontSize = 10.sp))
             drawText(s, topLeft = Offset(left + 6f, topPad + 4f))
         } else if (ring.preSeconds <= 2e-5) {
             val s = tm.measure("No pre-ringing: everything comes after the peak.", TextStyle(color = Color.White, fontSize = 10.sp))
@@ -707,6 +711,9 @@ private fun ProfileTools(
         val levels = listOf("Quiet (−30 dBFS)" to 0.0316, "Normal (−20 dBFS)" to 0.1, "Loud (−12 dBFS)" to 0.25)
         AlertDialog(
             onDismissRequest = { askMeasure = false },
+            containerColor = HwSurface1,
+            titleContentColor = Color.White,
+            textContentColor = Color.White.copy(alpha = 0.88f),
             title = { Text("Measure the $portLabel output") },
             text = {
                 Column {
@@ -718,7 +725,8 @@ private fun ProfileTools(
                     Spacer(Modifier.height(8.dp))
                     levels.forEachIndexed { i, (s, _) ->
                         Row(Modifier.fillMaxWidth().clickable { level = i }.padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-                            androidx.compose.material3.RadioButton(selected = level == i, onClick = { level = i })
+                            androidx.compose.material3.RadioButton(selected = level == i, onClick = { level = i },
+                                colors = androidx.compose.material3.RadioButtonDefaults.colors(selectedColor = secondary, unselectedColor = HwMuted))
                             Text(s, fontSize = 13.sp)
                         }
                     }
@@ -745,9 +753,9 @@ private fun ProfileTools(
                         }
                         status = (listOfNotNull(out.error) + out.notes).joinToString(" ")
                     }
-                }) { Text("Start") }
+                }) { Text("Start", color = secondary, fontWeight = FontWeight.Bold) }
             },
-            dismissButton = { TextButton(onClick = { askMeasure = false }) { Text("Cancel") } },
+            dismissButton = { TextButton(onClick = { askMeasure = false }) { Text("Cancel", color = HwMuted) } },
         )
     }
 }

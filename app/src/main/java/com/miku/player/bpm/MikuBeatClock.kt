@@ -63,6 +63,8 @@ object MikuBeatClock {
     private var misses = 0
     private var lastMissErrNs = 0.0
     private var halfOffRun = 0
+    private var liveCandidate = 0.0
+    private var liveAgree = 0
     private val liveBeats = ArrayDeque<Long>()
 
     /** New track: forget the old phase. [bpm] is the file tempo or 0. */
@@ -71,6 +73,7 @@ object MikuBeatClock {
         fileBpm = if (bpm > 0f) bpm else 0f
         filePeriodNs = if (fileBpm > 0f) 60e9 / fileBpm else 0.0
         hits = 0; misses = 0; halfOffRun = 0
+        liveCandidate = 0.0; liveAgree = 0
         liveBeats.clear()
         grid = Grid(fileBpm, filePeriodNs, 0L, false, if (fileBpm > 0f) "file" else "none")
     }
@@ -108,11 +111,18 @@ object MikuBeatClock {
         var period = grid.periodNs
         var basePeriod = filePeriodNs
         if (fileBpm <= 0f) {
-            // No file tempo: fit the period to the recent live beats instead, and keep the current
-            // one unless the fit has moved by more than 1.5 %, so the number does not flicker.
+            // No file tempo: fit the period to the recent live beats instead. BTrack takes a few
+            // seconds to settle, so a fit is only adopted once four in a row agree within 2 %,
+            // and the adopted one is kept unless the fit moves by more than that. Until then
+            // there is no tempo to show, rather than a number that runs 163, 148, 85, 81.
             val fitted = fittedLivePeriod() ?: return
-            if (period <= 0.0 || abs(fitted / period - 1.0) > 0.015) period = fitted
-            basePeriod = fitted
+            if (liveCandidate > 0.0 && abs(fitted / liveCandidate - 1.0) <= 0.02) liveAgree++ else liveAgree = 1
+            liveCandidate = fitted
+            if (period <= 0.0 || abs(fitted / period - 1.0) > 0.02) {
+                if (liveAgree < 4) return
+                period = fitted
+            }
+            basePeriod = period
         }
         val g = grid
         if (g.anchorNs == 0L) {

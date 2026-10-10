@@ -41,7 +41,7 @@ android {
         }
     }
 }
-tasks.matching { (it.name.startsWith("merge") && it.name.endsWith("Assets")) || it.name.contains("LintVital") }.configureEach { dependsOn(copySounds) }
+tasks.matching { (it.name.startsWith("merge") && it.name.endsWith("Assets")) || it.name.contains("LintVital", ignoreCase = true) }.configureEach { dependsOn(copySounds) }
 
 dependencies {
     implementation(platform("androidx.compose:compose-bom:2024.09.02"))

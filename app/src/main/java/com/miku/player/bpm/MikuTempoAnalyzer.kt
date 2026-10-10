@@ -55,6 +55,7 @@ object MikuTempoAnalyzer {
     private val inFlight = ConcurrentHashMap<String, Any>()
     /** One decode at a time across the app: the library job and now-playing never stack up. */
     private val gate = Semaphore(1, true)
+    private val foregroundWaiting = java.util.concurrent.atomic.AtomicInteger(0)
 
     /**
      * Cached or fresh tempo for [path]. With [allowAnalysis] false only the cache and the tag are
@@ -67,6 +68,7 @@ object MikuTempoAnalyzer {
         clipEndMs: Long = 0L,
         allowAnalysis: Boolean = true,
         shouldStop: () -> Boolean = { false },
+        background: Boolean = false,
     ): MikuTempoDb.Row? {
         if (path.isBlank()) return null
         attach(ctx)
@@ -93,10 +95,14 @@ object MikuTempoAnalyzer {
         synchronized(lock) {
             try {
                 db.lookup(path, clipStartMs)?.let { return it }
-                gate.acquire()
+                // The library job gives way: a now-playing request waiting for the gate stops the
+                // background decode at its next buffer, and the job retries that file later.
+                val stop: () -> Boolean = if (background) ({ shouldStop() || foregroundWaiting.get() > 0 }) else shouldStop
+                if (!background) foregroundWaiting.incrementAndGet()
+                try { gate.acquire() } finally { if (!background) foregroundWaiting.decrementAndGet() }
                 try {
-                    if (shouldStop()) return null
-                    val r = analyse(path, clipStartMs, clipEndMs, shouldStop) ?: return null
+                    if (stop()) return null
+                    val r = analyse(path, clipStartMs, clipEndMs, stop) ?: return null
                     // r[0] == 0: decoded fine but no steady beat. Stored as bpm 0 so the library
                     // job does not decode it again until the file changes.
                     val ok = r[0] > 0.5

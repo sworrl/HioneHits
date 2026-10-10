@@ -16,8 +16,9 @@ import com.miku.player.FastLibraryStore
  *
  * Runs only while the device is charging (JobScheduler), one file at a time on a background-
  * priority thread, and stops the moment the system asks. A whole-track decode plus TempoTrackV2
- * takes roughly 2 to 6 s per file here, so a library of ~17k tracks takes a few nights of
- * charging. Rows are keyed by path + size + mtime, so each file is done once until it changes.
+ * measured 8 to 15 s per four-minute file on the M500, so a library of ~17k tracks needs about
+ * 60 hours on the charger in total, spread over as many sessions as it takes. A now-playing
+ * analysis always goes first: it stops the job's current file, which is retried next run. Rows are keyed by path + size + mtime, so each file is done once until it changes.
  * Disc-image virtual tracks are skipped here and analysed per clip when they play.
  */
 class MikuBpmScanJob : JobService() {
@@ -40,7 +41,7 @@ class MikuBpmScanJob : JobService() {
                     if (stop) break
                     if (t.parentId != 0L || t.isDiscImage || t.path.isBlank()) continue
                     if (db.lookup(t.path) != null) continue
-                    MikuTempoAnalyzer.resolve(ctx, t.path, shouldStop = { stop })
+                    MikuTempoAnalyzer.resolve(ctx, t.path, shouldStop = { stop }, background = true)
                     done++
                 }
                 finished = !stop

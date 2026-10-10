@@ -312,11 +312,11 @@ object MikuBpmEngine {
                         }
                     }
                     var g = MikuBeatClock.grid
-                    val state = "${g.source}/${g.phaseLocked}/${"%.0f".format(60e9 / maxOf(1.0, g.periodNs))}"
+                    val state = "${g.source}/${g.phaseLocked}/${g.bpm}"
                     if (state != lastLoggedGrid) {
                         lastLoggedGrid = state
                         android.util.Log.i(TAG, "beat grid: source=${g.source} locked=${g.phaseLocked} " +
-                            "bpm=${"%.1f".format(60e9 / maxOf(1.0, g.periodNs))} shown=$currentBpm")
+                            "bpm=${g.bpm} shown=$currentBpm")
                     }
                     // The whole-file analysis ran and found no steady beat (ambient, rubato,
                     // spoken word): no tempo and no beat, rather than a live number that wanders.
