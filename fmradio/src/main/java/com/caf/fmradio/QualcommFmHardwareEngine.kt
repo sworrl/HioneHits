@@ -178,6 +178,14 @@ class QualcommFmHardwareEngine(private val context: Context) {
         const val SWEEP_SETTLE_MS = 60L
 
         /**
+         * Settle time per channel during a seek. The driver's tune already waits for the chip's
+         * STC interrupt (about 30 ms) and its signal read costs about 60 ms more (two commands
+         * at a fixed ~30 ms each), so a step is ~110 ms with this and ~150 ms at the sweep's 60.
+         * The RSQ numbers are valid at STC; this only covers the first audio blocks settling.
+         */
+        const val SEEK_SETTLE_MS = 20L
+
+        /**
          * What the Si4705 itself tunes, measured on 0.1.18 with the driver's band clamp removed
          * (MIKU_FM_UNLOCK): 64.0 MHz up to 108.0 MHz. 63 MHz came back as 64.0 and everything
          * from 108.1 to 162.55 MHz as 108.0, so these are the chip's own limits, and NOAA
@@ -235,7 +243,10 @@ class QualcommFmHardwareEngine(private val context: Context) {
         private const val STOCK_FM_VOLUME = 0.052481f
         private const val STOCK_EQUIVALENT_LEVEL = 47
 
-        /** Seek sensitivity, CAF's FM_RX_SIGNAL_STRENGTH_* scale. */
+        /**
+         * Seek sensitivity: the weakest station seek and scan will stop on. The index picks
+         * [FmSoftSeek.thresholds]; it is also still passed to the Qualcomm core, which ignores it.
+         */
         val SENSITIVITY_LABELS = listOf("Weakest", "Weak", "Strong", "Strongest")
     }
 
@@ -285,6 +296,9 @@ class QualcommFmHardwareEngine(private val context: Context) {
      * and on at every station found.
      */
     @Volatile private var sweeping: Boolean = false
+
+    /** True while a seek is stepping the chip. See [seek]. */
+    @Volatile private var seeking: Boolean = false
 
     /** The device code the HAL session was started with, so teardown can clear the same one. */
     @Volatile private var activeRouteCode: Int? = null
@@ -490,9 +504,12 @@ class QualcommFmHardwareEngine(private val context: Context) {
      */
     private fun noteLiveReading(s: FmV4L2.Reading) {
         val rssi = s.rssi ?: return
-        if (sweeping || isScanning.value) return
+        if (sweeping || seeking || isScanning.value) return
         val st = tunedStation.value ?: return
-        val f = s.freqKHz ?: currentFrequencyKHz.value
+        // The driver's readback is cut to 16 bits; raw / 16 read 3596 on 101.9 and this check
+        // threw every live reading away. Unwrapped near where we think we are, it is exact.
+        val f = s.freqRaw16?.let { FmSoftSeek.unwrapKHz(it, currentFrequencyKHz.value) }
+            ?: s.freqKHz ?: currentFrequencyKHz.value
         if (Math.abs(st.khz - f) > 60 || Math.abs(currentFrequencyKHz.value - f) > 60) return
         synchronized(liveWindow) {
             if (liveWindowCall != st.call) { liveWindow.clear(); liveWindowCall = st.call }
@@ -1358,31 +1375,82 @@ class QualcommFmHardwareEngine(private val context: Context) {
         if (g != FmChannelGrid.FREE) tune(snapToGrid(currentFrequencyKHz.value))
     }
 
+    /**
+     * Seek to the next station up or down, wrapping at the band edge.
+     *
+     * Done in software on the Si4705 ([FmSoftSeek]): step the channel grid, read the chip's
+     * signal at each channel, stop at the first that reads as a station. The hardware seek this
+     * used to call goes to the Qualcomm core, which has no antenna here, so it always came back
+     * on the frequency it started from (SEEK_CMPL at the start frequency after ~3.4 s of
+     * searching noise). The audio is muted while it steps and comes back on the station found,
+     * or on the start if a full pass found nothing else.
+     *
+     * Runs as [scanJob], so it and a band sweep can never drive the chip at the same time: a
+     * seek pressed during a sweep ends the sweep first, a second seek while one runs is ignored.
+     */
     fun seek(up: Boolean) {
         val rx = receiver
         if (rx == null || !hardwareOnline.value) { step(up); return }
+        if (seeking) return
+        val sweep = scanJob?.takeIf { it.isActive }
+        seeking = true
         isScanning.value = true
-        scope.launch(tunerDispatcher) {
-            val found = seekOnce(rx, up)
-            if (found == null) { isScanning.value = false; step(up) }
+        scanJob = scope.launch(tunerDispatcher) {
+            if (sweep != null) {
+                sweep.cancel(); sweep.join()        // its finally puts us back on the station
+                isScanning.value = true             // and cleared this on the way out
+            }
+            val plan = band.value
+            val startFreq = currentFrequencyKHz.value
+            val stepKHz = gridStep().takeIf { it > 0 } ?: plan.stepKHz
+            val base = if (gridStep() > 0) gridBase() else plan.lowKHz
+            val grid = FmSoftSeek.grid(plan.lowKHz, plan.highKHz, stepKHz, base)
+            val order = FmSoftSeek.order(grid, startFreq, up)
+            val thresholds = FmSoftSeek.thresholds(seekSensitivity.value)
+            val startRssi = FmV4L2.signal()?.rssi
+            val wasMuted = isMuted.value
+            val t0 = SystemClock.elapsedRealtime()
+            var steps = 0
+            var found: Int? = null
+            try {
+                if (!wasMuted) FmV4L2.setMute(true)
+                found = FmSoftSeek.seek(order, startFreq, startRssi, stepKHz, thresholds) { f ->
+                    if (!isActive || !isPoweredOn.value) throw kotlinx.coroutines.CancellationException("seek stopped")
+                    steps++
+                    // Off the tuner Looper: the probe sleeps with the chip lock held.
+                    kotlinx.coroutines.withContext(Dispatchers.IO) { probe(f, SEEK_SETTLE_MS) }
+                }
+            } catch (t: Throwable) {
+                Log.w(TAG, "seek ended early: $t")
+            } finally {
+                val ms = SystemClock.elapsedRealtime() - t0
+                val dest = found ?: startFreq
+                Log.i(TAG, "seek ${if (up) "up" else "down"} from $startFreq (rssi $startRssi): " +
+                    (found?.let { "found $it" } ?: "nothing else in the band") +
+                    " after $steps channel(s), $ms ms, thresholds $thresholds, ${plan.name} step $stepKHz")
+                seeking = false
+                isScanning.value = false
+                if (isPoweredOn.value && hardwareOnline.value) {
+                    // The last probe may have been one channel past the station (the climb
+                    // reads one more to know it has the peak), so land before unmuting.
+                    FmV4L2.setTunedKHz(dest)
+                    if (found != null) tune(dest) else runCatching { rx.setStation(startFreq) }
+                }
+                if (!wasMuted) FmV4L2.setMute(false)
+            }
         }
     }
 
-    /** One hardware seek, resolved when the chip reports where it landed. Null means it failed. */
-    private suspend fun seekOnce(rx: FmReceiver, up: Boolean, timeoutMs: Long = 12_000): Int? {
-        val d = CompletableDeferred<Int>().also { seekDeferred = it }
-        val ok = runCatching {
-            rx.searchStations(
-                FmReceiver.FM_RX_SRCH_MODE_SEEK,
-                FmReceiver.FM_RX_DWELL_PERIOD_1S,
-                if (up) FmReceiver.FM_RX_SEARCHDIR_UP else FmReceiver.FM_RX_SEARCHDIR_DOWN
-            )
-        }.getOrElse { Log.e(TAG, "searchStations threw", it); false }
-        if (!ok) { seekDeferred = null; return null }
-        val freq = withTimeoutOrNull(timeoutMs) { d.await() }
-        seekDeferred = null
-        return freq?.takeIf { it > 0 }
+    /** One seek or scan step: tune, settle, read, as one chip transaction. */
+    private fun probe(khz: Int, settleMs: Long): FmSoftSeek.Probe? {
+        val r = FmV4L2.probe(khz, settleMs) ?: return null
+        if (r.freqRaw16 != null && !FmSoftSeek.landedOn(r.freqRaw16, khz) && probeMismatchLogged.add(khz)) {
+            Log.w(TAG, "probe $khz: driver reads back ${FmSoftSeek.unwrapKHz(r.freqRaw16, khz)} kHz")
+        }
+        return FmSoftSeek.Probe(r.rssi ?: return null, r.snr ?: 0, FmSoftSeek.signedOffset(r.freqOffset))
     }
+
+    private val probeMismatchLogged = java.util.Collections.synchronizedSet(HashSet<Int>())
 
     fun cancelSeek() {
         sweeping = false
@@ -1393,16 +1461,7 @@ class QualcommFmHardwareEngine(private val context: Context) {
     }
 
     /**
-     * Sweep the whole band and collect what is actually receivable.
-     *
-     * Implemented as repeated hardware seeks rather than `searchStationList`, because the jar
-     * has no way to read a station list back out: `FmReceiverJNI.srchListCallback` parses one
-     * internally and nothing public exposes the result. Seeking round the band and recording
-     * where the chip stops uses only calls this device is known to answer, and it gives a real
-     * signal reading per hit instead of a bare frequency.
-     */
-    /**
-     * Sweep the band, measuring RSSI at every channel, and collect the ones the chip calls real.
+     * Sweep the band, measuring RSSI at every channel, and collect the stations in it.
      *
      * This replaced a scan built out of repeated hardware seeks. Seeks only report where they
      * stopped, which gives a list of frequencies and nothing to draw; and on this device the
@@ -1410,20 +1469,33 @@ class QualcommFmHardwareEngine(private val context: Context) {
      * Si4705 across the band and reading its own signal meter gives both the station list and a
      * picture of the band, from the part that is actually receiving.
      *
-     * A station is one the chip validates: `valid=1`, or SNR above zero. Those are the Si4705's
-     * own thresholds rather than a number picked here, which is why a sweep over an unconnected
-     * antenna correctly returns nothing instead of a list of noise peaks.
+     * A station is a channel over the seek thresholds for the current sensitivity
+     * ([FmSoftSeek.thresholds]), the same test seek uses, less any channel that is only the
+     * skirt of a stronger neighbour. It used to be any SNR above zero, which let noise in.
      */
     fun scanBand() {
         val rx = receiver
-        if (rx == null || !hardwareOnline.value || scanJob?.isActive == true) return
+        if (rx == null || !hardwareOnline.value || scanJob?.isActive == true || seeking) return
         scanJob = scope.launch(tunerDispatcher) {
             val plan = band.value
             val startFreq = currentFrequencyKHz.value
             val channels = ((plan.highKHz - plan.lowKHz) / plan.stepKHz) + 1
             val profile = FloatArray(channels)
             val raw = IntArray(channels)
+            // Same indexing as before (low edge, the plan's step), which bandRssi and the reach
+            // fit depend on. For North America that is 87.5, 87.7 ... 107.9, the odd tenths.
+            val grid = IntArray(channels) { plan.lowKHz + it * plan.stepKHz }
+            val readings = arrayOfNulls<FmSoftSeek.Probe>(channels)
+            val thresholds = FmSoftSeek.thresholds(seekSensitivity.value)
             val hits = ArrayList<FmScanHit>()
+            // A station is what the chip hears above the seek thresholds, less the skirts of
+            // stronger neighbours. The reach model only labels these later, it never drops one.
+            fun publishHits() {
+                val found = FmSoftSeek.stations(grid, readings, plan.stepKHz, thresholds)
+                hits.clear()
+                found.forEach { f -> readings[(f - plan.lowKHz) / plan.stepKHz]?.let { hits += FmScanHit(f, it.rssi, it.snr) } }
+                scanResults.value = hits.toList()
+            }
             val wasMuted = isMuted.value
             sweeping = true
             reconcileCapture()          // the siphon closes for the sweep (A2DP keeps its bridge)
@@ -1435,20 +1507,17 @@ class QualcommFmHardwareEngine(private val context: Context) {
                 if (!wasMuted) FmV4L2.setMute(true)
                 for (i in 0 until channels) {
                     if (!isActive || !isPoweredOn.value) break
-                    val f = plan.lowKHz + i * plan.stepKHz
-                    FmV4L2.setTunedKHz(f)
-                    delay(SWEEP_SETTLE_MS)
-                    val sig = FmV4L2.signal()
-                    val rssi = sig?.rssi ?: 0
+                    val f = grid[i]
+                    // Tune, settle and read under one hold of the chip lock, off the Looper.
+                    val p = kotlinx.coroutines.withContext(Dispatchers.IO) { probe(f, SWEEP_SETTLE_MS) }
+                    readings[i] = p
+                    val rssi = p?.rssi ?: 0
                     raw[i] = rssi
                     profile[i] = (rssi / SWEEP_RSSI_FULL_SCALE).coerceIn(0f, 1f)
-                    if (sig?.valid == true || (sig?.snr ?: 0) > 0) {
-                        hits += FmScanHit(f, rssi, sig?.snr)
-                    }
                     if (i % 4 == 0) {
                         bandProfile.value = profile.copyOf()
                         bandRssi.value = raw.copyOf()
-                        scanResults.value = hits.toList()
+                        publishHits()
                     }
                     scanProgress.value = (i + 1).toFloat() / channels
                 }
@@ -1457,7 +1526,7 @@ class QualcommFmHardwareEngine(private val context: Context) {
             } finally {
                 bandProfile.value = profile
                 bandRssi.value = raw
-                scanResults.value = hits.toList()
+                publishHits()
                 sweepHistory.addFirst(profile)
                 sweepTimes.addFirst(System.currentTimeMillis())
                 while (sweepHistory.size > SWEEP_HISTORY) sweepHistory.removeLast()
@@ -1473,7 +1542,8 @@ class QualcommFmHardwareEngine(private val context: Context) {
                 currentFrequencyKHz.value = startFreq
                 runCatching { rx.setStation(startFreq) }
                 if (!wasMuted) FmV4L2.setMute(false)
-                Log.i(TAG, "band sweep: $channels channels, ${hits.size} validated station(s)")
+                Log.i(TAG, "band sweep: $channels channels, ${hits.size} station(s) over $thresholds: " +
+                    hits.joinToString(" ") { "${it.freqKHz}/${it.rssi}/${it.snr}" })
                 FmStationCatalogue.listenerPosition(context)?.let { sweepPlace = it }
                 lastSweepHits = hits.map { FmScanHit(it.freqKHz, it.rssi ?: 0, it.snr) }
                     .filter { (it.rssi ?: 0) >= FmReach.LISTENABLE_DBUV }
@@ -1701,7 +1771,10 @@ class QualcommFmHardwareEngine(private val context: Context) {
                 // Only meter at full rate while someone is looking. Every tick is an I2C
                 // transaction on a chip that is demodulating, and the radio plays through the
                 // hardware loopback whether we poll or not.
-                if (uiVisible) {
+                if (seeking || sweeping) {
+                    // A seek or sweep owns the chip and is reading it anyway.
+                    delay(SIGNAL_POLL_MS)
+                } else if (uiVisible) {
                     refreshSignal()
                     tick++
                     delay(SIGNAL_POLL_MS)
@@ -2042,6 +2115,9 @@ class QualcommFmHardwareEngine(private val context: Context) {
             var lastArmAt = 0L
             try {
                 while (rdsRunning && isPoweredOn.value) {
+                    // Nothing to decode while a seek or sweep is passing through other stations,
+                    // and anything read then would belong to one of them.
+                    if (seeking || sweeping) { Thread.sleep(RDS_IDLE_POLL_MS); continue }
                     val now = SystemClock.elapsedRealtime()
                     if (now - lastGroupAt > RDS_REARM_MS && now - lastArmAt > RDS_REARM_MS) {
                         FmRdsReader.arm(fd)

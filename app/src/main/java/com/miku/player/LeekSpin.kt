@@ -1,5 +1,8 @@
 package com.miku.player
 
+import android.content.Context
+import android.os.SystemClock
+import android.provider.Settings
 import androidx.compose.foundation.layout.Box
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -19,17 +22,37 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.LocalContext
+import com.miku.player.bpm.MikuBeatClock
 import com.miku.player.bpm.MikuBpmEngine
-import kotlinx.coroutines.delay
 
 /**
- * The secret leek (MikuUnlocksReader.SECRET_LEEK_SPIN): a small spring onion twirling in a corner
- * of the Now Playing stage, after the old leek-spin loop.
+ * The Now Playing secret (MikuUnlocksReader.SECRET_LEEK_SPIN), drawn for the active mascot pack:
+ * the leek for the Miku pack, the coda lock ([CodaLock]) for every other pack. It sits beside
+ * the "Play along" pill, off the art and the visualizer.
+ */
+@Composable
+fun SecretBeatAccent(playing: Boolean, modifier: Modifier = Modifier) {
+    // Mascot.pack is Compose state, so a pack switch swaps the accent live.
+    if (Mascot.hasMikuLore) LeekSpin(playing, modifier) else CodaLock(playing, modifier)
+}
+
+/** True when the system animator duration scale is 0 (Developer options or accessibility). */
+internal fun motionReduced(ctx: Context): Boolean = try {
+    Settings.Global.getFloat(ctx.contentResolver, Settings.Global.ANIMATOR_DURATION_SCALE, 1f) == 0f
+} catch (_: Throwable) {
+    false
+}
+
+/**
+ * The secret leek: a small spring onion twirling beside the "Play along" pill, after the old
+ * leek-spin loop.
  *
- * TEMPO HONESTY. With a real tempo from MikuBpmEngine and the music playing, it turns once every
- * two beats. That matches the tempo, not the downbeat: the app has no beat phase to lock to, so it
- * does not claim one. With no tempo (0 = unknown) or while paused it does not spin at all; it
- * sways at a fixed slow rate, so it is never seen keeping time it does not have.
+ * TEMPO. With a phase-locked beat grid from MikuBeatClock and the music playing, the angle is
+ * computed from the grid: one turn per two beats, upright on every other beat. With a tempo but
+ * no phase yet it turns at the tempo. With no tempo (0 = unknown) or while paused it does not
+ * spin, it sways at a fixed slow rate, so it is never seen keeping time it does not have. With
+ * the animator duration scale at 0 it stands still and runs no frame loop.
  *
  * COST. The angle lives in one float state that is read only inside graphicsLayer, so a frame
  * re-draws this layer and recomposes nothing. Paths and brushes are built in drawWithCache and
@@ -38,44 +61,61 @@ import kotlinx.coroutines.delay
  */
 @Composable
 fun LeekSpin(playing: Boolean, modifier: Modifier = Modifier) {
-    // currentBpm is a plain volatile, not Compose state. Sample it once a second; the state write
-    // is a no-op (no recomposition) while the value stays the same.
-    var bpm by remember { mutableFloatStateOf(MikuBpmEngine.currentBpm) }
-    LaunchedEffect(Unit) {
-        while (true) {
-            bpm = MikuBpmEngine.currentBpm
-            delay(1000)
-        }
-    }
+    val ctx = LocalContext.current
+    val still = remember { motionReduced(ctx) }
     val playingNow by rememberUpdatedState(playing)
-    val bpmNow by rememberUpdatedState(bpm)
 
     var angle by remember { mutableFloatStateOf(0f) }
-    LaunchedEffect(Unit) {
+    if (!still) LaunchedEffect(Unit) {
         var spinPhase = 0f       // degrees, accumulated so a tempo change never makes it jump
         var swayT = 0f           // seconds of sway
+        var from = 0f            // angle when the mode last changed
+        var ease = 1f            // 0..1 blend from [from] into the new mode
+        var mode = -1            // 0 sway, 1 tempo only, 2 beat grid
         var last = 0L
         while (true) {
             val now = withFrameNanos { it }
             val dt = if (last == 0L) 0f else ((now - last) / 1_000_000_000f).coerceAtMost(0.1f)
             last = now
-            val b = bpmNow
-            if (b > 0f && playingNow) {
-                // Coming out of a sway: pick the spin up from the current angle, not from zero.
-                if (swayT > 0f) spinPhase = (angle % 360f + 360f) % 360f
-                // 360 degrees per two beats = 180 degrees per beat.
-                spinPhase = (spinPhase + dt * (b / 60f) * 180f) % 360f
-                angle = spinPhase
-                swayT = 0f
-            } else {
-                // Fixed, unhurried sway: a 3.2 s period, +-16 degrees, eased back from wherever the
-                // spin stopped so it does not snap.
-                swayT += dt
-                val target = 16f * kotlin.math.sin(swayT * (2f * Math.PI.toFloat() / 3.2f))
-                val from = if (spinPhase > 180f) spinPhase - 360f else spinPhase
-                val ease = (swayT / 0.6f).coerceAtMost(1f)
-                angle = from + (target - from) * ease
-                if (ease >= 1f) spinPhase = 0f
+            val g = MikuBeatClock.grid
+            val b = MikuBpmEngine.currentBpm
+            val m = when {
+                !playingNow -> 0
+                g.periodNs > 0.0 && g.anchorNs != 0L && g.phaseLocked -> 2
+                b > 0f -> 1
+                else -> 0
+            }
+            if (m != mode) {
+                from = angle
+                ease = if (mode == -1) 1f else 0f
+                if (m == 1) spinPhase = (angle % 360f + 360f) % 360f
+                if (m == 0) swayT = 0f
+                mode = m
+            }
+            ease = (ease + dt / 0.5f).coerceAtMost(1f)
+            val want = when (m) {
+                2 -> {
+                    // 180 degrees per beat from the grid anchor: exact phase, no drift.
+                    val beats = (SystemClock.elapsedRealtimeNanos() - g.anchorNs) / g.periodNs
+                    val d = (beats * 180.0) % 360.0
+                    (if (d < 0) d + 360.0 else d).toFloat()
+                }
+                1 -> {
+                    spinPhase = (spinPhase + dt * (b / 60f) * 180f) % 360f
+                    spinPhase
+                }
+                else -> {
+                    // Fixed, unhurried sway: a 3.2 s period, +-16 degrees.
+                    swayT += dt
+                    16f * kotlin.math.sin(swayT * (2f * Math.PI.toFloat() / 3.2f))
+                }
+            }
+            angle = if (ease >= 1f) want else {
+                // Shortest way round from where the last mode left it.
+                var delta = (want - from) % 360f
+                if (delta > 180f) delta -= 360f
+                if (delta < -180f) delta += 360f
+                from + delta * ease
             }
         }
     }

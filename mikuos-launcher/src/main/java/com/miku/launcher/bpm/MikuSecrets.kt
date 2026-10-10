@@ -41,7 +41,7 @@ object MikuSecrets {
     const val NEGI_BATTERY = "secret.os.battery.negi"
     /** Miku Music Tape Mode: a cassette shell that is invisible until earned. */
     const val TAPE_MIKU39 = "secret.player.tape.miku39"
-    /** Miku Music Now Playing: a leek spins in the corner, one turn per two beats. */
+    /** Now Playing, next to Play along: a leek (Miku pack) or the coda lock (other packs), on the beat. */
     const val LEEK_SPIN = "secret.player.leek_spin"
     /** Lockscreen clock becomes the holographic plasma face. */
     const val HOLO_LOCK_CLOCK = "secret.os.lock.holo_clock"
@@ -91,8 +91,10 @@ object MikuSecrets {
         Secret(TAPE_MIKU39, "MIKU 39 cassette shell", "${Mascot.musicAppName}, Tape Mode",
             "A new cassette shell. Pick it in Tape Mode's theme list or keep tapping the shell button.",
             "Mi-ku. Thirty-nine clean notes in a row, no stumbles.", false),
-        Secret(LEEK_SPIN, "Spinning leek on Now Playing", "${Mascot.musicAppName}, Now Playing",
-            "A leek spins in the corner of Now Playing, one turn every two beats.",
+        Secret(LEEK_SPIN, Mascot.lore("Spinning leek on Now Playing", "Coda lock on Now Playing"),
+            "${Mascot.musicAppName}, Now Playing",
+            Mascot.lore("A leek spins next to Play along on Now Playing, one turn every two beats.",
+                "A coda mark next to Play along on Now Playing locks onto every beat."),
             "Catch the fever three times before you leave the stage.", true),
         Secret(HOLO_LOCK_CLOCK, "Hologram lock screen clock", "Lock screen",
             "The lock screen clock switches to the big hologram style.",

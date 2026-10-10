@@ -179,13 +179,15 @@ object HolidayState {
 
     // ── Pack art slots ──────────────────────────────────────────────────────────────────────
 
-    /** Wallpaper slots of packs/miku/pack.json, compiled in (the Miku pack is the tree itself). */
+    /** Wallpaper slots of packs/miku/pack.json, compiled in (the Miku pack is the tree itself).
+     *  All the usual wallpaper for now: the Miku pack keeps its current look. Seasonal Miku art
+     *  can go in these slots later. */
     val MIKU_SEASONS: Map<String, String?> = mapOf(
         "default" to "drawable:miku_wallpaper",
         "spring" to "drawable:miku_wallpaper",
-        "summer" to "drawable:theme_beach_icecream_wallpaper",
-        "autumn" to "drawable:theme_cozy_cafe_wallpaper",
-        "winter" to "drawable:theme_cozy_cafe_wallpaper",
+        "summer" to "drawable:miku_wallpaper",
+        "autumn" to "drawable:miku_wallpaper",
+        "winter" to "drawable:miku_wallpaper",
     )
 
     /** Lockscreen slots of packs/miku/pack.json: none, the lockscreen keeps its portrait. */

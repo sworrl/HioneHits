@@ -705,17 +705,6 @@ fun NowPlayingScreen(
                             }
                     )
                 }
-
-                // Secret: the leek spin. Top-right of the stage, over the art/visualiser only (the
-                // transport lives in the card below). It takes no input, so taps reach the stage
-                // gestures underneath. Gone entirely when the screen is not actively lit, which also
-                // stops its frame loop.
-                if (leekSpinOn && IdleController.screenActive) {
-                    LeekSpin(
-                        playing = isPlaying,
-                        modifier = Modifier.align(Alignment.TopEnd).padding(10.dp).size(44.dp)
-                    )
-                }
             }
 
             Spacer(Modifier.height(8.dp))
@@ -924,12 +913,21 @@ fun NowPlayingScreen(
         // BPM game: a labeled pill right above the transport, never behind an overlay. Pulses on
         // the beat while music plays; the game opens on top of this screen and comes back here.
         Spacer(Modifier.height(4.dp))
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
+        // The unlocked secret (leek or coda lock, by mascot pack) sits just right of the pill, which
+        // stays centered. It is never on the stage, so it never covers the art or the visualizer.
+        // It takes no input and is gone while the screen is not actively lit, ending its frame loop.
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Spacer(Modifier.weight(1f))
             com.miku.player.ui.BpmGameButton(
                 from = MikuBpmGameLink.FROM_NOW_PLAYING,
                 accent = accent,
                 label = "Play along"
             )
+            Box(Modifier.weight(1f).padding(start = 12.dp), contentAlignment = Alignment.CenterStart) {
+                if (leekSpinOn && IdleController.screenActive) {
+                    SecretBeatAccent(playing = isPlaying, modifier = Modifier.size(28.dp))
+                }
+            }
         }
 
         Spacer(Modifier.height(4.dp))
