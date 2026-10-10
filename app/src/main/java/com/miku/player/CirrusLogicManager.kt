@@ -117,7 +117,13 @@ object CirrusLogicManager {
         return null
     }
 
+    // Filter, gain, DRE and high power read persist.vendor.audio.miku.* first: what the DAC was
+    // last told through com.miku.sysbridge, shared with the Hardware app, MikuOS Settings, the
+    // launcher and the SystemUI tiles. Then the old sources.
     fun getDigitalFilter(ctx: Context): DigitalFilter {
+        com.miku.player.profiles.HibyDacBridge.get(com.miku.player.profiles.HibyDacBridge.PROP_FILTER)?.let { v ->
+            DigitalFilter.values().firstOrNull { it.id == v.lowercase() }?.let { return it }
+        }
         val kernelVal = readSysfs("digital_filter")
         if (!kernelVal.isNullOrBlank()) {
             DigitalFilter.values().firstOrNull { it.id == kernelVal.lowercase() }?.let { return it }
@@ -150,6 +156,9 @@ object CirrusLogicManager {
     }
 
     fun getGainMode(ctx: Context): GainMode {
+        com.miku.player.profiles.HibyDacBridge.get(com.miku.player.profiles.HibyDacBridge.PROP_GAIN)?.let { v ->
+            GainMode.values().firstOrNull { it.sysfsValue == v.lowercase() }?.let { return it }
+        }
         val kernelVal = readSysfs("gain")
         if (!kernelVal.isNullOrBlank()) {
             GainMode.values().firstOrNull { it.sysfsValue == kernelVal.lowercase() }?.let { return it }
@@ -286,6 +295,7 @@ object CirrusLogicManager {
     }
 
     fun isDreEnabled(ctx: Context): Boolean {
+        com.miku.player.profiles.HibyDacBridge.get(com.miku.player.profiles.HibyDacBridge.PROP_DRE)?.let { return it == "dremode_enable" }
         val kernelVal = readSysfs("dre_mode")
         if (kernelVal != null) return kernelVal == "dremode_enable" || kernelVal == "1" || kernelVal.equals("on", true)
         val cr = ctx.contentResolver
@@ -310,6 +320,7 @@ object CirrusLogicManager {
     }
 
     fun isHighPowerEnabled(ctx: Context): Boolean {
+        com.miku.player.profiles.HibyDacBridge.get(com.miku.player.profiles.HibyDacBridge.PROP_HIGH_POWER)?.let { return it == "hpower_enable" }
         val kernelVal = readSysfs("high_power_mode")
         if (kernelVal != null) return kernelVal == "hpower_enable" || kernelVal == "1" || kernelVal.equals("on", true)
         val cr = ctx.contentResolver
@@ -389,10 +400,12 @@ object CirrusLogicManager {
                 source = if (sysfsOk) HardwareAuditState.Source.SYSFS else HardwareAuditState.Source.NONE
             )
         }
-        val sFilter = vendorSetting(ctx, "digital_filter") ?: vendorSetting(ctx, "hw.digital_filter")
-        val sGain = vendorSetting(ctx, "gain") ?: vendorSetting(ctx, "hw.gain")
-        val sHp = vendorSetting(ctx, "high_power_mode") ?: vendorSetting(ctx, "high_power")
-        val sDre = vendorSetting(ctx, "dre_mode")
+        // The bridge's persist properties first: what the DAC was last told.
+        val bridge = com.miku.player.profiles.HibyDacBridge
+        val sFilter = bridge.get(bridge.PROP_FILTER) ?: vendorSetting(ctx, "digital_filter") ?: vendorSetting(ctx, "hw.digital_filter")
+        val sGain = bridge.get(bridge.PROP_GAIN) ?: vendorSetting(ctx, "gain") ?: vendorSetting(ctx, "hw.gain")
+        val sHp = bridge.get(bridge.PROP_HIGH_POWER) ?: vendorSetting(ctx, "high_power_mode") ?: vendorSetting(ctx, "high_power")
+        val sDre = bridge.get(bridge.PROP_DRE) ?: vendorSetting(ctx, "dre_mode")
         val sOut = vendorSetting(ctx, "hw.bal_po_lo_switch")
         val sBal = vendorSetting(ctx, "hw.balance")
         val any = listOf(sFilter, sGain, sHp, sDre, sOut, sBal).any { it != null }

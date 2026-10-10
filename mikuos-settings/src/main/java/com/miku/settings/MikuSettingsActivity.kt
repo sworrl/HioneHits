@@ -380,9 +380,31 @@ fun AudioDacScreen(ctx: Context) {
     var dsdComp by remember { mutableStateOf(CirrusLogicManager.getDsdGainCompensate(ctx)) }
     var outMode by remember { mutableStateOf(CirrusLogicManager.getOutputMode(ctx)) }
     var balance by remember { mutableStateOf(CirrusLogicManager.getBalance(ctx)) }
-    // REAL control-path status: is the kernel DAC sysfs readable, and has anything been persisted?
-    val sysfsReachable = remember { CirrusLogicManager.isSysfsReachable() }
-    val hasPersisted = remember { CirrusLogicManager.hasPersistedDacSettings(ctx) }
+    // Control-path status: is com.miku.sysbridge installed, what was the DAC last told, and did
+    // the last set fail. Filter, gain, DRE and high power go through the bridge.
+    var bridgeOk by remember { mutableStateOf(DacBridge.available(ctx)) }
+    var dacApplied by remember { mutableStateOf(CirrusLogicManager.appliedSummary()) }
+    var dacProblem by remember { mutableStateOf<String?>(null) }
+    // Re-read after every set, so a control that did not apply snaps back to what the DAC has.
+    fun reloadDac() {
+        bridgeOk = DacBridge.available(ctx)
+        filter = CirrusLogicManager.getDigitalFilter(ctx)
+        gain = CirrusLogicManager.getGainMode(ctx)
+        dre = CirrusLogicManager.isDreEnabled(ctx)
+        turbo = CirrusLogicManager.isHighPowerEnabled(ctx)
+        dacApplied = CirrusLogicManager.appliedSummary()
+    }
+    fun applyDac(vararg steps: suspend () -> DacBridge.Result) {
+        scope.launch {
+            var problem: String? = null
+            for (step in steps) {
+                val r = step()
+                if (r != DacBridge.Result.CONFIRMED && problem == null) problem = DacBridge.lastProblem
+            }
+            dacProblem = problem
+            reloadDac()
+        }
+    }
 
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -392,30 +414,27 @@ fun AudioDacScreen(ctx: Context) {
         item {
             Column(Modifier.mikuHeroCard().padding(16.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    StatusDot(if (sysfsReachable) Color(0xFF1ABC9C) else if (hasPersisted) Color(0xFFF1C40F) else MikuMuted, 10.dp)
+                    StatusDot(if (bridgeOk) Color(0xFF1ABC9C) else Color(0xFFF1C40F), 10.dp)
                     Spacer(Modifier.width(8.dp))
                     Text(
-                        when {
-                            sysfsReachable -> "Dual CS43198 · kernel sysfs control reachable"
-                            hasPersisted -> "Dual CS43198 · Settings.Global fallback (sysfs not readable)"
-                            else -> "Dual CS43198 · no DAC state readable yet"
-                        },
-                        color = if (sysfsReachable) MikuTealBright else MikuMuted,
+                        if (bridgeOk) "DAC settings go through the MikuOS system bridge" else "MikuOS system bridge not found",
+                        color = if (bridgeOk) MikuTealBright else MikuMuted,
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Bold
                     )
                 }
                 Spacer(Modifier.height(6.dp))
                 Text(
-                    when {
-                        sysfsReachable -> "Filter, gain, DRE, power rails and balance are read from /sys/devices/platform/sa_sound_setting/. Selections below are what the kernel reports. Nothing is pre-selected from a default."
-                        hasPersisted -> "/sys/devices/platform/sa_sound_setting/ is not readable by this process. Selections below are the last values saved in Settings.Global (vendor.audio.hiby.*). Writes go through the shell path. Nothing selected means it was never set."
-                        else -> "Neither the kernel DAC nodes nor the HiBy audio settings report a value yet. Pick a setting to write one. Until then nothing is selected."
-                    },
+                    if (bridgeOk) "Applied now. $dacApplied"
+                    else "com.miku.sysbridge is not installed, so filter, gain, DRE and high power cannot change. Controls show the last saved choice.",
                     color = MikuMuted,
                     fontSize = 12.sp,
                     lineHeight = 16.sp
                 )
+                dacProblem?.let {
+                    Spacer(Modifier.height(6.dp))
+                    Text(it, color = Color(0xFFF1C40F), fontSize = 12.sp, lineHeight = 16.sp)
+                }
             }
         }
 
@@ -486,7 +505,7 @@ fun AudioDacScreen(ctx: Context) {
                             .padding(6.dp),
                         contentAlignment = Alignment.Center
                     ) {
-                        Text("Rec: Low gain (0 dB)", color = MikuTealBright, fontSize = 10.5.sp, fontWeight = FontWeight.SemiBold)
+                        Text("Rec: Low gain (-12 dB)", color = MikuTealBright, fontSize = 10.5.sp, fontWeight = FontWeight.SemiBold)
                     }
                     Box(
                         Modifier
@@ -508,12 +527,12 @@ fun AudioDacScreen(ctx: Context) {
                         gain = CirrusLogicManager.GainMode.LOW
                         dre = true
                         balance = 0
-                        scope.launch {
-                            CirrusLogicManager.setDigitalFilter(ctx, CirrusLogicManager.DigitalFilter.FAST_LINEAR)
-                            CirrusLogicManager.setGainMode(ctx, CirrusLogicManager.GainMode.LOW)
-                            CirrusLogicManager.setDreEnabled(ctx, true)
-                            CirrusLogicManager.setBalance(ctx, 0)
-                        }
+                        scope.launch { CirrusLogicManager.setBalance(ctx, 0) }
+                        applyDac(
+                            { CirrusLogicManager.setDigitalFilter(ctx, CirrusLogicManager.DigitalFilter.FAST_LINEAR) },
+                            { CirrusLogicManager.setGainMode(ctx, CirrusLogicManager.GainMode.LOW) },
+                            { CirrusLogicManager.setDreEnabled(ctx, true) },
+                        )
                     },
                     modifier = Modifier.fillMaxWidth().height(36.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = MikuTealBright),
@@ -550,7 +569,7 @@ fun AudioDacScreen(ctx: Context) {
                             .background(if (isSel) MikuTealBright.copy(alpha = 0.15f) else Color.Transparent)
                             .clickable {
                                 filter = f
-                                scope.launch { CirrusLogicManager.setDigitalFilter(ctx, f) }
+                                applyDac({ CirrusLogicManager.setDigitalFilter(ctx, f) })
                             }
                             .padding(8.dp),
                         verticalAlignment = Alignment.CenterVertically
@@ -559,7 +578,7 @@ fun AudioDacScreen(ctx: Context) {
                             selected = isSel,
                             onClick = {
                                 filter = f
-                                scope.launch { CirrusLogicManager.setDigitalFilter(ctx, f) }
+                                applyDac({ CirrusLogicManager.setDigitalFilter(ctx, f) })
                             },
                             colors = RadioButtonDefaults.colors(selectedColor = MikuTealBright, unselectedColor = MikuMuted)
                         )
@@ -597,7 +616,7 @@ fun AudioDacScreen(ctx: Context) {
                                 .border(1.dp, if (isSel) MikuTealBright else MikuTeal.copy(alpha = 0.3f), RoundedCornerShape(12.dp))
                                 .clickable {
                                     gain = g
-                                    scope.launch { CirrusLogicManager.setGainMode(ctx, g) }
+                                    applyDac({ CirrusLogicManager.setGainMode(ctx, g) })
                                 },
                             contentAlignment = Alignment.Center
                         ) {
@@ -768,7 +787,7 @@ fun AudioDacScreen(ctx: Context) {
                         checked = dre,
                         onCheckedChange = {
                             dre = it
-                            scope.launch { CirrusLogicManager.setDreEnabled(ctx, it) }
+                            applyDac({ CirrusLogicManager.setDreEnabled(ctx, it) })
                         },
                         colors = SwitchDefaults.colors(checkedThumbColor = MikuTealBright, checkedTrackColor = Color(0xFF0F3238))
                     )
@@ -779,13 +798,13 @@ fun AudioDacScreen(ctx: Context) {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
                         Text("High power mode", color = Color.White, fontSize = 13.5.sp, fontWeight = FontWeight.SemiBold)
-                        Text("More current for hard-to-drive headphones", color = MikuMuted, fontSize = 11.5.sp)
+                        Text("Switches in the external amp stage. The same volume step gets louder, so music volume is lowered to 30% when you turn it on", color = MikuMuted, fontSize = 11.5.sp)
                     }
                     Switch(
                         checked = turbo,
                         onCheckedChange = {
                             turbo = it
-                            scope.launch { CirrusLogicManager.setHighPowerEnabled(ctx, it) }
+                            applyDac({ CirrusLogicManager.setHighPowerEnabled(ctx, it) })
                         },
                         colors = SwitchDefaults.colors(checkedThumbColor = MikuTealBright, checkedTrackColor = Color(0xFF0F3238))
                     )

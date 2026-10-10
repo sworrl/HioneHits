@@ -1,7 +1,6 @@
 package com.miku.launcher
 
 import android.content.Context
-import android.content.Intent
 import android.media.AudioDeviceInfo
 import android.media.AudioManager
 import android.os.Build
@@ -24,10 +23,10 @@ object CirrusLogicManager {
     }
 
     enum class GainMode(val id: String, val label: String, val sysfsValue: String, val description: String) {
-        // No dB figures in the labels: the actual gain step of this unit is never read from anything,
-        // so "(0 dB)" / "(+6 dB)" were unverified numbers rendered next to a live-looking readout.
-        LOW("low", "Low Gain", "low", "For sensitive IEMs and low-impedance earphones"),
-        HIGH("high", "High Gain", "high", "For high-impedance and planar headphones")
+        // Figures from the driver (mikuos/docs/hiby-audio-knobs.md): a digital offset on the 3.5 and
+        // 4.4 mm outputs, low -12 dB, high 0 dB. Not an analog gain change.
+        LOW("low", "Low (-12 dB)", "low", "Digital offset of -12 dB on the 3.5 and 4.4 mm outputs. More volume steps for sensitive IEMs."),
+        HIGH("high", "High (0 dB)", "high", "No digital offset. For louder output use High power.")
     }
 
     enum class OutputMode(val id: String, val label: String, val sysfsValue: String, val icon: String, val description: String) {
@@ -53,7 +52,11 @@ object CirrusLogicManager {
      * hardware state. Re-reading proved nothing.
      */
     enum class Source {
-        /** Read back out of the kernel sysfs node — the DAC's actual state. */
+        /**
+         * What the DAC was last told: persist.vendor.audio.miku.* (set by com.miku.sysbridge, then
+         * written to the sysfs node by the image's miku_audio.rc). Apps cannot read the node
+         * itself, so this is the closest real source. Shared by every MikuOS DAC screen.
+         */
         SYSFS,
         /** Read from the vendor.audio.hiby.* Settings.Global row the HiBy audio HAL consumes. */
         VENDOR_SETTING,
@@ -225,13 +228,36 @@ object CirrusLogicManager {
         }
     }
 
+    // ---- Filter, gain, DRE and high power: the four knobs that move hardware ----
+    // Writes go through com.miku.sysbridge ([DacBridge]). Reads come from
+    // persist.vendor.audio.miku.* first, the same values Miku Music, the Hardware app, MikuOS
+    // Settings and the SystemUI tiles show. See mikuos/docs/hiby-audio-knobs.md.
+
+    // Explicit user choices. Miku Music's ensureBestAudio re-applies these on every player start
+    // and pushes its defaults for any knob without a row. Same keys as com.miku.player.MikuDirectAudio.
+    private const val KEY_USER_GAIN = "miku_audio_user_gain"
+    private const val KEY_USER_DRE = "miku_audio_user_dre"
+    private const val KEY_USER_HIGH_POWER = "miku_audio_user_high_power"
+
+    /** Send one knob through the bridge. A failure is shown as a toast, since callers here ignore the result. */
+    private fun bridged(ctx: Context, knob: String, value: String): DacBridge.Result {
+        val r = DacBridge.set(ctx, knob, value)
+        val msg = DacBridge.lastProblem
+        if (r != DacBridge.Result.CONFIRMED && msg != null) {
+            android.os.Handler(android.os.Looper.getMainLooper()).post {
+                runCatching { android.widget.Toast.makeText(ctx.applicationContext, msg, android.widget.Toast.LENGTH_LONG).show() }
+            }
+        }
+        return r
+    }
+
     /**
      * Tiered read: kernel node, then the vendor Settings.Global row the HAL consumes, then our own
      * prefs mirror (tagged [Source.USER_REQUEST] — a request, NOT a hardware state). Null when no
      * tier has anything. Display surfaces use this and must honour [Reading.isMeasured].
      */
     fun readDigitalFilter(ctx: Context): Reading<DigitalFilter>? {
-        readKernelNode("digital_filter")?.let { v ->
+        DacBridge.get(DacBridge.FILTER)?.let { v ->
             DigitalFilter.values().firstOrNull { it.id == v.lowercase() }
                 ?.let { return Reading(it, Source.SYSFS) }
         }
@@ -257,20 +283,12 @@ object CirrusLogicManager {
         runCatching { Settings.Global.putString(cr, "vendor.audio.hiby.digital_filter", filter.id) }
         runCatching { Settings.Global.putString(cr, "hw.digital_filter", filter.id) }
 
-        // The HAL parameter is the route that actually lands on this hardware. What used to be
-        // here was a RootShell line (echo > sysfs / setprop), and there is no su on MikuOS, so the
-        // Settings row above changed while the DAC did not and the UI echoed the choice back as
-        // applied. See [MikuHalAudio].
-        MikuHalAudio.push(ctx, "vendor.audio.hiby.hw.digital_filter", filter.id)
-        MikuHalAudio.push(ctx, "vendor.audio.hiby.digital_filter", filter.id)
-        ctx.sendBroadcast(Intent("com.m500.hardware.action.FILTER_CHANGED").apply {
-            putExtra("filter", filter.id)
-        })
+        bridged(ctx, DacBridge.FILTER, filter.id)
     }
 
     /** Tiered read — see [readDigitalFilter]. Null when nothing anywhere reports a gain. */
     fun readGainMode(ctx: Context): Reading<GainMode>? {
-        readKernelNode("gain")?.let { v ->
+        DacBridge.get(DacBridge.GAIN)?.let { v ->
             GainMode.values().firstOrNull { it.sysfsValue == v.lowercase() }
                 ?.let { return Reading(it, Source.SYSFS) }
         }
@@ -288,22 +306,16 @@ object CirrusLogicManager {
     /** Control-UI getter: falls back to a preset so the toggle has a selection. Never a measurement. */
     fun getGainMode(ctx: Context): GainMode = readGainMode(ctx)?.value ?: GainMode.HIGH
 
+    /** Gain only. High power is its own switch, as in Miku Music. */
     suspend fun setGainMode(ctx: Context, mode: GainMode) = withContext(Dispatchers.IO) {
         val cr = ctx.contentResolver
         val prefs = ctx.getSharedPreferences("miku_dac_settings", Context.MODE_PRIVATE)
         prefs.edit().putString("gain", mode.sysfsValue).apply()
+        runCatching { Settings.Global.putString(cr, KEY_USER_GAIN, mode.sysfsValue) }
         runCatching { Settings.Global.putString(cr, "vendor.audio.hiby.hw.gain", mode.sysfsValue) }
         runCatching { Settings.Global.putString(cr, "vendor.audio.hiby.gain", mode.sysfsValue) }
 
-        // The HAL parameter is the route that actually lands on this hardware. What used to be
-        // here was a RootShell line (echo > sysfs / setprop), and there is no su on MikuOS, so the
-        // Settings row above changed while the DAC did not and the UI echoed the choice back as
-        // applied. See [MikuHalAudio].
-        MikuHalAudio.push(ctx, "vendor.audio.hiby.hw.gain", mode.sysfsValue)
-        MikuHalAudio.push(ctx, "vendor.audio.hiby.gain", mode.sysfsValue)
-        ctx.sendBroadcast(Intent("com.m500.hardware.action.GAIN_CHANGED").apply {
-            putExtra("gain", mode.sysfsValue)
-        })
+        bridged(ctx, DacBridge.GAIN, mode.sysfsValue)
     }
 
     private fun parseEnabled(v: String, onToken: String): Boolean =
@@ -311,7 +323,7 @@ object CirrusLogicManager {
 
     /** Tiered read — see [readDigitalFilter]. Null when nothing anywhere reports DRE. */
     fun readDre(ctx: Context): Reading<Boolean>? {
-        readKernelNode("dre_mode")?.let { return Reading(parseEnabled(it, "dremode_enable"), Source.SYSFS) }
+        DacBridge.get(DacBridge.DRE)?.let { return Reading(it == "dremode_enable", Source.SYSFS) }
         readVendorSetting(ctx, "vendor.audio.hiby.hw.dre", "vendor.audio.hiby.dre_mode")
             ?.let { return Reading(parseEnabled(it, "dremode_enable"), Source.VENDOR_SETTING) }
         readRequestedPref(ctx, "dre_mode")
@@ -328,18 +340,15 @@ object CirrusLogicManager {
         val sysfsStr = if (enabled) "dremode_enable" else "dremode_disable"
         val prefs = ctx.getSharedPreferences("miku_dac_settings", Context.MODE_PRIVATE)
         prefs.edit().putString("dre_mode", sysfsStr).apply()
+        runCatching { Settings.Global.putInt(cr, KEY_USER_DRE, v) }
         runCatching { Settings.Global.putInt(cr, "vendor.audio.hiby.hw.dre", v) }
-        // The HAL parameter is the route that actually lands on this hardware. What used to be
-        // here was a RootShell line (echo > sysfs / setprop), and there is no su on MikuOS, so the
-        // Settings row above changed while the DAC did not and the UI echoed the choice back as
-        // applied. See [MikuHalAudio].
-        MikuHalAudio.push(ctx, "vendor.audio.hiby.hw.dre", v)
-        MikuHalAudio.push(ctx, "vendor.audio.hiby.dre_mode", sysfsStr)
+        runCatching { Settings.Global.putString(cr, "vendor.audio.hiby.dre_mode", sysfsStr) }
+        bridged(ctx, DacBridge.DRE, sysfsStr)
     }
 
     /** Tiered read — see [readDigitalFilter]. Null when nothing anywhere reports high power. */
     fun readHighPower(ctx: Context): Reading<Boolean>? {
-        readKernelNode("high_power_mode")?.let { return Reading(parseEnabled(it, "hpower_enable"), Source.SYSFS) }
+        DacBridge.get(DacBridge.HIGH_POWER)?.let { return Reading(it == "hpower_enable", Source.SYSFS) }
         readVendorSetting(ctx, "vendor.audio.hiby.hw.high_power", "vendor.audio.hiby.high_power_mode",
             "vendor.audio.hiby.high_power")?.let { return Reading(parseEnabled(it, "hpower_enable"), Source.VENDOR_SETTING) }
         readRequestedPref(ctx, "high_power_mode")
@@ -356,13 +365,21 @@ object CirrusLogicManager {
         val sysfsStr = if (enabled) "hpower_enable" else "hpower_disable"
         val prefs = ctx.getSharedPreferences("miku_dac_settings", Context.MODE_PRIVATE)
         prefs.edit().putString("high_power_mode", sysfsStr).apply()
+        runCatching { Settings.Global.putInt(cr, KEY_USER_HIGH_POWER, v) }
         runCatching { Settings.Global.putInt(cr, "vendor.audio.hiby.hw.high_power", v) }
-        // The HAL parameter is the route that actually lands on this hardware. What used to be
-        // here was a RootShell line (echo > sysfs / setprop), and there is no su on MikuOS, so the
-        // Settings row above changed while the DAC did not and the UI echoed the choice back as
-        // applied. See [MikuHalAudio].
-        MikuHalAudio.push(ctx, "vendor.audio.hiby.hw.high_power", v)
-        MikuHalAudio.push(ctx, "vendor.audio.hiby.high_power_mode", sysfsStr)
+        runCatching { Settings.Global.putString(cr, "vendor.audio.hiby.high_power", sysfsStr) }
+        runCatching { Settings.Global.putString(cr, "vendor.audio.hiby.high_power_mode", sysfsStr) }
+        // The same volume step is louder with the external amp stage in: lower music to 30% first.
+        if (enabled && DacBridge.get(DacBridge.HIGH_POWER) != "hpower_enable" && DacBridge.available(ctx)) {
+            runCatching {
+                val am = ctx.applicationContext.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+                val safe = (am.getStreamMaxVolume(AudioManager.STREAM_MUSIC) * 0.3f).toInt().coerceAtLeast(1)
+                if (am.getStreamVolume(AudioManager.STREAM_MUSIC) > safe) {
+                    am.setStreamVolume(AudioManager.STREAM_MUSIC, safe, 0)
+                }
+            }
+        }
+        bridged(ctx, DacBridge.HIGH_POWER, sysfsStr)
     }
 
     /** Tiered read — see [readDigitalFilter]. Null when nothing anywhere reports a balance. */
@@ -434,10 +451,11 @@ object CirrusLogicManager {
     /** Raw kernel node dump. "N/A" = that node could not be read; no prefs mirror is consulted. */
     fun getLiveHardwareAudit(ctx: Context): Map<String, String> {
         val audit = mutableMapOf<String, String>()
-        audit["kernel_sysfs_filter"] = readKernelNode("digital_filter") ?: "N/A"
-        audit["kernel_sysfs_gain"] = readKernelNode("gain") ?: "N/A"
-        // Both spellings are tried: the setters write "dre_mode", the original audit read "dre".
-        audit["kernel_sysfs_dre"] = readKernelNode("dre_mode") ?: readKernelNode("dre") ?: "N/A"
+        // Apps cannot read these nodes. The persist property is what the DAC was last told.
+        audit["applied_filter"] = DacBridge.get(DacBridge.FILTER) ?: "N/A"
+        audit["applied_gain"] = DacBridge.get(DacBridge.GAIN) ?: "N/A"
+        audit["applied_dre"] = DacBridge.get(DacBridge.DRE) ?: "N/A"
+        audit["applied_high_power"] = DacBridge.get(DacBridge.HIGH_POWER) ?: "N/A"
         audit["kernel_sysfs_turbo"] = readKernelNode("audio_turbo") ?: readKernelNode("turbo") ?: "N/A"
         audit["kernel_sysfs_out_mode"] = readKernelNode("out_mode") ?: "N/A"
         audit["kernel_sysfs_balance"] = readKernelNode("lr_balance") ?: "N/A"
