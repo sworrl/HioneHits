@@ -38,7 +38,7 @@ constexpr int kWin = 1024;
 constexpr double kFoldMinBpm = 70.0;
 constexpr double kFoldMaxBpm = 180.0;
 
-/** Streaming mono windowed-sinc resampler (Blackman window, 8 zero crossings). */
+/** Streaming mono polyphase windowed-sinc resampler (Blackman window, 8 zero crossings). */
 class Resampler {
 public:
     void reset(double inRate, double outRate);
@@ -54,10 +54,10 @@ private:
     double fc_ = 1.0;
     double half_ = 8.0;
     bool bypass_ = true;
+    int taps_ = 0;
     std::vector<float> buf_;
     double t_ = 0.0;
     std::vector<float> table_;
-    float kernel(double x) const;
 };
 
 struct OfflineResult {

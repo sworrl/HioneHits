@@ -31,7 +31,7 @@ namespace mikubeat {
 
 namespace {
 constexpr int kZero = 8;          // zero crossings each side
-constexpr int kTableRes = 512;    // table points per zero crossing
+constexpr int kPhases = 256;      // polyphase resolution, phases per input sample
 
 /**
  * Offset from a tracked beat to the onset it marks, measured with the synthetic drum test
@@ -62,29 +62,34 @@ void Resampler::reset(double inRate, double outRate) {
     half_ = kZero / fc_;
     buf_.clear();
     t_ = 0.0;
-    if (table_.empty()) {
-        table_.resize(kZero * kTableRes + 2);
-        for (size_t i = 0; i < table_.size(); i++) {
-            double u = double(i) / kTableRes;  // in zero-crossing units
-            double s = u < 1e-9 ? 1.0 : std::sin(M_PI * u) / (M_PI * u);
-            double w = u >= kZero ? 0.0
-                                  : 0.42 + 0.5 * std::cos(M_PI * u / kZero) + 0.08 * std::cos(2.0 * M_PI * u / kZero);
-            table_[i] = float(s * w);
+    if (bypass_) return;
+    // Polyphase table: kPhases fractional positions, taps_ coefficients each, every phase
+    // normalised to unity gain. Output k uses the phase nearest its fractional input position
+    // (1/256 of a sample, far below anything a tempo tracker can see).
+    taps_ = 2 * int(std::ceil(half_));
+    const int h = taps_ / 2;
+    table_.assign(size_t(kPhases) * size_t(taps_), 0.0f);
+    for (int p = 0; p < kPhases; p++) {
+        double frac = double(p) / kPhases;
+        double sum = 0;
+        for (int j = 0; j < taps_; j++) {
+            double x = frac + double(h - 1 - j);   // t - input index
+            double u = std::fabs(x) * fc_;          // zero-crossing units
+            double v = 0;
+            if (u < kZero) {
+                double sn = u < 1e-9 ? 1.0 : std::sin(M_PI * u) / (M_PI * u);
+                double w = 0.42 + 0.5 * std::cos(M_PI * u / kZero) + 0.08 * std::cos(2.0 * M_PI * u / kZero);
+                v = sn * w;
+            }
+            table_[size_t(p) * taps_ + size_t(j)] = float(v);
+            sum += v;
         }
+        if (sum > 1e-9)
+            for (int j = 0; j < taps_; j++) table_[size_t(p) * taps_ + size_t(j)] = float(table_[size_t(p) * taps_ + size_t(j)] / sum);
     }
-    // Pre-roll: the first output is centred on input sample 0, which needs half_ samples before it.
-    if (!bypass_) {
-        buf_.assign(size_t(std::ceil(half_)) + 1, 0.0f);
-        t_ = std::ceil(half_) + 1;
-    }
-}
-
-float Resampler::kernel(double x) const {
-    double u = std::fabs(x) * fc_ * kTableRes;
-    size_t i = size_t(u);
-    if (i + 1 >= table_.size()) return 0.0f;
-    double f = u - double(i);
-    return float(table_[i] + f * (table_[i + 1] - table_[i]));
+    // Pre-roll: the first output is centred on input sample 0, which needs h samples before it.
+    buf_.assign(size_t(h), 0.0f);
+    t_ = double(h);
 }
 
 void Resampler::process(const float* in, size_t n, std::vector<float>& out) {
@@ -93,22 +98,24 @@ void Resampler::process(const float* in, size_t n, std::vector<float>& out) {
         return;
     }
     buf_.insert(buf_.end(), in, in + n);
-    const double size = double(buf_.size());
-    while (t_ + half_ + 1.0 < size) {
-        long i0 = long(std::ceil(t_ - half_));
-        long i1 = long(std::floor(t_ + half_));
-        double acc = 0.0, wsum = 0.0;
-        for (long i = i0; i <= i1; i++) {
-            float h = kernel(t_ - double(i));
-            acc += double(h) * buf_[size_t(i)];
-            wsum += h;
-        }
-        out.push_back(float(wsum > 1e-9 ? acc / wsum : 0.0));
+    const int h = taps_ / 2;
+    const long size = long(buf_.size());
+    while (true) {
+        long base = long(std::floor(t_));
+        long first = base - h + 1;
+        if (first + taps_ > size) break;
+        int p = int((t_ - double(base)) * kPhases + 0.5);
+        if (p >= kPhases) { p = 0; base += 1; first += 1; if (first + taps_ > size) break; }
+        const float* c = &table_[size_t(p) * taps_];
+        const float* x = &buf_[size_t(first)];
+        float acc = 0.0f;
+        for (int j = 0; j < taps_; j++) acc += c[j] * x[j];
+        out.push_back(acc);
         t_ += step_;
     }
     // Keep only the history the next output still needs.
-    long drop = long(std::floor(t_ - half_)) - 1;
-    if (drop > 0) {
+    long drop = long(std::floor(t_)) - h;
+    if (drop > 4096) {
         buf_.erase(buf_.begin(), buf_.begin() + drop);
         t_ -= double(drop);
     }

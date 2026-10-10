@@ -132,7 +132,7 @@ object MikuBeatClock {
                 newPeriod = period + PERIOD_GAIN * err / maxOf(1.0, abs(k).coerceAtMost(8.0))
                 newPeriod = newPeriod.coerceIn(basePeriod * (1 - MAX_PERIOD_PULL), basePeriod * (1 + MAX_PERIOD_PULL))
             }
-            grid = Grid(displayBpm(newPeriod), newPeriod, newAnchor, hits >= LOCK_AFTER || g.phaseLocked && g.source == "live",
+            grid = Grid(displayBpm(newPeriod), newPeriod, newAnchor, hits >= LOCK_AFTER || g.phaseLocked,
                 if (hits >= LOCK_AFTER) "live" else g.source)
         } else {
             // Half a period off is the other octave of a BTrack that is tracking at 2x the grid,
