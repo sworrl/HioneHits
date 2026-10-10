@@ -49,65 +49,9 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlin.math.roundToInt
 
-/**
- * Hand off to the REAL (AOSP) Settings app for screens MikuOS does not implement itself
- * (Wi-Fi picker, Bluetooth pairing, app manager, storage browser, developer options, about).
- *
- * MikuSettings declares these same intent actions (WIFI_SETTINGS, BLUETOOTH_SETTINGS, etc.)
- * in its own manifest, so firing a bare Intent(action) resolves right back to com.miku.settings
- * (an infinite self-loop). We therefore:
- *   1. Scope the intent to com.android.settings so it can never resolve to ourselves.
- *   2. Fall back to an unscoped intent only if it resolves to some OTHER package.
- *   3. Otherwise show a Toast instead of looping or silently failing.
- */
-fun openAospSettings(ctx: Context, action: String, fallbackMsg: String = "Not available on this device") {
-    val pm = ctx.packageManager
-    val explicitComponent = when (action) {
-        Settings.ACTION_BLUETOOTH_SETTINGS -> android.content.ComponentName("com.android.settings", "com.android.settings.Settings\$ConnectedDeviceDashboardActivity")
-        Settings.ACTION_WIFI_SETTINGS, Settings.ACTION_WIRELESS_SETTINGS -> android.content.ComponentName("com.android.settings", "com.android.settings.Settings\$NetworkDashboardActivity")
-        Settings.ACTION_DISPLAY_SETTINGS -> android.content.ComponentName("com.android.settings", "com.android.settings.Settings\$DisplaySettingsActivity")
-        Settings.ACTION_SOUND_SETTINGS -> android.content.ComponentName("com.android.settings", "com.android.settings.Settings\$SoundSettingsActivity")
-        Settings.ACTION_DEVICE_INFO_SETTINGS -> android.content.ComponentName("com.android.settings", "com.android.settings.Settings\$MyDeviceInfoActivity")
-        Settings.ACTION_APPLICATION_SETTINGS -> android.content.ComponentName("com.android.settings", "com.android.settings.Settings\$ManageApplicationsActivity")
-        Settings.ACTION_INTERNAL_STORAGE_SETTINGS -> android.content.ComponentName("com.android.settings", "com.android.settings.Settings\$StorageDashboardActivity")
-        Settings.ACTION_APPLICATION_DEVELOPMENT_SETTINGS -> android.content.ComponentName("com.android.settings", "com.android.settings.Settings\$DevelopmentSettingsDashboardActivity")
-        else -> null
-    }
-
-    if (explicitComponent != null) {
-        val intent = Intent(action).apply {
-            component = explicitComponent
-            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        }
-        try { ctx.startActivity(intent); return } catch (_: Throwable) {}
-    }
-
-    // 1. Explicit AOSP Settings package query — find any exported activity in com.android.settings
-    val scoped = Intent(action).apply {
-        setPackage("com.android.settings")
-        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-    }
-    val matches = pm.queryIntentActivities(scoped, 0)
-    for (m in matches) {
-        if (m.activityInfo.packageName == "com.android.settings") {
-            val direct = Intent(action).apply {
-                setClassName("com.android.settings", m.activityInfo.name)
-                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            }
-            try { ctx.startActivity(direct); return } catch (_: Throwable) {}
-        }
-    }
-
-    // 2. Unscoped fallback, only if it resolves to something other than ourselves
-    val generic = Intent(action).apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) }
-    val resolved = generic.resolveActivity(pm)
-    if (resolved != null && resolved.packageName != ctx.packageName) {
-        try { ctx.startActivity(generic); return } catch (_: Throwable) {}
-    }
-
-    // 3. Fallback Toast
-    try { Toast.makeText(ctx, fallbackMsg, Toast.LENGTH_SHORT).show() } catch (_: Throwable) {}
-}
+// The old openAospSettings() hand-off is gone: every screen it opened in stock Settings now has a
+// MikuOS page (pages/), and anything not rebuilt yet goes through route/SettingsRouterActivity,
+// which deep-links to the exact stock component and explains when stock Settings is absent.
 
 /**
  * Home tiles. A tile with a [route] opens a MikuPageActivity page (the screens that replace stock
