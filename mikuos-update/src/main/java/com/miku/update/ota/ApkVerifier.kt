@@ -31,9 +31,12 @@ object ApkVerifier {
         null
     }
 
+    /** PackageManager.MATCH_FACTORY_ONLY: @SystemApi, so not in the public SDK stubs. */
+    private const val MATCH_FACTORY_ONLY = 0x00200000
+
     /** The copy in the system image, even when a /data update is installed over it. */
     fun factoryInfo(ctx: Context, pkg: String): PackageInfo? = try {
-        ctx.packageManager.getPackageInfo(pkg, PackageManager.MATCH_FACTORY_ONLY or signingFlags())
+        ctx.packageManager.getPackageInfo(pkg, MATCH_FACTORY_ONLY or signingFlags())
     } catch (_: PackageManager.NameNotFoundException) {
         null
     }

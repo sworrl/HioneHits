@@ -184,11 +184,16 @@ private fun shortTime(iso: String): String = runCatching {
 @Composable
 private fun TransmitterRow(t: FmWeatherRadio.Transmitter) {
     val statusColor = when (t.status) { "NORMAL" -> MikuTeal; "DEGRADED" -> CyberAmber; else -> MikuNeonPink }
-    Row(
-        Modifier.fillMaxWidth().heightIn(min = 56.dp)
+    var open by remember(t.call, t.mhz) { mutableStateOf(false) }
+    Column(
+        Modifier.fillMaxWidth()
             .alpha(if (t.inService) 1f else 0.55f)
             .glass(RoundedCornerShape(14.dp), accent = WxAccent, accent2 = SunGold, fill = WxCard, rimAlpha = 0.4f, shine = 0.7f)
+            .pressable(pressedScale = 0.98f) { open = !open }
             .padding(horizontal = 10.dp, vertical = 6.dp),
+    ) {
+    Row(
+        Modifier.fillMaxWidth().heightIn(min = 44.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(
@@ -214,6 +219,26 @@ private fun TransmitterRow(t: FmWeatherRadio.Transmitter) {
             Text(String.format(Locale.US, "%.0f km", t.distanceKm), color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold)
             Text(t.status, color = statusColor, fontSize = 7.sp, fontWeight = FontWeight.Bold)
         }
+    }
+    if (open) {
+        Spacer(Modifier.height(6.dp))
+        Text(
+            String.format(Locale.US,
+                "%.3f MHz is past this tuner. With the driver unlocked we measured the Si4705 at " +
+                "64.0 to 108.0 MHz, and every frequency above 108 lands on 108.0. On a weather " +
+                "radio or scanner, set %s.", t.mhz, t.wx.ifBlank { "this frequency" }),
+            color = MikuTextPrimary, fontSize = 9.sp,
+        )
+        t.wfo?.let { Text("Programmed by NWS $it. Its alerts for your area are listed above.", color = MikuTextSecondary, fontSize = 8.sp) }
+        Spacer(Modifier.height(6.dp))
+        Box(
+            Modifier.clip(RoundedCornerShape(10.dp)).background(SunGold.copy(alpha = 0.22f))
+                .pressable { FmRadioManager.tune(Math.round(t.mhz * 1000).toInt()) }
+                .padding(horizontal = 12.dp, vertical = 8.dp)
+        ) {
+            Text("TRY ANYWAY (tunes 108.0)", color = SunGold, fontSize = 9.sp, fontWeight = FontWeight.Bold, fontFamily = AudiowideFont)
+        }
+    }
     }
 }
 

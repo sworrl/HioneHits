@@ -177,6 +177,15 @@ class QualcommFmHardwareEngine(private val context: Context) {
          */
         const val SWEEP_SETTLE_MS = 60L
 
+        /**
+         * What the Si4705 itself tunes, measured on 0.1.18 with the driver's band clamp removed
+         * (MIKU_FM_UNLOCK): 64.0 MHz up to 108.0 MHz. 63 MHz came back as 64.0 and everything
+         * from 108.1 to 162.55 MHz as 108.0, so these are the chip's own limits, and NOAA
+         * Weather Radio (162.4-162.55) is out of its reach.
+         */
+        const val CHIP_LOW_KHZ = 64_000
+        const val CHIP_HIGH_KHZ = 108_000
+
         /** Nearby full-power stations to fetch terrain for, beyond the presets. */
         private const val TERRAIN_PREFETCH = 12
 
@@ -1173,7 +1182,10 @@ class QualcommFmHardwareEngine(private val context: Context) {
 
     fun tune(freqKHz: Int) {
         val plan = band.value
-        val clamped = snapToGrid(freqKHz).coerceIn(plan.lowKHz, plan.highKHz)
+        // Inside the region's band: its channel grid. Outside it (only reachable with the
+        // driver's range unlock): 50 kHz steps, clamped to what the chip itself accepts.
+        val clamped = if (freqKHz in plan.lowKHz..plan.highKHz) snapToGrid(freqKHz)
+            else (Math.round(freqKHz / 50.0) * 50).toInt().coerceIn(CHIP_LOW_KHZ, CHIP_HIGH_KHZ)
         currentFrequencyKHz.value = clamped
         onNewStation()
         prefs.edit().putInt("last_freq", clamped).apply()

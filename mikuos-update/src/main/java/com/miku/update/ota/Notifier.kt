@@ -17,6 +17,7 @@ object Notifier {
     private const val ID_INSTALLED = 1
     private const val ID_AVAILABLE = 2
     private const val ID_SYSTEM = 3
+    private const val ID_REVOKED = 4
     private const val ID_ACTION_BASE = 100
 
     fun createChannels(ctx: Context) {
@@ -68,6 +69,12 @@ object Notifier {
         if (lines.isEmpty()) return
         val title = if (lines.size == 1) "1 app update ready" else "${lines.size} app updates ready"
         post(ctx, ID_AVAILABLE, base(ctx, CH_UPDATES, title, lines.joinToString("\n") + "\nOpen Miku Update to install."))
+    }
+
+    fun revoked(ctx: Context, lines: List<String>) {
+        if (lines.isEmpty()) return
+        val title = if (lines.size == 1) "An update was pulled" else "${lines.size} updates were pulled"
+        post(ctx, ID_REVOKED, base(ctx, CH_UPDATES, title, lines.joinToString("\n") + "\nBack on the version that came with MikuOS."))
     }
 
     fun systemUpdate(ctx: Context, build: String, required: Boolean) {

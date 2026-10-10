@@ -68,7 +68,7 @@ fun MikuFMRadioScreen(onBack: () -> Unit) {
     BackHandler(enabled = sheet != FmSheet.None) { sheet = FmSheet.None }
 
     Box(Modifier.fillMaxSize().background(CyberDarkBg)) {
-        FmBackdrop()
+        FmVisualizerBackground(fallback = { FmBackdrop() })
 
         Column(
             Modifier.fillMaxSize().systemBarsPadding().padding(horizontal = 10.dp, vertical = 4.dp),

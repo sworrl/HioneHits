@@ -253,6 +253,8 @@ fun FmSettings(st: FmState) {
                 "Off by default: it retunes without being asked, which is not always wanted.",
             st.afJump
         ) { FmRadioManager.setAfJump(it) }
+        Spacer(Modifier.height(10.dp))
+        FmBackgroundSetting()
     }
 }
 
@@ -364,13 +366,21 @@ fun ColumnScope.FmKeypad(st: FmState, onTuned: () -> Unit) {
     val low = st.band.lowKHz / 1000.0
     val high = st.band.highKHz / 1000.0
 
+    var note by remember { mutableStateOf<String?>(null) }
     fun commit() {
         val mhzValue = entry.toDoubleOrNull() ?: return
         val khz = Math.round(mhzValue * 1000).toInt()
-        if (khz in st.band.lowKHz..st.band.highKHz) {
-            // Engine snaps, using the band-anchored grid. Rounding here from zero was the bug.
-            FmRadioManager.tune(khz)
-            onTuned()
+        note = null
+        when {
+            khz in QualcommFmHardwareEngine.CHIP_LOW_KHZ..QualcommFmHardwareEngine.CHIP_HIGH_KHZ -> {
+                // Engine snaps: the band-anchored grid inside the region's band, 50 kHz outside.
+                FmRadioManager.tune(khz)
+                onTuned()
+            }
+            khz > QualcommFmHardwareEngine.CHIP_HIGH_KHZ ->
+                note = "This tuner stops at 108.0 MHz. We tested past it and the chip will not go higher."
+            else ->
+                note = "This tuner starts at 64.0 MHz."
         }
     }
 
@@ -382,10 +392,13 @@ fun ColumnScope.FmKeypad(st: FmState, onTuned: () -> Unit) {
         modifier = Modifier.align(Alignment.CenterHorizontally)
     )
     Text(
-        String.format(Locale.US, "%.1f – %.1f MHz, %d kHz steps", low, high, st.band.stepKHz),
+        String.format(Locale.US, "%.1f to %.1f MHz in %d kHz steps. Anything from 64.0 to 108.0 tunes.", low, high, st.band.stepKHz),
         color = MikuTextSecondary, fontSize = 8.sp,
         modifier = Modifier.align(Alignment.CenterHorizontally)
     )
+    note?.let {
+        Text(it, color = MikuNeonPink, fontSize = 9.sp, modifier = Modifier.align(Alignment.CenterHorizontally).padding(top = 4.dp))
+    }
     Spacer(Modifier.height(8.dp))
 
     val keys = listOf("1", "2", "3", "4", "5", "6", "7", "8", "9", ".", "0", "⌫")

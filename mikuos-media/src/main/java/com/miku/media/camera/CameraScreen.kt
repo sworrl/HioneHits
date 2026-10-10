@@ -85,6 +85,12 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.disabled
+import androidx.compose.ui.semantics.onClick
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -665,6 +671,13 @@ private fun Shutter(
                         else -> if (waitForUpOrCancellation() != null) latestClick()
                     }
                 }
+            }
+            // The gesture above is raw pointer input, so TalkBack needs the click spelled out.
+            .semantics {
+                role = Role.Button
+                contentDescription = if (video) (if (recording) "Stop recording" else "Record video") else "Take photo"
+                if (!enabled) disabled()
+                onClick { latestClick(); true }
             }
             .border(4.dp, MikuWhite.copy(alpha = if (enabled) 0.95f else 0.4f), CircleShape)
             .padding(8.dp),

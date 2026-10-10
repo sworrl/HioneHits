@@ -55,6 +55,9 @@ class FmSpectrumSurfaceView(context: Context) : SurfaceView(context), SurfaceHol
         // Opaque: the renderer fills every pixel, and an opaque layer is cheaper to composite
         // (and eligible for a hardware overlay).
         holder.setFormat(PixelFormat.OPAQUE)
+        // The projectM background is also a surface at the default layer; without this their
+        // order is undefined and the background can land on top of the analyser.
+        setZOrderMediaOverlay(true)
     }
 
     override fun surfaceCreated(h: SurfaceHolder) {
