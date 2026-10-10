@@ -790,8 +790,11 @@ private fun KawaiiProjectDivaBeatNode(
             contentAlignment = Alignment.Center
         ) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                // The face of the node is the skin's own glyph alphabet.
-                Text(
+                // The face of the node is the skin's own glyph alphabet. Fever shows the
+                // mascot's own mark: a leek for Miku, the coda mark for every other pack.
+                if (feverActive && !Mascot.hasMikuLore) {
+                    com.miku.launcher.CodaMarkGlyph(22.dp, ring = Mascot.primaryDeep, pip = Mascot.accent)
+                } else Text(
                     if (feverActive) "✨🥬✨" else skin.burstGlyphs.take(3).joinToString(""),
                     fontSize = 18.sp
                 )
@@ -2048,7 +2051,9 @@ private fun ColumnScope.BpmBeatNodeStage(
                     }
                     .padding(8.dp)
             ) {
-                Text("✨🥬✨", fontSize = 20.sp)
+                // Golden leek for Miku; a golden coda mark under every other pack.
+                if (Mascot.hasMikuLore) Text("✨🥬✨", fontSize = 20.sp)
+                else com.miku.launcher.CodaMarkGlyph(28.dp, ring = Color.White, pip = Mascot.primaryDeep)
             }
         }
 

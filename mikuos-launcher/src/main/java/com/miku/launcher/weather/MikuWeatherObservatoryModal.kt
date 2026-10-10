@@ -105,6 +105,10 @@ fun MikuWeatherObservatoryModal(
     LaunchedEffect(Unit) {
         historyRecords = MikuMetricDatabase.getInstance(ctx).getRecentWeatherHistory(24)
     }
+    // Widget port (MikuWeatherExtras / MikuNowcastEngine): air quality + pollen, frost, the rain
+    // nowcast and, with a key, Windy data. Each one skips itself when its data is still fresh.
+    LaunchedEffect(gps.latitude, gps.longitude) { MikuWeatherExtras.refresh(ctx) }
+    val extras by MikuWeatherExtras.state.collectAsState()
 
     Box(
         Modifier
@@ -243,23 +247,14 @@ fun MikuWeatherObservatoryModal(
                         Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
-                        TabButton(
-                            title = "NOW",
-                            isSelected = selectedTab == 0,
-                            modifier = Modifier.weight(1f)
-                        ) { selectedTab = 0 }
-
-                        TabButton(
-                            title = "FORECAST",
-                            isSelected = selectedTab == 1,
-                            modifier = Modifier.weight(1f)
-                        ) { selectedTab = 1 }
-
-                        TabButton(
-                            title = "RADAR",
-                            isSelected = selectedTab == 2,
-                            modifier = Modifier.weight(1f)
-                        ) { selectedTab = 2 }
+                        listOf("NOW", "FORECAST", "RADAR", "MAP", "CAMS").forEachIndexed { i, title ->
+                            TabButton(
+                                title = title,
+                                isSelected = selectedTab == i,
+                                modifier = Modifier.weight(if (title == "FORECAST") 1.35f else 1f),
+                                fontSize = 9.5.sp
+                            ) { selectedTab = i }
+                        }
                     }
 
                     Spacer(Modifier.height(8.dp))
@@ -269,9 +264,10 @@ fun MikuWeatherObservatoryModal(
 
                     when (selectedTab) {
                         0 -> {
-                            // TAB 0: HIGH-DENSITY OBSERVATORY OVERVIEW (No scrolling needed)
+                            // TAB 0: OVERVIEW. Scrolls since the widget port added the rain line, pollen,
+                            // frost and the Windy card.
                             Column(
-                                modifier = Modifier.fillMaxSize(),
+                                modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()),
                                 verticalArrangement = Arrangement.spacedBy(6.dp)
                             ) {
                                 // Multi-Source Feed Attribution Banner
@@ -301,6 +297,9 @@ fun MikuWeatherObservatoryModal(
                                         )
                                     }
                                 }
+
+                                // "Rain in ~25 min from the SW" from the radar nowcast; tap for the radar.
+                                MikuRainNowcastLine(onOpenRadar = { selectedTab = 2 })
 
                                 // Main Current Conditions Hero Card
                                 Box(
@@ -517,20 +516,31 @@ fun MikuWeatherObservatoryModal(
                                         // UV 0 = not reported (was a flat 4). AQI is the -1
                                         // "no AQI source wired up" sentinel — it used to be printed
                                         // raw, so the tile literally read "AQI -1".
+                                        // AQI now comes from Open-Meteo air quality (MikuWeatherExtras)
+                                        // when the service has none, which is always so far.
                                         value = "UV " + (if (weather.uvIndex > 0f) "${weather.uvIndex.roundToInt()}" else "—") +
-                                            " · AQI " + (if (weather.aqi >= 0) "${weather.aqi}" else "—"),
-                                        sub = if (weather.aqiCategory.isNotBlank()) "Air quality: ${weather.aqiCategory}" else "Air quality: —",
+                                            " · AQI " + (if (weather.aqi >= 0) "${weather.aqi}" else MikuWeatherExtras.aqiLabel(extras.air)),
+                                        sub = when {
+                                            weather.aqiCategory.isNotBlank() -> "Air quality: ${weather.aqiCategory}"
+                                            extras.air?.usAqi != null -> "Air quality: ${WxFmt.aqiCategory(extras.air?.usAqi)}"
+                                            else -> "Air quality: —"
+                                        },
                                         icon = Icons.Default.WbSunny,
                                         color = Color(0xFFFF9100)
                                     )
                                 }
+
+                                MikuWeatherExtraBadges()
+
+                                // What Windy adds, the links, and the key fields. Folds to one line.
+                                MikuWindyCard()
                             }
                         }
 
                         1 -> {
                             // TAB 1: METEOGRAM & MULTI-DAY FORECAST
                             Column(
-                                modifier = Modifier.fillMaxSize(),
+                                modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()),
                                 verticalArrangement = Arrangement.spacedBy(6.dp)
                             ) {
                                 MikuMeteogramForecastView(
@@ -539,6 +549,9 @@ fun MikuWeatherObservatoryModal(
                                     modifier = Modifier.fillMaxWidth(),
                                     isCompact = false
                                 )
+
+                                // Windy GFS point forecast next to the free one (only with a point key).
+                                MikuWindyPointStrip()
 
                                 Spacer(Modifier.height(4.dp))
 
@@ -614,8 +627,23 @@ fun MikuWeatherObservatoryModal(
                         }
 
                         2 -> {
-                            // TAB 2: LIVE DOPPLER RADAR SWEEP
-                            MikuLiveDopplerRadarTab(gps = gps, weather = weather)
+                            // TAB 2: RAIN NOWCAST RADAR (RainViewer, storm motion, arrival time)
+                            Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
+                                MikuNowcastRadarTab(gps = gps)
+                            }
+                        }
+
+                        3 -> {
+                            // TAB 3: MAP (free OSM/CARTO + RainViewer; Windy layers with a key).
+                            // Not in a scroll column: the map takes drags for panning.
+                            MikuWeatherMapTab(gps = gps)
+                        }
+
+                        4 -> {
+                            // TAB 4: WINDY WEBCAMS (needs the webcam key)
+                            Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
+                                MikuWebcamTab()
+                            }
                         }
                     }
                 }
@@ -752,6 +780,7 @@ fun TabButton(
     title: String,
     isSelected: Boolean,
     modifier: Modifier = Modifier,
+    fontSize: androidx.compose.ui.unit.TextUnit = 11.sp,
     onClick: () -> Unit
 ) {
     Box(
@@ -770,7 +799,8 @@ fun TabButton(
         Text(
             text = title,
             color = if (isSelected) Color.White else MikuTextSecondary,
-            fontSize = 11.sp,
+            fontSize = fontSize,
+            maxLines = 1,
             fontWeight = FontWeight.Bold,
             fontFamily = AudiowideFont
         )
@@ -951,465 +981,6 @@ fun WeatherMetricBadge(
                     overflow = TextOverflow.Ellipsis
                 )
             }
-        }
-    }
-}
-
-data class RadarFrameInfo(
-    val time: Long,
-    val timeLabel: String,
-    val bitmap: ImageBitmap?
-)
-
-/**
- * Hatsune Miku Live Doppler Radar Suite (RainViewer High-Res Composite).
- * Fetches real timestamped RainViewer radar tiles over a dark basemap with a playback scrubber.
- *
- * Everything drawn here is tied to the REAL fix and the REAL web-mercator tile scale:
- *  - no fix => no tiles fetched and no station mark drawn (it used to fall back to a hardcoded
- *    35.0844/-106.6504 and show Albuquerque's radar as the user's own),
- *  - the station mark sits at the device's fractional position inside the tile, not at the tile
- *    centre (at z6 a tile is ~600 km wide, so "centre" was up to ~300 km from the truth),
- *  - the range rings are labelled with distances computed from the tile scale, not the old
- *    hardcoded 20/40/60/80 NM, which described a range this imagery never had.
- */
-private const val RADAR_ZOOM = 6
-/** Web-mercator equatorial circumference, metres — for the real ground scale of a radar tile. */
-private const val EARTH_CIRCUMFERENCE_M = 40075016.686
-@Composable
-fun MikuLiveDopplerRadarTab(
-    gps: MikuWeatherService.GpsTelemetry,
-    weather: MikuWeatherService.WeatherCondition
-) {
-    var pastFrames by remember { mutableStateOf<List<RadarFrameInfo>>(emptyList()) }
-    var basemapBitmap by remember { mutableStateOf<ImageBitmap?>(null) }
-    var currentFrameIndex by remember { mutableIntStateOf(0) }
-    var isPlaying by remember { mutableStateOf(true) }
-    var isLoading by remember { mutableStateOf(true) }
-    // Real pixel size of the radar viewport — the only way to turn a ring radius in pixels into a
-    // distance on the ground. Zero until the first layout pass, which renders every label as "—".
-    var viewportPx by remember { mutableStateOf(androidx.compose.ui.unit.IntSize.Zero) }
-
-    val infiniteTransition = rememberInfiniteTransition(label = "RadarSweep")
-    val sweepAngle by infiniteTransition.animateFloat(
-        initialValue = 0f,
-        targetValue = 360f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(4000, easing = LinearEasing),
-            repeatMode = RepeatMode.Restart
-        ),
-        label = "radarAngle"
-    )
-
-    // A radar picture is only honest when we know where the device actually is.
-    val hasFix = gps.latitude != 0.0 || gps.longitude != 0.0
-
-    // Real ground scale of the drawn tile. The 256 px tile is drawn with ContentScale.Crop, so it
-    // covers max(w, h) px; one tile spans EARTH_CIRCUMFERENCE * cos(lat) / 2^zoom metres.
-    val metersPerPx: Double? = if (hasFix && viewportPx.width > 0 && viewportPx.height > 0) {
-        val drawnTilePx = maxOf(viewportPx.width, viewportPx.height).toDouble()
-        (EARTH_CIRCUMFERENCE_M * cos(Math.toRadians(gps.latitude)) / (1 shl RADAR_ZOOM)) / drawnTilePx
-    } else null
-    // Outer range ring, in nautical miles, MEASURED from that scale (was a hardcoded "80NM").
-    val outerRingNm: Double? = metersPerPx?.let {
-        val maxRadiusPx = minOf(viewportPx.width, viewportPx.height) / 2.0 - 8.0
-        if (maxRadiusPx <= 0) null else maxRadiusPx * it / 1852.0
-    }
-
-    // Load Live RainViewer Radar Frames & CartoDB Dark Basemap
-    LaunchedEffect(gps.latitude, gps.longitude) {
-        // WAS: fell through to a hardcoded Albuquerque (35.0844/-106.6504) with no fix, so the
-        // user saw a stranger's storms under "TARGET: STATION". NOW: no fix => no radar.
-        if (!hasFix) {
-            pastFrames = emptyList()
-            basemapBitmap = null
-            currentFrameIndex = 0
-            isLoading = false
-            return@LaunchedEffect
-        }
-        isLoading = true
-        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-            try {
-                val lat = gps.latitude
-                val lon = gps.longitude
-                val zoom = RADAR_ZOOM
-                val tileX = ((lon + 180.0) / 360.0 * (1 shl zoom)).toInt()
-                val latRad = Math.toRadians(lat)
-                val tileY = ((1.0 - kotlin.math.ln(kotlin.math.tan(latRad) + 1.0 / kotlin.math.cos(latRad)) / Math.PI) / 2.0 * (1 shl zoom)).toInt()
-
-                // 1. Download CartoDB Dark basemap tile
-                try {
-                    val baseMapUrl = "https://a.basemaps.cartocdn.com/dark_all/$zoom/$tileX/$tileY.png"
-                    val baseReq = java.net.URL(baseMapUrl).openConnection() as java.net.HttpURLConnection
-                    baseReq.setRequestProperty("User-Agent", "MikuMeteorology/1.0 (contact@falcontechnix.com)")
-                    baseReq.connectTimeout = 6000
-                    baseReq.readTimeout = 6000
-                    val baseBytes = baseReq.inputStream.use { it.readBytes() }
-                    val baseBmp = BitmapFactory.decodeByteArray(baseBytes, 0, baseBytes.size)
-                    basemapBitmap = baseBmp?.asImageBitmap()
-                } catch (_: Throwable) {}
-
-                // 2. Fetch RainViewer radar metadata
-                val rvReq = java.net.URL("https://api.rainviewer.com/public/weather-maps.json").openConnection() as java.net.HttpURLConnection
-                rvReq.setRequestProperty("User-Agent", "MikuMeteorology/1.0 (contact@falcontechnix.com)")
-                rvReq.connectTimeout = 6000
-                rvReq.readTimeout = 6000
-                val rvJsonStr = rvReq.inputStream.bufferedReader().use { it.readText() }
-                val rootJson = org.json.JSONObject(rvJsonStr)
-                val host = rootJson.optString("host", "https://tilecache.rainviewer.com")
-                val radarObj = rootJson.optJSONObject("radar")
-                val pastArray = radarObj?.optJSONArray("past")
-
-                val frames = mutableListOf<RadarFrameInfo>()
-                if (pastArray != null) {
-                    val count = pastArray.length()
-                    val startIndex = (count - 6).coerceAtLeast(0)
-                    for (i in startIndex until count) {
-                        val item = pastArray.getJSONObject(i)
-                        val t = item.getLong("time")
-                        val p = item.getString("path")
-                        val tileUrl = "$host$p/256/$zoom/$tileX/$tileY/2/1_1.png"
-
-                        try {
-                            val tileReq = java.net.URL(tileUrl).openConnection() as java.net.HttpURLConnection
-                            tileReq.setRequestProperty("User-Agent", "MikuMeteorology/1.0 (contact@falcontechnix.com)")
-                            tileReq.connectTimeout = 5000
-                            tileReq.readTimeout = 5000
-                            val tileBytes = tileReq.inputStream.use { it.readBytes() }
-                            val tileBmp = BitmapFactory.decodeByteArray(tileBytes, 0, tileBytes.size)
-
-                            val cal = java.util.Calendar.getInstance()
-                            cal.timeInMillis = t * 1000L
-                            val sdf = java.text.SimpleDateFormat("HH:mm", java.util.Locale.US)
-                            val label = sdf.format(cal.time)
-
-                            frames.add(RadarFrameInfo(time = t, timeLabel = label, bitmap = tileBmp?.asImageBitmap()))
-                        } catch (_: Throwable) {}
-                    }
-                }
-                pastFrames = frames
-                currentFrameIndex = if (frames.isNotEmpty()) frames.size - 1 else 0
-            } catch (t: Throwable) {
-                android.util.Log.e("MikuWeatherRadar", "Failed to fetch live radar frames", t)
-            } finally {
-                isLoading = false
-            }
-        }
-    }
-
-    // Playback loop timer
-    LaunchedEffect(isPlaying, pastFrames.size) {
-        if (isPlaying && pastFrames.isNotEmpty()) {
-            while (true) {
-                kotlinx.coroutines.delay(650L)
-                currentFrameIndex = (currentFrameIndex + 1) % pastFrames.size
-            }
-        }
-    }
-
-    Column(Modifier.fillMaxWidth()) {
-        // Radar Header & Metadata
-        Row(
-            Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Column {
-                Text(
-                    text = "RADAR",
-                    color = MikuCyan,
-                    fontSize = 9.sp,
-                    fontWeight = FontWeight.Black,
-                    fontFamily = AudiowideFont
-                )
-                Text(
-                    // WAS: "RANGE: 80NM · BASE REFLECTIVITY (0.5°) · dBZ SCALE" — none of which was
-                    // true of a RainViewer z6 composite tile. NOW: the source, and the outer-ring
-                    // distance actually computed from the tile's ground scale ("—" before layout).
-                    text = "RAINVIEWER COMPOSITE · z$RADAR_ZOOM · OUTER RING " +
-                        (outerRingNm?.let { "${"%.0f".format(it)} NM" } ?: "—"),
-                    color = Color.White.copy(alpha = 0.7f),
-                    fontSize = 7.sp,
-                    fontWeight = FontWeight.Bold
-                )
-            }
-
-            if (pastFrames.isNotEmpty() && currentFrameIndex in pastFrames.indices) {
-                Box(
-                    Modifier
-                        .clip(CutCornerShape(4.dp))
-                        .background(Mascot.color(0x3300E5FF))
-                        .border(1.dp, MikuCyan, CutCornerShape(4.dp))
-                        .padding(horizontal = 6.dp, vertical = 2.dp)
-                ) {
-                    Text(
-                        text = "FRAME ${pastFrames[currentFrameIndex].timeLabel}",
-                        color = Color.White,
-                        fontSize = 8.sp,
-                        fontWeight = FontWeight.Black,
-                        fontFamily = AudiowideFont
-                    )
-                }
-            }
-        }
-
-        Spacer(Modifier.height(8.dp))
-
-        // Radar Map Viewport
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(240.dp)
-                .clip(CutCornerShape(12.dp))
-                .background(Color(0xFF02090E))
-                .border(1.dp, MikuCyan.copy(alpha = 0.8f), CutCornerShape(12.dp))
-                .onSizeChanged { viewportPx = it }
-        ) {
-            // 1. Dark Basemap Tile (if loaded)
-            basemapBitmap?.let { bmp ->
-                Image(
-                    bitmap = bmp,
-                    contentDescription = "Radar Basemap",
-                    modifier = Modifier.fillMaxSize(),
-                    contentScale = ContentScale.Crop
-                )
-            }
-
-            // 2. Live RainViewer Doppler Radar Tile (Current Frame)
-            if (pastFrames.isNotEmpty() && currentFrameIndex in pastFrames.indices) {
-                pastFrames[currentFrameIndex].bitmap?.let { bmp ->
-                    Image(
-                        bitmap = bmp,
-                        contentDescription = "Radar Echo Tile",
-                        modifier = Modifier.fillMaxSize(),
-                        contentScale = ContentScale.Crop,
-                        alpha = 0.85f
-                    )
-                }
-            }
-
-            // 3. Cyber Range Rings & Tactical Scanner Grid — drawn ONLY with a real fix, and
-            //    centred on the device's real position inside the tile (was the tile centre, which
-            //    at z6 is up to ~300 km away from where the user actually is).
-            if (hasFix) {
-                Canvas(modifier = Modifier.fillMaxSize()) {
-                    // ContentScale.Crop draws the 256 px tile at max(w, h) px, centred.
-                    val drawn = kotlin.math.max(size.width, size.height)
-                    val originX = (size.width - drawn) / 2f
-                    val originY = (size.height - drawn) / 2f
-                    val n = (1 shl RADAR_ZOOM).toDouble()
-                    val latRad = Math.toRadians(gps.latitude)
-                    val tx = (gps.longitude + 180.0) / 360.0 * n
-                    val ty = (1.0 - kotlin.math.ln(kotlin.math.tan(latRad) + 1.0 / kotlin.math.cos(latRad)) / Math.PI) / 2.0 * n
-                    val fracX = (tx - kotlin.math.floor(tx)).toFloat()
-                    val fracY = (ty - kotlin.math.floor(ty)).toFloat()
-                    val center = Offset(originX + fracX * drawn, originY + fracY * drawn)
-                    val maxRadius = kotlin.math.min(size.width, size.height) / 2f - 8f
-
-                    // Range rings at 1/4, 1/2, 3/4 and the full computed radius. Their real
-                    // distances are printed by the labels below, from [outerRingNm].
-                    val rings = listOf(0.25f, 0.50f, 0.75f, 1.0f)
-                    rings.forEach { frac ->
-                        drawCircle(
-                            color = MikuCyan.copy(alpha = 0.25f),
-                            radius = maxRadius * frac,
-                            center = center,
-                            style = Stroke(width = 1.dp.toPx())
-                        )
-                    }
-
-                    // Crosshairs
-                    drawLine(
-                        color = MikuCyan.copy(alpha = 0.35f),
-                        start = Offset(center.x - maxRadius, center.y),
-                        end = Offset(center.x + maxRadius, center.y),
-                        strokeWidth = 1.dp.toPx()
-                    )
-                    drawLine(
-                        color = MikuCyan.copy(alpha = 0.35f),
-                        start = Offset(center.x, center.y - maxRadius),
-                        end = Offset(center.x, center.y + maxRadius),
-                        strokeWidth = 1.dp.toPx()
-                    )
-
-                    // Station Point Marker — the device's real spot on this tile.
-                    drawCircle(com.miku.launcher.ui.MikuIdentity.Coral, radius = 4.dp.toPx(), center = center)
-                    drawCircle(Color.White, radius = 2.dp.toPx(), center = center)
-
-                    // Decorative sweep arm. It is an ANIMATION, not a scan: the imagery is a
-                    // downloaded composite frame, so the arm never uncovers or refreshes anything.
-                    val sweepRad = Math.toRadians(sweepAngle.toDouble())
-                    val beamEndX = center.x + (maxRadius * kotlin.math.cos(sweepRad)).toFloat()
-                    val beamEndY = center.y + (maxRadius * kotlin.math.sin(sweepRad)).toFloat()
-                    drawLine(
-                        color = MikuCyan.copy(alpha = 0.9f),
-                        start = center,
-                        end = Offset(beamEndX, beamEndY),
-                        strokeWidth = 2.dp.toPx()
-                    )
-                }
-            }
-
-            if (isLoading) {
-                Box(
-                    Modifier
-                        .fillMaxSize()
-                        .background(Color(0x99000000)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    CircularProgressIndicator(color = MikuCyan, modifier = Modifier.size(24.dp))
-                }
-            } else if (!hasFix) {
-                // Honest empty state. The old code silently substituted a hardcoded city here.
-                Box(
-                    Modifier
-                        .fillMaxSize()
-                        .background(Color(0xAA000000)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        "NO LOCATION YET, SO NO RADAR",
-                        color = Color(0xFFFFB300),
-                        fontSize = 9.sp,
-                        fontWeight = FontWeight.Black,
-                        fontFamily = AudiowideFont,
-                        textAlign = TextAlign.Center
-                    )
-                }
-            } else if (pastFrames.isEmpty()) {
-                Box(
-                    Modifier
-                        .fillMaxSize()
-                        .background(Color(0xAA000000)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        "NO RADAR FRAMES CAME BACK",
-                        color = Color(0xFFFFB300),
-                        fontSize = 9.sp,
-                        fontWeight = FontWeight.Black,
-                        fontFamily = AudiowideFont,
-                        textAlign = TextAlign.Center
-                    )
-                }
-            }
-
-            // Radar Range Labels — distances MEASURED from the tile scale. They were hardcoded
-            // "80NM" / "40NM", which had nothing to do with the imagery on screen.
-            Text(
-                outerRingNm?.let { "${"%.0f".format(it)}NM" } ?: "—",
-                color = MikuCyan,
-                fontSize = 7.sp,
-                fontFamily = AudiowideFont,
-                modifier = Modifier
-                    .align(Alignment.TopCenter)
-                    .padding(top = 4.dp)
-            )
-            Text(
-                outerRingNm?.let { "${"%.0f".format(it / 2.0)}NM" } ?: "—",
-                color = MikuCyan.copy(alpha = 0.7f),
-                fontSize = 6.5.sp,
-                fontFamily = AudiowideFont,
-                modifier = Modifier
-                    .align(Alignment.Center)
-                    .offset(y = (-32).dp)
-            )
-            Text(
-                // Only names a place the geocoder actually resolved; "STATION" used to stand in for
-                // a location we did not have at all.
-                text = when {
-                    gps.city.isNotEmpty() -> "CENTER: ${gps.city}"
-                    hasFix -> "CENTER: ${"%.3f".format(gps.latitude)}, ${"%.3f".format(gps.longitude)}"
-                    else -> "CENTER: —"
-                },
-                color = Color.White,
-                fontSize = 7.5.sp,
-                fontWeight = FontWeight.Bold,
-                fontFamily = AudiowideFont,
-                modifier = Modifier
-                    .align(Alignment.BottomStart)
-                    .padding(6.dp)
-            )
-        }
-
-        Spacer(Modifier.height(8.dp))
-
-        // Playback Controls & Frame Scrubber
-        Row(
-            Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            Button(
-                onClick = { isPlaying = !isPlaying },
-                colors = ButtonDefaults.buttonColors(containerColor = Mascot.color(0x3300E5FF)),
-                border = BorderStroke(1.dp, MikuCyan),
-                shape = RoundedCornerShape(6.dp),
-                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
-                modifier = Modifier.height(32.dp)
-            ) {
-                Text(if (isPlaying) "PAUSE" else "PLAY", color = Color.White, fontSize = 8.sp, fontFamily = AudiowideFont)
-            }
-
-            if (pastFrames.isNotEmpty()) {
-                Slider(
-                    value = currentFrameIndex.toFloat(),
-                    onValueChange = {
-                        isPlaying = false
-                        currentFrameIndex = it.toInt().coerceIn(0, pastFrames.size - 1)
-                    },
-                    valueRange = 0f..(pastFrames.size - 1).toFloat(),
-                    steps = (pastFrames.size - 2).coerceAtLeast(0),
-                    modifier = Modifier.weight(1f),
-                    colors = SliderDefaults.colors(
-                        thumbColor = MikuCyan,
-                        activeTrackColor = MikuCyan,
-                        inactiveTrackColor = Mascot.color(0x3300E5FF)
-                    )
-                )
-            }
-        }
-
-        Spacer(Modifier.height(8.dp))
-
-        // dBZ Reflectivity Scale Legend Bar
-        Column(
-            Modifier
-                .fillMaxWidth()
-                .clip(CutCornerShape(6.dp))
-                .background(Mascot.color(0x9904121A))
-                .border(0.8.dp, CyberGlassBorder.copy(alpha = 0.5f), CutCornerShape(6.dp))
-                .padding(6.dp)
-        ) {
-            Row(
-                Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                // The bar below is Miku brand colour, NOT RainViewer's tile palette, so it cannot
-                // be read as a dBZ key. It used to be labelled "REFLECTIVITY (dBZ) 15 30 45 55 65+",
-                // inviting the user to decode real reflectivity values off colours that mean nothing.
-                Text("PRECIPITATION INTENSITY", color = MikuCyan, fontSize = 7.sp, fontFamily = AudiowideFont)
-                Text("LIGHT → HEAVY", color = Color.White.copy(alpha = 0.7f), fontSize = 7.sp, fontFamily = AudiowideFont)
-            }
-            Spacer(Modifier.height(4.dp))
-            Box(
-                Modifier
-                    .fillMaxWidth()
-                    .height(6.dp)
-                    .clip(RoundedCornerShape(3.dp))
-                    .background(
-                        Brush.horizontalGradient(
-                            listOf(
-                                Mascot.color(0xFF00E5FF),
-                                com.miku.launcher.ui.MikuIdentity.Leek,
-                                com.miku.launcher.ui.MikuIdentity.Gold,
-                                Color(0xFFFF9100),
-                                com.miku.launcher.ui.MikuIdentity.Coral,
-                                Mascot.color(0xFFFF007F)
-                            )
-                        )
-                    )
-            )
         }
     }
 }

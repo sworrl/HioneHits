@@ -244,6 +244,17 @@
             </intent-filter>
         </receiver>
 
+        <!-- Import the Windy API keys from adb into the encrypted key store. See MikuWindyKeyReceiver.
+             DUMP like the two above: the shell holds it, other apps cannot get it. -->
+        <receiver
+            android:name=".weather.MikuWindyKeyReceiver"
+            android:exported="true"
+            android:permission="android.permission.DUMP">
+            <intent-filter>
+                <action android:name="com.miku.launcher.action.WINDY_KEYS" />
+            </intent-filter>
+        </receiver>
+
         <receiver
             android:name=".network.MikuDevWifiReceiver"
             android:exported="true"

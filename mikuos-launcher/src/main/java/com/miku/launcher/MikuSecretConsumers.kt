@@ -82,9 +82,15 @@ object MikuConcertMode {
  * NEGI BATTERY: the battery glyph as a leek lying on its side. White bulb and roots on the left,
  * the stalk fills from white to green with charge, and the leaves fan out at the top end.
  * Same information as the four bars it replaces — level, charging, low — just a lot more leek.
+ * Under a pack without Miku lore it draws Hione's coda reticle and ice shard instead
+ * ([CodaShardBatteryGlyph]), switching live with the pack.
  */
 @Composable
 fun MikuNegiBatteryGlyph(pct: Int, charging: Boolean, low: Boolean, modifier: Modifier = Modifier) {
+    if (!Mascot.hasMikuLore) {
+        CodaShardBatteryGlyph(pct, charging, low, modifier)
+        return
+    }
     Canvas(modifier.size(width = 26.dp, height = 11.dp)) {
         val w = size.width
         val h = size.height
@@ -128,7 +134,8 @@ private fun DrawScope.drawRoundRectCompat(topLeft: Offset, size: Size, color: Co
 }
 
 /**
- * Home-screen secret effects drawn over the wallpaper: NEGI SNOW (leeks drifting down) and
+ * Home-screen secret effects drawn over the wallpaper: NEGI SNOW (leeks drifting down, or under
+ * a pack without Miku lore, Hione's ice shards and coda marks: [drawCodaSnow]) and
  * CONCERT MODE (penlights swaying and stage beams sweeping on the beat).
  *
  * POWER. This sits on the home screen, which can be on for hours, so it is deliberately cheap:
@@ -154,7 +161,11 @@ fun MikuSecretHomeFx(isPlaying: Boolean, accent: Color, modifier: Modifier = Mod
     val bpmState by MikuBpmEngine.state.collectAsState()
     Canvas(modifier.fillMaxSize()) {
         val t = clock.longValue
-        if (snow) drawNegiSnow(t, if (isPlaying) 2.2f else 1f)
+        if (snow) {
+            // Read in the draw pass, so a pack switch redraws on the next frame.
+            if (Mascot.hasMikuLore) drawNegiSnow(t, if (isPlaying) 2.2f else 1f)
+            else drawCodaSnow(t, if (isPlaying) 2.2f else 1f)
+        }
         if (concert) drawConcert(t, bpmState.beatIntervalMs, bpmState.lastPulseEpochMs, bpmState.bpm > 0f, accent)
     }
 }

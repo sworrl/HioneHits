@@ -232,6 +232,8 @@ object MikuWeatherService {
         startLocationRefreshLoop(ctx)
         // NWS alerts + nearest NOAA Weather Radio (own 10 min cadence, publishes miku_weather_* keys).
         runCatching { MikuNwsAlerts.start(ctx) }
+        // Rain-soon and frost-tonight notifications (ported from the KDE Windy Weather widget).
+        runCatching { MikuWeatherExtras.start(ctx) }
 
         if (weatherJob == null) {
             weatherJob = scope.launch {
@@ -290,6 +292,15 @@ object MikuWeatherService {
             val loc = oneShotFix(app) ?: run { Log.i(TAG, "one-shot fix: no location available"); return@launch }
             val before = _state.value.gps
             val movedKm = if (before.isLocked) haversineKm(before.latitude, before.longitude, loc.latitude, loc.longitude) else Double.MAX_VALUE
+            // Accuracy guard, from the KDE widget: a fix more than 10x (and 2 km+) coarser than the one
+            // we hold is ignored while ours is under 6 h old, so a Wi-Fi or cell guess good to +-20 km
+            // never replaces a +-5 m GPS fix from this morning. Unknown accuracy (0) is never guarded.
+            val freshMs = SystemClock.elapsedRealtime() - before.lastFixTime
+            if (before.isLocked && before.accuracyM > 0f && freshMs < 6 * 3_600_000L &&
+                loc.accuracy > maxOf(before.accuracyM * 10f, 2_000f)) {
+                Log.i(TAG, "ignored a ±${loc.accuracy.toInt()}m ${loc.provider} fix ${"%.1f".format(movedKm)} km away; keeping the ±${before.accuracyM.toInt()}m fix")
+                return@launch
+            }
             Log.i(TAG, "fix from ${loc.provider} (±${loc.accuracy.toInt()}m) at ${"%.4f".format(loc.latitude)},${"%.4f".format(loc.longitude)}" +
                 if (before.isLocked) " — moved ${"%.1f".format(movedKm)} km" else " — first fix")
             updateLocation(app, loc)

@@ -669,10 +669,15 @@ private fun openBpmGame(ctx: Context) {
 /**
  * Battery as a leek, held at the leek-spin angle: the white stalk fills with the level (green
  * while charging, pink when low), green leaves on top, teal outline. Same slot as the battery
- * icon in the header chip.
+ * icon in the header chip. Under a pack without Miku lore it is [CodaBattery] instead, and the
+ * swap is live: the pack is Compose state.
  */
 @Composable
 private fun NegiBattery(pct: Int, charging: Boolean, modifier: Modifier) {
+    if (!Mascot.hasMikuLore) {
+        CodaBattery(pct, charging, modifier)
+        return
+    }
     androidx.compose.foundation.Canvas(modifier) {
         val u = size.minDimension / 18f
         val len = size.minDimension * 1.3f
@@ -721,6 +726,51 @@ private fun NegiBattery(pct: Int, charging: Boolean, modifier: Modifier) {
                 drawPath(up, MikuTeal.copy(alpha = 0.7f), style = androidx.compose.ui.graphics.drawscope.Stroke(0.6f * u))
             }
         }
+    }
+}
+
+/**
+ * Battery as Hione's coda mark: the ring is the gauge. A faint ice track runs round the ring and
+ * fills clockwise from 12 o'clock with the level, in ice blue, amber while charging, or the
+ * warning color when low. The plus-sign arms cross the ring in amber, standing off the center
+ * like a scope reticle, and a center pip lights while charging. Pack palette colors: amber is
+ * primary and ice blue is accent under Hione.
+ */
+@Composable
+private fun CodaBattery(pct: Int, charging: Boolean, modifier: Modifier) {
+    val amber = Mascot.primary
+    val ice = Mascot.accent
+    val warn = Mascot.warn
+    androidx.compose.foundation.Canvas(modifier) {
+        val r = size.minDimension / 2f
+        val c = Offset(size.width / 2f, size.height / 2f)
+        val ringR = 0.62f * r
+        val ringW = 0.2f * r
+        val frac = (pct / 100f).coerceIn(0f, 1f)
+        val fill = when {
+            charging -> amber
+            pct <= 15 -> warn
+            else -> ice
+        }
+        val box = androidx.compose.ui.geometry.Size(2f * ringR, 2f * ringR)
+        val tl = Offset(c.x - ringR, c.y - ringR)
+        // Track, then the level as an arc from 12 o'clock.
+        drawCircle(ice.copy(alpha = 0.22f), ringR, c, style = androidx.compose.ui.graphics.drawscope.Stroke(ringW))
+        if (frac > 0f) {
+            drawArc(
+                fill, -90f, 360f * frac, false, topLeft = tl, size = box,
+                style = androidx.compose.ui.graphics.drawscope.Stroke(ringW, cap = androidx.compose.ui.graphics.StrokeCap.Butt)
+            )
+        }
+        // Arms: the plus sign, open at the center, running out past the ring.
+        val gap = 0.26f * r
+        val out = 0.99f * r
+        val armW = 0.11f * r
+        drawLine(amber, Offset(c.x, c.y - gap), Offset(c.x, c.y - out), armW)
+        drawLine(amber, Offset(c.x, c.y + gap), Offset(c.x, c.y + out), armW)
+        drawLine(amber, Offset(c.x - gap, c.y), Offset(c.x - out, c.y), armW)
+        drawLine(amber, Offset(c.x + gap, c.y), Offset(c.x + out, c.y), armW)
+        if (charging) drawCircle(amber, 0.13f * r, c)
     }
 }
 

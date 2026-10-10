@@ -37,7 +37,7 @@ object MikuSecrets {
 
     // ---- ids (never rename) -------------------------------------------------------------------
 
-    /** Launcher top-bar battery badge + SystemUI shade battery chip draw a leek. */
+    /** Launcher top-bar battery badge + SystemUI shade battery chip draw a leek (Miku) or a coda mark (other packs). */
     const val NEGI_BATTERY = "secret.os.battery.negi"
     /** Miku Music Tape Mode: a cassette shell that is invisible until earned. */
     const val TAPE_MIKU39 = "secret.player.tape.miku39"
@@ -47,7 +47,7 @@ object MikuSecrets {
     const val HOLO_LOCK_CLOCK = "secret.os.lock.holo_clock"
     /** Home screen: double-tap the hearts clock for penlights and stage beams on the beat. */
     const val CONCERT_MODE = "secret.os.home.concert_mode"
-    /** Home screen: leeks drift down the wallpaper. */
+    /** Home screen: leeks (Miku) or ice shards and coda marks (other packs) drift down the wallpaper. */
     const val NEGI_SNOW = "secret.os.home.negi_snow"
     /** A synthesized Mi-Ku chime greets every boot (same boot-sound switch as the stock jingle). */
     const val BOOT_CHIME = "secret.os.boot.chime39"
@@ -85,9 +85,10 @@ object MikuSecrets {
      * finds them all, which is the point of having them.
      */
     val ALL: List<Secret> get() = listOf(
-        Secret(NEGI_BATTERY, "Leek battery icon", "Top bar and notification shade",
-            "Your battery icon is a leek now. The more green, the more charge.",
-            "Some leeks only grow after midnight.", true),
+        Secret(NEGI_BATTERY, Mascot.lore("Leek battery icon", "Coda battery icon"), "Top bar and notification shade",
+            Mascot.lore("Your battery icon is a leek now. The more green, the more charge.",
+                "Your battery icon is a coda mark and an ice shard now. The more ice, the more charge."),
+            Mascot.lore("Some leeks only grow after midnight.", "Some ice only forms after midnight."), true),
         Secret(TAPE_MIKU39, "MIKU 39 cassette shell", "${Mascot.musicAppName}, Tape Mode",
             "A new cassette shell. Pick it in Tape Mode's theme list or keep tapping the shell button.",
             "Mi-ku. Thirty-nine clean notes in a row, no stumbles.", false),
@@ -102,8 +103,9 @@ object MikuSecrets {
         Secret(CONCERT_MODE, "Concert lights on the home screen", "Home screen",
             "Double-tap the clock on the home screen while music plays. Glow sticks and stage lights move to the beat.",
             "Fifty notes without a miss, on something fast.", true),
-        Secret(NEGI_SNOW, "Falling leeks on the wallpaper", "Home screen wallpaper",
-            "Leeks drift down your wallpaper, and fall faster while music plays.",
+        Secret(NEGI_SNOW, Mascot.lore("Falling leeks on the wallpaper", "Falling ice on the wallpaper"), "Home screen wallpaper",
+            Mascot.lore("Leeks drift down your wallpaper, and fall faster while music plays.",
+                "Ice shards and coda marks drift down your wallpaper, and fall faster while music plays."),
             "Seven different voices. Sing along with each of them.", true),
         Secret(BOOT_CHIME, "${Mascot.name} startup chime", "Plays after a restart",
             "${Mascot.name}'s own chime plays when the device starts. It follows the boot sound switch.",
