@@ -14,6 +14,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlin.math.roundToInt
 
 /**
  * UI state mirrored from [QualcommFmHardwareEngine]. Nothing here is pre-filled with a plausible
@@ -73,7 +74,13 @@ data class FmState(
     val listenerPlace: Pair<Double, Double>? = null,
     val catalogueSize: Int = 0,
     val diagnostics: FmDiagnostics = FmDiagnostics(),
-    val spectrum: FloatArray = FloatArray(0),
+    /** Song identification (Shazam-style), its last result and this session's history. */
+    val songId: FmSongId.State = FmSongId.State(),
+    /** Nearest NOAA Weather Radio transmitters; reference only, this tuner cannot receive 162 MHz. */
+    val weatherRadios: List<FmWeatherRadio.Transmitter> = emptyList(),
+    /** Calibration behind every station's reach verdict: offset in dB and how many stations it came from. */
+    val reachOffsetDb: Double = FmReach.DEFAULT_OFFSET_DB,
+    val reachCalibratedFrom: Int = 0,
 ) {
     /**
      * Compose and equals(): the FloatArray makes the generated equals reference-compare, which
@@ -97,7 +104,7 @@ data class FmState(
             afJump == other.afJump && softMute == other.softMute &&
             seekSensitivity == other.seekSensitivity && audioLevel == other.audioLevel &&
             diagnostics == other.diagnostics && captureFraming == other.captureFraming &&
-            spectrumTopHz == other.spectrumTopHz && spectrum === other.spectrum &&
+            spectrumTopHz == other.spectrumTopHz &&
             signalHistory === other.signalHistory && bandProfile === other.bandProfile &&
             bandHistory === other.bandHistory && rdsSupported == other.rdsSupported &&
             rdsArtist == other.rdsArtist && rdsTitle == other.rdsTitle &&
@@ -106,7 +113,9 @@ data class FmState(
             sdrSkin == other.sdrSkin && viewMode == other.viewMode &&
             siphonState == other.siphonState && siphonReason == other.siphonReason && bandHistoryTimes === other.bandHistoryTimes &&
             tunedProfile === other.tunedProfile &&
-            listenerPlace == other.listenerPlace && catalogueSize == other.catalogueSize
+            listenerPlace == other.listenerPlace && catalogueSize == other.catalogueSize &&
+            songId == other.songId && weatherRadios === other.weatherRadios &&
+            reachOffsetDb == other.reachOffsetDb && reachCalibratedFrom == other.reachCalibratedFrom
     }
 
     override fun hashCode(): Int {
@@ -116,7 +125,6 @@ data class FmState(
         r = 31 * r + (rssi ?: 0)
         r = 31 * r + stationName.hashCode()
         r = 31 * r + radioText.hashCode()
-        r = 31 * r + System.identityHashCode(spectrum)
         return r
     }
 }
@@ -135,6 +143,24 @@ object FmRadioManager {
     private val _state = MutableStateFlow(FmState())
     val state: StateFlow<FmState> = _state
     private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
+
+    /**
+     * The live spectrum, on its own flow. It updates 25 times a second; folded into [state] it
+     * made the whole screen recompose at that rate, which is most of why the tuner felt laggy.
+     * Only the analyser should read this.
+     */
+    data class SpectrumFrame(
+        val level: FloatArray = FloatArray(0),
+        val peak: FloatArray = FloatArray(0),
+        /** Centre frequency of each bin, Hz (log-spaced). */
+        val binHz: FloatArray = FloatArray(0),
+        val topHz: Int = 16_000,
+    ) {
+        override fun equals(other: Any?) = other is SpectrumFrame && level === other.level && peak === other.peak
+        override fun hashCode() = System.identityHashCode(level)
+    }
+    private val _spectrum = MutableStateFlow(SpectrumFrame())
+    val spectrum: StateFlow<SpectrumFrame> = _spectrum
 
     /** Programme-type names. Two tables, because RBDS and RDS assign the same codes differently. */
     private val PTY_RDS = listOf(
@@ -170,8 +196,27 @@ object FmRadioManager {
             launch { eng.hardwareOnline.collect { v -> _state.update { it.copy(isHardwareOnline = v) } } }
             launch { eng.hardwareError.collect { v -> _state.update { it.copy(hardwareError = v) } } }
             launch { eng.band.collect { v -> _state.update { it.copy(band = v) } } }
-            launch { eng.spectrum.collect { v -> _state.update { it.copy(spectrum = v) } } }
-            launch { eng.audioLevel.collect { v -> _state.update { it.copy(audioLevel = v) } } }
+            // The live spectrum is NOT folded into state any more: it is published on its own
+            // flow below and read only by the analyser's draw phase. At 25 fps in here it made
+            // the whole screen recompose every frame.
+            launch {
+                eng.spectrumPeaks.collect { pk ->
+                    _spectrum.value = SpectrumFrame(eng.spectrum.value, pk, eng.spectrumBinHz.value, eng.spectrumTopHz.value)
+                }
+            }
+            launch { FmSongId.state.collect { v -> _state.update { it.copy(songId = v) } } }
+            launch { eng.weatherRadios.collect { v -> _state.update { it.copy(weatherRadios = v) } } }
+            // The engine updates the RMS level on every capture block (dozens of times a
+            // second). Only a printed number reads it, so it is sampled at 4 Hz and rounded to
+            // what is printed; otherwise it alone recomposed the screen at audio-block rate.
+            launch {
+                var last = -1f
+                while (true) {
+                    val v = (eng.audioLevel.value * 100f).roundToInt() / 100f
+                    if (v != last) { last = v; _state.update { it.copy(audioLevel = v) } }
+                    delay(250)
+                }
+            }
             launch { eng.captureFraming.collect { v -> _state.update { it.copy(captureFraming = v) } } }
             launch { eng.spectrumTopHz.collect { v -> _state.update { it.copy(spectrumTopHz = v) } } }
             launch { eng.signalHistory.collect { v -> _state.update { it.copy(signalHistory = v) } } }
@@ -182,7 +227,11 @@ object FmRadioManager {
             launch { eng.rdsTitle.collect { v -> _state.update { it.copy(rdsTitle = v) } } }
             launch { eng.rdsGroups.collect { v -> _state.update { it.copy(rdsGroups = v) } } }
             launch { eng.channelGrid.collect { v -> _state.update { it.copy(channelGrid = v) } } }
-            launch { eng.nearbyStations.collect { v -> _state.update { it.copy(nearbyStations = v) } } }
+            launch {
+                eng.nearbyStations.collect { v ->
+                    _state.update { it.copy(nearbyStations = v, reachOffsetDb = FmReach.offsetDb, reachCalibratedFrom = FmReach.calibratedFrom) }
+                }
+            }
             launch { eng.sdrSkin.collect { v -> _state.update { it.copy(sdrSkin = v) } } }
             launch { eng.viewMode.collect { v -> _state.update { it.copy(viewMode = v) } } }
             launch { eng.siphonState.collect { v -> _state.update { it.copy(siphonState = v) } } }
@@ -266,6 +315,23 @@ object FmRadioManager {
     fun cycleSdrSkin() { engine?.cycleSdrSkin() }
     fun setViewMode(m: QualcommFmHardwareEngine.ViewMode) { engine?.setViewMode(m) }
     fun retrySiphon() { engine?.retrySiphon() }
+    fun identifySong() { engine?.identifySong() }
+    fun dismissSongId() = FmSongId.dismiss()
+
+    /**
+     * Search the whole station catalogue (call, city, format, genre, licensee, or a frequency
+     * like "94.5"). Blocking SQLite: call from a background dispatcher. Results get the same
+     * reach verdicts as the nearby list where they are in it.
+     */
+    fun searchStations(query: String): List<FmStationCatalogue.Station> {
+        val pos = _state.value.listenerPlace
+        val near = _state.value.nearbyStations.associateBy { it.call }
+        val found = FmStationCatalogue.search(query, pos?.first, pos?.second)
+        val predicted = if (pos == null) found else FmReach.annotate(found.filter { it.call !in near }, null, 0, 1).associateBy { it.call }.let { p ->
+            found.map { p[it.call] ?: it }
+        }
+        return predicted.map { near[it.call] ?: it }
+    }
 
     fun nudgeFmVolume(up: Boolean) { engine?.nudgeFmVolume(up) }
     fun setAfJump(on: Boolean) { engine?.setAfJump(on) }
@@ -342,6 +408,11 @@ class MikuFMRadioActivity : ComponentActivity() {
                 android.view.WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS
         )
         hideSystemBars()
+        // The station search has a text field. Edge-to-edge with adjustResize hands the IME
+        // height to Compose as an inset (the sheet pads itself by it) instead of panning the
+        // whole immersive window up under the keyboard.
+        @Suppress("DEPRECATION")
+        window.setSoftInputMode(android.view.WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
 
         // Hardware volume keys should move the radio, so route them at STREAM_MUSIC — which is
         // also the stream the engine's fm_volume tracks.

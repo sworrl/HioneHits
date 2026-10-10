@@ -283,12 +283,6 @@ class MikuVolumeHud(
             strokeWidth = dp(0.9f)
         }
         private val fillPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL }
-        private val thumbLinePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            style = Paint.Style.STROKE
-            strokeWidth = dp(2f)
-            strokeCap = Paint.Cap.ROUND
-            color = Color.argb(242, 255, 255, 255)
-        }
         private val glowPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL }
         private val buttonBgPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL }
         private val iconPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
@@ -309,6 +303,7 @@ class MikuVolumeHud(
         }
 
         private val cardPath = Path()
+        private val glassFx = MikuGlass.CanvasGlass(density)
         private val cardRect = RectF()
         private val trackRect = RectF()
         private val fillRect = RectF()
@@ -481,6 +476,8 @@ class MikuVolumeHud(
             }
             borderPaint.shader = LinearGradient(0f, top, 0f, bottom, borderColors, null, Shader.TileMode.CLAMP)
             canvas.drawPath(cardPath, borderPaint)
+            // MikuGlass sheen + top-edge light; the neon border above stays the rim
+            glassFx.drawOver(canvas, cardPath, cardRect, dynColor, withRim = false)
 
             val cx = cardRect.centerX()
 
@@ -544,9 +541,9 @@ class MikuVolumeHud(
                 )
                 canvas.drawCircle(cx, topY, gw * 1.8f, glowPaint)
 
-                // Indicator line
-                canvas.drawLine(gx + dp(2f), topY + dp(1f), gx + gw - dp(2f), topY + dp(1f), thumbLinePaint)
                 canvas.restore()
+                // Liquid bead thumb riding the fill level (outside the fill clip so it can sit proud)
+                glassFx.drawBead(canvas, cx, topY.coerceIn(gy + dp(5f), gy + gh - dp(5f)), gw / 2f + dp(1f), dp(5f), dynColor)
             }
 
             // 3. Volume % Text
@@ -628,6 +625,7 @@ class MikuVolumeHud(
             borderPaint.shader = LinearGradient(left, top, right, top, borderColors, null, Shader.TileMode.CLAMP)
             borderPaint.alpha = alpha
             canvas.drawRoundRect(cardRect, cornerR, cornerR, borderPaint)
+            glassFx.drawOver(canvas, cardRect, cornerR, 0xFF39C5BB.toInt(), 0xFFFF4FA3.toInt(), alpha, withRim = false)
 
             // Left: Speaker Circle (34dp)
             val iconCx = left + dp(28f)
@@ -688,6 +686,8 @@ class MikuVolumeHud(
                 fillPaint.shader = LinearGradient(textLeft, barTop, textLeft + trackW, barTop, fillColors, null, Shader.TileMode.CLAMP)
                 fillPaint.alpha = alpha
                 canvas.drawRoundRect(fillRect, dp(3f), dp(3f), fillPaint)
+                glassFx.drawBead(canvas, textLeft + fillW, barTop + trackH / 2f, dp(7f), dp(5f),
+                    if (isDanger) 0xFFFF0055.toInt() else 0xFFFF4FA3.toInt(), alpha)
             }
         }
 

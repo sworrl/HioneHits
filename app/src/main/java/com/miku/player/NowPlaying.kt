@@ -196,6 +196,13 @@ fun NowPlayingScreen(
     val ctx = LocalContext.current
     androidx.activity.compose.BackHandler(onBack = onClose)
     NowPlayingLook.load(ctx)
+    // Unlock state is re-read fresh each time this screen opens, so a reward earned in the BPM game
+    // a moment ago applies now (the reader otherwise caches for 5 s). The leek is a secret that
+    // simply appears, so it follows the ENABLED view: earned and not switched off in the game.
+    val leekSpinOn = remember {
+        MikuUnlocksReader.invalidate()
+        MikuUnlocksReader.isEnabled(ctx, MikuUnlocksReader.SECRET_LEEK_SPIN)
+    }
     // Instant art: the cached thumb shows the same frame the screen opens, then the lossless
     // hi-res decode swaps in underneath — never a blank wait.
     val art by produceState<ImageBitmap?>(initialValue = AlbumArtCache.getHi(track.id), track.id) {
@@ -696,6 +703,17 @@ fun NowPlayingScreen(
                                     }
                                 )
                             }
+                    )
+                }
+
+                // Secret: the leek spin. Top-right of the stage, over the art/visualiser only (the
+                // transport lives in the card below). It takes no input, so taps reach the stage
+                // gestures underneath. Gone entirely when the screen is not actively lit, which also
+                // stops its frame loop.
+                if (leekSpinOn && IdleController.screenActive) {
+                    LeekSpin(
+                        playing = isPlaying,
+                        modifier = Modifier.align(Alignment.TopEnd).padding(10.dp).size(44.dp)
                     )
                 }
             }

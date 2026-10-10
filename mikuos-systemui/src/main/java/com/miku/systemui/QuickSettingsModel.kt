@@ -6,7 +6,11 @@ import android.net.wifi.WifiManager
 import android.net.wifi.ScanResult
 import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothDevice
+import android.hardware.display.DisplayManager
 import android.provider.Settings
+import android.util.Log
+import android.view.Display
+import android.view.Surface
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -21,7 +25,11 @@ data class QsTile(
     val icon: ImageVector,
     val isActive: Boolean,
     val onClick: () -> Unit,
-    val onLongClick: (() -> Unit)? = null
+    val onLongClick: (() -> Unit)? = null,
+    /** False when the state cannot be read (radio missing, codec not answering). Drawn dimmed; a tap still tries. */
+    val isAvailable: Boolean = true,
+    /** Long-press opens another app's screen, so the shade should get out of the way. */
+    val longPressOpensUi: Boolean = true
 )
 
 object QuickSettingsModel {
@@ -98,6 +106,52 @@ object QuickSettingsModel {
         RootShell.execFast("svc bluetooth " + (if (enable) "enable" else "disable"))
     }
 
+    // ------------------------------------------------------------------ rotation
+
+    fun isAutoRotate(ctx: Context): Boolean =
+        runCatching { Settings.System.getInt(ctx.contentResolver, Settings.System.ACCELEROMETER_ROTATION, 0) == 1 }.getOrDefault(false)
+
+    /** Surface.ROTATION_* the default display is showing right now. */
+    fun displayRotation(ctx: Context): Int = runCatching {
+        // DisplayManager, not ctx.display: this runs from the accessibility service context too,
+        // which is not a visual context and throws on getDisplay().
+        (ctx.getSystemService(Context.DISPLAY_SERVICE) as DisplayManager).getDisplay(Display.DEFAULT_DISPLAY).rotation
+    }.getOrDefault(Surface.ROTATION_0)
+
+    /** USER_ROTATION, i.e. the orientation a locked display is held in. */
+    fun lockedRotation(ctx: Context): Int =
+        runCatching { Settings.System.getInt(ctx.contentResolver, Settings.System.USER_ROTATION, Surface.ROTATION_0) }.getOrDefault(Surface.ROTATION_0)
+
+    /**
+     * Auto-rotate on/off, the way AOSP's RotationPolicy does it but through the settings provider:
+     * DisplayRotation observes both keys and applies them, so no IWindowManager call is needed.
+     * Locking first pins USER_ROTATION to the CURRENT rotation, otherwise turning auto-rotate off
+     * while sideways would snap the screen back to whatever USER_ROTATION held last time.
+     * Needs WRITE_SETTINGS (signature|appop, granted by the platform signature); root shell fallback.
+     */
+    fun setAutoRotate(ctx: Context, enable: Boolean) {
+        val cr = ctx.contentResolver
+        val rot = displayRotation(ctx)
+        val ok = runCatching {
+            if (!enable) Settings.System.putInt(cr, Settings.System.USER_ROTATION, rot)
+            Settings.System.putInt(cr, Settings.System.ACCELEROMETER_ROTATION, if (enable) 1 else 0)
+        }.getOrDefault(false)
+        if (!ok) {
+            Log.w("QuickSettingsModel", "Settings.System rotation write refused; root shell fallback")
+            RootShell.execFast(
+                (if (!enable) "settings put system user_rotation $rot; " else "") +
+                    "settings put system accelerometer_rotation " + (if (enable) 1 else 0)
+            )
+        }
+    }
+
+    private fun rotationName(rot: Int) = when (rot) {
+        Surface.ROTATION_90 -> "Landscape"
+        Surface.ROTATION_180 -> "Portrait (flipped)"
+        Surface.ROTATION_270 -> "Landscape (flipped)"
+        else -> "Portrait"
+    }
+
     fun getTiles(ctx: Context, scope: CoroutineScope, onRefresh: () -> Unit): List<QsTile> {
         val list = mutableListOf<QsTile>()
 
@@ -115,6 +169,7 @@ object QuickSettingsModel {
                 },
                 icon = if (isWifiOn) Icons.Default.Wifi else Icons.Default.WifiOff,
                 isActive = isWifiOn,
+                isAvailable = ctx.applicationContext.getSystemService(Context.WIFI_SERVICE) != null,
                 onClick = {
                     val next = !isWifiOn
                     toggleWifi(ctx, next)
@@ -133,6 +188,7 @@ object QuickSettingsModel {
                 subtitle = if (isBtOn) "Active" else "Off",
                 icon = if (isBtOn) Icons.Default.Bluetooth else Icons.Default.BluetoothDisabled,
                 isActive = isBtOn,
+                isAvailable = (ctx.getSystemService(Context.BLUETOOTH_SERVICE) as? android.bluetooth.BluetoothManager)?.adapter != null,
                 onClick = {
                     val next = !isBtOn
                     toggleBluetooth(ctx, next)
@@ -159,6 +215,7 @@ object QuickSettingsModel {
                 },
                 icon = Icons.Default.GraphicEq,
                 isActive = currentFilter != null,
+                isAvailable = currentFilter != null,
                 onClick = {
                     val all = CirrusLogicManager.DigitalFilter.values()
                     val nextIdx = if (currentFilter == null) 0 else (currentFilter.ordinal + 1) % all.size
@@ -186,6 +243,7 @@ object QuickSettingsModel {
                 },
                 icon = Icons.Default.VolumeUp,
                 isActive = isHighGain,
+                isAvailable = currentGain != null,
                 onClick = {
                     val next = if (isHighGain) CirrusLogicManager.GainMode.LOW else CirrusLogicManager.GainMode.HIGH
                     scope.launch {
@@ -253,6 +311,29 @@ object QuickSettingsModel {
                     }
                 },
                 onLongClick = { openMikuSettings(ctx, "system_about") }
+            )
+        )
+
+        // Rotation lock. Active = auto-rotate on (AOSP semantics); off shows the held orientation.
+        val autoRotate = isAutoRotate(ctx)
+        val held = lockedRotation(ctx)
+        val heldLandscape = held == Surface.ROTATION_90 || held == Surface.ROTATION_270
+        list.add(
+            QsTile(
+                id = "rotation",
+                label = if (autoRotate) "Auto-rotate" else "Rotation lock",
+                subtitle = if (autoRotate) "On" else "Locked · " + rotationName(held),
+                icon = when {
+                    autoRotate -> Icons.Default.ScreenRotation
+                    heldLandscape -> Icons.Default.ScreenLockLandscape
+                    else -> Icons.Default.ScreenLockPortrait
+                },
+                isActive = autoRotate,
+                onClick = {
+                    setAutoRotate(ctx, !autoRotate)
+                    onRefresh()
+                },
+                onLongClick = { openMikuSettings(ctx, "display") }
             )
         )
 

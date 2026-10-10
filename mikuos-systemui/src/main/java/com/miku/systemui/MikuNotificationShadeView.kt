@@ -11,7 +11,6 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.animateColorAsState
@@ -22,9 +21,7 @@ import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -33,7 +30,6 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
@@ -64,6 +60,7 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.CloudSync
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.HeadsetOff
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.Pause
@@ -74,14 +71,15 @@ import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material.icons.filled.SkipPrevious
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.Slider
-import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.SwipeToDismissBox
 import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.key
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.unit.Density
 import androidx.compose.runtime.LaunchedEffect
@@ -100,7 +98,6 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -108,7 +105,6 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.graphics.drawable.toBitmap
@@ -124,18 +120,26 @@ import java.util.Locale
  * MikuOS notification shade — Pixel 11 layout & behaviour, Miku skin.
  *
  *   ┌ header: hearts clock + date ─────────── battery · expand chevron ┐
- *   │ QQS: 4 pill tiles (Wi-Fi · BT · Ingress · Wireless ADB)          │  ← pull further /
+ *   │ QQS: first 4 tiles of the user's order (QsTileOrder)              │  ← pull further /
  *   │ brightness                                                         │    chevron = full
  *   │ media card (active MediaSession)                                   │    2-column QS grid
  *   │ notifications (swipe to dismiss, tap = open, chevron = expand)     │
  *   │ CLEAR ALL                                                          │
- *   └ footer: listener state ·········· settings · power · close ───────┘
+ *   └ footer: listener state ········· edit · settings · power · close ┘
  *
+ * Surfaces are MikuGlass (see MikuGlass.kt): glass panel over a SurfaceFlinger blur when the
+ * device offers one, glass-button tiles, a liquid brightness slider. The pencil opens
+ * MikuQsEditor over the panel; the order it saves drives both the quick row and the grid.
  * 8dp grid, ≥40dp touch targets, ≥11sp text, 360×640dp target.
  */
 
 private val ShadeCorner = 28.dp
 private val TileCorner = 24.dp
+/** Room left around the QS tiles inside the QS clip, for their glass halo and contact shadow. */
+private val QsGlassRoom = 8.dp
+/** Notification cards: no contact shadow (a long list of shadows reads as mud), quieter rim when ongoing. */
+private val NotifGlass = MikuGlass.Card.copy(shadow = 0.dp, opacity = 0.92f)
+private val NotifGlassQuiet = NotifGlass.copy(rim = 0.4f, specular = 0.6f)
 
 @OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class)
 @Composable
@@ -166,10 +170,23 @@ fun MikuNotificationShadeView(
     var isCharging by remember { mutableStateOf(false) }
     var media by remember { mutableStateOf<MikuMediaHub.Now?>(null) }
     var tiles by remember { mutableStateOf<List<QsTile>>(emptyList()) }
+    val tileOrder by QsTileOrder.active.collectAsState()
+    // Built tiles in the user's order. Anything not in the order is simply not shown.
+    val ordered = remember(tiles, tileOrder) {
+        val byId = tiles.associateBy { it.id }
+        tileOrder.mapNotNull { byId[it] }
+    }
+    var editing by remember { mutableStateOf(false) }
+    val editAnim = remember { Animatable(0f) }
+    LaunchedEffect(editing) { editAnim.animateTo(if (editing) 1f else 0f, MikuMotion.settle()) }
+    val blur by MikuGlass.backdropBlur.collectAsState()
     val notifs by MikuNotificationStore.items.collectAsState()
     val listenerOk by MikuNotificationStore.connected.collectAsState()
     // Album accent (Miku Music → Settings.Global miku_np_accent), ≈30% into teal, animated 400ms.
-    LaunchedEffect(Unit) { MikuAccent.observe(ctx); MikuPowerProfile.observe(ctx) }
+    LaunchedEffect(Unit) { MikuAccent.observe(ctx); MikuPowerProfile.observe(ctx); QsTileOrder.observe(ctx) }
+    // The window host keeps this composition alive between pulls, so tile state read on the last
+    // pull would otherwise still be showing. Every open resumes the lifecycle: re-read then.
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { tick++ }
     val powerProfile by MikuPowerProfile.profile.collectAsState()
     val quiet = powerProfile == "audio_only" || powerProfile == "idle"
     val accentRaw by MikuAccent.accent.collectAsState()
@@ -204,12 +221,6 @@ fun MikuNotificationShadeView(
             media = withContext(Dispatchers.IO) { runCatching { MikuMediaHub.now(ctx) }.getOrNull() }
             delay(MikuPowerProfile.pollMs(1000L))
         }
-    }
-
-    // Brightness (manual mode while the user drags)
-    val cr = ctx.contentResolver
-    var brightness by remember {
-        mutableIntStateOf(runCatching { Settings.System.getInt(cr, Settings.System.SCREEN_BRIGHTNESS) }.getOrDefault(128))
     }
 
     // ---------------------------------------------------------------- expansion
@@ -302,11 +313,15 @@ fun MikuNotificationShadeView(
     }
 
     BackHandler(enabled = true) {
-        if (expanded) scope.launch { expand.animateTo(0f, MikuMotion.settle()) } else onDismiss()
+        when {
+            editing -> editing = false
+            expanded -> scope.launch { expand.animateTo(0f, MikuMotion.settle()) }
+            else -> onDismiss()
+        }
     }
 
     val compactH = 56.dp
-    val gridRows = (tiles.size + 1) / 2
+    val gridRows = (ordered.size + 1) / 2
     val expandedH = (gridRows * 64 + (gridRows - 1).coerceAtLeast(0) * 8).dp
     // PERF (2026-09-17): these used to be `val qsH = ... expand.value ...` read right here in the
     // composition body. `expand` is an Animatable, so every single frame of the pull invalidated
@@ -324,7 +339,7 @@ fun MikuNotificationShadeView(
     Box(
         Modifier
             .fillMaxSize()
-            .drawBehind { drawRect(Color.Black.copy(alpha = 0.55f * panelIn.value * revealProgress())) }
+            .drawBehind { drawRect(Color.Black.copy(alpha = MikuGlass.scrimAlpha(blur) * panelIn.value * revealProgress())) }
             .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) { onDismiss() }
     ) {
         BoxWithConstraints(Modifier.fillMaxSize()) {
@@ -337,10 +352,12 @@ fun MikuNotificationShadeView(
                     .graphicsLayer {
                         val pullUp = (-expand.value).coerceAtLeast(0f)   // 0..0.4 while dragging up to dismiss
                         translationY = panelOffsetPx() - (1f - panelIn.value) * size.height * 0.35f - pullUp * size.height * 0.5f
-                        alpha = (0.6f + 0.4f * panelIn.value) * (1f - pullUp * 0.8f)
+                        alpha = (0.6f + 0.4f * panelIn.value) * (1f - pullUp * 0.8f) * (1f - editAnim.value)
                     }
-                    .clip(RoundedCornerShape(bottomStart = ShadeCorner, bottomEnd = ShadeCorner))
-                    .background(Brush.verticalGradient(listOf(Color(0xFA0A1E26), Color(0xFC061319), Color(0xFE030B0F))))
+                    .mikuGlass(
+                        RoundedCornerShape(bottomStart = ShadeCorner, bottomEnd = ShadeCorner),
+                        MikuGlass.panelStyle(blur), accent = osAccentBright
+                    )
                     .drawBehind {
                         // soft teal + pink plasma glows behind the glass
                         drawCircle(Brush.radialGradient(listOf(MikuTeal.copy(alpha = 0.18f), Color.Transparent), center = androidx.compose.ui.geometry.Offset(size.width * 0.15f, size.height * 0.05f), radius = size.width * 0.6f), radius = size.width * 0.6f, center = androidx.compose.ui.geometry.Offset(size.width * 0.15f, size.height * 0.05f))
@@ -363,13 +380,14 @@ fun MikuNotificationShadeView(
                     Row(
                         Modifier
                             .height(32.dp)
-                            .clip(RoundedCornerShape(16.dp))
-                            .background(MikuSurface2.copy(alpha = 0.9f))
-                            .border(1.dp, MikuTeal.copy(alpha = 0.45f), RoundedCornerShape(16.dp))
+                            .mikuGlass(RoundedCornerShape(16.dp), MikuGlass.Chip, accent = osAccentBright)
                             .padding(horizontal = 10.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Icon(
+                        // Negi Battery (a BPM-game secret): re-read on every pull (tick bumps on resume).
+                        val negi = remember(tick) { MikuUnlocksReader.isEnabled(ctx, MikuUnlocksReader.SECRET_NEGI_BATTERY) }
+                        if (negi) MikuNegiBatteryGlyph(pct = batteryPct ?: -1, charging = isCharging)
+                        else Icon(
                             if (isCharging) Icons.Default.BatteryChargingFull else Icons.Default.BatteryFull,
                             null, tint = if (isCharging) Color(0xFF69F0AE) else MikuTealBright, modifier = Modifier.size(16.dp)
                         )
@@ -378,18 +396,12 @@ fun MikuNotificationShadeView(
                     }
                     Spacer(Modifier.width(4.dp))
                     // expand / collapse chevron (40dp target)
-                    Box(
-                        Modifier
-                            .size(40.dp)
-                            .clip(CircleShape)
-                            .clickable {
-                                view.performHapticFeedback(android.view.HapticFeedbackConstants.CONTEXT_CLICK)
-                                scope.launch { expand.animateTo(if (expanded) 0f else 1f, MikuMotion.settle()) }
-                            },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore, null, tint = MikuTextSecondary, modifier = Modifier.size(24.dp))
-                    }
+                    GlassIconButton(
+                        if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                        if (expanded) "Collapse quick settings" else "Expand quick settings",
+                        MikuTextSecondary, accent = osAccentBright
+                    ) { scope.launch { expand.animateTo(if (expanded) 0f else 1f, MikuMotion.settle()) } }
+                    Spacer(Modifier.width(4.dp))
                 }
                 // header underline — carries the album accent
                 Box(
@@ -404,26 +416,30 @@ fun MikuNotificationShadeView(
                     Modifier
                         .fillMaxWidth()
                         .then(dragModifier)
-                        .padding(horizontal = 16.dp)
+                        .padding(horizontal = 16.dp - QsGlassRoom)
                         // Height in the LAYOUT phase. Modifier.height(qsH) would need a new
                         // composition for every pixel of the pull; this re-measures without one.
                         .layout { measurable, constraints ->
-                            val h = qsHeightPx(this, expand.value)
+                            val h = qsHeightPx(this, expand.value) + 2 * QsGlassRoom.roundToPx()
                             val p = measurable.measure(constraints.copy(minHeight = h, maxHeight = h))
                             layout(p.width, h) { p.place(0, 0) }
                         }
-                        .clip(RoundedCornerShape(4.dp))
+                        // The clip hides the grid while it is taller than the box mid-pull. It sits
+                        // QsGlassRoom outside the tiles so their halo and shadow are not shaved off.
+                        .clip(RoundedCornerShape(12.dp))
+                        .padding(QsGlassRoom)
                 ) {
                     // compact row
                     if (showCompact) {
-                        val compactIds = listOf("wifi", "bluetooth", "ingest", "wireless_adb")
-                        val compact = compactIds.mapNotNull { id -> tiles.firstOrNull { it.id == id } }
+                        val compact = ordered.take(QsTileOrder.QUICK_COUNT)
                         Row(
                             Modifier.fillMaxWidth().height(compactH)
                                 .graphicsLayer { alpha = 1f - expand.value.coerceIn(0f, 1f) },
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            compact.forEach { t -> CompactTile(t, Modifier.weight(1f), osAccent, osAccentBright) }
+                            compact.forEach { t -> key(t.id) { GlassCompactTile(t, Modifier.weight(1f), osAccentBright, onLongPressOpened = onDismiss) } }
+                            // keep tile widths stable when the user has fewer than four active
+                            repeat(QsTileOrder.QUICK_COUNT - compact.size) { Spacer(Modifier.weight(1f)) }
                         }
                     }
                     // expanded grid
@@ -435,9 +451,9 @@ fun MikuNotificationShadeView(
                             },
                             verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            tiles.chunked(2).forEach { pair ->
+                            ordered.chunked(2).forEach { pair ->
                                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                    pair.forEach { t -> GridTile(t, Modifier.weight(1f), osAccent, osAccentBright) }
+                                    pair.forEach { t -> key(t.id) { GlassGridTile(t, Modifier.weight(1f), osAccentBright, onLongPressOpened = onDismiss) } }
                                     if (pair.size == 1) Spacer(Modifier.weight(1f))
                                 }
                             }
@@ -448,33 +464,7 @@ fun MikuNotificationShadeView(
                 Spacer(Modifier.height(8.dp))
 
                 // ---------------------------------------------------- brightness
-                Row(
-                    Modifier
-                        .fillMaxWidth()
-                        .then(dragModifier)
-                        .padding(horizontal = 16.dp)
-                        .height(40.dp)
-                        .clip(RoundedCornerShape(20.dp))
-                        .background(MikuSurface1.copy(alpha = 0.9f))
-                        .padding(start = 14.dp, end = 6.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(Icons.Default.BrightnessMedium, null, tint = MikuTealBright, modifier = Modifier.size(18.dp))
-                    Spacer(Modifier.width(6.dp))
-                    Slider(
-                        value = brightness.toFloat(),
-                        onValueChange = { v ->
-                            brightness = v.toInt()
-                            runCatching {
-                                Settings.System.putInt(cr, Settings.System.SCREEN_BRIGHTNESS_MODE, Settings.System.SCREEN_BRIGHTNESS_MODE_MANUAL)
-                                Settings.System.putInt(cr, Settings.System.SCREEN_BRIGHTNESS, brightness)
-                            }
-                        },
-                        valueRange = 8f..255f,
-                        colors = SliderDefaults.colors(thumbColor = osAccentBright, activeTrackColor = osAccent, inactiveTrackColor = Color(0xFF12313A)),
-                        modifier = Modifier.weight(1f)
-                    )
-                }
+                BrightnessRow(Modifier.fillMaxWidth().then(dragModifier).padding(horizontal = 16.dp), osAccent, osAccentBright)
 
                 Spacer(Modifier.height(8.dp))
 
@@ -505,20 +495,11 @@ fun MikuNotificationShadeView(
                     }
                     if (visibleNotifs.any { it.isClearable }) {
                         item(key = "clear") {
-                            Box(Modifier.fillMaxWidth().padding(top = 4.dp), contentAlignment = Alignment.Center) {
-                                Box(
-                                    Modifier
-                                        .height(40.dp)
-                                        .clip(RoundedCornerShape(20.dp))
-                                        .background(MikuSurface2)
-                                        .border(1.dp, MikuTeal.copy(alpha = 0.5f), RoundedCornerShape(20.dp))
-                                        .clickable {
-                                            MikuHaptics.pop(view)
-                                            MikuNotificationStore.dismissAll()
-                                        }
-                                        .padding(horizontal = 20.dp),
-                                    contentAlignment = Alignment.Center
-                                ) { Text("CLEAR ALL", color = MikuTealBright, fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 2.sp) }
+                            Box(Modifier.fillMaxWidth().padding(top = 4.dp, bottom = 4.dp), contentAlignment = Alignment.Center) {
+                                GlassChipButton("CLEAR ALL", accent = osAccentBright, height = 40.dp) {
+                                    MikuHaptics.pop(view)
+                                    MikuNotificationStore.dismissAll()
+                                }
                             }
                         }
                     }
@@ -553,9 +534,12 @@ fun MikuNotificationShadeView(
                         modifier = Modifier.padding(start = 8.dp)
                     )
                     Spacer(Modifier.weight(1f))
-                    FooterIcon(Icons.Default.Settings, "Settings", MikuTealBright) { onDismiss(); onOpenSettings() }
-                    FooterIcon(Icons.Default.PowerSettingsNew, "Power", MikuPinkBright) { onDismiss(); onOpenPower() }
-                    FooterIcon(Icons.Default.Close, "Close", MikuTextSecondary) { onDismiss() }
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+                        GlassIconButton(Icons.Default.Edit, "Edit tiles", osAccentBright) { editing = true }
+                        GlassIconButton(Icons.Default.Settings, "Settings", MikuTealBright) { onDismiss(); onOpenSettings() }
+                        GlassIconButton(Icons.Default.PowerSettingsNew, "Power", MikuPinkBright) { onDismiss(); onOpenPower() }
+                        GlassIconButton(Icons.Default.Close, "Close", MikuTextSecondary) { onDismiss() }
+                    }
                 }
                 // drag handle (swipe up to close)
                 Box(
@@ -566,6 +550,34 @@ fun MikuNotificationShadeView(
                     contentAlignment = Alignment.TopCenter
                 ) {
                     Box(Modifier.padding(top = 4.dp).width(40.dp).height(4.dp).clip(RoundedCornerShape(2.dp)).background(MikuTeal.copy(alpha = 0.55f)))
+                }
+            }
+            // ---------------------------------------------------- tile editor (pencil)
+            val showEditor by remember { derivedStateOf { editing || editAnim.value > 0.001f } }
+            if (showEditor) {
+                // Full-size catcher above the (faded-out) panel: the panel is invisible while the
+                // editor is up but would still take touches below the editor's bottom edge.
+                // A tap outside the editor closes it; every drop has already been saved.
+                Box(
+                    Modifier
+                        .fillMaxSize()
+                        .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) { editing = false }
+                ) {
+                    MikuQsEditor(
+                        onDone = { editing = false },
+                        accent = osAccent,
+                        accentBright = osAccentBright,
+                        modifier = Modifier
+                            .heightIn(max = maxPanelH)
+                            .graphicsLayer {
+                                val e = editAnim.value
+                                alpha = e.coerceIn(0f, 1f)
+                                translationY = -(1f - e) * 48f
+                                scaleX = 0.96f + 0.04f * e; scaleY = scaleX
+                            }
+                            // eat taps on the editor's own background
+                            .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) {}
+                    )
                 }
             }
         }
@@ -616,6 +628,7 @@ private fun extraTiles(ctx: Context, onRefresh: () -> Unit): List<QsTile> {
                 " \u00b7 dim " + idleActiveSec + "s \u00b7 sleep " + (idleActiveSec + idleDimSec + idleAmbientSec) + "s"
             else "Off - screen cuts straight to black",
             Icons.Default.BrightnessMedium, idleDimOn,
+            longPressOpensUi = false,
             onClick = {
                 putGlobal(MikuIdleDimSettings.KEY_ENABLED, if (idleDimOn) 0 else 1)
                 onRefresh()
@@ -630,82 +643,41 @@ private fun extraTiles(ctx: Context, onRefresh: () -> Unit): List<QsTile> {
     )
 }
 
-// ------------------------------------------------------------------------------------ tiles
+// ------------------------------------------------------------------------------------ brightness
 
-@OptIn(ExperimentalFoundationApi::class)
+/**
+ * Own composable so a drag recomposes this row only. The brightness used to be state in the
+ * shade's body, which re-ran the whole shade on every slider step.
+ */
 @Composable
-private fun CompactTile(t: QsTile, modifier: Modifier, accent: Color = MikuTeal, accentBright: Color = MikuTealBright) {
-    val view = LocalView.current
-    val interaction = remember { MutableInteractionSource() }
-    val bg by animateFloatAsState(if (t.isActive) 1f else 0f, tween(MikuMotion.ms(200)), label = "tileBg")
-    Column(
-        modifier
-            .height(56.dp)
-            .pressScale(interaction)
-            .clip(RoundedCornerShape(28.dp))
-            .background(lerpColor(MikuSurface2, accent, bg))
-            .border(1.dp, if (t.isActive) accentBright.copy(alpha = 0.9f) else accent.copy(alpha = 0.25f), RoundedCornerShape(28.dp))
-            .combinedClickable(
-                interactionSource = interaction, indication = null,
-                onClick = { MikuHaptics.tick(view); t.onClick() },
-                onLongClick = { MikuHaptics.pop(view); t.onLongClick?.invoke() }
-            ),
-        horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center
-    ) {
-        Icon(t.icon, t.label, tint = if (t.isActive) MikuDarkBg else MikuTealBright, modifier = Modifier.size(20.dp))
-        Spacer(Modifier.height(2.dp))
-        val short = when (t.id) { "wifi" -> "WI-FI"; "bluetooth" -> "BLUETOOTH"; "ingest" -> "INGRESS"; "wireless_adb" -> "ADB"; else -> t.label.uppercase().take(10) }
-        Text(
-            short, color = if (t.isActive) MikuDarkBg else MikuTextSecondary,
-            fontSize = 11.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis, letterSpacing = 0.sp,
-            modifier = Modifier.padding(horizontal = 2.dp)
-        )
+private fun BrightnessRow(modifier: Modifier, accent: Color, accentBright: Color) {
+    val ctx = LocalContext.current
+    val cr = ctx.contentResolver
+    var brightness by remember {
+        mutableIntStateOf(runCatching { Settings.System.getInt(cr, Settings.System.SCREEN_BRIGHTNESS) }.getOrDefault(128))
     }
-}
-
-@OptIn(ExperimentalFoundationApi::class)
-@Composable
-private fun GridTile(t: QsTile, modifier: Modifier, accent: Color = MikuTeal, accentBright: Color = MikuTealBright) {
-    val view = LocalView.current
-    val interaction = remember { MutableInteractionSource() }
-    val bg by animateFloatAsState(if (t.isActive) 1f else 0f, tween(MikuMotion.ms(200)), label = "gridTileBg")
-    Row(
-        modifier
-            .height(64.dp)
-            .pressScale(interaction)
-            .clip(RoundedCornerShape(TileCorner))
-            .background(lerpColor(MikuSurface2, accent, bg))
-            .border(1.dp, if (t.isActive) accentBright.copy(alpha = 0.9f) else accent.copy(alpha = 0.25f), RoundedCornerShape(TileCorner))
-            .combinedClickable(
-                interactionSource = interaction, indication = null,
-                onClick = { MikuHaptics.tick(view); t.onClick() },
-                onLongClick = { MikuHaptics.pop(view); t.onLongClick?.invoke() }
-            )
-            .padding(horizontal = 12.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Box(
-            Modifier.size(32.dp).clip(CircleShape).background(if (t.isActive) MikuDarkBg.copy(alpha = 0.25f) else MikuTeal.copy(alpha = 0.15f)),
-            contentAlignment = Alignment.Center
-        ) { Icon(t.icon, t.label, tint = if (t.isActive) MikuDarkBg else MikuTealBright, modifier = Modifier.size(18.dp)) }
-        Spacer(Modifier.width(10.dp))
-        Column(Modifier.weight(1f)) {
-            Text(t.label, color = if (t.isActive) MikuDarkBg else MikuWhite, fontSize = 12.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            Text(t.subtitle, color = if (t.isActive) MikuDarkBg.copy(alpha = 0.75f) else MikuTextSecondary, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-        }
+    // Re-read on every open (the window host keeps this composition alive between pulls).
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
+        runCatching { brightness = Settings.System.getInt(cr, Settings.System.SCREEN_BRIGHTNESS) }
     }
-}
-
-private fun lerpColor(a: Color, b: Color, t: Float): Color = Color(
-    red = a.red + (b.red - a.red) * t, green = a.green + (b.green - a.green) * t,
-    blue = a.blue + (b.blue - a.blue) * t, alpha = a.alpha + (b.alpha - a.alpha) * t
-)
-
-@Composable
-private fun RowScope.FooterIcon(icon: ImageVector, desc: String, tint: Color, onClick: () -> Unit) {
-    Box(Modifier.size(44.dp).clip(CircleShape).clickable { onClick() }, contentAlignment = Alignment.Center) {
-        Icon(icon, desc, tint = tint, modifier = Modifier.size(22.dp))
-    }
+    MikuGlassSlider(
+        value = brightness.toFloat(),
+        onValueChange = { v ->
+            val next = v.toInt()
+            if (next == brightness) return@MikuGlassSlider
+            brightness = next
+            runCatching {
+                Settings.System.putInt(cr, Settings.System.SCREEN_BRIGHTNESS_MODE, Settings.System.SCREEN_BRIGHTNESS_MODE_MANUAL)
+                Settings.System.putInt(cr, Settings.System.SCREEN_BRIGHTNESS, next)
+            }
+        },
+        valueRange = 8f..255f,
+        icon = Icons.Default.BrightnessMedium,
+        contentDescription = "Brightness",
+        accent = accent,
+        accentBright = accentBright,
+        modifier = modifier
+    )
 }
 
 // ------------------------------------------------------------------------------------ media card
@@ -718,9 +690,10 @@ private fun MediaCard(m: MikuMediaHub.Now, onOpen: () -> Unit) {
     Column(
         Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(TileCorner))
-            .background(Brush.horizontalGradient(listOf(accent.copy(alpha = 0.35f), MikuSurface1.copy(alpha = 0.95f))))
-            .border(1.dp, accent.copy(alpha = 0.6f), RoundedCornerShape(TileCorner))
+            .padding(vertical = 2.dp)
+            .mikuGlass(RoundedCornerShape(TileCorner), MikuGlass.Card, accent = accent)
+            // the art's colour bleeds in from the left, as before, now under the glass sheen
+            .background(Brush.horizontalGradient(listOf(accent.copy(alpha = 0.30f), Color.Transparent)))
             .clickable { onOpen() }
     ) {
         Row(Modifier.fillMaxWidth().padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -746,12 +719,10 @@ private fun MediaCard(m: MikuMediaHub.Now, onOpen: () -> Unit) {
             Box(Modifier.size(40.dp).clip(CircleShape).clickable { view.performHapticFeedback(android.view.HapticFeedbackConstants.CONTEXT_CLICK); m.controller.transportControls.skipToPrevious() }, contentAlignment = Alignment.Center) {
                 Icon(Icons.Default.SkipPrevious, "Previous", tint = MikuWhite, modifier = Modifier.size(22.dp))
             }
-            Box(
-                Modifier.size(44.dp).clip(CircleShape).background(accent).clickable {
-                    view.performHapticFeedback(android.view.HapticFeedbackConstants.CONTEXT_CLICK)
-                    if (m.isPlaying) m.controller.transportControls.pause() else m.controller.transportControls.play()
-                }, contentAlignment = Alignment.Center
-            ) { Icon(if (m.isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow, "Play/Pause", tint = MikuDarkBg, modifier = Modifier.size(24.dp)) }
+            PlayPauseButton(m.isPlaying, accent) {
+                view.performHapticFeedback(android.view.HapticFeedbackConstants.CONTEXT_CLICK)
+                if (m.isPlaying) m.controller.transportControls.pause() else m.controller.transportControls.play()
+            }
             Box(Modifier.size(40.dp).clip(CircleShape).clickable { view.performHapticFeedback(android.view.HapticFeedbackConstants.CONTEXT_CLICK); m.controller.transportControls.skipToNext() }, contentAlignment = Alignment.Center) {
                 Icon(Icons.Default.SkipNext, "Next", tint = MikuWhite, modifier = Modifier.size(22.dp))
             }
@@ -804,9 +775,11 @@ private fun NotifRow(n: MikuNotif, onOpen: () -> Unit, onDismiss: () -> Unit, mo
                     alpha = if (state.targetValue == SwipeToDismissBoxValue.Settled) 1f else 1f - 0.7f * p.coerceIn(0f, 1f)
                 }
                 .animateContentSize(MikuMotion.settle())
-                .clip(RoundedCornerShape(20.dp))
-                .background(MikuSurface1.copy(alpha = 0.96f))
-                .border(1.dp, MikuTeal.copy(alpha = if (n.isOngoing) 0.15f else 0.3f), RoundedCornerShape(20.dp))
+                .mikuGlass(
+                    RoundedCornerShape(20.dp),
+                    if (n.isOngoing) NotifGlassQuiet else NotifGlass,
+                    accent = accent
+                )
                 .clickable { view.performHapticFeedback(android.view.HapticFeedbackConstants.CONTEXT_CLICK); onOpen() }
                 .padding(start = 12.dp, end = 4.dp, top = 8.dp, bottom = 8.dp)
         ) {
@@ -844,16 +817,7 @@ private fun NotifRow(n: MikuNotif, onOpen: () -> Unit, onDismiss: () -> Unit, mo
             AnimatedVisibility(visible = expanded && n.actions.isNotEmpty(), enter = expandVertically() + fadeIn(), exit = shrinkVertically() + fadeOut()) {
                 Row(Modifier.padding(top = 6.dp, end = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     n.actions.take(3).forEach { (label, pi) ->
-                        Box(
-                            Modifier
-                                .height(36.dp)
-                                .clip(RoundedCornerShape(18.dp))
-                                .background(MikuSurface2)
-                                .border(1.dp, accent.copy(alpha = 0.5f), RoundedCornerShape(18.dp))
-                                .clickable { MikuNotificationStore.send(ctx, pi) }
-                                .padding(horizontal = 14.dp),
-                            contentAlignment = Alignment.Center
-                        ) { Text(label.uppercase(), color = accent, fontSize = 11.sp, fontWeight = FontWeight.Bold, maxLines = 1, letterSpacing = 0.5.sp) }
+                        GlassChipButton(label.uppercase(), accent = accent) { MikuNotificationStore.send(ctx, pi) }
                     }
                 }
             }
@@ -861,6 +825,21 @@ private fun NotifRow(n: MikuNotif, onOpen: () -> Unit, onDismiss: () -> Unit, mo
     }
 }
 
+
+/** Lit glass play/pause: the art's accent as the glass colour, press physics like the tiles. */
+@Composable
+private fun PlayPauseButton(isPlaying: Boolean, accent: Color, onClick: () -> Unit) {
+    val interaction = remember { MutableInteractionSource() }
+    val press = rememberMikuPress(interaction)
+    Box(
+        Modifier
+            .size(44.dp)
+            .mikuPressScale(press, depth = 0.1f)
+            .mikuGlass(CircleShape, MikuGlass.Chip, accent = accent, active = { 1f }, pressed = press)
+            .clickable(interactionSource = interaction, indication = null, onClick = onClick),
+        contentAlignment = Alignment.Center
+    ) { Icon(if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow, if (isPlaying) "Pause" else "Play", tint = MikuDarkBg, modifier = Modifier.size(24.dp)) }
+}
 
 /** Static hearts clock for audio_only / idle power profiles — no infinite plasma transitions. */
 @Composable

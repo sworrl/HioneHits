@@ -2741,13 +2741,21 @@ fun expandNotificationShade(ctx: Context) {
 
             // Standalone Miku Music brand header — the shared mark (ui/MikuTopBar.kt), same glyph +
             // wordmark that signs Now Playing and every settings page.
-            com.miku.player.ui.MikuBrandMark(tint = ac.accent, fontSize = brandFontSize, glyphSize = 24.dp)
-            Spacer(Modifier.weight(1f))
+            //
+            // ROW BUDGET (360dp-wide panel): back 38 + gap, then Random, BPM and Tape keys at 38dp
+            // (the back key's size) plus the scan pill. That leaves roughly 120-165dp for the brand,
+            // so the brand takes the flexible weight instead of a Spacer: it is measured LAST, gets
+            // whatever is left, and ellipsizes its wordmark if it ever has to. With a Spacer here,
+            // an over-full row squeezed the right-most key (Tape) out of existence instead.
+            com.miku.player.ui.MikuBrandMark(
+                tint = ac.accent, fontSize = brandFontSize, glyphSize = 24.dp,
+                modifier = Modifier.weight(1f)
+            )
 
             // Instant RANDOM — always one tap away from anything in the library.
             HapticIconButton(
                 onClick = onRandom,
-                modifier = Modifier.semantics { contentDescription = "Random — play anything" }
+                modifier = Modifier.size(38.dp).semantics { contentDescription = "Random — play anything" }
             ) {
                 Icon(
                     Icons.Default.Casino, null,
@@ -2760,10 +2768,29 @@ fun expandNotificationShade(ctx: Context) {
                 count = count,
                 onScan = onScan
             )
-            Spacer(Modifier.width(4.dp))
+            Spacer(Modifier.width(2.dp))
+            // BPM rhythm game. Same hand-off as the button in MikuMonitorDialog: the game lives in
+            // the MikuOS launcher's BPM observatory, opened with the `open_bpm` launch extra.
+            HapticIconButton(
+                onClick = {
+                    val launch = ctx.packageManager.getLaunchIntentForPackage("com.miku.launcher")?.apply {
+                        putExtra("open_bpm", true)
+                        flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK or android.content.Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED
+                    }
+                    if (launch == null) {
+                        android.widget.Toast.makeText(ctx, "MikuOS launcher not installed - BPM game unavailable", android.widget.Toast.LENGTH_SHORT).show()
+                    } else try { ctx.startActivity(launch) } catch (t: Throwable) {
+                        android.widget.Toast.makeText(ctx, "Couldn't open the BPM game: ${t.message}", android.widget.Toast.LENGTH_SHORT).show()
+                    }
+                },
+                modifier = Modifier.size(38.dp).semantics { contentDescription = "BPM rhythm game" }
+            ) {
+                Icon(Icons.Default.SportsEsports, null, tint = ac.accent, modifier = Modifier.size(22.dp))
+            }
+            Spacer(Modifier.width(2.dp))
             HapticIconButton(
                 onClick = onTape,
-                modifier = Modifier.semantics { contentDescription = "Tape mode" }
+                modifier = Modifier.size(38.dp).semantics { contentDescription = "Tape mode" }
             ) { TapeIcon(tint = ac.accent2, modifier = Modifier.size(22.dp)) }
         }
     }

@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.SharedPreferences
 import android.os.SystemClock
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import java.util.Locale
@@ -89,25 +90,46 @@ object MikuBeatClickerEngine {
     }
 
     /** Silhouette of the beat node itself — the single most legible difference between skins. */
-    enum class NodeShape { ORB, DIAMOND, HEX, STAR, SNOWFLAKE }
+    enum class NodeShape { ORB, DIAMOND, HEX, STAR, SNOWFLAKE, HEART }
 
     /** Idle background treatment drawn behind everything. */
-    enum class AmbientStyle { PETALS, HEX_RAIN, HONEY_BUBBLES, DAMASK_VEIL, SNOW_DRIFT }
+    enum class AmbientStyle { PETALS, HEX_RAIN, HONEY_BUBBLES, DAMASK_VEIL, SNOW_DRIFT, HOLO_GRID }
 
     /** How a tap burst moves: gravity, speed, swirl, rise. */
     enum class BurstStyle { PETAL_FALL, SPARK_SHOT, BUBBLE_RISE, RIBBON_SWIRL, CRYSTAL_DRIFT }
 
     /** What a PERFECT does to the screen. */
-    enum class HitEffect { RING, SHARD, SPLASH, VELVET_PULSE, FROST_CRACK }
+    enum class HitEffect { RING, SHARD, SPLASH, VELVET_PULSE, FROST_CRACK, GLITCH }
+
+    /**
+     * How the note highway itself is textured. The lane is the thing the player stares at for a
+     * whole song, so it is where a skin has to be most different — a recolour of the same lane is
+     * exactly the "the skins are all the same" complaint.
+     */
+    enum class LaneStyle {
+        /** Soft wash with petals drifting along the lane. */
+        PETAL_STREAM,
+        /** Hard scrolling grid lines and scanlines: a synth display. */
+        NEON_GRID,
+        /** Honeycomb cells sliding past. */
+        HONEYCOMB,
+        /** Dark velvet with lace bands and a slow heartbeat swell. */
+        VELVET_LACE,
+        /** Icy streaks and frost crystals. */
+        FROST_STREAK,
+        /** Interference bands and a glitch offset on the beat. */
+        HOLO_SCAN
+    }
 
     /**
      * Aesthetic skins.
      *
      * These used to differ ONLY by colour — same circle, same hearts drifting behind it, same
      * emoji burst, same type — so nobody could tell them apart and "unlocking" one meant nothing.
-     * Each skin now changes four things a player sees at a glance: the SHAPE of the beat node,
-     * the AMBIENT background, how the tap BURST moves (and which glyphs it throws), and the
-     * hit EFFECT on a PERFECT — plus its own judgment typography.
+     * Each skin now changes what a player sees at a glance: the SHAPE of the beat node (and of
+     * every note on the highway, which uses the same silhouette), the LANE texture, the whole
+     * SHEET palette behind the game, the AMBIENT background, how the tap BURST moves (and which
+     * glyphs it throws), and the hit EFFECT on a PERFECT — plus its own judgment typography.
      */
     enum class BpmSkin(
         val displayName: String,
@@ -123,23 +145,37 @@ object MikuBeatClickerEngine {
         /** Judgment text: monospaced arcade caps vs soft lower-case. */
         val judgmentArcade: Boolean,
         val judgmentSpacing: Float,
-        val blurb: String
+        val blurb: String,
+        val laneStyle: LaneStyle,
+        /** The game sheet's own background, top and bottom. */
+        val sheetTop: Long,
+        val sheetBottom: Long
     ) {
         SAKURA_DREAM("Sakura Dream", "🌸", 0xFFFF85B3, 0xFF39C5BB, 0xFFFFB5D5, "sakura_lattice",
             NodeShape.ORB, AmbientStyle.PETALS, BurstStyle.PETAL_FALL, HitEffect.RING,
-            false, 0f, "Round orb · petals fall and settle · soft ring"),
+            false, 0f, "Round notes · petal stream lane · soft ring",
+            LaneStyle.PETAL_STREAM, 0xF22A0E26, 0xFF12050F),
         CYBER_MIRAI("Cyber Mirai", "🌟", 0xFF00E5FF, 0xFF9D4EDD, 0xFF7000FF, "hex_matrix",
             NodeShape.HEX, AmbientStyle.HEX_RAIN, BurstStyle.SPARK_SHOT, HitEffect.SHARD,
-            true, 1.5f, "Hex node · data rain · sparks shoot out hard"),
+            true, 1.5f, "Hex notes · neon grid lane · sparks shoot out",
+            LaneStyle.NEON_GRID, 0xF2061826, 0xFF02060E),
         HONEY_SWEET("Honey Sweet", "🍯", 0xFFFFD166, 0xFFFF9F1C, 0xFFFFE49E, "honeycomb",
             NodeShape.DIAMOND, AmbientStyle.HONEY_BUBBLES, BurstStyle.BUBBLE_RISE, HitEffect.SPLASH,
-            false, 0f, "Diamond node · bubbles rise slowly · syrup splash"),
+            false, 0f, "Diamond notes · honeycomb lane · syrup splash",
+            LaneStyle.HONEYCOMB, 0xF2281806, 0xFF120A02),
         GOTHIC_DIVA("Gothic Lolita", "🖤", 0xFFFF2277, 0xFF7B2CBF, 0xFFFF5599, "velvet_damask",
             NodeShape.STAR, AmbientStyle.DAMASK_VEIL, BurstStyle.RIBBON_SWIRL, HitEffect.VELVET_PULSE,
-            true, 2.5f, "Star node · damask veil · ribbons swirl · velvet pulse"),
+            true, 2.5f, "Star notes · velvet lace lane · ribbons swirl",
+            LaneStyle.VELVET_LACE, 0xF2160410, 0xFF050105),
         SNOW_CRYSTAL("Snow Crystal", "❄️", 0xFF7FE6DE, 0xFF48CAE4, 0xFFE0F7FA, "frost_shimmer",
             NodeShape.SNOWFLAKE, AmbientStyle.SNOW_DRIFT, BurstStyle.CRYSTAL_DRIFT, HitEffect.FROST_CRACK,
-            true, 1.0f, "Snowflake node · drifting snow · frost cracks out");
+            true, 1.0f, "Snowflake notes · frost lane · cracks out",
+            LaneStyle.FROST_STREAK, 0xF20C2030, 0xFF040C14),
+        // Secret skin: not in the selector at all until MikuSecrets.HOLO_SKIN is earned.
+        HOLOGRAM_39("Hologram 39", "💠", 0xFF39C5BB, 0xFFFF4FA3, 0xFFB8FFF9, "holo_scan",
+            NodeShape.HEART, AmbientStyle.HOLO_GRID, BurstStyle.SPARK_SHOT, HitEffect.GLITCH,
+            true, 3.0f, "Heart notes · interference lane · glitch hits",
+            LaneStyle.HOLO_SCAN, 0xF2031A1C, 0xFF000608);
 
         /** Glyphs a tap burst throws — a different alphabet per skin, not a different tint. */
         val burstGlyphs: List<String>
@@ -149,6 +185,7 @@ object MikuBeatClickerEngine {
                 HONEY_SWEET -> listOf("🍯", "🐝", "🟡", "🍮")
                 GOTHIC_DIVA -> listOf("🖤", "🥀", "🦇", "♠")
                 SNOW_CRYSTAL -> listOf("❄", "💎", "✳", "✨")
+                HOLOGRAM_39 -> listOf("39", "♡", "▚", "⌁")
             }
 
         /** Particle tints, taken from the skin's own palette instead of one shared rainbow. */
@@ -166,7 +203,11 @@ object MikuBeatClickerEngine {
                 HONEY_SWEET -> MikuUnlocks.SKIN_HONEY_SWEET
                 GOTHIC_DIVA -> MikuUnlocks.SKIN_GOTHIC_DIVA
                 SNOW_CRYSTAL -> MikuUnlocks.SKIN_SNOW_CRYSTAL
+                HOLOGRAM_39 -> MikuSecrets.HOLO_SKIN
             }
+
+        /** A secret skin is not merely locked, it is absent from the selector until earned. */
+        val isSecret: Boolean get() = this == HOLOGRAM_39
 
         fun isAvailable(ctx: Context): Boolean {
             val id = unlockId ?: return true
@@ -212,6 +253,33 @@ object MikuBeatClickerEngine {
             const val GOAL_ACCURACY_PCT = 80f
             const val GOAL_ACCURACY_MIN_TAPS = 40
             const val REWARD_EACH = 2_500.0
+        }
+    }
+
+    /**
+     * The Daily Challenge: ONE seeded goal per day, different in KIND from the setlist (which is
+     * the same three goals every day). The kind rotates by date so every player gets the same
+     * challenge on the same day and tomorrow is a different game — "come back tomorrow" only
+     * works if tomorrow is not a repeat.
+     */
+    enum class ChallengeKind(val label: String, val target: Int) {
+        PERFECTS("Land PERFECTs", 39),
+        COMBO("Reach a combo of", 60),
+        FEVERS("Trigger Fever", 2),
+        SONG_SCORE("Score on one song", 6_000),
+        LUCKY("Catch lucky notes", 3),
+        NO_MISS("No-miss run of", 40)
+    }
+
+    data class DailyChallenge(
+        val dateKey: String = "",
+        val kind: ChallengeKind = ChallengeKind.PERFECTS,
+        val progress: Int = 0,
+        val claimed: Boolean = false
+    ) {
+        val done: Boolean get() = progress >= kind.target
+        companion object {
+            const val REWARD_LEEKS = 12_000.0
         }
     }
 
@@ -304,6 +372,21 @@ object MikuBeatClickerEngine {
     private val _dailySetlist = MutableStateFlow(DailySetlist())
     val dailySetlist: StateFlow<DailySetlist> = _dailySetlist.asStateFlow()
 
+    private val _dailyChallenge = MutableStateFlow(DailyChallenge())
+    val dailyChallenge: StateFlow<DailyChallenge> = _dailyChallenge.asStateFlow()
+
+    /** Lifetime golden pickups (golden leeks + lucky notes). Feeds a secret; shown on the quests tab. */
+    private val _goldenPickups = MutableStateFlow(0)
+    val goldenPickups: StateFlow<Int> = _goldenPickups.asStateFlow()
+
+    /** Lucky-note bonus: the next N judged hits pay this multiplier ("Miku sings along"). */
+    private var encoreTapsLeft = 0
+    private const val ENCORE_MULT = 3.0
+    private var noMissRun = 0
+
+    @Volatile private var appCtx: Context? = null
+    private val ioScope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO + kotlinx.coroutines.SupervisorJob())
+
     // Rolling window of the last judged taps (true = GREAT or better). Drives the tier, so a
     // player who is struggling RIGHT NOW gets wider windows rather than having to live down a
     // bad start for the rest of the session.
@@ -342,6 +425,8 @@ object MikuBeatClickerEngine {
     fun init(context: Context) {
         val p = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         prefs = p
+        appCtx = context.applicationContext
+        _goldenPickups.value = p.getInt("golden_pickups", 0)
 
         _leeks.value = p.getFloat(KEY_LEEKS, 0f).toDouble()
         _totalEarned.value = p.getFloat(KEY_TOTAL_EARNED, 0f).toDouble()
@@ -379,6 +464,14 @@ object MikuBeatClickerEngine {
             )
         } else DailySetlist(dateKey = today)
         _comboShields.value = p.getInt("combo_shields", 0).coerceIn(0, MAX_COMBO_SHIELDS)
+        _dailyChallenge.value = if (p.getString("challenge_date", "") == today) {
+            DailyChallenge(
+                dateKey = today,
+                kind = challengeKindFor(today),
+                progress = p.getInt("challenge_progress", 0),
+                claimed = p.getBoolean("challenge_claimed", false)
+            )
+        } else DailyChallenge(dateKey = today, kind = challengeKindFor(today))
 
         val skinName = p.getString("current_skin", BpmSkin.SAKURA_DREAM.name)
         val restored = runCatching { BpmSkin.valueOf(skinName!!) }.getOrDefault(BpmSkin.SAKURA_DREAM)
@@ -538,7 +631,14 @@ object MikuBeatClickerEngine {
         var shieldSaved = false
         when {
             accuracy.growsCombo -> {
+                val before = _combo.value
                 _combo.value += 1
+                if (comboMultiplier(_combo.value) > comboMultiplier(before)) {
+                    // Crossing a rung is the loudest moment of a run: big centre pop and a small
+                    // kick of the whole sheet, so the multiplier change is FELT, not read.
+                    MikuGameFx.pop("x${_combo.value}!", 0xFFFFD166, big = true)
+                    MikuGameFx.shake(if (_combo.value >= 32) 0.8f else 0.45f)
+                }
                 shieldProgress += 1
                 if (shieldProgress >= SHIELD_EARN_STREAK && _comboShields.value < MAX_COMBO_SHIELDS) {
                     shieldProgress = 0
@@ -559,6 +659,13 @@ object MikuBeatClickerEngine {
             }
             else -> {
                 if (_combo.value >= 10) pushFloatingText("💔 COMBO BROKEN (x${_combo.value})", isCrit = false)
+                // Near-miss on the ladder: losing a run two taps short of the next rung is the
+                // single most "one more go" moment there is, so name it.
+                val rung = nextComboRung(_combo.value)
+                if (rung != null && rung.first <= 3 && _combo.value >= 6) {
+                    MikuStagePerformance.say("${rung.first} short of ${String.format(Locale.US, "%.1f", rung.second)}×. SO close.")
+                }
+                if (_combo.value >= 16) MikuGameFx.shake(0.6f)
                 _combo.value = 0
                 shieldProgress = 0
             }
@@ -580,6 +687,10 @@ object MikuBeatClickerEngine {
             if (newEnergy >= 100f) {
                 _feverSeconds.value = feverDurationSeconds
                 com.miku.launcher.audio.MikuSeasonalAudioEngine.playGoldenLeekJingle()
+                MikuGameFx.pop("FEVER!", 0xFFFF3385, big = true)
+                MikuGameFx.shake(1f)
+                MikuSecrets.onFeverStarted()
+                advanceChallenge(ChallengeKind.FEVERS, 1)
             }
         }
 
@@ -588,8 +699,9 @@ object MikuBeatClickerEngine {
         // the number banked can never disagree. See MikuStagePerformance.
         val stageMult = MikuStagePerformance.onJudgedTap(accuracy, _combo.value)
 
+        val encoreMult = if (encoreTapsLeft > 0 && accuracy.isHit) { encoreTapsLeft--; ENCORE_MULT } else 1.0
         val totalTapYield = baseClick * accuracy.yieldMultiplier * comboBonus * critMultiplier *
-            feverMult * bpmBonus * scoreScale.coerceIn(0.5f, 3f) * stageMult
+            feverMult * bpmBonus * scoreScale.coerceIn(0.5f, 3f) * stageMult * encoreMult
         _leeks.value += totalTapYield
         _totalEarned.value += totalTapYield
 
@@ -683,6 +795,11 @@ object MikuBeatClickerEngine {
 
     /** Judged-tap progress toward Today's Setlist, with the one-off completion rewards. */
     private fun recordDailyProgress(accuracy: HitAccuracy) {
+        if (accuracy == HitAccuracy.PERFECT) advanceChallenge(ChallengeKind.PERFECTS, 1)
+        setChallengeAtLeast(ChallengeKind.COMBO, _combo.value)
+        noMissRun = if (accuracy == HitAccuracy.MISS) 0 else noMissRun + 1
+        setChallengeAtLeast(ChallengeKind.NO_MISS, noMissRun)
+        setChallengeAtLeast(ChallengeKind.SONG_SCORE, MikuSongRecords.run.value.score.coerceAtMost(Int.MAX_VALUE.toLong()).toInt())
         val today = todayKey()
         val cur = _dailySetlist.value.let { if (it.dateKey == today) it else DailySetlist(dateKey = today) }
         var next = cur.copy(
@@ -721,7 +838,112 @@ object MikuBeatClickerEngine {
         // the accuracy counters that back the grade.
         _combo.value += 10
         com.miku.launcher.audio.MikuSeasonalAudioEngine.playGoldenLeekJingle()
+        recordGoldenPickup()
         return reward
+    }
+
+    // =====================================================================================
+    // LUCKY NOTES — the variable-ratio surprise
+    // =====================================================================================
+
+    /**
+     * A lucky (golden) note on the highway was hit GREAT or better. What it pays is drawn from a
+     * table, on purpose: a reward you cannot predict is the one you keep chasing (variable-ratio
+     * reinforcement), and having several KINDS of prize means the surprise is in what you got,
+     * not only in how much. Weights sum to 100.
+     *
+     * Returns the line to show. The caller guarantees the hit was judged against a real beat.
+     */
+    fun luckyNote(): String {
+        recordGoldenPickup()
+        advanceChallenge(ChallengeKind.LUCKY, 1)
+        val roll = Random.nextInt(100)
+        val text = when {
+            roll < 45 -> {
+                val bonus = (1.0 + getBaseBps() * 0.03) * 40.0
+                _leeks.value += bonus; _totalEarned.value += bonus
+                "🍀 LUCKY NOTE · +${formatNumber(bonus)} leeks"
+            }
+            roll < 65 -> {
+                if (_comboShields.value < MAX_COMBO_SHIELDS) {
+                    _comboShields.value += 1
+                    "🍀 LUCKY NOTE · free combo shield 🛡️"
+                } else {
+                    val bonus = (1.0 + getBaseBps() * 0.03) * 60.0
+                    _leeks.value += bonus; _totalEarned.value += bonus
+                    "🍀 LUCKY NOTE · shields full, +${formatNumber(bonus)} leeks"
+                }
+            }
+            roll < 82 -> {
+                if (_feverSeconds.value == 0) _feverEnergy.value = (_feverEnergy.value + 40f).coerceAtMost(99f)
+                "🍀 LUCKY NOTE · fever +40%"
+            }
+            roll < 96 -> {
+                encoreTapsLeft = 8
+                MikuStagePerformance.say("wait. i know this one. ♪ (next 8 hits pay triple)")
+                "🍀 LUCKY NOTE · Miku sings along: 3× for 8 hits"
+            }
+            else -> {
+                _goldenLeekVisible.value = true
+                "🍀 JACKPOT · a golden leek appeared!"
+            }
+        }
+        com.miku.launcher.audio.MikuSeasonalAudioEngine.playGoldenLeekJingle()
+        MikuGameFx.pop("LUCKY!", 0xFFFFD700, big = true)
+        pushFloatingText(text, isCrit = true)
+        spawnParticles(16)
+        return text
+    }
+
+    private fun recordGoldenPickup() {
+        _goldenPickups.value += 1
+        val ctx = appCtx ?: return
+        ioScope.launch { MikuSecrets.onGoldenPickup(ctx) }
+    }
+
+    // =====================================================================================
+    // DAILY CHALLENGE
+    // =====================================================================================
+
+    private fun challengeKindFor(dateKey: String): ChallengeKind {
+        val kinds = ChallengeKind.entries
+        // Stable per date, different across consecutive days.
+        val h = dateKey.hashCode().let { if (it < 0) -it else it }
+        return kinds[h % kinds.size]
+    }
+
+    private fun currentChallenge(): DailyChallenge {
+        val today = todayKey()
+        val c = _dailyChallenge.value
+        return if (c.dateKey == today) c else DailyChallenge(dateKey = today, kind = challengeKindFor(today))
+    }
+
+    private fun advanceChallenge(kind: ChallengeKind, by: Int) {
+        val c = currentChallenge()
+        if (c.kind != kind || c.claimed) { if (c !== _dailyChallenge.value) _dailyChallenge.value = c; return }
+        settleChallenge(c.copy(progress = c.progress + by))
+    }
+
+    private fun setChallengeAtLeast(kind: ChallengeKind, value: Int) {
+        val c = currentChallenge()
+        if (c.kind != kind || c.claimed || value <= c.progress) { if (c !== _dailyChallenge.value) _dailyChallenge.value = c; return }
+        settleChallenge(c.copy(progress = value))
+    }
+
+    private fun settleChallenge(c: DailyChallenge) {
+        if (c.done && !c.claimed) {
+            _dailyChallenge.value = c.copy(progress = c.kind.target, claimed = true)
+            _leeks.value += DailyChallenge.REWARD_LEEKS
+            _totalEarned.value += DailyChallenge.REWARD_LEEKS
+            if (_comboShields.value < MAX_COMBO_SHIELDS) _comboShields.value += 1
+            pushFloatingText("🎲 DAILY CHALLENGE CLEARED +${formatNumber(DailyChallenge.REWARD_LEEKS)}", isCrit = true)
+            MikuGameFx.pop("CHALLENGE CLEAR!", 0xFF39C5BB, big = true)
+            MikuStagePerformance.say("daily challenge: done. see you tomorrow? (please come back tomorrow)")
+            com.miku.launcher.audio.MikuSeasonalAudioEngine.playLevelUpFanfare()
+            saveState()
+        } else {
+            _dailyChallenge.value = c
+        }
     }
 
     /**
@@ -843,6 +1065,11 @@ object MikuBeatClickerEngine {
         editor.putInt("daily_great", d.greatOrBetter)
         editor.putInt("daily_claimed", d.claimedMask)
         editor.putInt("combo_shields", _comboShields.value)
+        val c = _dailyChallenge.value
+        editor.putString("challenge_date", c.dateKey)
+        editor.putInt("challenge_progress", c.progress)
+        editor.putBoolean("challenge_claimed", c.claimed)
+        editor.putInt("golden_pickups", _goldenPickups.value)
         editor.apply()
     }
 

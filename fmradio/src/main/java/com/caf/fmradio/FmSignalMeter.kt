@@ -64,9 +64,8 @@ fun FmSignalMeter(st: FmState, modifier: Modifier = Modifier) {
     }
 
     Row(
-        modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp))
-            .background(Color(0xBB07161D))
-            .border(1.dp, CyberGlassBorder, RoundedCornerShape(12.dp))
+        modifier.fillMaxWidth()
+            .glass(RoundedCornerShape(14.dp), accent = MikuTeal, accent2 = MikuPink, fill = Color(0xB807161D), rimAlpha = 0.4f, shine = 0.8f)
             .padding(horizontal = 10.dp, vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {

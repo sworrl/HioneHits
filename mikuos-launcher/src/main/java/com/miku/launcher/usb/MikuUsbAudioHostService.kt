@@ -23,6 +23,8 @@ class MikuUsbAudioHostService : Service() {
     private var usbReceiver: BroadcastReceiver? = null
 
     companion object {
+        /** A plug-in must still be connected this long later to count; unplug bounces are shorter. */
+        private const val SETTLE_MS = 1500L
         private val _usbConnectedEvents = MutableSharedFlow<Boolean>(replay = 0)
         val usbConnectedEvents: SharedFlow<Boolean> = _usbConnectedEvents.asSharedFlow()
 
@@ -39,29 +41,46 @@ class MikuUsbAudioHostService : Service() {
         registerUsbReceiver()
     }
 
+    /** Last USB data state this process saw, so only a real plug-in prompts. Null = not yet known. */
+    @Volatile private var lastConnected: Boolean? = null
+    private var pendingPrompt: kotlinx.coroutines.Job? = null
+
+    /**
+     * Prompt (or apply the saved mode) on a real plug-in, and only then.
+     *
+     * USB_STATE is a STICKY broadcast. Registering for it replays the last state at once, so
+     * every time this process was restarted (often: the launcher is killed under memory pressure
+     * and comes back) it looked like a fresh connection and the modal popped up out of nowhere.
+     * It is also re-sent while connected whenever the USB functions change, including the
+     * changes this modal makes itself, and the gadget bounces through connected/configured while
+     * the cable is being pulled. So: the replayed sticky state only seeds [lastConnected]; a
+     * prompt needs a disconnected-to-connected edge; and the connection must still be there
+     * [SETTLE_MS] later, which is what filters out the unplug bounce.
+     */
     private fun registerUsbReceiver() {
         val receiver = object : BroadcastReceiver() {
             override fun onReceive(context: Context?, intent: Intent?) {
-                if (intent?.action == "android.hardware.usb.action.USB_STATE") {
-                    val connected = intent.getBooleanExtra("connected", false)
-                    val configured = intent.getBooleanExtra("configured", false)
-                    val ctx = context ?: return
-
-                    if (connected && configured) {
-                        scope.launch {
-                            val savedMode = MikuUsbPreferences.getSavedMode(ctx)
-                            val shouldPrompt = MikuUsbPreferences.shouldShowPrompt(ctx)
-
-                            if (shouldPrompt) {
-                                _usbConnectedEvents.emit(true)
-                            } else {
-                                // Apply saved mode silently
-                                when (savedMode) {
-                                    MikuUsbPreferences.MODE_DAC -> MikuUsbAudioHostManager.setUsbDacMode(ctx, true)
-                                    MikuUsbPreferences.MODE_MTP -> MikuUsbAudioHostManager.setMtpMode(ctx)
-                                    MikuUsbPreferences.MODE_CHARGE -> MikuUsbAudioHostManager.setChargeOnlyMode(ctx)
-                                }
-                            }
+                if (intent?.action != "android.hardware.usb.action.USB_STATE") return
+                val ctx = context ?: return
+                val connected = intent.getBooleanExtra("connected", false)
+                val configured = intent.getBooleanExtra("configured", false)
+                val was = lastConnected
+                lastConnected = connected
+                if (isInitialStickyBroadcast) return
+                if (!connected) { pendingPrompt?.cancel(); pendingPrompt = null; return }
+                if (was == true || !configured || pendingPrompt?.isActive == true) return
+                pendingPrompt = scope.launch {
+                    kotlinx.coroutines.delay(SETTLE_MS)
+                    if (lastConnected != true) return@launch
+                    val savedMode = MikuUsbPreferences.getSavedMode(ctx)
+                    if (MikuUsbPreferences.shouldShowPrompt(ctx)) {
+                        _usbConnectedEvents.emit(true)
+                    } else {
+                        // Apply saved mode silently
+                        when (savedMode) {
+                            MikuUsbPreferences.MODE_DAC -> MikuUsbAudioHostManager.setUsbDacMode(ctx, true)
+                            MikuUsbPreferences.MODE_MTP -> MikuUsbAudioHostManager.setMtpMode(ctx)
+                            MikuUsbPreferences.MODE_CHARGE -> MikuUsbAudioHostManager.setChargeOnlyMode(ctx)
                         }
                     }
                 }

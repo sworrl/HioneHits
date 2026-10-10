@@ -149,6 +149,9 @@ fun resolveAppDisplayLabel(pkg: String, activityName: String = "", rawLabel: Str
     }
 }
 
+/** The pearl's ring once Miku Music's icon has gone gold (see MikuSecrets.GOLDEN_ICON). */
+private val GOLD_RING_STOPS = listOf(Color(0xFFFFF3B0), Color(0xFFFFC930), Color(0xFF8A5A00), Color(0xFFFFD54F), Color(0xFFFFF3B0))
+
 fun resolveCustomAppIcon(pkg: String, label: String = "", activityName: String = ""): Int? {
     if (pkg == "com.android.settings") {
         return R.drawable.ic_settings_miku
@@ -1008,6 +1011,10 @@ fun MikuLauncherScreen() {
 
         // Now-playing accent tint over the wallpaper (~8 %, animated, transparent when idle).
         Box(Modifier.fillMaxSize().background(npAccent.scrim))
+
+        // BPM-game secrets that live on the wallpaper: Negi Snow and Concert Mode. Draws nothing
+        // (and runs no frame loop) unless one of them is earned and on.
+        MikuSecretHomeFx(isPlaying = isAudioPlaying, accent = npAccent.full)
 
         var rootDragY by remember { mutableFloatStateOf(0f) }
         Column(
@@ -2218,10 +2225,12 @@ fun DesktopAppIconItem(
                 .border(0.8.dp, CyberGlassBorder, RoundedCornerShape(16.dp)),
             contentAlignment = Alignment.Center
         ) {
-            val customPainter = remember(app.iconResId) {
-                if (app.iconResId != null && app.iconResId != 0) {
+            val golden = rememberUnlockEnabled(com.miku.launcher.bpm.MikuSecrets.GOLDEN_ICON)
+            val shownRes = displayIconRes(app.iconResId, golden)
+            val customPainter = remember(shownRes) {
+                if (shownRes != null && shownRes != 0) {
                     try {
-                        ctx.resources.getDrawable(app.iconResId, ctx.theme)?.toBitmap(160, 160)?.asImageBitmap()
+                        ctx.resources.getDrawable(shownRes, ctx.theme)?.toBitmap(160, 160)?.asImageBitmap()
                     } catch (_: Throwable) { null }
                 } else null
             }
@@ -3646,6 +3655,14 @@ fun MikuQuantumBatteryBadge(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.Center
         ) {
+            // NEGI BATTERY (a BPM-game secret): the level drawn as a leek instead of four bars.
+            val negi = rememberUnlockEnabled(com.miku.launcher.bpm.MikuSecrets.NEGI_BATTERY)
+            if (negi) {
+                MikuNegiBatteryGlyph(
+                    pct = batteryPct, charging = isCharging,
+                    low = batteryKnown && batteryPct <= 20 && !isCharging
+                )
+            } else
             // Micro 4-bar level indicator
             Row(
                 modifier = Modifier
@@ -5420,6 +5437,7 @@ private fun CyberShadeFooterSection(onClose: () -> Unit) {
  * main-thread stalls). Content, order and modifiers are unchanged; the quilt's own
  * telemetry collectors simply live here now, next to their only consumer.
  */
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun MikuLauncherQuiltSection(
     currentTime: String,
@@ -5455,8 +5473,26 @@ private fun MikuLauncherQuiltSection(
     val npBpm by com.miku.launcher.bpm.MikuBpmEngine.state.collectAsState()
     val quiltBadges = listOf(
         QuiltBadge("clock", "Hearts clock") {
+            // Concert Mode (a BPM-game secret) is a double-tap on this clock. Until it is earned
+            // the clock keeps a plain single tap, so nobody pays the double-tap delay for a
+            // feature they do not have and the gesture cannot be stumbled on early.
+            val concertEarned = rememberUnlockEnabled(com.miku.launcher.bpm.MikuSecrets.CONCERT_MODE)
             Box(
-                Modifier.clickable(
+                if (concertEarned) Modifier.combinedClickable(
+                    interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
+                    indication = null,
+                    onClick = { launchClockApp(ctx) },
+                    onDoubleClick = {
+                        val on = !MikuConcertMode.active.value
+                        MikuConcertMode.active.value = on
+                        com.miku.launcher.haptics.MikuHaptics.confirm(ctx)
+                        android.widget.Toast.makeText(
+                            ctx,
+                            if (!on) "Concert Mode off" else if (isAudioPlaying) "🎆 Concert Mode" else "🎆 Concert Mode on — start some music",
+                            android.widget.Toast.LENGTH_SHORT
+                        ).show()
+                    }
+                ) else Modifier.clickable(
                     interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
                     indication = null
                 ) { launchClockApp(ctx) }
@@ -5807,14 +5843,16 @@ private fun MikuLauncherDivaDock(
                         ),
                     contentAlignment = Alignment.Center
                 ) {
+                    // GOLDEN MIKU MUSIC (a BPM-game secret): gold art and a gold ring on the pearl.
+                    val golden = rememberUnlockEnabled(com.miku.launcher.bpm.MikuSecrets.GOLDEN_ICON)
                     Box(
                         Modifier
                             .fillMaxSize()
                             .graphicsLayer { rotationZ = rainbowRotation }
-                            .border(BorderStroke(2.5.dp, Brush.sweepGradient(colors = rainbowStops)), CircleShape)
+                            .border(BorderStroke(2.5.dp, Brush.sweepGradient(colors = if (golden) GOLD_RING_STOPS else rainbowStops)), CircleShape)
                     )
                     Image(
-                        painter = painterResource(id = R.drawable.ic_miku_music_brand),
+                        painter = painterResource(id = mikuMusicIconRes(golden)),
                         contentDescription = "Miku Music",
                         contentScale = ContentScale.Crop,
                         modifier = Modifier
@@ -5858,7 +5896,11 @@ private fun MikuLauncherShadeAndWallpaperModals(
     val ctx = LocalContext.current
     // Cosmetics earned in the BPM game. A locked card stays VISIBLE (hiding it means nobody
     // learns the reward exists) but is labelled and refuses selection. Ids are MikuUnlocks'.
-    val lockedCosmetics = remember {
+    // Keyed on the unlock store's version: this composable stays alive for the whole launcher
+    // session, so an unkeyed remember kept a wallpaper earned mid-session showing as locked until
+    // the launcher was restarted — an earned reward that looked like it did nothing.
+    val unlockVersion by com.miku.launcher.bpm.MikuUnlocks.version.collectAsState()
+    val lockedCosmetics = remember(unlockVersion) {
         val u = com.miku.launcher.bpm.MikuUnlocks.unlockedIds(ctx)
         mapOf(
             "w6" to com.miku.launcher.bpm.MikuUnlocks.OS_WALLPAPER_NEON_WAVE,

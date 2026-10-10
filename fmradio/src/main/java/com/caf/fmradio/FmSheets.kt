@@ -33,24 +33,29 @@ import java.util.Locale
 
 /** A scrim plus a bottom card. Written by hand rather than with ModalBottomSheet because this
  *  activity runs fully immersive with no system bars, and the sheet component wants insets the
- *  window does not have. */
+ *  window does not have. It does honour the IME inset, so the station search field rides up
+ *  above the keyboard instead of being covered by it. */
 @Composable
-fun FmSheetFrame(onDismiss: () -> Unit, content: @Composable ColumnScope.() -> Unit) {
+fun FmSheetFrame(
+    onDismiss: () -> Unit,
+    maxHeight: androidx.compose.ui.unit.Dp = 520.dp,
+    content: @Composable ColumnScope.() -> Unit,
+) {
+    val shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp)
     Box(
         Modifier.fillMaxSize().background(Color(0xCC000000))
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null,
                 onClick = onDismiss
-            ),
+            )
+            .imePadding(),
         contentAlignment = Alignment.BottomCenter
     ) {
         Column(
             Modifier.fillMaxWidth()
-                .heightIn(max = 520.dp)
-                .clip(RoundedCornerShape(topStart = 18.dp, topEnd = 18.dp))
-                .background(Color(0xF5061219))
-                .border(1.dp, MikuCyan.copy(alpha = 0.6f), RoundedCornerShape(topStart = 18.dp, topEnd = 18.dp))
+                .heightIn(max = maxHeight)
+                .glass(shape, accent = MikuCyan, accent2 = MikuPink, fill = Color(0xF5061219), rimAlpha = 0.7f)
                 .clickable(
                     interactionSource = remember { MutableInteractionSource() },
                     indication = null,
@@ -59,10 +64,10 @@ fun FmSheetFrame(onDismiss: () -> Unit, content: @Composable ColumnScope.() -> U
                 .padding(horizontal = 14.dp, vertical = 10.dp)
         ) {
             Box(
-                Modifier.align(Alignment.CenterHorizontally).width(40.dp).height(3.dp)
+                Modifier.align(Alignment.CenterHorizontally).width(44.dp).height(4.dp)
                     .clip(RoundedCornerShape(2.dp)).background(MikuCyan.copy(alpha = 0.5f))
             )
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(10.dp))
             content()
             Spacer(Modifier.height(10.dp))
         }
@@ -86,47 +91,57 @@ private fun SheetNote(text: String) {
 // ---------------------------------------------------------------------------- scan results
 
 @Composable
-fun FmScanResults(st: FmState, onTuned: () -> Unit) {
-    SheetTitle("Stations found · ${st.band.label}")
+fun ColumnScope.FmScanResults(st: FmState, onTuned: () -> Unit) {
+    SheetNote("Stations found by the last scan of ${st.band.label}: every stop is a frequency the tuner itself locked onto, with the signal measured at that moment.")
+    Spacer(Modifier.height(6.dp))
     if (st.scanResults.isEmpty()) {
         SheetNote(
-            "Nothing yet. Tap the scan key to sweep the band; every stop is a frequency the " +
-                "tuner itself locked onto, with the signal measured at that moment. With no " +
-                "antenna attached a sweep will find nothing, which is the honest result."
+            "Nothing yet. Tap the scan key to sweep the band. With no antenna attached a sweep " +
+                "will find nothing, which is the honest result."
         )
         return
     }
-    LazyColumn(Modifier.fillMaxWidth().heightIn(max = 400.dp)) {
+    LazyColumn(Modifier.fillMaxWidth().weight(1f, fill = false), verticalArrangement = Arrangement.spacedBy(5.dp)) {
         items(st.scanResults) { hit ->
             val current = hit.freqKHz == st.frequencyKHz
             val fav = st.favorites.contains(hit.freqKHz)
+            val stn = stationOn(hit.freqKHz, st.nearbyStations)
+            val color = stn?.let { stationColor(it.call) } ?: frequencyColor(hit.freqKHz)
             Row(
-                Modifier.fillMaxWidth()
-                    .clickable { FmRadioManager.tune(hit.freqKHz); onTuned() }
-                    .padding(vertical = 6.dp),
+                Modifier.fillMaxWidth().heightIn(min = 52.dp)
+                    .glass(RoundedCornerShape(12.dp), accent = color, rimAlpha = if (current) 1f else 0.3f,
+                           fill = if (current) color.copy(alpha = 0.16f) else Color(0x990A1E26), shine = 0.6f)
+                    .pressable(pressedScale = 0.98f) { FmRadioManager.tune(hit.freqKHz); onTuned() }
+                    .padding(start = 12.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
                     String.format(Locale.US, "%.1f", hit.freqKHz / 1000.0),
                     color = if (current) MikuCyan else Color.White,
                     fontSize = 14.sp, fontWeight = FontWeight.Bold, fontFamily = AudiowideFont,
-                    modifier = Modifier.width(62.dp)
+                    modifier = Modifier.width(64.dp)
                 )
-                Text("MHz", color = MikuTextSecondary, fontSize = 8.sp)
-                Spacer(Modifier.weight(1f))
-                Text(
-                    buildString {
-                        append("RSSI ").append(hit.rssi?.toString() ?: "—")
-                        hit.snr?.let { append("   SNR ").append(it) }
-                    },
-                    color = MikuTextSecondary, fontSize = 9.sp, fontFamily = AudiowideFont
-                )
-                Spacer(Modifier.width(10.dp))
-                Icon(
-                    if (fav) Icons.Default.Star else Icons.Default.StarBorder, "Preset",
-                    tint = if (fav) MikuNeonPink else Color.Gray,
-                    modifier = Modifier.size(16.dp).clickable { FmRadioManager.togglePreset(hit.freqKHz) }
-                )
+                Column(Modifier.weight(1f)) {
+                    Text(stn?.call ?: "not in the catalogue here", color = if (stn != null) color else MikuTextSecondary,
+                         fontSize = 9.5.sp, fontWeight = FontWeight.Bold)
+                    Text(
+                        buildString {
+                            append("RSSI ").append(hit.rssi?.toString() ?: "—")
+                            hit.snr?.let { append("   SNR ").append(it) }
+                            stn?.genre?.let { append("   ").append(it) }
+                        },
+                        color = MikuTextSecondary, fontSize = 8.sp, fontFamily = AudiowideFont
+                    )
+                }
+                Box(
+                    Modifier.size(44.dp).clip(RoundedCornerShape(22.dp)).pressable { FmRadioManager.togglePreset(hit.freqKHz) },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        if (fav) Icons.Default.Star else Icons.Default.StarBorder, "Preset",
+                        tint = if (fav) MikuNeonPink else Color.Gray, modifier = Modifier.size(20.dp)
+                    )
+                }
             }
         }
     }
@@ -294,7 +309,7 @@ fun FmDiagnosticsPanel(st: FmState) {
             false -> "plain 16-bit PCM as advertised"
             null -> "—"
         })
-        DiagRow("Spectrum range", "60 Hz to ${st.spectrumTopHz} Hz")
+        DiagRow("Spectrum range", "25 Hz to ${st.spectrumTopHz} Hz · 4096-pt FFT, 256 log bins")
         Spacer(Modifier.height(8.dp))
         // Two tuners, read separately. Only the one with an antenna will move with frequency.
         DiagRow("RSSI · Si4705 (radio0)", d.rssiSi4705?.toString() ?: "—")
@@ -379,10 +394,9 @@ fun ColumnScope.FmKeypad(st: FmState, onTuned: () -> Unit) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(5.dp)) {
                 row.forEach { k ->
                     Box(
-                        Modifier.weight(1f).clip(RoundedCornerShape(10.dp))
-                            .background(Color(0x2200E5FF))
-                            .border(1.dp, CyberGlassBorder, RoundedCornerShape(10.dp))
-                            .clickable {
+                        Modifier.weight(1f)
+                            .glass(RoundedCornerShape(12.dp), accent = MikuCyan, rimAlpha = 0.4f, shine = 0.8f)
+                            .pressable {
                                 entry = when {
                                     k == "⌫" -> entry.dropLast(1)
                                     k == "." && entry.contains('.') -> entry
@@ -390,7 +404,7 @@ fun ColumnScope.FmKeypad(st: FmState, onTuned: () -> Unit) {
                                     else -> entry + k
                                 }
                             }
-                            .padding(vertical = 10.dp),
+                            .padding(vertical = 14.dp),
                         contentAlignment = Alignment.Center
                     ) {
                         Text(k, color = MikuCyan, fontSize = 15.sp, fontWeight = FontWeight.Bold,
@@ -400,8 +414,8 @@ fun ColumnScope.FmKeypad(st: FmState, onTuned: () -> Unit) {
             }
         }
         Box(
-            Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp))
-                .background(MikuCyan).clickable { commit() }.padding(vertical = 10.dp),
+            Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp))
+                .background(MikuCyan).pressable { commit() }.padding(vertical = 14.dp),
             contentAlignment = Alignment.Center
         ) {
             Text("TUNE", color = Color.Black, fontSize = 12.sp, fontWeight = FontWeight.Black,

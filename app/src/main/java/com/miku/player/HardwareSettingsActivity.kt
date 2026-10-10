@@ -211,6 +211,38 @@ fun HardwareSettingsScreen(onBack: () -> Unit) {
                 verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
                 // ============================================================
+                // LISTENING PROFILES ENTRY (per-headphone EQ + DAC settings)
+                // ============================================================
+                item {
+                    remember { com.miku.player.profiles.ListeningProfileStore.load(ctx) }
+                    val current by com.miku.player.profiles.ListeningProfileStore.currentId.collectAsState()
+                    val currentName = remember(current) {
+                        com.miku.player.profiles.ListeningProfileStore.get(ctx, current)?.name
+                    }
+                    Row(
+                        Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(16.dp))
+                            .background(Color(0xDD0A1E26))
+                            .border(1.dp, MikuNeonPink, RoundedCornerShape(16.dp))
+                            .clickable {
+                                ctx.startActivity(android.content.Intent(ctx, com.miku.player.profiles.ListeningProfilesActivity::class.java))
+                            }
+                            .padding(14.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(Modifier.weight(1f)) {
+                            Text("LISTENING PROFILES", color = MikuNeonPink, fontSize = 11.sp, fontWeight = FontWeight.Bold, fontFamily = AudiowideFont)
+                            Text(
+                                currentName?.let { "Current: $it" } ?: "Pick your headphones: EQ and DAC settings that follow them",
+                                color = MikuTextSecondary, fontSize = 10.5.sp
+                            )
+                        }
+                        Text("›", color = MikuNeonPink, fontSize = 22.sp)
+                    }
+                }
+
+                // ============================================================
                 // HARDWARE STATUS & LIVE KERNEL AUDIT BANNER
                 // ============================================================
                 item {

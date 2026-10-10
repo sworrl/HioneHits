@@ -169,7 +169,6 @@ class MikuTrackHud(
         private val glass = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL }
         private val fillPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL }
         private val glow = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL }
-        private val stroke = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE; strokeWidth = dp(1f) }
         private val titlePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0xFFF0FDFB.toInt(); textSize = dp(14f); isFakeBoldText = true }
         private val artistPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0xFF80DEEA.toInt(); textSize = dp(12f) }
         private val chipPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { textSize = dp(10f); isFakeBoldText = true }
@@ -180,6 +179,7 @@ class MikuTrackHud(
         private val rect = RectF()
         private val artDst = Rect()
         private val cardR = dp(20f)
+        private val glassFx = MikuGlass.CanvasGlass(density)
 
         init { isClickable = true }
 
@@ -255,7 +255,8 @@ class MikuTrackHud(
             // glass card
             glass.shader = LinearGradient(0f, 0f, w, h, intArrayOf(0xF60B222A.toInt(), 0xFA061319.toInt()), null, Shader.TileMode.CLAMP)
             rect.set(0f, 0f, w, h); canvas.drawRoundRect(rect, cardR, cardR, glass)
-            stroke.color = (accent and 0x00FFFFFF) or 0xAA000000.toInt(); canvas.drawRoundRect(rect, cardR, cardR, stroke)
+            // MikuGlass sheen, top-edge light and refraction rim (art accent -> Miku pink), under the content
+            glassFx.drawOver(canvas, rect, cardR, accent, 0xFFFF4081.toInt())
             // art
             val pad = dp(8f); val artSz = dp(56f)
             artDst.set(pad.toInt(), pad.toInt(), (pad + artSz).toInt(), (pad + artSz).toInt())

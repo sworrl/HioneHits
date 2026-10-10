@@ -925,7 +925,16 @@ fun MikuKawaiiLockscreenScreen(
                 Modifier.fillMaxWidth(),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Text(
+                // HOLO PLASMA CLOCK (a BPM-game secret, MikuSecrets.HOLO_LOCK_CLOCK): the full
+                // holographic face — spectrum digits, heartbeat colon, scanline — in place of the
+                // plain digits. MikuLockscreenMegaClock was written for this screen and never
+                // wired in; the secret is what finally puts it on the glass.
+                val holoClock = com.miku.launcher.rememberUnlockEnabled(com.miku.launcher.bpm.MikuSecrets.HOLO_LOCK_CLOCK)
+                if (holoClock) {
+                    Box(Modifier.graphicsLayer { alpha = settleClock.value.coerceIn(0f, 1f); translationY = (1f - settleClock.value) * 14.dp.toPx() }) {
+                        MikuLockscreenMegaClock(time = currentTime)
+                    }
+                } else Text(
                     modifier = Modifier.graphicsLayer { alpha = settleClock.value.coerceIn(0f, 1f); translationY = (1f - settleClock.value) * 14.dp.toPx() },
                     text = currentTime,
                     color = Color.White,

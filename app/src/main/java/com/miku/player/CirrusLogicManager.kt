@@ -141,6 +141,11 @@ object CirrusLogicManager {
         // Settings row that [getDigitalFilter] reads back changed while the DAC did not.)
         MikuDirectAudio.pushToHal(ctx, "vendor.audio.hiby.hw.digital_filter", filter.id)
         MikuDirectAudio.pushToHal(ctx, "vendor.audio.hiby.digital_filter", filter.id)
+        // Neither line above reaches the DAC: the framework turns the hw.* key into a property
+        // nothing reads, and the HAL ignores the other. The node is written by init when
+        // vendor.audio.hiby.digital_filter (no "hw") changes, which only system_server may set.
+        // UNVERIFIED on hardware - see com.miku.player.profiles.HibyDacBridge / DspKnob.FILTER.
+        com.miku.player.profiles.HibyDacBridge.set(com.miku.player.profiles.HibyDacBridge.PROP_FILTER, filter.id)
     }
 
     fun getGainMode(ctx: Context): GainMode {
@@ -294,6 +299,10 @@ object CirrusLogicManager {
         // toggle's state matches the DAC instead of only matching a Settings row.
         MikuDirectAudio.pushToHal(ctx, "vendor.audio.hiby.hw.dre", v.toString())
         MikuDirectAudio.pushToHal(ctx, "vendor.audio.hiby.hw.dre_mode", sysfsStr)
+        // The real switch (init -> sa_sound_setting/dre_mode). The Global row is what HiBy's
+        // AudioService re-applies at boot; the bridge applies it now. See HibyDacBridge.
+        runCatching { Settings.Global.putString(cr, "vendor.audio.hiby.dre_mode", sysfsStr) }
+        com.miku.player.profiles.HibyDacBridge.set(com.miku.player.profiles.HibyDacBridge.PROP_DRE, sysfsStr)
     }
 
     fun isHighPowerEnabled(ctx: Context): Boolean {
@@ -311,6 +320,9 @@ object CirrusLogicManager {
         runCatching { Settings.Global.putInt(cr, "vendor.audio.hiby.hw.high_power", v) }
         MikuDirectAudio.pushToHal(ctx, "vendor.audio.hiby.hw.high_power", v.toString())
         MikuDirectAudio.pushToHal(ctx, "vendor.audio.hiby.hw.high_power_mode", sysfsStr)
+        // The real switch (init -> sa_sound_setting/high_power_mode), live now and at boot.
+        runCatching { Settings.Global.putString(cr, "vendor.audio.hiby.high_power", sysfsStr) }
+        com.miku.player.profiles.HibyDacBridge.set(com.miku.player.profiles.HibyDacBridge.PROP_HIGH_POWER, sysfsStr)
     }
 
     fun getDsdGainCompensate(ctx: Context): Boolean {

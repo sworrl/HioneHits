@@ -3,22 +3,21 @@ package com.caf.fmradio
 import android.content.Context
 import android.content.Intent
 import android.widget.Toast
-import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.automirrored.filled.FormatListBulleted
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -30,20 +29,36 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import java.util.Locale
 
-private enum class FmSheet { NONE, SCAN, SETTINGS, DIAGNOSTICS, KEYPAD }
+/** Which bottom sheet is up. Some carry what they are about. */
+private sealed interface FmSheet {
+    data object None : FmSheet
+    data object Settings : FmSheet
+    data object Diagnostics : FmSheet
+    data object Keypad : FmSheet
+    data object SongHistory : FmSheet
+    data class Stations(val tab: StationsTab) : FmSheet
+    data class Detail(val target: PresetTarget) : FmSheet
+}
 
-private fun mhz(khz: Int) = String.format(Locale.US, "%.1f", khz / 1000.0)
+/** One spacing step between the screen's blocks, so the rhythm is the same everywhere. */
+private val GAP = 4.dp
 
-@OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun MikuFMRadioScreen(onBack: () -> Unit) {
     val ctx = LocalContext.current
     val st by FmRadioManager.state.collectAsState()
-    var sheet by remember { mutableStateOf(FmSheet.NONE) }
+    var sheet by remember { mutableStateOf<FmSheet>(FmSheet.None) }
+    var pathExpanded by rememberSaveable { mutableStateOf(false) }
+    // Derived once per change of the scan list, not per recomposition: a fresh list every time
+    // would defeat skipping of the whole spectrum panel.
+    val scanHits = remember(st.scanResults) { st.scanResults.map { it.freqKHz } }
+
+    BackHandler(enabled = sheet != FmSheet.None) { sheet = FmSheet.None }
 
     Box(Modifier.fillMaxSize().background(CyberDarkBg)) {
         Image(
@@ -62,12 +77,16 @@ fun MikuFMRadioScreen(onBack: () -> Unit) {
             Modifier.fillMaxSize().systemBarsPadding().padding(horizontal = 10.dp, vertical = 4.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            FmHeaderBar(st, onBack) { sheet = FmSheet.SETTINGS }
-            Spacer(Modifier.height(3.dp))
-            FmFrequencyCard(st, onKeypad = { sheet = FmSheet.KEYPAD })
-            Spacer(Modifier.height(3.dp))
-            FmSignalMeter(st, Modifier.clickable { sheet = FmSheet.DIAGNOSTICS })
-            Spacer(Modifier.height(3.dp))
+            FmHeaderBar(st.isHeadsetPlugged, onBack) { sheet = FmSheet.Settings }
+            Spacer(Modifier.height(GAP))
+            FmFrequencyCard(
+                st,
+                onKeypad = { sheet = FmSheet.Keypad },
+                onStation = { s -> sheet = FmSheet.Detail(PresetTarget(s.khz, s, st.favorites.any { kotlin.math.abs(it - s.khz) <= 60 })) },
+            )
+            Spacer(Modifier.height(GAP))
+            FmSignalMeter(st, Modifier.pressable(pressedScale = 0.98f) { sheet = FmSheet.Diagnostics })
+            Spacer(Modifier.height(GAP))
 
             Box(Modifier.weight(1f).fillMaxWidth()) {
                 RadioWaterfallSpectrum(
@@ -76,12 +95,11 @@ fun MikuFMRadioScreen(onBack: () -> Unit) {
                     isPowerOn = st.isPowerOn,
                     isHardwareOnline = st.isHardwareOnline,
                     hardwareError = st.hardwareError,
-                    spectrum = st.spectrum,
                     signalHistory = st.signalHistory,
                     bandProfile = st.bandProfile,
                     bandHistory = st.bandHistory,
                     favorites = st.favorites,
-                    scanHits = st.scanResults.map { it.freqKHz },
+                    scanHits = scanHits,
                     cataloguedStations = st.nearbyStations,
                     skin = st.sdrSkin,
                     rowTimes = st.bandHistoryTimes,
@@ -89,75 +107,91 @@ fun MikuFMRadioScreen(onBack: () -> Unit) {
                     onCycleSkin = { FmRadioManager.cycleSdrSkin() },
                     onTuneFreq = { FmRadioManager.tune(it) }
                 )
-                FmViewModeChips(st, Modifier.align(Alignment.TopEnd).padding(top = 18.dp, end = 6.dp))
-                if (st.isScanning) {
-                    FmScanOverlay(st)
-                }
+                FmViewModeChips(st.viewMode, Modifier.align(Alignment.TopEnd).padding(top = 18.dp, end = 6.dp))
+                if (st.isScanning) FmScanOverlay(st)
+                SongIdCard(
+                    st.songId,
+                    onHistory = { sheet = FmSheet.SongHistory },
+                    modifier = Modifier.align(Alignment.BottomCenter).padding(6.dp),
+                )
             }
 
-            // The terrain between here and whatever is tuned. Only shown once a profile has
-            // actually been obtained: this panel exists to answer "is a hill in the way", and
-            // an empty one every time the catalogue has no match would just be furniture.
+            // The terrain between here and whatever is tuned, once a profile exists. Folded to
+            // one line by default: the preset chips already carry the line-of-sight verdict, and
+            // the full cross-section is 80 dp the analyser can use when you are not aiming.
             st.tunedProfile?.let { prof ->
-                Spacer(Modifier.height(3.dp))
-                FmFresnelProfileView(prof, Modifier.height(82.dp))
+                Spacer(Modifier.height(GAP))
+                FmPathStrip(prof, pathExpanded) { pathExpanded = !pathExpanded }
             }
 
-            Spacer(Modifier.height(4.dp))
-            FmTransportRow(st, ctx)
-            Spacer(Modifier.height(3.dp))
+            Spacer(Modifier.height(GAP + 1.dp))
+            FmTransportRow(st.isPowerOn, ctx)
+            Spacer(Modifier.height(GAP))
             FmToolRow(
-                st = st,
+                stereoRequested = st.stereoRequested,
+                isScanning = st.isScanning,
+                isRecording = st.isRecording,
+                recordedBytes = st.recordedBytes,
+                songId = st.songId,
+                hasScanResults = st.scanResults.isNotEmpty(),
                 onScan = { if (st.isScanning) FmRadioManager.cancelSeek() else FmRadioManager.scanBand() },
-                onResults = { sheet = FmSheet.SCAN },
-                onRecord = {
-                    Toast.makeText(ctx, FmRadioManager.toggleRecording(ctx), Toast.LENGTH_SHORT).show()
-                },
-                onKeypad = { sheet = FmSheet.KEYPAD }
+                onStations = { sheet = FmSheet.Stations(StationsTab.STATIONS) },
+                onRecord = { Toast.makeText(ctx, FmRadioManager.toggleRecording(ctx), Toast.LENGTH_SHORT).show() },
+                onSongHistory = { sheet = FmSheet.SongHistory },
             )
-            Spacer(Modifier.height(3.dp))
-            FmPresetRow(st)
+            Spacer(Modifier.height(GAP))
+            FmPresetBar(
+                favorites = st.favorites,
+                nearby = st.nearbyStations,
+                frequencyKHz = st.frequencyKHz,
+                hasPosition = st.listenerPlace != null,
+                onDetails = { sheet = FmSheet.Detail(it) },
+                onAllStations = { sheet = FmSheet.Stations(StationsTab.STATIONS) },
+            )
             Spacer(Modifier.height(2.dp))
             FmGesturePill(ctx)
         }
     }
 
-    // Transient volume readout. The slider is gone and the wheel now drives the tuner's own
-    // gain, so without this a turn of the wheel changes something invisible. It shows on change
-    // and fades, which is the behaviour of every hardware volume control.
+    // Transient volume readout. The wheel drives the tuner's own gain, so without this a turn
+    // of the wheel changes something invisible. It shows on change and fades.
     FmVolumeHud(st.fmVolumeLevel)
 
-    when (sheet) {
-        FmSheet.NONE -> Unit
-        FmSheet.SCAN -> FmSheetFrame({ sheet = FmSheet.NONE }) { FmScanResults(st) { sheet = FmSheet.NONE } }
-        FmSheet.SETTINGS -> FmSheetFrame({ sheet = FmSheet.NONE }) { FmSettings(st) }
-        FmSheet.DIAGNOSTICS -> FmSheetFrame({ sheet = FmSheet.NONE }) { FmDiagnosticsPanel(st) }
-        FmSheet.KEYPAD -> FmSheetFrame({ sheet = FmSheet.NONE }) { FmKeypad(st) { sheet = FmSheet.NONE } }
+    val close = { sheet = FmSheet.None }
+    when (val sh = sheet) {
+        FmSheet.None -> Unit
+        FmSheet.Settings -> FmSheetFrame(close) { FmSettings(st) }
+        FmSheet.Diagnostics -> FmSheetFrame(close) { FmDiagnosticsPanel(st) }
+        FmSheet.Keypad -> FmSheetFrame(close) { FmKeypad(st, close) }
+        FmSheet.SongHistory -> FmSheetFrame(close, maxHeight = 560.dp) { FmSongHistory(st.songId) }
+        is FmSheet.Stations -> FmSheetFrame(close, maxHeight = 600.dp) {
+            FmStationsSheet(st, sh.tab, onTuned = close, onDetails = { sheet = FmSheet.Detail(it) })
+        }
+        is FmSheet.Detail -> FmSheetFrame(close, maxHeight = 560.dp) { FmStationDetail(st, sh.target, close) }
     }
 }
 
 // ---------------------------------------------------------------------------- header
 
 @Composable
-private fun FmHeaderBar(st: FmState, onBack: () -> Unit, onSettings: () -> Unit) {
+private fun FmHeaderBar(headsetPlugged: Boolean, onBack: () -> Unit, onSettings: () -> Unit) {
     // This board has no internal antenna, so the headphone cable is it. The chip reports what
     // is actually plugged in rather than a decorative "ANTENNA OK".
-    val ok = st.isHeadsetPlugged
-    val label = if (ok) "ANTENNA OK" else "PLUG HEADSET"
+    val label = if (headsetPlugged) "ANTENNA OK" else "PLUG HEADSET"
     Row(
         Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        MikuBackButton(onClick = onBack)
+        CyberIconButton(Icons.Default.ArrowBackIosNew, "Back", 40.dp, false, onBack)
         Text(
             "MIKU CYBER FM TUNER", color = MikuCyan, fontSize = 11.sp,
             fontWeight = FontWeight.Bold, fontFamily = AudiowideFont, letterSpacing = 1.sp
         )
         Row(verticalAlignment = Alignment.CenterVertically) {
-            CyberChip(label, ok)
+            CyberChip(label, headsetPlugged)
             Spacer(Modifier.width(5.dp))
-            CyberIconButton(Icons.Default.Tune, "Settings", 34.dp, false, onSettings)
+            CyberIconButton(Icons.Default.Tune, "Settings", 40.dp, false, onSettings)
         }
     }
 }
@@ -166,298 +200,280 @@ private fun FmHeaderBar(st: FmState, onBack: () -> Unit, onSettings: () -> Unit)
 fun CyberChip(text: String, ok: Boolean, accent: Color = MikuCyan) {
     val c = if (ok) accent else MikuNeonPink
     Box(
-        Modifier.clip(RoundedCornerShape(9.dp))
-            .background(c.copy(alpha = 0.18f))
-            .border(1.dp, c, RoundedCornerShape(9.dp))
+        Modifier
+            .glass(RoundedCornerShape(9.dp), accent = c, accent2 = c, fill = c.copy(alpha = 0.16f), rimAlpha = 0.9f, shine = 0.7f)
             .padding(horizontal = 6.dp, vertical = 2.dp)
     ) {
         Text(text, color = c, fontSize = 7.sp, fontWeight = FontWeight.Bold, fontFamily = AudiowideFont)
     }
 }
 
+/**
+ * The round glass key used across the screen. [size] is the visible disc; the touch target is
+ * never smaller than 48 dp regardless, because a 36 dp disc is a fine visual weight for a
+ * secondary key and a poor target for a thumb.
+ */
 @Composable
 fun CyberIconButton(
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     label: String,
-    size: androidx.compose.ui.unit.Dp,
+    size: Dp,
     active: Boolean,
     onClick: () -> Unit,
 ) {
     Box(
-        Modifier.size(size).clip(CircleShape)
-            .background(if (active) MikuCyan.copy(alpha = 0.28f) else Color(0x1100E5FF))
-            .border(1.dp, if (active) MikuCyan else CyberGlassBorder, CircleShape)
-            .clickable(onClick = onClick),
+        Modifier.sizeIn(minWidth = 48.dp, minHeight = 48.dp).pressable(onClick = onClick),
         contentAlignment = Alignment.Center
     ) {
-        Icon(icon, label, tint = if (active) MikuCyan else MikuTextSecondary, modifier = Modifier.size(size * 0.5f))
+        Box(
+            Modifier.size(size).glass(
+                CircleShape, accent = MikuCyan, accent2 = MikuPink,
+                fill = if (active) MikuCyan.copy(alpha = 0.26f) else Color(0xB00A1E26),
+                rimAlpha = if (active) 1f else 0.4f, shine = if (active) 1.4f else 0.9f,
+            ),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(icon, label, tint = if (active) MikuCyan else MikuTextSecondary, modifier = Modifier.size(size * 0.48f))
+        }
     }
 }
 
 // ---------------------------------------------------------------------------- frequency
 
 @Composable
-private fun FmFrequencyCard(st: FmState, onKeypad: () -> Unit) {
+private fun FmFrequencyCard(st: FmState, onKeypad: () -> Unit, onStation: (FmStationCatalogue.Station) -> Unit) {
     val isFav = st.favorites.contains(st.frequencyKHz)
     val online = st.isHardwareOnline
     val statusColor = when {
         online -> MikuCyan
         st.hardwareError != null -> MikuNeonPink
-        st.isPowerOn -> Color(0xFFFFD54F)
+        st.isPowerOn -> CyberAmber
         else -> Color.Gray
     }
     val pty = FmRadioManager.programmeTypeName(st.programmeType, st.band)
+    val tuned = st.tunedStation
+    val accent = tuned?.let { stationColor(it.call) } ?: MikuCyan
 
-    Box(
-        Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp))
-            .background(Color(0xDD0A1E26))
-            .border(1.2.dp, if (st.isPowerOn) MikuCyan else Color.White.copy(alpha = 0.15f), RoundedCornerShape(14.dp))
-            .padding(horizontal = 12.dp, vertical = 5.dp)
+    Column(
+        Modifier.fillMaxWidth()
+            .glass(
+                RoundedCornerShape(16.dp), accent = if (st.isPowerOn) accent else Color.White, accent2 = MikuPink,
+                fill = Color(0xC80A1E26), rimAlpha = if (st.isPowerOn) 0.9f else 0.2f, rimWidth = 1.2.dp,
+            )
+            .padding(horizontal = 6.dp, vertical = 4.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
-            Row(
-                Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Box(Modifier.size(6.dp).clip(CircleShape).background(statusColor))
-                    Spacer(Modifier.width(4.dp))
-                    Text(
-                        when {
-                            online -> {
-                                val mode = when (st.isStereo) {
-                                    true -> "STEREO"; false -> "MONO"; null -> "FM"
-                                }
-                                "$mode · ${st.band.label}"
-                            }
-                            st.hardwareError != null -> "TUNER ERROR"
-                            st.isPowerOn -> "STARTING TUNER…"
-                            else -> "STANDBY"
-                        },
-                        color = statusColor, fontSize = 8.sp,
-                        fontWeight = FontWeight.Bold, fontFamily = AudiowideFont
-                    )
-                }
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        Icons.Default.Dialpad, "Enter a frequency",
-                        tint = MikuTextSecondary,
-                        modifier = Modifier.size(16.dp).clickable(onClick = onKeypad)
-                    )
-                    Spacer(Modifier.width(10.dp))
-                    Icon(
-                        if (isFav) Icons.Default.Star else Icons.Default.StarBorder,
-                        "Preset",
-                        tint = if (isFav) MikuNeonPink else Color.Gray,
-                        modifier = Modifier.size(17.dp)
-                            .clickable { FmRadioManager.togglePreset(st.frequencyKHz) }
-                    )
-                }
+        Row(Modifier.fillMaxWidth().padding(horizontal = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+            Box(Modifier.size(6.dp).clip(CircleShape).background(statusColor))
+            Spacer(Modifier.width(5.dp))
+            Text(
+                when {
+                    online -> {
+                        val mode = when (st.isStereo) { true -> "STEREO"; false -> "MONO"; null -> "FM" }
+                        "$mode · ${st.band.label}"
+                    }
+                    st.hardwareError != null -> "TUNER ERROR"
+                    st.isPowerOn -> "STARTING TUNER…"
+                    else -> "STANDBY"
+                },
+                color = statusColor, fontSize = 8.sp, fontWeight = FontWeight.Bold, fontFamily = AudiowideFont,
+                modifier = Modifier.weight(1f), maxLines = 1,
+            )
+            if (tuned != null && tuned.reach != FmReach.Verdict.UNKNOWN) {
+                Text(tuned.reach.shortLabel, color = tuned.reach.color, fontSize = 7.5.sp,
+                     fontWeight = FontWeight.Bold, fontFamily = AudiowideFont)
             }
+        }
 
-            Row(verticalAlignment = Alignment.Bottom) {
+        // Dial row: keypad and preset star flank the number as full-size thumb targets.
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Box(Modifier.size(48.dp).clip(CircleShape).pressable(onClick = onKeypad), contentAlignment = Alignment.Center) {
+                Icon(Icons.Default.Dialpad, "Enter a frequency", tint = MikuTextSecondary, modifier = Modifier.size(22.dp))
+            }
+            Row(Modifier.weight(1f), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.Bottom) {
                 Text(
-                    mhz(st.frequencyKHz),
+                    fmtMhz(st.frequencyKHz),
                     color = if (st.isPowerOn) Color.White else Color.Gray,
-                    fontSize = 34.sp, fontWeight = FontWeight.Black,
-                    fontFamily = AudiowideFont, letterSpacing = 1.sp
+                    fontSize = 34.sp, fontWeight = FontWeight.Black, fontFamily = AudiowideFont, letterSpacing = 1.sp
                 )
                 Spacer(Modifier.width(4.dp))
-                Text(
-                    "MHz", color = MikuCyan, fontSize = 11.sp, fontWeight = FontWeight.Bold,
-                    fontFamily = AudiowideFont, modifier = Modifier.padding(bottom = 5.dp)
+                Text("MHz", color = accent, fontSize = 11.sp, fontWeight = FontWeight.Bold,
+                     fontFamily = AudiowideFont, modifier = Modifier.padding(bottom = 6.dp))
+            }
+            Box(
+                Modifier.size(48.dp).clip(CircleShape).pressable { FmRadioManager.togglePreset(st.frequencyKHz) },
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    if (isFav) Icons.Default.Star else Icons.Default.StarBorder,
+                    if (isFav) "Remove preset" else "Save as preset",
+                    tint = if (isFav) MikuNeonPink else MikuTextSecondary, modifier = Modifier.size(24.dp)
                 )
             }
+        }
 
-            // RDS name when decoded; otherwise the engine's real status line. Never an
-            // invented station.
-            val headline = when {
-                st.stationName.isNotEmpty() && pty != null -> "${st.stationName} · $pty"
-                st.stationName.isNotEmpty() -> st.stationName
-                st.rdsAvailable == false -> "No RDS on this station"
-                online -> "No RDS name"
-                else -> "—"
+        // RDS name when decoded; otherwise what the catalogue says is licensed on this channel
+        // here, so the dial is not blank while the antenna hunts. Never an invented station.
+        val headline = when {
+            st.stationName.isNotEmpty() && pty != null -> "${st.stationName} · $pty"
+            st.stationName.isNotEmpty() -> st.stationName
+            tuned != null -> buildString {
+                append(tuned.call)
+                listOfNotNull(tuned.city, tuned.state).joinToString(", ").takeIf { it.isNotBlank() }?.let { append(" · ").append(it) }
             }
-            // The catalogue knows what is licensed on this channel here even when RDS has
-            // decoded nothing, so the dial is not blank while the antenna hunts.
-            val fromCatalogue = st.tunedStation
-            val shown = when {
-                headline != "No RDS name" && headline != "—" -> headline
-                fromCatalogue != null ->
-                    "${fromCatalogue.call} · ${fromCatalogue.city ?: ""} ${fromCatalogue.state ?: ""}".trim()
-                else -> headline
+            st.rdsAvailable == false -> "No RDS on this station"
+            online -> "No RDS name"
+            else -> "—"
+        }
+        Row(
+            Modifier.fillMaxWidth().padding(horizontal = 6.dp)
+                .then(if (tuned != null) Modifier.pressable(pressedScale = 0.98f) { onStation(tuned) } else Modifier),
+            horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(headline, color = MikuTextPrimary, fontSize = 10.sp, fontWeight = FontWeight.Bold,
+                 maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
+            tuned?.genre?.let { g ->
+                Spacer(Modifier.width(6.dp))
+                Text(g.uppercase(Locale.US), color = Color.Black, fontSize = 6.5.sp, fontWeight = FontWeight.Bold, maxLines = 1,
+                     modifier = Modifier.clip(RoundedCornerShape(4.dp)).background(genreColor(g)).padding(horizontal = 4.dp, vertical = 1.dp))
             }
-            Text(
-                shown,
-                color = MikuTextPrimary, fontSize = 10.sp, fontWeight = FontWeight.Bold,
-                maxLines = 1, overflow = TextOverflow.Ellipsis
-            )
-            // The engine parks a "no RDS on <freq>" message in radioText when nothing decodes,
-            // which is the same thing the headline already says. Only show the second line when
-            // it is carrying real radio text.
-            val showsRealRadioText = st.stationName.isNotEmpty() && st.radioText.isNotBlank() &&
-                !st.radioText.startsWith("No RDS") && !st.radioText.startsWith("Live tuner")
-            if (showsRealRadioText) {
-                Text(
-                    st.radioText, color = MikuTextSecondary, fontSize = 8.5.sp,
-                    maxLines = 1, overflow = TextOverflow.Ellipsis
-                )
-            }
+        }
+        // The engine parks a "no RDS on <freq>" message in radioText when nothing decodes, which
+        // the headline already says. Only show the second line when it is real radio text.
+        val showsRealRadioText = st.stationName.isNotEmpty() && st.radioText.isNotBlank() &&
+            !st.radioText.startsWith("No RDS") && !st.radioText.startsWith("Live tuner")
+        val subline = when {
+            showsRealRadioText -> st.radioText
+            tuned?.format != null -> tuned.format
+            else -> null
+        }
+        if (subline != null) {
+            Text(subline, color = MikuTextSecondary, fontSize = 8.5.sp, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                 modifier = Modifier.padding(horizontal = 10.dp))
         }
     }
 }
 
-// ---------------------------------------------------------------------------- signal
+// ---------------------------------------------------------------------------- path strip
 
 @Composable
-private fun FmSignalStrip(st: FmState, onDiagnostics: () -> Unit) {
-    val s = st.signal
-    Column(
-        Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp))
-            .background(Color(0xBB07161D))
-            .border(1.dp, CyberGlassBorder, RoundedCornerShape(12.dp))
-            .clickable(onClick = onDiagnostics)
-            .padding(horizontal = 10.dp, vertical = 5.dp)
+private fun FmPathStrip(prof: FmFresnel.Profile, expanded: Boolean, onToggle: () -> Unit) {
+    if (expanded) {
+        Box(Modifier.pressable(pressedScale = 0.99f, onClick = onToggle)) {
+            FmFresnelProfileView(prof, Modifier.height(82.dp))
+        }
+        return
+    }
+    val los = Los.of(prof.worst?.fresnelFraction)
+    Row(
+        Modifier.fillMaxWidth().height(32.dp)
+            .glass(RoundedCornerShape(12.dp), accent = los.color, rimAlpha = 0.45f, shine = 0.6f)
+            .pressable(pressedScale = 0.98f, onClick = onToggle)
+            .padding(horizontal = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            // Ranges are the readable span of each metric on this tuner, used only to scale the
-            // bar; the printed number is always the raw reading.
-            MeterCell("RSSI", s.rssi ?: st.rssi, 0f, 90f, Modifier.weight(1f))
-            MeterCell("SNR", s.snr, 0f, 30f, Modifier.weight(1f))
-            // Multipath is a distortion figure: low is good. The bar is drawn the same way as
-            // the others because an inverted one reads as "maxed out" when the value is zero,
-            // which is the best possible reading.
-            MeterCell("MPATH", s.multipath, 0f, 100f, Modifier.weight(1f))
-            MeterCell("AUDIO", (st.audioLevel * 100).toInt().takeIf { st.isPowerOn }, 0f, 60f, Modifier.weight(1f))
-        }
-        Spacer(Modifier.height(3.dp))
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-            CyberChip(st.diagnostics.routeLabel.uppercase(Locale.US), true, MikuTeal)
-            CyberChip(
-                when (st.diagnostics.halLoopback) {
-                    true -> "HAL FM ON"
-                    false -> "HAL FM OFF"
-                    null -> "HAL FM ?"
-                },
-                st.diagnostics.halLoopback == true
-            )
-            if (st.diagnostics.driverMuted == true) CyberChip("DRIVER MUTED", false)
-            if (st.rdsAvailable == true) CyberChip("RDS", true, MikuPurple)
-            Spacer(Modifier.weight(1f))
-            Text("DIAG", color = MikuTextSecondary, fontSize = 7.sp, fontFamily = AudiowideFont)
-        }
-    }
-}
-
-@Composable
-private fun MeterCell(label: String, value: Int?, min: Float, max: Float, modifier: Modifier) {
-    val shown = value?.let { ((it - min) / (max - min)).coerceIn(0f, 1f) } ?: 0f
-    Column(modifier.padding(end = 6.dp)) {
-        Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
-            Text(label, color = MikuTextSecondary, fontSize = 6.5.sp, fontFamily = AudiowideFont)
-            Text(value?.toString() ?: "—", color = MikuTextPrimary, fontSize = 6.5.sp, fontWeight = FontWeight.Bold)
-        }
-        Box(Modifier.fillMaxWidth().height(3.dp).clip(RoundedCornerShape(2.dp)).background(Color(0x33FFFFFF))) {
-            if (value != null) {
-                Box(
-                    Modifier.fillMaxWidth(shown).fillMaxHeight().clip(RoundedCornerShape(2.dp))
-                        .background(if (shown > 0.6f) MikuCyan else if (shown > 0.3f) MikuTeal else MikuNeonPink)
-                )
-            }
-        }
+        ReceptionGauge(prof.station.receptionScore, prof.station.reach, prof.worst?.fresnelFraction, Modifier.size(24.dp), strokeDp = 2f)
+        Spacer(Modifier.width(8.dp))
+        Text(
+            "PATH TO ${prof.station.call} · ${"%.1f".format(Locale.US, prof.distanceKm)} km",
+            color = MikuTeal.copy(alpha = 0.9f), fontSize = 8.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f),
+            maxLines = 1, overflow = TextOverflow.Ellipsis,
+        )
+        Text(
+            prof.verdict.uppercase(Locale.US) +
+                if (prof.diffractionLossDb > 0.5) " · ~${"%.0f".format(Locale.US, prof.diffractionLossDb)} dB" else "",
+            color = los.color, fontSize = 8.sp, fontWeight = FontWeight.Bold,
+        )
+        Icon(Icons.Default.ExpandMore, "Show the terrain profile", tint = MikuTextSecondary, modifier = Modifier.size(18.dp))
     }
 }
 
 // ---------------------------------------------------------------------------- transport
 
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun FmTransportRow(st: FmState, ctx: Context) {
+private fun FmTransportRow(isPowerOn: Boolean, ctx: Context) {
     Row(
-        Modifier.fillMaxWidth().padding(horizontal = 6.dp),
+        Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceEvenly,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        CyberIconButton(Icons.Default.FastRewind, "Seek down", 42.dp, false) { FmRadioManager.seek(false) }
-        CyberIconButton(Icons.Default.KeyboardArrowLeft, "Step down", 36.dp, false) { FmRadioManager.step(false) }
+        CyberIconButton(Icons.Default.FastRewind, "Seek down", 46.dp, false) { FmRadioManager.seek(false) }
+        CyberIconButton(Icons.AutoMirrored.Filled.KeyboardArrowLeft, "Step down", 40.dp, false) { FmRadioManager.step(false) }
 
         // Power. Starting the service rather than the engine directly is what keeps the tuner
         // alive after this activity goes away.
         Box(
-            Modifier.size(54.dp).clip(CircleShape)
-                .background(
-                    if (st.isPowerOn) Brush.verticalGradient(listOf(MikuCyan, Color(0xFF006978)))
-                    else Brush.verticalGradient(listOf(Color(0xEE0A1E26), Color(0xFF040D12)))
+            Modifier.size(56.dp)
+                .then(
+                    if (isPowerOn) Modifier.clip(CircleShape)
+                        .background(Brush.verticalGradient(listOf(MikuCyan, Color(0xFF006978))))
+                    else Modifier
                 )
-                .border(1.6.dp, if (st.isPowerOn) MikuCyan else CyberGlassBorder, CircleShape)
-                .clickable {
-                    if (st.isPowerOn) MikuFmService.stop(ctx) else MikuFmService.start(ctx)
-                },
+                .glass(
+                    CircleShape, accent = MikuCyan, accent2 = MikuPink,
+                    fill = if (isPowerOn) Color.Transparent else Color(0xC00A1E26),
+                    rimAlpha = if (isPowerOn) 1f else 0.5f, rimWidth = 1.5.dp, shine = 1.6f,
+                )
+                .pressable { if (isPowerOn) MikuFmService.stop(ctx) else MikuFmService.start(ctx) },
             contentAlignment = Alignment.Center
         ) {
             Icon(
-                Icons.Default.PowerSettingsNew, "Power",
-                tint = if (st.isPowerOn) Color.Black else MikuTextSecondary,
-                modifier = Modifier.size(24.dp)
+                Icons.Default.PowerSettingsNew, if (isPowerOn) "Turn the radio off" else "Turn the radio on",
+                tint = if (isPowerOn) Color.Black else MikuTextSecondary, modifier = Modifier.size(26.dp)
             )
         }
 
-        CyberIconButton(Icons.Default.KeyboardArrowRight, "Step up", 36.dp, false) { FmRadioManager.step(true) }
-        CyberIconButton(Icons.Default.FastForward, "Seek up", 42.dp, false) { FmRadioManager.seek(true) }
+        CyberIconButton(Icons.AutoMirrored.Filled.KeyboardArrowRight, "Step up", 40.dp, false) { FmRadioManager.step(true) }
+        CyberIconButton(Icons.Default.FastForward, "Seek up", 46.dp, false) { FmRadioManager.seek(true) }
     }
 }
 
-// ---------------------------------------------------------------------------- volume
-
-/*
- * The volume row used to live here, between the transport and the tool rows.
- *
- * Removed: the M500 has a hardware volume wheel, which is a better control than a 4 mm slider
- * on a 720 px screen and is the one you reach for anyway. The engine still tracks STREAM_MUSIC
- * and pushes the matching linear gain to the HAL on every change, so the wheel drives FM volume
- * exactly as it drives everything else. Mute stayed, as a button in the tool row.
- */
-
 // ---------------------------------------------------------------------------- tools
 
-@OptIn(ExperimentalFoundationApi::class)
+/*
+ * The volume row used to live here, between the transport and the tool rows. Removed: the M500
+ * has a hardware volume wheel, which is a better control than a 4 mm slider on a 720 px screen.
+ * The keypad key that used to sit in this row is gone too; the dial card has one beside the
+ * frequency, which is where you look when you want to type one. Its slot went to song ID.
+ */
 @Composable
 private fun FmToolRow(
-    st: FmState,
+    stereoRequested: Boolean,
+    isScanning: Boolean,
+    isRecording: Boolean,
+    recordedBytes: Long,
+    songId: FmSongId.State,
+    hasScanResults: Boolean,
     onScan: () -> Unit,
-    onResults: () -> Unit,
+    onStations: () -> Unit,
     onRecord: () -> Unit,
-    onKeypad: () -> Unit,
+    onSongHistory: () -> Unit,
 ) {
     Row(
-        Modifier.fillMaxWidth().padding(horizontal = 6.dp),
+        Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceEvenly,
         verticalAlignment = Alignment.CenterVertically
     ) {
         CyberIconButton(
-            if (st.stereoRequested) Icons.Default.Headphones else Icons.Default.HearingDisabled,
-            if (st.stereoRequested) "Stereo requested" else "Mono", 38.dp, st.stereoRequested
-        ) { FmRadioManager.setStereo(!st.stereoRequested) }
+            if (stereoRequested) Icons.Default.Headphones else Icons.Default.HearingDisabled,
+            if (stereoRequested) "Stereo requested" else "Mono", 42.dp, stereoRequested
+        ) { FmRadioManager.setStereo(!stereoRequested) }
 
         CyberIconButton(
-            if (st.isScanning) Icons.Default.Close else Icons.Default.Search,
-            if (st.isScanning) "Stop the scan" else "Scan the band", 38.dp, st.isScanning, onScan
+            if (isScanning) Icons.Default.Close else Icons.Default.Search,
+            if (isScanning) "Stop the scan" else "Scan the band", 42.dp, isScanning, onScan
         )
 
-        FmRecordButton(isRecording = st.isRecording, onClick = onRecord)
+        SongIdButton(songId, onHistory = onSongHistory, modifier = Modifier.widthIn(min = 104.dp))
 
-        CyberIconButton(
-            Icons.Default.FormatListBulleted, "Stations found", 38.dp,
-            st.scanResults.isNotEmpty(), onResults
-        )
+        FmRecordButton(isRecording = isRecording, onClick = onRecord)
 
-        CyberIconButton(Icons.Default.Dialpad, "Tune directly", 38.dp, false, onKeypad)
+        CyberIconButton(Icons.AutoMirrored.Filled.FormatListBulleted, "Stations", 42.dp, hasScanResults, onStations)
     }
-    if (st.isRecording) {
-        val seconds = st.recordedBytes / (48000 * 2 * 2)
+    if (isRecording) {
+        val seconds = recordedBytes / (48000 * 2 * 2)
         Text(
-            "REC %d:%02d · %.1f MB".format(seconds / 60, seconds % 60, st.recordedBytes / 1_048_576.0),
+            "REC %d:%02d · %.1f MB".format(seconds / 60, seconds % 60, recordedBytes / 1_048_576.0),
             color = Color(0xFFFF5252), fontSize = 7.5.sp, fontFamily = AudiowideFont
         )
     }
@@ -467,8 +483,7 @@ private fun FmToolRow(
 private fun FmScanOverlay(st: FmState) {
     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         Column(
-            Modifier.clip(RoundedCornerShape(12.dp)).background(Color(0xEE02090D))
-                .border(1.dp, MikuCyan, RoundedCornerShape(12.dp))
+            Modifier.glass(RoundedCornerShape(14.dp), accent = MikuCyan, fill = Color(0xEE02090D), rimAlpha = 0.9f)
                 .padding(horizontal = 16.dp, vertical = 10.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
@@ -483,81 +498,6 @@ private fun FmScanOverlay(st: FmState) {
             Spacer(Modifier.height(5.dp))
             Text("${st.scanResults.size} found · tap the scan key to stop",
                 color = MikuTextSecondary, fontSize = 8.sp)
-        }
-    }
-}
-
-// ---------------------------------------------------------------------------- presets
-
-/**
- * Two tiers of quick select.
- *
- * Filled chips are the user's own, locked and permanent. Outlined chips are what the station
- * catalogue says is licensed within reach of wherever the device currently is — they follow
- * you, appear without being asked for, and are gone when you move. Tap either to tune; tap the
- * star on a predicted one to lock it into the permanent row.
- *
- * The predicted tier is not a promise. It is transmitter power and height against distance,
- * with no terrain in it, which in a hollow is an upper bound rather than a forecast.
- */
-@OptIn(ExperimentalFoundationApi::class)
-@Composable
-private fun FmPresetRow(st: FmState) {
-    val predicted = st.nearbyStations
-        .filter { it.khz !in st.favorites }
-        .distinctBy { it.khz }
-        .take(14)
-
-    if (st.favorites.isEmpty() && predicted.isEmpty()) {
-        Text(
-            if (st.listenerPlace == null)
-                "No presets yet — tap ☆ to save a station. Local stations appear once the device knows where it is."
-            else "No presets yet — tap ☆ to save the current station",
-            color = MikuTextSecondary, fontSize = 8.sp, fontFamily = AudiowideFont,
-            modifier = Modifier.padding(vertical = 2.dp), maxLines = 2
-        )
-        return
-    }
-
-    LazyRow(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(5.dp)) {
-        items(predicted) { stn ->
-            val current = st.frequencyKHz == stn.khz
-            Box(
-                Modifier.clip(RoundedCornerShape(9.dp))
-                    .background(Color(0x1100E5FF))
-                    .border(1.dp, if (current) MikuCyan else MikuTeal.copy(alpha = 0.55f),
-                            RoundedCornerShape(9.dp))
-                    .combinedClickable(
-                        onClick = { FmRadioManager.tune(stn.khz) },
-                        onLongClick = { FmRadioManager.togglePreset(stn.khz) }
-                    )
-                    .padding(horizontal = 7.dp, vertical = 3.dp)
-            ) {
-                Column {
-                    Text(stn.call, color = if (current) MikuCyan else MikuTeal,
-                         fontSize = 8.sp, fontWeight = FontWeight.Bold, fontFamily = AudiowideFont)
-                    Text("${mhz(stn.khz)} · ${stn.distanceKm.toInt()} km",
-                         color = MikuTextSecondary, fontSize = 6.5.sp)
-                }
-            }
-        }
-        items(st.favorites) { freq ->
-            val current = st.frequencyKHz == freq
-            Box(
-                Modifier.clip(RoundedCornerShape(9.dp))
-                    .background(if (current) MikuCyan else Color(0xDD0A1E26))
-                    .border(1.dp, if (current) MikuCyan else CyberGlassBorder, RoundedCornerShape(9.dp))
-                    .combinedClickable(
-                        onClick = { FmRadioManager.tune(freq) },
-                        onLongClick = { FmRadioManager.togglePreset(freq) }
-                    )
-                    .padding(horizontal = 7.dp, vertical = 3.dp)
-            ) {
-                Text(
-                    mhz(freq), color = if (current) Color.Black else Color.White,
-                    fontSize = 9.sp, fontWeight = FontWeight.Bold, fontFamily = AudiowideFont
-                )
-            }
         }
     }
 }
@@ -603,7 +543,6 @@ private fun FmGesturePill(ctx: Context) {
     }
 }
 
-
 @Composable
 private fun FmVolumeHud(level: Int) {
     var visible by remember { mutableStateOf(false) }
@@ -617,21 +556,16 @@ private fun FmVolumeHud(level: Int) {
     if (!visible) return
     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         Column(
-            Modifier.clip(RoundedCornerShape(14.dp)).background(Color(0xEE02090D))
-                .border(1.dp, MikuCyan, RoundedCornerShape(14.dp))
+            Modifier.glass(RoundedCornerShape(16.dp), accent = MikuCyan, fill = Color(0xEE02090D), rimAlpha = 0.9f)
                 .padding(horizontal = 20.dp, vertical = 12.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Text("TUNER VOLUME", color = MikuTextSecondary, fontSize = 7.5.sp,
-                 fontFamily = AudiowideFont)
+            Text("TUNER VOLUME", color = MikuTextSecondary, fontSize = 7.5.sp, fontFamily = AudiowideFont)
             Spacer(Modifier.height(5.dp))
-            Text("$level", color = MikuCyan, fontSize = 26.sp, fontWeight = FontWeight.Black,
-                 fontFamily = AudiowideFont)
+            Text("$level", color = MikuCyan, fontSize = 26.sp, fontWeight = FontWeight.Black, fontFamily = AudiowideFont)
             Spacer(Modifier.height(6.dp))
-            Box(Modifier.width(150.dp).height(4.dp).clip(RoundedCornerShape(2.dp))
-                    .background(Color(0x3300E5FF))) {
-                Box(Modifier.fillMaxWidth(level / 100f).fillMaxHeight()
-                        .clip(RoundedCornerShape(2.dp)).background(MikuCyan))
+            Box(Modifier.width(150.dp).height(4.dp).clip(RoundedCornerShape(2.dp)).background(Color(0x3300E5FF))) {
+                Box(Modifier.fillMaxWidth(level / 100f).fillMaxHeight().clip(RoundedCornerShape(2.dp)).background(MikuCyan))
             }
             Spacer(Modifier.height(4.dp))
             Text("independent of media volume", color = MikuTextSecondary, fontSize = 7.sp)
@@ -639,29 +573,32 @@ private fun FmVolumeHud(level: Int) {
     }
 }
 
-
 /**
  * LIVE | BAND. BAND sweeps the whole band over and over while it is selected, and the radio is
  * muted for each sweep (one chip, one frequency at a time), so it says so on the chip.
  */
 @Composable
-private fun FmViewModeChips(st: FmState, modifier: Modifier = Modifier) {
+private fun FmViewModeChips(mode: QualcommFmHardwareEngine.ViewMode, modifier: Modifier = Modifier) {
     Row(modifier, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
         for (m in QualcommFmHardwareEngine.ViewMode.values()) {
-            val on = st.viewMode == m
-            Text(
-                when (m) {
-                    QualcommFmHardwareEngine.ViewMode.LIVE -> "LIVE"
-                    QualcommFmHardwareEngine.ViewMode.BAND -> if (on) "BAND · SCANNING" else "BAND"
-                },
-                color = if (on) Color.Black else MikuTeal,
-                fontSize = 8.sp, fontWeight = FontWeight.Bold, fontFamily = AudiowideFont,
-                modifier = Modifier
-                    .clip(RoundedCornerShape(6.dp))
-                    .background(if (on) MikuTeal else Color(0xCC03141B))
-                    .clickable { FmRadioManager.setViewMode(m) }
-                    .padding(horizontal = 6.dp, vertical = 3.dp)
-            )
+            val on = mode == m
+            Box(
+                Modifier.heightIn(min = 30.dp)
+                    .glass(RoundedCornerShape(8.dp), accent = MikuTeal, fill = if (on) MikuTeal else Color(0xCC03141B),
+                           rimAlpha = if (on) 1f else 0.5f, shine = if (on) 1.2f else 0.6f)
+                    .pressable { FmRadioManager.setViewMode(m) }
+                    .padding(horizontal = 10.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    when (m) {
+                        QualcommFmHardwareEngine.ViewMode.LIVE -> "LIVE"
+                        QualcommFmHardwareEngine.ViewMode.BAND -> if (on) "BAND · SCANNING" else "BAND"
+                    },
+                    color = if (on) Color.Black else MikuTeal,
+                    fontSize = 8.sp, fontWeight = FontWeight.Bold, fontFamily = AudiowideFont,
+                )
+            }
         }
     }
 }

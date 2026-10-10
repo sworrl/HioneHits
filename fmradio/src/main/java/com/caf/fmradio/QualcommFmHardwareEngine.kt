@@ -149,8 +149,10 @@ class QualcommFmHardwareEngine(private val context: Context) {
         private const val FM_DEVICE_PATH = "/dev/radio0"
         private const val AUDIO_SOURCE_RADIO_TUNER = 1998 // MediaRecorder.AudioSource.RADIO_TUNER
         const val ACTION_DEBUG = "com.caf.fmradio.action.DEBUG"
-        const val SPECTRUM_BINS = 48
-        private const val SPECTRUM_FRAMES = 1024
+        /** Display bins of the live spectrum; FmFft's default, which the UI also sizes by. */
+        const val SPECTRUM_BINS = 256
+        /** How often a new spectrum frame goes to the UI: 25 fps. */
+        private const val SPECTRUM_PUBLISH_MS = 40L
         private const val SPECTRUM_LOW_HZ = 60.0
         private const val SPECTRUM_HIGH_HZ = 15000.0
 
@@ -175,6 +177,9 @@ class QualcommFmHardwareEngine(private val context: Context) {
          */
         const val SWEEP_SETTLE_MS = 60L
 
+        /** Nearby full-power stations to fetch terrain for, beyond the presets. */
+        private const val TERRAIN_PREFETCH = 12
+
         /** Sweeps kept for the waterfall underneath the live trace. */
         const val SWEEP_HISTORY = 24
 
@@ -193,6 +198,14 @@ class QualcommFmHardwareEngine(private val context: Context) {
 
         /** Re-arm RDS (poll the node) after this long without a group. */
         private const val RDS_REARM_MS = 1000L
+        /**
+         * How often to ask the chip for a group while none are arriving. Each ask is an I2C
+         * round trip the driver busy-waits for (__const_udelay on CTS), and at the old 80 ms
+         * it was the busiest thread in the app, 20% of a core, on stations with no RDS.
+         */
+        private const val RDS_IDLE_POLL_MS = 400L
+        /** While groups flow: the chip's FIFO fills at ~11 groups/s, so this keeps it drained. */
+        private const val RDS_ACTIVE_POLL_MS = 60L
         /** Tuned this long without one clean group: report no RDS, while still listening. */
         private const val RDS_ABSENT_MS = 10_000L
 
@@ -344,10 +357,71 @@ class QualcommFmHardwareEngine(private val context: Context) {
             catalogueSize.value = FmStationCatalogue.size()
             val svc = if (band.value == FmBandPlan.US) listOf("FM", "FX", "FL") else listOf("FM")
             val list = FmStationCatalogue.near(pos.first, pos.second, services = svc)
-            nearbyStations.value = list
+            rawNearby = list
+            if (prev != null && haversineApproxKm(prev, pos) > 2.0) {
+                // Somewhere else now: a sweep from the old spot says nothing about this one.
+                sweepPlace = null
+                terrainByCall.clear()
+            }
+            weatherRadios.value = FmWeatherRadio.nearest(context, pos.first, pos.second)
+            reannotate()
             Log.i(TAG, "catalogue: ${list.size} station(s) within reach of " +
                 "%.4f,%.4f".format(pos.first, pos.second))
             updateTunedStation()
+            refreshTerrainForList()
+        }
+    }
+
+    /** Catalogue rows for here, before reach annotation; [nearbyStations] is these, annotated. */
+    @Volatile private var rawNearby: List<FmStationCatalogue.Station> = emptyList()
+    /** Where the last band sweep was made; its readings only count near that spot. */
+    @Volatile private var sweepPlace: Pair<Double, Double>? = null
+    /** Terrain profiles from here, by call sign, as they arrive. */
+    private val terrainByCall = java.util.concurrent.ConcurrentHashMap<String, FmFresnel.Profile>()
+    @Volatile private var terrainListJob: Job? = null
+
+    /** NOAA Weather Radio transmitters near here (reference only; see [FmWeatherRadio]). */
+    val weatherRadios = MutableStateFlow<List<FmWeatherRadio.Transmitter>>(emptyList())
+
+    private fun haversineApproxKm(a: Pair<Double, Double>, b: Pair<Double, Double>): Double {
+        val dLat = (b.first - a.first) * 111.0
+        val dLon = (b.second - a.second) * 111.0 * Math.cos(Math.toRadians(a.first))
+        return Math.sqrt(dLat * dLat + dLon * dLon)
+    }
+
+    /** Re-run the reach verdicts from the catalogue rows, the latest sweep and known terrain. */
+    private fun reannotate() {
+        val plan = band.value
+        val sweep = bandRssi.value.takeIf { it.isNotEmpty() && sweepPlace != null }
+        nearbyStations.value = FmReach.annotate(rawNearby, sweep, plan.lowKHz, plan.stepKHz, HashMap(terrainByCall))
+        tunedStation.value?.let { t -> tunedStation.value = nearbyStations.value.firstOrNull { it.call == t.call } ?: t }
+    }
+
+    /**
+     * Terrain profiles for the presets and the strongest nearby stations, one at a time in the
+     * background, so every chip in the preset bar can show line of sight, not only the tuned
+     * station. Each is one Open-Meteo request the first time and a disk read after that.
+     */
+    private fun refreshTerrainForList() {
+        val pos = FmStationCatalogue.listenerPosition(context) ?: return
+        terrainListJob?.cancel()
+        terrainListJob = scope.launch {
+            val stations = rawNearby
+            val wanted = LinkedHashMap<String, FmStationCatalogue.Station>()
+            for (f in presets.value) {
+                stations.filter { Math.abs(it.khz - f) <= 60 }.maxByOrNull { it.score }?.let { wanted[it.call] = it }
+            }
+            stations.filter { it.service == "FM" }.sortedByDescending { it.score }.take(TERRAIN_PREFETCH)
+                .forEach { wanted.putIfAbsent(it.call, it) }
+            var got = 0
+            for (st in wanted.values) {
+                if (!isActive) break
+                if (terrainByCall.containsKey(st.call)) continue
+                val p = runCatching { FmFresnel.profile(context, pos.first, pos.second, st) }.getOrNull() ?: continue
+                terrainByCall[st.call] = p
+                if (++got % 3 == 0) reannotate()
+            }
+            if (got > 0) reannotate()
         }
     }
 
@@ -377,7 +451,10 @@ class QualcommFmHardwareEngine(private val context: Context) {
             val p = runCatching { FmFresnel.profile(context, pos.first, pos.second, st) }
                 .onFailure { Log.w(TAG, "terrain profile failed: $it") }
                 .getOrNull()
-            if (isActive) tunedProfile.value = p
+            if (isActive) {
+                tunedProfile.value = p
+                if (p != null && !terrainByCall.containsKey(st.call)) { terrainByCall[st.call] = p; reannotate() }
+            }
         }
     }
 
@@ -433,11 +510,15 @@ class QualcommFmHardwareEngine(private val context: Context) {
 
     /**
      * Live audio spectrum of the FM PCM flowing through the bridge: [SPECTRUM_BINS] log-spaced
-     * bins 60 Hz–15 kHz, each 0..1 (−60 dBFS..0 dBFS). Empty when no audio is flowing. Computed
+     * bins 25 Hz–16 kHz from a 4096-point FFT ([FmFft]), each 0..1 (−90 dBFS..0 dBFS). Empty when no audio is flowing. Computed
      * from the real AudioRecord buffer — this is what the UI waterfall draws, and it is also the
      * honest answer to "is there actually audio": a flat plot means silence, not a dead widget.
      */
     val spectrum = MutableStateFlow(FloatArray(0))
+    /** Peak-hold per display bin, same scale as [spectrum]. */
+    val spectrumPeaks = MutableStateFlow(FloatArray(0))
+    /** Centre frequency of each [spectrum] bin, Hz, log-spaced. Empty until audio has flowed. */
+    val spectrumBinHz = MutableStateFlow(FloatArray(0))
     /** RMS level (0..1) of the same PCM; 0 when nothing flows. */
     val audioLevel = MutableStateFlow(0f)
     /**
@@ -583,6 +664,7 @@ class QualcommFmHardwareEngine(private val context: Context) {
     /** Everything that is only true of the station we just left. */
     private fun onNewStation() {
         updateTunedStation()
+        FmSongId.clear()
         FmRdsReader.newStation()
         FmNowPlaying.newStation()
         rdsTunedAt = SystemClock.elapsedRealtime()
@@ -1249,6 +1331,11 @@ class QualcommFmHardwareEngine(private val context: Context) {
                 runCatching { rx.setStation(startFreq) }
                 if (!wasMuted) FmV4L2.setMute(false)
                 Log.i(TAG, "band sweep: $channels channels, ${hits.size} validated station(s)")
+                FmStationCatalogue.listenerPosition(context)?.let { sweepPlace = it }
+                FmReach.calibrate(rawNearby, hits.map { FmScanHit(it.freqKHz, it.rssi ?: 0, it.snr) }
+                    .filter { (it.rssi ?: 0) >= FmReach.LISTENABLE_DBUV })
+                Log.i(TAG, "reach: offset %.1f dB from %d heard station(s)".format(FmReach.offsetDb, FmReach.calibratedFrom))
+                reannotate()
             }
         }
     }
@@ -1661,6 +1748,8 @@ class QualcommFmHardwareEngine(private val context: Context) {
             audioTrackHelper?.release()
             audioTrackHelper = null
             spectrum.value = FloatArray(0)
+            spectrumPeaks.value = FloatArray(0)
+            fft?.reset()
             audioLevel.value = 0f
             captureFraming.value = null
             Log.d(TAG, "AudioRecord bridge stopped")
@@ -1735,7 +1824,7 @@ class QualcommFmHardwareEngine(private val context: Context) {
                         rdsAvailable.value = false
                     }
                     if (changed) publishRds()
-                    Thread.sleep(if (drained > 0) 40 else 80)
+                    Thread.sleep(if (now - lastGroupAt < 2_000L) RDS_ACTIVE_POLL_MS else RDS_IDLE_POLL_MS)
                 }
             } catch (_: InterruptedException) {
             } catch (e: android.system.ErrnoException) {
@@ -1789,45 +1878,31 @@ class QualcommFmHardwareEngine(private val context: Context) {
     // ------------------------------------------------------------------ live spectrum (real PCM)
 
     private var lastSpectrumMs = 0L
-    private val binFreqs = FloatArray(SPECTRUM_BINS) { i ->
-        (SPECTRUM_LOW_HZ * Math.pow((SPECTRUM_HIGH_HZ / SPECTRUM_LOW_HZ), i.toDouble() / (SPECTRUM_BINS - 1))).toFloat()
-    }
-    private val monoScratch = FloatArray(SPECTRUM_FRAMES)
+    private var fft: FmFft? = null
 
     /**
-     * Goertzel magnitude at [SPECTRUM_BINS] log-spaced frequencies over the first
-     * [SPECTRUM_FRAMES] frames of the 16-bit stereo buffer, ~12 updates/s. Cheap (48 × 1024 MACs)
-     * and computed from the audio that is really being played — nothing synthetic.
+     * Feed one block of decoded mono PCM to the analyser and to song ID.
+     *
+     * The FFT runs on every hop (~47 frames/s at 48 kHz) so its ballistics are smooth, but the
+     * UI is only handed a new frame every [SPECTRUM_PUBLISH_MS]: each publish is a recomposition
+     * and a redraw, and the screen was already dropping 4 frames in 10 at the old rate.
      */
     private fun updateSpectrum(samples: ShortArray, count: Int, sampleRate: Int) {
         val now = android.os.SystemClock.elapsedRealtime()
-        if (now - lastSpectrumMs < 80) return
-        val frames = minOf(count, SPECTRUM_FRAMES)
-        if (frames < 256) return
-        lastSpectrumMs = now
+        FmSongId.offer(samples, count, 1, sampleRate)
+        val f = fft?.takeIf { it.sampleRateHz == sampleRate } ?: FmFft(sampleRate).also {
+            fft = it
+            spectrumBinHz.value = it.binHz.copyOf()
+            spectrumTopHz.value = it.topHz.toInt()
+        }
+        val produced = f.feed(samples, count, 1, now)
         var sumSq = 0.0
-        for (i in 0 until frames) {
-            val m = samples[i] / 32768f
-            monoScratch[i] = m; sumSq += (m * m).toDouble()
-        }
-        // Bins above Nyquist cannot be measured, so they are not drawn rather than drawn as
-        // zero: the UI reads spectrumTopHz to know how far the plot is real.
-        val nyquist = sampleRate / 2
-        spectrumTopHz.value = minOf(SPECTRUM_HIGH_HZ, nyquist.toDouble()).toInt()
-        val out = FloatArray(SPECTRUM_BINS)
-        for (b in 0 until SPECTRUM_BINS) {
-            if (binFreqs[b] >= nyquist) { out[b] = 0f; continue }
-            val w = 2.0 * Math.PI * binFreqs[b] / sampleRate
-            val coeff = 2.0 * Math.cos(w)
-            var s1 = 0.0; var s2 = 0.0
-            for (i in 0 until frames) { val s0 = monoScratch[i] + coeff * s1 - s2; s2 = s1; s1 = s0 }
-            val power = s1 * s1 + s2 * s2 - coeff * s1 * s2
-            val mag = Math.sqrt(maxOf(power, 0.0)) * 2.0 / frames        // ≈ amplitude, 0..1
-            val db = 20.0 * Math.log10(maxOf(mag, 1e-6))
-            out[b] = ((db + 60.0) / 60.0).toFloat().coerceIn(0f, 1f)     // −60 dBFS..0 dBFS → 0..1
-        }
-        spectrum.value = out
-        audioLevel.value = Math.sqrt(sumSq / frames).toFloat().coerceIn(0f, 1f)
+        for (i in 0 until count) { val m = samples[i] / 32768.0; sumSq += m * m }
+        audioLevel.value = Math.sqrt(sumSq / maxOf(1, count)).toFloat().coerceIn(0f, 1f)
+        if (!produced || now - lastSpectrumMs < SPECTRUM_PUBLISH_MS) return
+        lastSpectrumMs = now
+        spectrum.value = f.level.copyOf()
+        spectrumPeaks.value = f.peak.copyOf()
     }
 
     // ------------------------------------------------------------------ recording
@@ -1851,6 +1926,23 @@ class QualcommFmHardwareEngine(private val context: Context) {
         val f = wav.stop()
         reconcileCapture()
         return f
+    }
+
+    /**
+     * Identify the song playing, from the last few seconds of the radio's own audio. Needs the
+     * siphon (or the A2DP bridge) carrying real audio; FmSongId says so when it is not.
+     */
+    fun identifySong() {
+        val st = FmSongId.state.value.phase
+        if (st == FmSongId.Phase.LISTENING || st == FmSongId.Phase.MATCHING) return
+        val freq = currentFrequencyKHz.value
+        scope.launch(Dispatchers.IO) {
+            FmSongId.identify(freq) { spectrum.value.isNotEmpty() }
+            FmSongId.state.value.match?.takeIf { it.atMs > System.currentTimeMillis() - 5_000 }?.let { m ->
+                FmNowPlaying.offer(context, stationName.value.ifBlank { "FM" }, "%.1f".format(freq / 1000.0),
+                    m.artist, m.title, "", isStereo.value)
+            }
+        }
     }
 
     fun isRecording(): Boolean = wav.isRecording()
@@ -1909,6 +2001,16 @@ class QualcommFmHardwareEngine(private val context: Context) {
                             // Stock always re-issues the frequency straight after this.
                             FmV4L2.setTunedKHz(currentFrequencyKHz.value)
                             Log.i(TAG, "setV4L2RadioChannelMode($m) accepted=$ok readback=${FmV4L2.channelMode()}")
+                        }
+                        // Tune the chip directly, past the band plan, to find what it really
+                        // accepts: am broadcast ... --es cmd rawtune --ei freq 76000
+                        "rawtune" -> {
+                            val f = intent.getIntExtra("freq", currentFrequencyKHz.value)
+                            scope.launch(tunerDispatcher) {
+                                val ok = FmV4L2.setTunedKHz(f)
+                                delay(250)
+                                Log.i(TAG, "rawtune $f kHz: accepted=$ok driverFreq=${FmV4L2.tunedKHz()} signal=${FmV4L2.signal()}")
+                            }
                         }
                         "retune" -> {
                             val f = currentFrequencyKHz.value
