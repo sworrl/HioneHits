@@ -1372,11 +1372,14 @@ private fun App(tracks: List<Track>, player: ExoPlayer, loading: Boolean = false
                     when (r) {
                     is ContentRoute.Album -> DetailList(r.group.name, r.group.tracks, { albumSel = null }, ::startPlay, likeAlbum = r.group.name, onOpenArtist = openArtistByName)
                     is ContentRoute.Artist -> ArtistDetail(r.group, { artistSel = null }, { albumSel = it }, ::startPlay, listState = artistDetailListState)
-                    is ContentRoute.Lib -> {
+                    is ContentRoute.Lib -> if (r.name == com.miku.player.wanted.WANTED_LIB_KEY) {
+                        com.miku.player.wanted.WantedScreen(tracks, onBack = { libSel = null }, onPlay = ::startPlay)
+                    } else {
                         val isLiked = r.name == LIKED_KEY
                         val libTracks = if (isLiked) LikeStore.resolveLiked(ctx, tracks)
                                         else { val ids = PlayerPreferences.loadPlaylists(ctx)[r.name]?.toSet() ?: emptySet(); tracks.filter { it.id in ids } }
-                        DetailList(if (isLiked) "Liked Songs" else r.name, libTracks, { libSel = null }, ::startPlay, onOpenArtist = openArtistByName)
+                        DetailList(if (isLiked) "Liked Songs" else r.name, libTracks, { libSel = null }, ::startPlay, onOpenArtist = openArtistByName,
+                            footer = if (isLiked) { { com.miku.player.wanted.WantedNotInLibrarySection(onOpenAll = { libSel = com.miku.player.wanted.WANTED_LIB_KEY }) } } else null)
                     }
                     ContentRoute.Videos -> VideoLibraryScreen(videos, onOpen = { videoSel = it }, onClose = { showVideoLibrary = false })
                     is ContentRoute.TabPage -> when (r.tab) {
@@ -4413,7 +4416,8 @@ private fun ArtistSortSettingsModal(
     onPlay: (List<Track>, Int) -> Unit,
     likeAlbum: String? = null,
     onOpenArtist: ((String) -> Unit)? = null,
-    listState: LazyListState = rememberLazyListState()
+    listState: LazyListState = rememberLazyListState(),
+    footer: (@Composable () -> Unit)? = null
 ) {
     val ctx = LocalContext.current
     val sortedTracks = remember(tracks) { sortAlbumTracks(tracks) }
@@ -4610,6 +4614,7 @@ private fun ArtistSortSettingsModal(
         items(sortedTracks.size, key = { sortedTracks[it].id }, contentType = { "track" }) { i ->
             TrackRow(sortedTracks[i], showTrackNumber = true) { onPlay(sortedTracks, i) }
         }
+        if (footer != null) item(key = "detail_footer") { footer() }
     }
 }
 
@@ -7408,6 +7413,7 @@ object TransportShapes {
         // "browse everything" is the most-used entry point into a library screen.
         item { LibRow(Icons.Default.MusicNote, "All Songs", "$trackCount tracks", MikuTealBright, onAllSongs) }
         item { LibRow(Icons.Default.Favorite, "Liked Songs", "${liked.size} songs", MikuPink) { onOpen(LIKED_KEY) } }
+        item { com.miku.player.wanted.WantedLibRow { onOpen(com.miku.player.wanted.WANTED_LIB_KEY) } }
         if (videoCount > 0) item { LibRow(Icons.Default.Movie, "Videos", "$videoCount videos", MikuGold, onVideos) }
         items(playlists.keys.toList(), key = { it }) { name ->
             LibRow(Icons.Default.QueueMusic, name, "${playlists[name]?.size ?: 0} songs", MikuTeal) { onOpen(name) }

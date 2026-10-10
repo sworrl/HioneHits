@@ -262,6 +262,9 @@ fun MikuWeatherObservatoryModal(
 
                     Spacer(Modifier.height(8.dp))
 
+                    // Live NWS alerts + nearest NOAA Weather Radio (MikuWeatherAlertsPanel.kt).
+                    MikuWeatherAlertsPanel(Modifier.padding(bottom = 6.dp))
+
                     when (selectedTab) {
                         0 -> {
                             // TAB 0: HIGH-DENSITY OBSERVATORY OVERVIEW (No scrolling needed)

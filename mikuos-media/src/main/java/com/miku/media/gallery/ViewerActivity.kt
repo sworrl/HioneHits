@@ -14,6 +14,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import com.miku.media.ui.MikuSounds
 import com.miku.media.ui.MikuTheme
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -37,6 +38,7 @@ class ViewerActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        MikuSounds.preload(this, "gallery")
         val i = intent
         val secure = i.action == ACTION_REVIEW_SECURE || i.getBooleanExtra(EXTRA_SECURE, false)
         if (secure) {

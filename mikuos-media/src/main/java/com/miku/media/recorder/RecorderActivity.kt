@@ -47,6 +47,7 @@ import androidx.compose.material.icons.rounded.Mic
 import androidx.compose.material.icons.rounded.Pause
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Refresh
+import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.rounded.Share
 import androidx.compose.material.icons.rounded.Stop
 import androidx.compose.material3.AlertDialog
@@ -89,6 +90,8 @@ import com.miku.media.ui.LabelStyle
 import com.miku.media.ui.MessagePane
 import com.miku.media.ui.MikuDanger
 import com.miku.media.ui.MikuHeader
+import com.miku.media.ui.MikuSounds
+import com.miku.media.ui.SoundSettingsSheet
 import com.miku.media.ui.MikuMuted
 import com.miku.media.ui.MikuPink
 import com.miku.media.ui.MikuSurface1
@@ -174,6 +177,8 @@ private fun RecorderApp(request: RecRequest?, onReturn: (Uri?) -> Unit) {
     val result = if (request != null && state.savedSeq > seqAtOpen) state.lastSaved else null
 
     val idle = state.status == RecStatus.IDLE
+    var showSettings by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) { MikuSounds.preload(ctx, "recorder") }
 
     LaunchedEffect(state.error) {
         state.error?.let { Toast.makeText(ctx, it, Toast.LENGTH_LONG).show() }
@@ -185,6 +190,7 @@ private fun RecorderApp(request: RecRequest?, onReturn: (Uri?) -> Unit) {
         onReturn(null)
     }
 
+    Box(Modifier.fillMaxSize()) {
     Column(Modifier.fillMaxSize().mikuBackground().statusBarsPadding().navigationBarsPadding()) {
         MikuHeader(
             title = "Recorder",
@@ -192,7 +198,8 @@ private fun RecorderApp(request: RecRequest?, onReturn: (Uri?) -> Unit) {
             leading = if (request != null) ({ BareIconButton(Icons.Rounded.Close, "Cancel") {
                 if (!idle) RecorderService.send(ctx, RecorderService.ACTION_DISCARD)
                 onReturn(null)
-            } }) else null
+            } }) else null,
+            actions = { BareIconButton(Icons.Rounded.Settings, "Sound settings") { showSettings = true } }
         )
 
         if (!canRecord) {
@@ -227,6 +234,7 @@ private fun RecorderApp(request: RecRequest?, onReturn: (Uri?) -> Unit) {
                 when (state.status) {
                     RecStatus.RECORDING -> state.description
                     RecStatus.PAUSED -> "Paused"
+                    RecStatus.ARMING -> "Get ready"
                     RecStatus.IDLE -> if (format == RecFormat.WAV) "WAV, 48 kHz, best quality the mic allows" else format.label
                 },
                 style = LabelStyle
@@ -275,7 +283,7 @@ private fun RecorderApp(request: RecRequest?, onReturn: (Uri?) -> Unit) {
                     }
                 }
                 Box(Modifier.size(56.dp)) {
-                    if (!idle) {
+                    if (!idle && state.status != RecStatus.ARMING) {
                         val paused = state.status == RecStatus.PAUSED
                         GlassIconButton(if (paused) Icons.Rounded.Mic else Icons.Rounded.Pause, if (paused) "Resume" else "Pause", size = 56.dp) {
                             RecorderService.send(ctx, if (paused) RecorderService.ACTION_RESUME else RecorderService.ACTION_PAUSE)
@@ -288,6 +296,10 @@ private fun RecorderApp(request: RecRequest?, onReturn: (Uri?) -> Unit) {
         if (request == null) {
             RecordingList(Modifier.weight(1f))
         }
+    }
+    if (showSettings) {
+        SoundSettingsSheet("recorder", "Recorder", "recording_started", showTimerCue = false) { showSettings = false }
+    }
     }
 }
 

@@ -144,6 +144,7 @@ fun ViewerScreen(
         val gone = pendingDelete
         pendingDelete = null
         if (r.resultCode == Activity.RESULT_OK && gone != null) {
+            MediaActions.deletedCue()
             items = items.filterNot { it.uri == gone.uri }
             if (items.isEmpty()) onClose()
         }

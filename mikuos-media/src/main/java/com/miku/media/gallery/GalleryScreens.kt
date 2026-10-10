@@ -38,6 +38,7 @@ import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.PhotoCamera
 import androidx.compose.material.icons.rounded.PhotoLibrary
 import androidx.compose.material.icons.rounded.PlayArrow
+import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.rounded.Share
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -71,6 +72,8 @@ import com.miku.media.ui.LabelStyle
 import com.miku.media.ui.MediaPerms
 import com.miku.media.ui.MessagePane
 import com.miku.media.ui.MikuHeader
+import com.miku.media.ui.MikuSounds
+import com.miku.media.ui.SoundSettingsSheet
 import com.miku.media.ui.MikuPink
 import com.miku.media.ui.MikuSurface2
 import com.miku.media.ui.MikuTeal
@@ -94,7 +97,11 @@ fun GalleryApp(mode: GalleryMode, onPicked: (List<Uri>) -> Unit) {
     val multiPick = (mode as? GalleryMode.Pick)?.multiple == true
 
     val gate = rememberPermissionGate(MediaPerms.visual)
-    LaunchedEffect(Unit) { if (!MediaPerms.anyVisual(ctx)) gate.request() }
+    LaunchedEffect(Unit) {
+        MikuSounds.preload(ctx, "gallery")
+        if (!MediaPerms.anyVisual(ctx)) gate.request()
+    }
+    var showSettings by remember { mutableStateOf(false) }
 
     var items by remember { mutableStateOf<List<MediaItem>?>(null) }
     var reload by remember { mutableIntStateOf(0) }
@@ -109,7 +116,10 @@ fun GalleryApp(mode: GalleryMode, onPicked: (List<Uri>) -> Unit) {
     var selected by remember { mutableStateOf<Set<Long>>(emptySet()) }
 
     val deleter = rememberLauncherForActivityResult(ActivityResultContracts.StartIntentSenderForResult()) { r ->
-        if (r.resultCode == Activity.RESULT_OK) selected = emptySet()
+        if (r.resultCode == Activity.RESULT_OK) {
+            selected = emptySet()
+            MediaActions.deletedCue()
+        }
     }
 
     val all = items
@@ -169,6 +179,7 @@ fun GalleryApp(mode: GalleryMode, onPicked: (List<Uri>) -> Unit) {
                             BareIconButton(Icons.Rounded.PhotoCamera, "Open camera", tint = MikuTeal) {
                                 ctx.startActivity(android.content.Intent(ctx, CameraActivity::class.java))
                             }
+                            BareIconButton(Icons.Rounded.Settings, "Sound settings") { showSettings = true }
                         }
                     }
                 )
@@ -219,6 +230,9 @@ fun GalleryApp(mode: GalleryMode, onPicked: (List<Uri>) -> Unit) {
 
         viewer?.let { (list, idx) ->
             ViewerScreen(list, idx, secure = false, onClose = { viewer = null })
+        }
+        if (showSettings) {
+            SoundSettingsSheet("gallery", "Gallery", "wallpaper_set", showTimerCue = false) { showSettings = false }
         }
     }
 }

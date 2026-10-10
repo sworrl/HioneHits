@@ -250,6 +250,9 @@ fun MikuWeatherTile(modifier: Modifier = Modifier, onOpenObservatory: (() -> Uni
             }
         }
 
+        // ---- NWS alert / nearest NOAA weather radio (MikuWeatherAlertsPanel.kt) ----------
+        com.miku.launcher.weather.MikuWeatherAlertTileLine()
+
         // ---- Miku mood / honest status line ---------------------------------------------
         Spacer(Modifier.height(5.dp))
         val status = when {

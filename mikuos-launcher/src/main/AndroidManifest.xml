@@ -42,6 +42,8 @@
     <uses-permission android:name="android.permission.CHANGE_WIFI_STATE" />
     <!-- Haptic feedback (BPM tap-tempo orb + UI ticks). -->
     <uses-permission android:name="android.permission.VIBRATE" />
+    <!-- Severe/extreme NWS weather alert notifications (weather/MikuNwsAlerts). -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <!-- ActivityManager.moveTaskToFront (bring launcher/app forward). -->
     <uses-permission android:name="android.permission.REORDER_TASKS" />
     <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES" />

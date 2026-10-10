@@ -1,4 +1,6 @@
 import java.util.Properties
+import groovy.json.JsonOutput
+import groovy.json.JsonSlurper
 
 plugins {
     id("com.android.application")
@@ -97,6 +99,12 @@ android {
         compose = true
     }
 
+    // Sound assets are opened with openFd() for SoundPool and MediaPlayer, which only works on
+    // stored (uncompressed) entries. AGP already stores .ogg; this keeps it explicit.
+    androidResources {
+        noCompress += "ogg"
+    }
+
     lint {
         disable += setOf("ProtectedPermissions", "MissingPermission", "UnsafeOptInUsageError")
         abortOnError = false
@@ -108,6 +116,84 @@ android {
                 outputFileName = "MikuMedia.apk"
             }
         }
+    }
+}
+
+/**
+ * Copies the camera, recorder and gallery subset of the MikuOS sound library into the APK's
+ * assets at build time, with an index trimmed to just those rows.
+ *
+ * mikuos/data stays the single source of truth: regenerate a clip there and the next build picks
+ * it up. Only the files this app uses are declared as inputs, so the 100+ other clips and the
+ * radio station database are neither copied nor hashed. If the mikuos checkout is not next to
+ * this repo, the task writes an empty asset dir and the app runs silent rather than failing.
+ */
+abstract class MikuSoundsTask : DefaultTask() {
+    @get:InputFiles
+    @get:PathSensitive(PathSensitivity.RELATIVE)
+    abstract val sources: ConfigurableFileCollection
+
+    @get:Internal
+    abstract val dataDir: DirectoryProperty
+
+    @get:Input
+    abstract val apps: ListProperty<String>
+
+    @get:OutputDirectory
+    abstract val outputDir: DirectoryProperty
+
+    @TaskAction
+    fun run() {
+        val out = outputDir.get().asFile
+        out.deleteRecursively()
+        val root = File(out, "sounds").apply { mkdirs() }
+        val data = dataDir.get().asFile
+        val indexFile = File(data, "sounds_index.json")
+        if (!indexFile.exists()) {
+            logger.warn("mikuos-media: ${indexFile} not found, building without sounds")
+            return
+        }
+        @Suppress("UNCHECKED_CAST")
+        val index = JsonSlurper().parse(indexFile) as Map<String, Any?>
+        val keep = apps.get().toSet()
+        fun rows(key: String) = (index[key] as? List<*>).orEmpty().filterIsInstance<Map<String, Any?>>().filter { it["app"] in keep }
+        val voice = rows("voice")
+        val sfx = rows("sfx")
+        val paths = voice.flatMap { (it["files"] as? Map<*, *>).orEmpty().values.map { v -> v.toString() } } +
+            sfx.map { it["file"].toString() }
+        for (rel in paths) {
+            val src = File(data, rel)
+            if (src.exists()) src.copyTo(File(root, rel), overwrite = true)
+            else logger.warn("mikuos-media: missing sound ${rel}")
+        }
+        val trimmed = LinkedHashMap<String, Any?>()
+        trimmed["version"] = index["version"]
+        trimmed["voices"] = index["voices"]
+        trimmed["default_voice"] = index["default_voice"]
+        trimmed["voice"] = voice
+        trimmed["sfx"] = sfx
+        File(root, "sounds_index.json").writeText(JsonOutput.toJson(trimmed))
+    }
+}
+
+val mikuSoundsData = rootProject.layout.projectDirectory.dir("../mikuos/data")
+val mikuSoundApps = listOf("camera", "recorder", "gallery")
+val copyMikuSounds = tasks.register<MikuSoundsTask>("copyMikuSounds") {
+    dataDir.set(mikuSoundsData)
+    apps.set(mikuSoundApps)
+    val d = mikuSoundsData.asFile
+    sources.from(File(d, "sounds_index.json").takeIf { it.exists() } ?: emptyList<File>())
+    mikuSoundApps.forEach { app ->
+        sources.from(fileTree(File(d, "sfx/$app")).matching { include("*.ogg") })
+        listOf("mirai", "hoshi", "cyber").forEach { v -> sources.from(fileTree(File(d, "voice/$v/app/$app")).matching { include("*.ogg") }) }
+    }
+    // No outputDir here: addGeneratedSourceDirectory below assigns one per variant
+    // (build/generated/assets/copyMikuSounds/<variant>) and wires the task into the merge.
+}
+
+androidComponents {
+    onVariants { variant ->
+        variant.sources.assets?.addGeneratedSourceDirectory(copyMikuSounds, MikuSoundsTask::outputDir)
     }
 }
 

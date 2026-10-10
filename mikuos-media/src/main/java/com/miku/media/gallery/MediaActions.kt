@@ -14,6 +14,7 @@ import android.provider.OpenableColumns
 import android.util.Size
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
+import com.miku.media.ui.MikuSounds
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlin.math.max
@@ -53,6 +54,12 @@ object MediaActions {
         val ms = uris.filter { isMediaStore(it) }
         if (ms.isEmpty()) return null
         return MediaStore.createDeleteRequest(ctx.contentResolver, ms).intentSender
+    }
+
+    /** Delete feedback: the swoosh, then "File deleted." when the gallery's lines are on. */
+    fun deletedCue() {
+        MikuSounds.sfx("gallery", "delete")
+        MikuSounds.sayAfter("gallery", "deleted", MikuSounds.sfxDurationMs("gallery", "delete") / 2)
     }
 
     fun openWallpaper(ctx: Context, uri: Uri) {

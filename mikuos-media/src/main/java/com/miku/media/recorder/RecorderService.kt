@@ -18,6 +18,7 @@ import android.os.SystemClock
 import android.provider.MediaStore
 import android.util.Log
 import com.miku.media.R
+import com.miku.media.ui.MikuSounds
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -33,7 +34,8 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
-enum class RecStatus { IDLE, RECORDING, PAUSED }
+/** ARMING: the file exists and the start cue is playing; the microphone opens when it ends. */
+enum class RecStatus { IDLE, ARMING, RECORDING, PAUSED }
 
 data class RecUi(
     val status: RecStatus = RecStatus.IDLE,
@@ -101,11 +103,18 @@ class RecorderService : Service() {
     private var pfd: ParcelFileDescriptor? = null
     private var uri: Uri? = null
     private var ticker: Job? = null
+    private var armJob: Job? = null
+    private var resumeJob: Job? = null
     private var wake: PowerManager.WakeLock? = null
     private var startedAt = 0L
     private var accumulated = 0L
 
     override fun onBind(intent: Intent?): IBinder? = null
+
+    override fun onCreate() {
+        super.onCreate()
+        MikuSounds.preload(this, "recorder")
+    }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
@@ -146,20 +155,31 @@ class RecorderService : Service() {
         val onLimit: () -> Unit = { scope.launch { finish(keep = true) } }
         val e = if (format == RecFormat.WAV) WavEngine(fd, maxBytes, onLimit)
         else MediaRecorderEngine(this, fd, format, maxBytes, onLimit)
+        engine = e; pfd = fd; uri = u
+        RecorderBus.clearWave()
+        RecorderBus.state.update { it.copy(status = RecStatus.ARMING, elapsedMs = 0, description = e.description, error = null) }
+        armJob = scope.launch {
+            // The cue plays before the microphone opens, so the chime or "Recording started"
+            // does not end up as the first second of every recording.
+            delay(cueBefore("recording_started", "start"))
+            begin(e, fd, u)
+        }
+    }
+
+    private fun begin(e: RecordingEngine, fd: ParcelFileDescriptor, u: Uri) {
         val ok = runCatching { e.start() }.onFailure { Log.e("MikuRecorder", "start failed", it) }.isSuccess
         if (!ok) {
+            engine = null; pfd = null; uri = null
             runCatching { e.stop() }
             runCatching { fd.close() }
             runCatching { contentResolver.delete(u, null, null) }
             fail("The microphone could not be opened. Another app may be using it.")
             return
         }
-        engine = e; pfd = fd; uri = u
         accumulated = 0; startedAt = SystemClock.elapsedRealtime()
         wake = (getSystemService(POWER_SERVICE) as PowerManager)
             .newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "MikuMedia:recorder").apply { acquire(6 * 60 * 60 * 1000L) }
-        RecorderBus.clearWave()
-        RecorderBus.state.update { it.copy(status = RecStatus.RECORDING, elapsedMs = 0, description = e.description, error = null) }
+        RecorderBus.state.update { it.copy(status = RecStatus.RECORDING, elapsedMs = 0) }
         ticker = scope.launch {
             var n = 0
             while (isActive) {
@@ -185,20 +205,44 @@ class RecorderService : Service() {
         RecorderBus.state.update { it.copy(status = RecStatus.PAUSED, elapsedMs = accumulated) }
         RecorderBus.push(0f)
         notify(RecStatus.PAUSED, accumulated)
+        // After the pause has taken effect, so the cue is not recorded.
+        cueAfter("paused", "pause")
     }
 
     private fun resume() {
         val e = engine ?: return
-        if (RecorderBus.state.value.status != RecStatus.PAUSED) return
-        e.resume()
-        startedAt = SystemClock.elapsedRealtime()
-        RecorderBus.state.update { it.copy(status = RecStatus.RECORDING) }
-        notify(RecStatus.RECORDING, accumulated)
+        if (RecorderBus.state.value.status != RecStatus.PAUSED || resumeJob?.isActive == true) return
+        resumeJob = scope.launch {
+            // Same rule as starting: cue first, then open up again.
+            delay(cueBefore("resumed", "start"))
+            if (engine !== e || RecorderBus.state.value.status != RecStatus.PAUSED) return@launch
+            e.resume()
+            startedAt = SystemClock.elapsedRealtime()
+            RecorderBus.state.update { it.copy(status = RecStatus.RECORDING) }
+            notify(RecStatus.RECORDING, accumulated)
+        }
+    }
+
+    /**
+     * Cue played before the microphone (re)opens: the spoken line when the recorder speaks,
+     * otherwise the chime. Returns how long to wait for it to finish (0 if nothing played).
+     */
+    private suspend fun cueBefore(line: String, chime: String): Long {
+        if (MikuSounds.speaks("recorder") && MikuSounds.speak("recorder", line)) return MikuSounds.voiceDurationMs("recorder", line)
+        if (MikuSounds.sfx("recorder", chime)) return MikuSounds.sfxDurationMs("recorder", chime)
+        return 0L
+    }
+
+    /** Cue after the microphone is closed or paused; nothing to wait for. */
+    private fun cueAfter(line: String, chime: String) {
+        if (MikuSounds.speaks("recorder")) MikuSounds.say("recorder", line) else MikuSounds.sfx("recorder", chime)
     }
 
     private fun finish(keep: Boolean) {
         val e = engine ?: run { stopSelf(); return }
         engine = null
+        armJob?.cancel()
+        resumeJob?.cancel()
         ticker?.cancel()
         e.stop()
         // A stop within a few milliseconds of start leaves an empty or header-only file. Nothing
@@ -225,6 +269,7 @@ class RecorderService : Service() {
         RecorderBus.state.update {
             it.copy(status = RecStatus.IDLE, lastSaved = saved ?: it.lastSaved, savedSeq = if (saved != null) it.savedSeq + 1 else it.savedSeq)
         }
+        if (saved != null) cueAfter("saved", "stop")
         stopForeground(STOP_FOREGROUND_REMOVE)
         stopSelf()
     }

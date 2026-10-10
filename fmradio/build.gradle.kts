@@ -18,8 +18,27 @@ android {
         applicationId = "com.caf.fmradio"
         minSdk = 26
         targetSdk = 34
-        versionCode = 1013
-        versionName = "1.0.13-mikuos"
+        versionCode = 1014
+        versionName = "1.0.14-mikuos"
+
+        // projectM background (FmProjectMBackground.kt). arm64 only, like the vendor JNI.
+        ndk { abiFilters += "arm64-v8a" }
+        externalNativeBuild {
+            cmake {
+                cppFlags("-std=c++17 -O3 -ffast-math -fexceptions -frtti")
+                arguments("-DANDROID_STL=c++_static")
+            }
+        }
+    }
+
+    // libfmprojectm builds the SAME vendored libprojectM tree as Miku Music
+    // (app/src/main/cpp/vendor/projectm, referenced by relative path, not copied). Only the JNI
+    // wrapper lives here. See src/main/cpp/CMakeLists.txt.
+    externalNativeBuild {
+        cmake {
+            path = file("src/main/cpp/CMakeLists.txt")
+            version = "3.22.1"
+        }
     }
 
     // Platform signing (seinfo=platform is required alongside the package name).

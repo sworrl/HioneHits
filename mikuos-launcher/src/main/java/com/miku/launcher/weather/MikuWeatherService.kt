@@ -230,6 +230,8 @@ object MikuWeatherService {
         restoreLastWeather(ctx)
         startLocationTracking(ctx)
         startLocationRefreshLoop(ctx)
+        // NWS alerts + nearest NOAA Weather Radio (own 10 min cadence, publishes miku_weather_* keys).
+        runCatching { MikuNwsAlerts.start(ctx) }
 
         if (weatherJob == null) {
             weatherJob = scope.launch {

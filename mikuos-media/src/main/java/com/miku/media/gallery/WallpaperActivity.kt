@@ -51,6 +51,7 @@ import androidx.compose.ui.unit.sp
 import com.miku.media.ui.GlassButton
 import com.miku.media.ui.MikuSurface2
 import com.miku.media.ui.MikuTeal
+import com.miku.media.ui.MikuSounds
 import com.miku.media.ui.MikuTheme
 import com.miku.media.ui.TitleStyle
 import com.miku.media.ui.glass
@@ -71,6 +72,7 @@ class WallpaperActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val start = if (intent.action == Intent.ACTION_ATTACH_DATA) intent.data else null
+        MikuSounds.init(this)
         setContent {
             MikuTheme {
                 WallpaperFlow(start, onDone = { ok ->
@@ -109,6 +111,8 @@ class WallpaperActivity : ComponentActivity() {
             scope.launch {
                 val ok = setWallpaper(uri, which)
                 Toast.makeText(ctx, if (ok) "Wallpaper set" else "Could not set wallpaper", Toast.LENGTH_SHORT).show()
+                // The line outlives this dialog: MikuSounds plays from the process, not the activity.
+                if (ok) MikuSounds.say("gallery", "wallpaper_set")
                 onDone(ok)
             }
         }

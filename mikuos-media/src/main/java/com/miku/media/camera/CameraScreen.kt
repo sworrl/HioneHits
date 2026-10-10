@@ -7,6 +7,8 @@ import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.ImageDecoder
 import android.net.Uri
+import android.os.Environment
+import android.os.StatFs
 import android.provider.MediaStore
 import android.view.OrientationEventListener
 import android.view.Surface
@@ -21,7 +23,10 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.waitForUpOrCancellation
 import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -48,6 +53,7 @@ import androidx.compose.material.icons.rounded.Pause
 import androidx.compose.material.icons.rounded.PhotoCamera
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Refresh
+import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Timer10
 import androidx.compose.material.icons.rounded.Timer3
@@ -64,6 +70,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -88,6 +95,8 @@ import com.miku.media.ui.GlassButton
 import com.miku.media.ui.GlassIconButton
 import com.miku.media.ui.GlassSegments
 import com.miku.media.ui.MessagePane
+import com.miku.media.ui.MikuSounds
+import com.miku.media.ui.SoundSettingsSheet
 import com.miku.media.ui.MikuDanger
 import com.miku.media.ui.MikuPink
 import com.miku.media.ui.MikuTeal
@@ -105,6 +114,11 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
 import kotlin.math.max
+import kotlin.random.Random
+
+/** Below this much free space the camera warns once per session (about 150 photos). */
+private const val LOW_STORAGE_BYTES = 500L * 1024 * 1024
+private const val MAX_BURST = 30
 
 @Composable
 fun CameraScreen(
@@ -191,8 +205,27 @@ private fun Viewfinder(
     var reviewVideo by remember { mutableStateOf<Uri?>(null) }
     var iconTurn by remember { mutableStateOf(0f) }
     val iconAngle by animateFloatAsState(iconTurn, tween(250), label = "iconTurn")
+    var bursting by remember { mutableStateOf(false) }
+    var arming by remember { mutableStateOf(false) }
+    var showSettings by remember { mutableStateOf(false) }
+    var notice by remember { mutableStateOf<String?>(null) }
+    var storageWarned by remember { mutableStateOf(false) }
 
-    LaunchedEffect(Unit) { ready = engine.init() }
+    LaunchedEffect(Unit) {
+        MikuSounds.preload(ctx, "camera")
+        ready = engine.init()
+    }
+
+    fun checkStorage() {
+        if (storageWarned) return
+        val free = runCatching { StatFs(Environment.getExternalStorageDirectory().path).availableBytes }.getOrDefault(Long.MAX_VALUE)
+        if (free < LOW_STORAGE_BYTES) {
+            storageWarned = true
+            notice = "Storage is almost full."
+            MikuSounds.say("camera", "storage_almost_full")
+        }
+    }
+    LaunchedEffect(ready) { if (ready) { delay(600); checkStorage() } }
 
     // Rebind whenever the camera or mode changes. Binding is the expensive step (it reopens the
     // sensor), so flash/zoom/torch changes go straight to the bound camera instead.
@@ -251,10 +284,20 @@ private fun Viewfinder(
             return
         }
         if (mode is CaptureMode.Video) reviewVideo = uri
-        else { lastUri = uri; session.add(0, uri) }
+        else {
+            lastUri = uri; session.add(0, uri)
+            // After the stop chime, not over it.
+            scope.launch { delay(MikuSounds.sfxDurationMs("camera", "video_stop")); MikuSounds.say("camera", "video_saved") }
+            checkStorage()
+        }
     }
 
-    fun startVideo() {
+    fun stopVideo() {
+        engine.stopRecording()
+        MikuSounds.sfx("camera", "video_stop")
+    }
+
+    fun beginRecording() {
         val req = mode as? CaptureMode.Video
         val audio = ctx.hasPermission(Manifest.permission.RECORD_AUDIO)
         val started = engine.startRecording(
@@ -275,36 +318,97 @@ private fun Viewfinder(
         if (started) recording = true
     }
 
+    fun startVideo() {
+        if (arming) return
+        scope.launch {
+            if (MikuSounds.sfx("camera", "video_start")) {
+                // Recording begins when the chime ends, so the chime is a "go" signal rather than
+                // the first second of every clip.
+                arming = true
+                delay(MikuSounds.sfxDurationMs("camera", "video_start"))
+                arming = false
+            }
+            beginRecording()
+        }
+    }
+
+    /**
+     * Self-timer. The cue is either the voice ("Three. Two. One.") or beeps, never both. The
+     * voice clip has its numbers exactly one second apart, so starting it with three seconds
+     * left and firing at 3.0 s lines the shot up with the end of "One". Longer timers count the
+     * first seconds silently (with a "Say cheese!" up front when spoken lines are on).
+     */
+    suspend fun runTimer(seconds: Int) {
+        var t = seconds
+        if (seconds > 3 && MikuSounds.speaks("camera")) {
+            MikuSounds.say("camera", if (Random.nextBoolean()) "say_cheese" else "smile")
+            countdown = t; delay(1000); t--
+        }
+        if (MikuSounds.timerCueVoice && MikuSounds.voice != null) {
+            while (t > 3) { countdown = t; delay(1000); t-- }
+            if (MikuSounds.speak("camera", "countdown_timed", force = true)) {
+                for (s in t downTo 1) { countdown = s; delay(1000) }
+                t = 0
+            }
+        }
+        // Beeps: the chosen cue, or the fallback if the voice line could not play.
+        while (t > 0) {
+            countdown = t
+            MikuSounds.sfx("camera", if (t == 1) "timer_beep_final" else "timer_beep")
+            delay(1000); t--
+        }
+        countdown = 0
+    }
+
     fun takePhoto() {
         if (busy) return
         busy = true
         scope.launch {
-            if (timer > 0) {
-                for (s in timer downTo 1) { countdown = s; delay(1000) }
-                countdown = 0
-            }
+            if (timer > 0) runTimer(timer)
+            MikuSounds.shutter()
             launch { shutterFlash.snapTo(0.85f); shutterFlash.animateTo(0f, tween(220)) }
             when (mode) {
                 is CaptureMode.Image -> {
                     val f = File(ctx.cacheDir, "capture.jpg")
                     if (engine.takePhotoToFile(f)) reviewPhoto = f
                 }
-                else -> engine.takePhotoToGallery()?.let { lastUri = it; session.add(0, it) }
+                else -> engine.takePhotoToGallery()?.let {
+                    lastUri = it; session.add(0, it)
+                    MikuSounds.say("camera", "photo_saved")
+                    checkStorage()
+                }
             }
             busy = false
         }
     }
 
+    // Burst: hold the shutter. Each frame gets the short dry shutter so a burst sounds like a
+    // burst, and the run is capped so a stuck finger cannot fill the storage.
+    LaunchedEffect(bursting) {
+        if (!bursting) return@LaunchedEffect
+        busy = true
+        var n = 0
+        while (bursting && n < MAX_BURST) {
+            MikuSounds.shutter("shutter_burst")
+            launch { shutterFlash.snapTo(0.5f); shutterFlash.animateTo(0f, tween(120)) }
+            val uri = engine.takePhotoToGallery() ?: break
+            lastUri = uri; session.add(0, uri); n++
+        }
+        busy = false
+        bursting = false
+        if (n > 0) { MikuSounds.say("camera", "photo_saved"); checkStorage() }
+    }
+
     fun shutter() {
-        if (reviewPhoto != null || reviewVideo != null) return
+        if (reviewPhoto != null || reviewVideo != null || arming) return
         if (videoMode) {
-            if (recording) engine.stopRecording() else startVideo()
+            if (recording) stopVideo() else startVideo()
         } else takePhoto()
     }
 
     LaunchedEffect(Unit) { activity.shutterKeys.collect { shutter() } }
 
-    BackHandler(enabled = recording) { engine.stopRecording() }
+    BackHandler(enabled = recording) { stopVideo() }
 
     // ---------------- review screens for capture-for-result ----------------
     reviewPhoto?.let { f ->
@@ -323,7 +427,8 @@ private fun Viewfinder(
                             }.getOrDefault(false)
                         }
                         f.delete()
-                        if (ok) onImageResult(m.output, null) else engine.error = "Could not save to the requested place."
+                        if (ok) { MikuSounds.say("camera", "got_it"); onImageResult(m.output, null) }
+                        else engine.error = "Could not save to the requested place."
                     } else {
                         // Inline result: Binder caps a transaction near 1 MB, so keep it small.
                         val bmp = withContext(Dispatchers.IO) {
@@ -337,6 +442,7 @@ private fun Viewfinder(
                             }.getOrNull()
                         }
                         f.delete()
+                        MikuSounds.say("camera", "got_it")
                         onImageResult(null, bmp)
                     }
                 }
@@ -366,7 +472,7 @@ private fun Viewfinder(
             Modifier.fillMaxSize()
                 .pointerInput(Unit) {
                     detectTapGestures { p ->
-                        engine.focusAt(view, p.x, p.y)
+                        engine.focusAt(view, p.x, p.y) { MikuSounds.sfx("camera", "focus_lock") }
                         focus = p
                         scope.launch { focusAlpha.snapTo(1f); delay(700); focusAlpha.animateTo(0f, tween(400)) }
                     }
@@ -422,6 +528,7 @@ private fun Viewfinder(
                     GlassIconButton(if (torch) Icons.Rounded.FlashOn else Icons.Rounded.FlashOff, "Torch", modifier = Modifier.rotate(iconAngle),
                         tint = if (torch) MikuTeal else MikuWhite) {
                         torch = !torch; engine.setTorch(torch)
+                        MikuSounds.say("camera", if (torch) "flash_on" else "flash_off")
                     }
                 } else {
                     GlassIconButton(
@@ -430,6 +537,7 @@ private fun Viewfinder(
                     ) {
                         flash = Flash.entries[(flash.ordinal + 1) % Flash.entries.size]
                         engine.setFlash(flash.mode)
+                        MikuSounds.say("camera", when (flash) { Flash.OFF -> "flash_off"; Flash.AUTO -> "flash_auto"; Flash.ON -> "flash_on" })
                     }
                 }
                 Spacer(Modifier.width(8.dp))
@@ -444,6 +552,9 @@ private fun Viewfinder(
                 ) { timer = when (timer) { 0 -> 3; 3 -> 10; else -> 0 } }
             }
             Spacer(Modifier.weight(1f))
+            if (!recording && !secure) {
+                GlassIconButton(Icons.Rounded.Settings, "Sound settings", modifier = Modifier.rotate(iconAngle)) { showSettings = true }
+            }
             if (recording) {
                 Row(Modifier.glass(18.dp, MikuPink).padding(horizontal = 12.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                     Box(Modifier.size(10.dp).clip(CircleShape).background(if (paused) MikuWhite else MikuDanger))
@@ -453,7 +564,7 @@ private fun Viewfinder(
             }
         }
 
-        engine.error?.let { msg ->
+        (engine.error ?: notice)?.let { msg ->
             Text(
                 msg, color = MikuWhite, fontSize = 13.sp,
                 modifier = Modifier.align(Alignment.TopCenter).padding(top = 80.dp, start = 24.dp, end = 24.dp)
@@ -496,22 +607,65 @@ private fun Viewfinder(
                         }
                     }
                 }
-                Shutter(videoMode, recording, enabled = !busy && (if (videoMode) engine.canRecord else engine.canCapturePhoto)) { shutter() }
+                Shutter(
+                    videoMode, recording,
+                    enabled = !arming && (!busy || bursting) && (if (videoMode) engine.canRecord else engine.canCapturePhoto),
+                    burstAllowed = mode is CaptureMode.Free && !videoMode && timer == 0,
+                    onBurst = { bursting = it }
+                ) { shutter() }
                 Box(Modifier.size(56.dp), contentAlignment = Alignment.Center) {
                     if (engine.cameras.size > 1 && !recording) {
                         GlassIconButton(Icons.Rounded.Cameraswitch, "Switch camera to ${engine.cameras[(engine.camIndex + 1) % engine.cameras.size].label.lowercase()}",
-                            size = 56.dp, modifier = Modifier.rotate(iconAngle)) { engine.nextCamera() }
+                            size = 56.dp, modifier = Modifier.rotate(iconAngle)) {
+                            engine.nextCamera()
+                            MikuSounds.say("camera", "camera_switched")
+                        }
                     }
                 }
             }
         }
+
+        if (showSettings) {
+            SoundSettingsSheet("camera", "Camera", "say_cheese", showTimerCue = true) { showSettings = false }
+        }
     }
 }
 
+/**
+ * Shutter button. A tap is a shot; holding past the long-press timeout starts a burst (when
+ * [burstAllowed]) that runs until the finger lifts.
+ */
 @Composable
-private fun Shutter(video: Boolean, recording: Boolean, enabled: Boolean, onClick: () -> Unit) {
+private fun Shutter(
+    video: Boolean,
+    recording: Boolean,
+    enabled: Boolean,
+    burstAllowed: Boolean,
+    onBurst: (Boolean) -> Unit,
+    onClick: () -> Unit
+) {
+    val latestEnabled by rememberUpdatedState(enabled)
+    val latestBurst by rememberUpdatedState(burstAllowed)
+    val latestClick by rememberUpdatedState(onClick)
+    val latestOnBurst by rememberUpdatedState(onBurst)
     Box(
-        Modifier.size(80.dp).pressable(enabled = enabled, onClick = onClick)
+        Modifier.size(80.dp)
+            .pointerInput(Unit) {
+                awaitEachGesture {
+                    awaitFirstDown()
+                    if (!latestEnabled) return@awaitEachGesture
+                    val early = withTimeoutOrNull(viewConfiguration.longPressTimeoutMillis) { waitForUpOrCancellation() }
+                    when {
+                        early != null -> latestClick()
+                        latestBurst -> {
+                            latestOnBurst(true)
+                            waitForUpOrCancellation()
+                            latestOnBurst(false)
+                        }
+                        else -> if (waitForUpOrCancellation() != null) latestClick()
+                    }
+                }
+            }
             .border(4.dp, MikuWhite.copy(alpha = if (enabled) 0.95f else 0.4f), CircleShape)
             .padding(8.dp),
         contentAlignment = Alignment.Center

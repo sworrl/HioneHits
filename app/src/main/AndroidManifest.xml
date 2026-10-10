@@ -377,6 +377,18 @@
             </intent-filter>
         </receiver>
 
+        <!-- Songs hearted in the FM app (com.caf.fmradio FmLikes) land in the Wanted list
+             (wanted/WantedStore). Guarded by the signature-level SYSTEM_BRIDGE permission so only
+             platform-signed senders reach it. -->
+        <receiver
+            android:name=".wanted.FmTrackLikedReceiver"
+            android:exported="true"
+            android:permission="com.miku.permission.SYSTEM_BRIDGE">
+            <intent-filter>
+                <action android:name="com.miku.player.action.FM_TRACK_LIKED" />
+            </intent-filter>
+        </receiver>
+
         <!-- Settings → Listening stats (per-listen stats DB: totals, top-10s, hours, CSV export). -->
         <activity
             android:name=".stats.ListeningStatsActivity"

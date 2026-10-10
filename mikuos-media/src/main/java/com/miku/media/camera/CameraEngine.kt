@@ -236,7 +236,8 @@ class CameraEngine(private val ctx: Context) {
         camera?.cameraControl?.setZoomRatio(c)
     }
 
-    fun focusAt(view: PreviewView, x: Float, y: Float) {
+    /** [onLocked] fires only when autofocus actually reports a lock, never for metering alone. */
+    fun focusAt(view: PreviewView, x: Float, y: Float, onLocked: () -> Unit = {}) {
         val cam = camera ?: return
         val point = view.meteringPointFactory.createPoint(x, y)
         val action = FocusMeteringAction.Builder(point, FocusMeteringAction.FLAG_AF or FocusMeteringAction.FLAG_AE)
@@ -244,7 +245,10 @@ class CameraEngine(private val ctx: Context) {
             .build()
         // Fixed-focus sensors reject AF; metering alone still helps exposure, so try both.
         if (cam.cameraInfo.isFocusMeteringSupported(action)) {
-            cam.cameraControl.startFocusAndMetering(action)
+            val f = cam.cameraControl.startFocusAndMetering(action)
+            f.addListener({
+                if (runCatching { f.get().isFocusSuccessful }.getOrDefault(false)) onLocked()
+            }, main)
         } else {
             val ae = FocusMeteringAction.Builder(point, FocusMeteringAction.FLAG_AE).build()
             if (cam.cameraInfo.isFocusMeteringSupported(ae)) cam.cameraControl.startFocusAndMetering(ae)

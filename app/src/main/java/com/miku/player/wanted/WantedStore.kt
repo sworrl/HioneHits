@@ -147,27 +147,25 @@ object WantedStore {
         var changed = 0
         synchronized(lock) {
             for (row in rows) {
+                // Already tied to a track that still exists (found earlier, or linked by hand).
+                if (row.status == WantedStatus.IN_LIBRARY && row.matchedTrackId != null && row.matchedTrackId in ids) continue
                 val hit = index.find(row.title, row.artist)
-                when {
-                    hit != null && (row.status != WantedStatus.IN_LIBRARY || row.matchedTrackId != hit.id) -> {
-                        val auto = likeTrack(ctx, hit)
-                        db.update(row.id, ContentValues().apply {
-                            put("status", WantedStatus.IN_LIBRARY.name)
-                            put("matched_track_id", hit.id)
-                            // Keep an earlier auto-like flag if this is just MediaStore renumbering.
-                            put("auto_liked", if (auto || (row.autoLiked && row.matchedTrackId != null)) 1 else 0)
-                        })
-                        changed++
-                    }
-                    hit == null && row.status == WantedStatus.IN_LIBRARY &&
-                        (row.matchedTrackId == null || row.matchedTrackId !in ids) -> {
-                        // The file went away (or was a manual link that no longer resolves).
-                        db.update(row.id, ContentValues().apply {
-                            put("status", WantedStatus.WANTED.name)
-                            putNull("matched_track_id")
-                        })
-                        changed++
-                    }
+                if (hit != null) {
+                    val auto = likeTrack(ctx, hit)
+                    db.update(row.id, ContentValues().apply {
+                        put("status", WantedStatus.IN_LIBRARY.name)
+                        put("matched_track_id", hit.id)
+                        // Keep an earlier auto-like flag if this is just MediaStore renumbering.
+                        put("auto_liked", if (auto || row.autoLiked) 1 else 0)
+                    })
+                    changed++
+                } else if (row.status == WantedStatus.IN_LIBRARY) {
+                    // The file went away: it is wanted again.
+                    db.update(row.id, ContentValues().apply {
+                        put("status", WantedStatus.WANTED.name)
+                        putNull("matched_track_id")
+                    })
+                    changed++
                 }
             }
         }
