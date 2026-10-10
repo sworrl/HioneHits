@@ -53,16 +53,19 @@ class MainActivity : ComponentActivity() {
     data class Verdict(val state: String, val note: String) // state: like | fix
 
     /**
-     * Clips the off-device speech check misheard (tools/voice report, 2026-10-10). Badged so they
-     * get a listen first; they are not pre-judged.
+     * Clips the off-device speech check misheard in the first build (tools/voice, 2026-10-10).
+     * All of them were re-rendered and now pass. Still badged so they get a listen first; they
+     * are not pre-judged.
      */
     private val suspect = mapOf(
-        "cyber:iem" to "speech check heard \"IAMs\" / \"I am\"",
-        "cyber:mode" to "speech check heard \"mood\"",
-        "hoshi:wifi_connected" to "speech check heard \"Wife I connected\"",
-        "cyber:say_cheese" to "speech check heard \"Cheezer\"",
-        "cyber:count_2" to "speech check heard \"To\"",
-        "cyber:miss" to "speech check heard \"Mess up\"",
+        "cyber:iem" to "re-rendered, speech check now hears \"IEMs\" (was \"IAMs\" / \"I am\")",
+        "cyber:mode" to "re-rendered, speech check now hears \"mode\" (was \"mood\")",
+        "hoshi:wifi_connected" to "re-rendered, speech check now hears \"Wi-Fi connected\" (was \"Wife I connected\")",
+        "cyber:say_cheese" to "re-rendered, speech check now hears \"Say cheese!\" (was \"Cheezer\")",
+        "cyber:count_2" to "re-rendered, speech check now hears \"Two\" (was \"To\")",
+        "cyber:countdown_timed" to "rebuilt with the new \"Two\", speech check hears \"3, 2, 1\"",
+        "cyber:miss" to "re-rendered, speech check now hears \"Miss\" (was \"Mess up\")",
+        "cyber:fm_radio_on" to "new take, speech check hears \"FM radio on\"",
     )
 
     private fun suspectNote(c: Clip): String? = suspect.entries.firstOrNull { (k, _) ->
