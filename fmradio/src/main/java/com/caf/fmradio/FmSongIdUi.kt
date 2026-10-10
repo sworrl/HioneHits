@@ -77,22 +77,15 @@ object FmCoverArt {
         cache.get(url)?.let { return it }
         val img = withContext(Dispatchers.IO) {
             runCatching {
-                val c = URL(url).openConnection() as HttpURLConnection
-                try {
-                    c.connectTimeout = 8_000
-                    c.readTimeout = 10_000
-                    c.instanceFollowRedirects = true
-                    if (c.responseCode !in 200..299) return@runCatching null
-                    val bytes = c.inputStream.use { it.readBytes() }
-                    val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
-                    BitmapFactory.decodeByteArray(bytes, 0, bytes.size, bounds)
-                    var sample = 1
-                    while (bounds.outWidth / (sample * 2) >= targetPx && bounds.outHeight / (sample * 2) >= targetPx) sample *= 2
-                    BitmapFactory.decodeByteArray(bytes, 0, bytes.size, BitmapFactory.Options().apply { inSampleSize = sample })
-                        ?.asImageBitmap()
-                } finally {
-                    c.disconnect()
-                }
+                val r = FmNet.request(url)
+                if (r.code !in 200..299) return@runCatching null
+                val bytes = r.body
+                val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+                BitmapFactory.decodeByteArray(bytes, 0, bytes.size, bounds)
+                var sample = 1
+                while (bounds.outWidth / (sample * 2) >= targetPx && bounds.outHeight / (sample * 2) >= targetPx) sample *= 2
+                BitmapFactory.decodeByteArray(bytes, 0, bytes.size, BitmapFactory.Options().apply { inSampleSize = sample })
+                    ?.asImageBitmap()
             }.getOrNull()
         }
         if (img != null) cache.put(url, img)

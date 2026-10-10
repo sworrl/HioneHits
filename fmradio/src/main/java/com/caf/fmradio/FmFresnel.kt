@@ -158,19 +158,12 @@ object FmFresnel {
             val lats = chunk.joinToString(",") { "%.5f".format(java.util.Locale.US, it.first) }
             val lons = chunk.joinToString(",") { "%.5f".format(java.util.Locale.US, it.second) }
             val body = runCatching {
-                val c = (URL("$ELEVATION_API?latitude=$lats&longitude=$lons").openConnection()
-                    as HttpURLConnection).apply {
-                    connectTimeout = TIMEOUT_MS
-                    readTimeout = TIMEOUT_MS
-                    requestMethod = "GET"
+                val r = FmNet.request("$ELEVATION_API?latitude=$lats&longitude=$lons")
+                if (r.code != 200) {
+                    Log.w(TAG, "elevation service returned HTTP ${r.code}")
+                    return null
                 }
-                try {
-                    if (c.responseCode != 200) {
-                        Log.w(TAG, "elevation service returned HTTP ${c.responseCode}")
-                        return null
-                    }
-                    c.inputStream.bufferedReader().readText()
-                } finally { c.disconnect() }
+                r.text
             }.onFailure { Log.w(TAG, "elevation fetch failed: $it") }.getOrNull() ?: return null
             val arr = runCatching { JSONObject(body).getJSONArray("elevation") }
                 .onFailure { Log.w(TAG, "elevation reply was not what we expected: $it") }

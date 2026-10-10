@@ -5,7 +5,6 @@ import android.util.Log
 import kotlinx.coroutines.flow.MutableStateFlow
 import org.json.JSONObject
 import java.io.ByteArrayOutputStream
-import java.net.HttpURLConnection
 import java.net.URL
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
@@ -193,23 +192,17 @@ object FmSongId {
             .put("timestamp", now)
             .put("context", JSONObject())
             .put("geolocation", JSONObject())
-        val c = url.openConnection() as HttpURLConnection
-        try {
-            c.requestMethod = "POST"
-            c.connectTimeout = 10_000
-            c.readTimeout = 15_000
-            c.doOutput = true
-            c.setRequestProperty("Content-Type", "application/json")
-            c.setRequestProperty("Content-Language", "en_US")
-            c.setRequestProperty("User-Agent", "Dalvik/2.1.0 (Linux; U; Android 14)")
-            c.outputStream.use { it.write(body.toString().toByteArray()) }
-            val code = c.responseCode
-            val text = (if (code in 200..299) c.inputStream else c.errorStream)?.bufferedReader()?.use { it.readText() } ?: ""
-            if (code !in 200..299) throw java.io.IOException("HTTP $code")
-            return JSONObject(text)
-        } finally {
-            c.disconnect()
-        }
+        val r = FmNet.request(
+            url.toString(), method = "POST",
+            headers = mapOf(
+                "Content-Type" to "application/json",
+                "Content-Language" to "en_US",
+                "User-Agent" to "Dalvik/2.1.0 (Linux; U; Android 14)",
+            ),
+            body = body.toString().toByteArray(),
+        )
+        if (r.code !in 200..299) throw java.io.IOException("HTTP ${r.code}")
+        return JSONObject(r.text)
     }
 
     // ---------------------------------------------------------------- the fingerprint

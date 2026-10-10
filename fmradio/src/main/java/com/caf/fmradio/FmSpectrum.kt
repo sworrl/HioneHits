@@ -61,6 +61,7 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.viewinterop.AndroidView
 import kotlin.math.ln
 import kotlin.math.roundToInt
 
@@ -69,33 +70,13 @@ private const val MIN_LABEL_GAP_DP = 26f
 /** Hard cap: a crowded band here lists hundreds of stations and none of them would be legible. */
 private const val MAX_BAND_LABELS = 14
 
-/** Waterfall depth in rows. At the engine's 25 frames a second this is six seconds of history. */
-private const val WATERFALL_ROWS = 150
-
-/** The analyser's dB span: the engine maps −90..0 dBFS to 0..1. */
-private const val FLOOR_DB = -90f
-
-/** Labelled frequencies on the log axis; the eye reads octave-ish decades, not bin numbers. */
-private val MAJOR_HZ = floatArrayOf(50f, 100f, 200f, 500f, 1000f, 2000f, 5000f, 10000f)
-private val MINOR_HZ = floatArrayOf(30f, 40f, 60f, 70f, 80f, 90f, 300f, 400f, 600f, 700f, 800f, 900f,
-    3000f, 4000f, 6000f, 7000f, 8000f, 9000f, 15000f)
-
-private fun hzLabel(hz: Float): String {
-    if (hz < 1000f) return hz.roundToInt().toString()
-    val k = hz / 1000f
-    // 15.68 kHz (the top bin at a 32 kHz capture) reads better as "15.7k", 2000 as "2k".
-    if (k >= 10f) return "${k.roundToInt()}k"
-    val tenths = (k * 10f).roundToInt()
-    return if (tenths % 10 == 0) "${tenths / 10}k" else "${tenths / 10}.${tenths % 10}k"
-}
-
 /**
  * The tuner's big panel. Two different instruments share it, and they no longer share chrome:
  *
  * LIVE is an audio analyser of what is playing: 256 log-spaced FFT bins with peak hold, a log
- * frequency axis in Hz and a dB scale, and a spectrogram underneath. It reads its own flow
- * ([FmRadioManager.spectrum]) and nothing else at frame rate, so the rest of the screen does not
- * recompose 25 times a second. FM band furniture (call signs, the tuned-frequency cursor, the
+ * frequency axis in Hz and a dB scale, and a spectrogram underneath. It is drawn on its own
+ * surface and thread ([FmSpectrumSurfaceView]), so a spectrum frame never redraws the app
+ * window. FM band furniture (call signs, the tuned-frequency cursor, the
  * MHz strip) is meaningless on an audio axis and is not drawn here.
  *
  * BAND is the swept RSSI of the whole band: x is frequency, peaks are labelled with the
@@ -138,7 +119,7 @@ fun RadioWaterfallSpectrum(
             .border(1.2.dp, CyberGlassBorder, RoundedCornerShape(14.dp))
     ) {
         if (mode == QualcommFmHardwareEngine.ViewMode.LIVE) {
-            LiveAudioPanel(signalHistory)
+            LivePanel()
         } else {
             BandPanel(currentFreqKHz, band, signalHistory, bandProfile, bandHistory, favorites,
                       scanHits, cataloguedStations, skin, rowTimes, onCycleSkin, onTuneFreq)
@@ -165,292 +146,18 @@ fun RadioWaterfallSpectrum(
 // ============================================================================ LIVE
 
 /**
- * Live audio: analyser on top, spectrogram below.
- *
- * Frame-rate work is confined to the draw phase. The flow is collected in a LaunchedEffect that
- * writes one waterfall row into a bitmap and bumps a state object that only the draw lambdas
- * read, so a new frame invalidates drawing here and nothing else: no recomposition, no layout.
- * Per frame the cost is one 256-pixel row write, two bitmap blits, one 256-point path and one
- * drawLines call for the peak markers, with every buffer allocated once.
+ * LIVE is a SurfaceView ([FmSpectrumSurfaceView]) with its own render thread, inset inside the
+ * panel's rounded frame. The inset is deliberate: the surface is a plain rectangle composited
+ * under the window, and 5 dp keeps its square corners inside the 14 dp rounded rim whether or
+ * not this Android version clips the punched hole to the rounded shape. The frame, the status
+ * label and the overlays above it are ordinary, static window content.
  */
 @Composable
-private fun LiveAudioPanel(signalHistory: FloatArray) {
-    val frame = remember { mutableStateOf(FmRadioManager.spectrum.value, neverEqualPolicy()) }
-    val wf = remember { Waterfall(QualcommFmHardwareEngine.SPECTRUM_BINS, WATERFALL_ROWS) }
-    // The axis range changes only when the decoded sample rate does, so it is its own state and
-    // is the only thing that rebuilds the cached axis labels.
-    val axis = remember { mutableStateOf(25f to 16_000f) }
-    LaunchedEffect(Unit) {
-        FmRadioManager.spectrum.collect { f ->
-            if (f.level.isNotEmpty()) {
-                wf.push(f.level)
-                val b = f.binHz
-                if (b.size >= 2) {
-                    val r = b.first() to b.last()
-                    if (r != axis.value) axis.value = r
-                }
-            }
-            frame.value = f
-        }
-    }
-    val hasAudio by remember { derivedStateOf { frame.value.level.isNotEmpty() } }
-
-    if (!hasAudio) {
-        LiveSignalFallback(signalHistory)
-        return
-    }
-
-    val tm = rememberTextMeasurer()
-    val trace = remember { Path() }
-    val fill = remember { Path() }
-    val peakLines = remember { FloatArray(QualcommFmHardwareEngine.SPECTRUM_BINS * 4) }
-    val peakPaint = remember {
-        android.graphics.Paint().apply {
-            color = android.graphics.Color.argb(230, 0xFF, 0x5F, 0xA2)
-            strokeCap = android.graphics.Paint.Cap.BUTT
-        }
-    }
-    // Finger readout: x in px while pressed, -1 otherwise. Read only while drawing.
-    val cursorX = remember { mutableFloatStateOf(-1f) }
-
-    Box(Modifier.fillMaxSize()) {
-        Spacer(
-            Modifier
-                .fillMaxSize()
-                .pointerInput(Unit) {
-                    awaitEachGesture {
-                        val down = awaitFirstDown()
-                        cursorX.floatValue = down.position.x
-                        while (true) {
-                            val ev = awaitPointerEvent()
-                            val c = ev.changes.firstOrNull() ?: break
-                            if (!c.pressed) break
-                            cursorX.floatValue = c.position.x
-                            c.consume()
-                        }
-                        cursorX.floatValue = -1f
-                    }
-                }
-                .drawWithCache {
-                    val (fLo, fHi) = axis.value
-                    val logSpan = ln(fHi / fLo)
-                    val gutter = 24.dp.toPx()
-                    val top = 16.dp.toPx()
-                    val plotW = size.width - gutter - 4.dp.toPx()
-                    val plotH = size.height * 0.46f - top
-                    val axisH = 12.dp.toPx()
-                    val wfTop = top + plotH + axisH
-                    val wfH = size.height - wfTop - 3.dp.toPx()
-                    fun xOf(hz: Float) = gutter + plotW * (ln(hz / fLo) / logSpan)
-                    val labelStyle = TextStyle(color = MikuTeal.copy(alpha = 0.75f), fontSize = 6.sp)
-                    val dbStyle = TextStyle(color = MikuTeal.copy(alpha = 0.6f), fontSize = 6.sp)
-                    val freqLabels = ArrayList<Pair<Float, TextLayoutResult>>()
-                    for (hz in MAJOR_HZ) if (hz in fLo..fHi) freqLabels += xOf(hz) to tm.measure(hzLabel(hz), labelStyle)
-                    val minorX = MINOR_HZ.filter { it in fLo..fHi }.map { xOf(it) }
-                    val dbLines = intArrayOf(0, -20, -40, -60, -80)
-                    val dbLabels = dbLines.map { db ->
-                        val y = top + plotH * (1f - (db - FLOOR_DB) / -FLOOR_DB)
-                        y to tm.measure(if (db == 0) "0" else "$db", dbStyle)
-                    }
-                    val dbUnit = tm.measure("dBFS", TextStyle(color = MikuTeal.copy(alpha = 0.4f), fontSize = 5.5.sp))
-                    val title = tm.measure(
-                        "LIVE · FFT 4096 · ${hzLabel(fLo)}–${hzLabel(fHi)}Hz · HOLD TO READ",
-                        TextStyle(color = MikuTeal.copy(alpha = 0.85f), fontSize = 7.sp, fontWeight = FontWeight.Bold)
-                    )
-                    val fillBrush = Brush.verticalGradient(
-                        0f to MikuPink.copy(alpha = 0.55f), 0.35f to MikuCyan.copy(alpha = 0.40f),
-                        1f to MikuTeal.copy(alpha = 0.04f), startY = top, endY = top + plotH,
-                    )
-                    val traceStroke = Stroke(width = 1.4.dp.toPx())
-                    val gridColor = MikuTeal.copy(alpha = 0.10f)
-                    val majorColor = MikuTeal.copy(alpha = 0.20f)
-                    val nowLabel = tm.measure("now", TextStyle(color = MikuTeal.copy(alpha = 0.5f), fontSize = 5.5.sp))
-                    val peakW = (plotW / QualcommFmHardwareEngine.SPECTRUM_BINS).coerceAtLeast(1.5f)
-                    peakPaint.strokeWidth = 1.6.dp.toPx()
-                    val readoutStyle = TextStyle(color = Color.White, fontSize = 8.sp, fontWeight = FontWeight.Bold)
-
-                    onDrawBehind {
-                        drawText(title, topLeft = Offset(8.dp.toPx(), 3.dp.toPx()))
-                        // Grid: dB rows and log-frequency columns.
-                        for ((y, lay) in dbLabels) {
-                            drawLine(gridColor, Offset(gutter, y), Offset(gutter + plotW, y), 1f)
-                            drawText(lay, topLeft = Offset(gutter - lay.size.width - 3f,
-                                (y - lay.size.height / 2f).coerceIn(top - 4f, top + plotH - lay.size.height)))
-                        }
-                        drawText(dbUnit, topLeft = Offset(2f, top + plotH + 1f))
-                        for (x in minorX) drawLine(gridColor, Offset(x, top), Offset(x, top + plotH), 1f)
-                        for ((x, lay) in freqLabels) {
-                            drawLine(majorColor, Offset(x, top), Offset(x, top + plotH + 3f), 1f)
-                            drawText(lay, topLeft = Offset(
-                                (x - lay.size.width / 2f).coerceIn(gutter, size.width - lay.size.width),
-                                top + plotH + 2f))
-                        }
-
-                        val f = frame.value
-                        val lv = f.level
-                        val pk = f.peak
-                        val n = lv.size
-                        if (n >= 2) {
-                            val dx = plotW / (n - 1)
-                            val base = top + plotH
-                            trace.reset(); fill.reset()
-                            fill.moveTo(gutter, base)
-                            for (i in 0 until n) {
-                                val x = gutter + i * dx
-                                val y = base - lv[i].coerceIn(0f, 1f) * plotH
-                                if (i == 0) trace.moveTo(x, y) else trace.lineTo(x, y)
-                                fill.lineTo(x, y)
-                            }
-                            fill.lineTo(gutter + plotW, base); fill.close()
-                            drawPath(fill, fillBrush)
-                            drawPath(trace, MikuTealBright, style = traceStroke)
-
-                            // Peak hold: a short bar per bin, all in one native call.
-                            if (pk.size == n) {
-                                var k = 0
-                                for (i in 0 until n) {
-                                    val v = pk[i]
-                                    if (v <= 0.02f) continue
-                                    val x = gutter + i * dx
-                                    val y = base - v.coerceIn(0f, 1f) * plotH
-                                    peakLines[k++] = x - peakW * 0.45f; peakLines[k++] = y
-                                    peakLines[k++] = x + peakW * 0.45f; peakLines[k++] = y
-                                }
-                                if (k > 0) drawIntoCanvas { it.nativeCanvas.drawLines(peakLines, 0, k, peakPaint) }
-                            }
-                        }
-
-                        // Spectrogram: same x mapping (bins are log-uniform), newest row on top.
-                        wf.draw(this, gutter, wfTop, plotW, wfH)
-                        drawText(nowLabel, topLeft = Offset(2f, wfTop))
-                        wf.ageSeconds()?.let { age ->
-                            // Measuring text per frame is the one allocation here; it is a
-                            // handful of characters and only changes once a second.
-                            val lay = tm.measure("-${age}s", TextStyle(color = MikuTeal.copy(alpha = 0.5f), fontSize = 5.5.sp))
-                            drawText(lay, topLeft = Offset(2f, wfTop + wfH - lay.size.height))
-                        }
-
-                        // Finger readout.
-                        val cx = cursorX.floatValue
-                        if (cx >= gutter && cx <= gutter + plotW && n >= 2) {
-                            val frac = (cx - gutter) / plotW
-                            val hz = fLo * kotlin.math.exp(frac * logSpan)
-                            val bi = (frac * (n - 1)).roundToInt().coerceIn(0, n - 1)
-                            val db = (FLOOR_DB * (1f - lv[bi])).roundToInt()
-                            drawLine(Color.White.copy(alpha = 0.7f), Offset(cx, top), Offset(cx, wfTop + wfH), 1.dp.toPx())
-                            val txt = tm.measure(
-                                (if (hz >= 1000f) String.format(java.util.Locale.US, "%.2f kHz", hz / 1000f)
-                                 else "${hz.roundToInt()} Hz") + " · $db dB", readoutStyle)
-                            val bx = (cx - txt.size.width / 2f).coerceIn(gutter, size.width - txt.size.width - 4f)
-                            drawRoundRect(Color(0xE6040D12), Offset(bx - 4f, top + 2f),
-                                Size(txt.size.width + 8f, txt.size.height + 4f),
-                                androidx.compose.ui.geometry.CornerRadius(6f))
-                            drawText(txt, topLeft = Offset(bx, top + 4f))
-                        }
-                    }
-                }
-        )
-    }
-}
-
-/**
- * The spectrogram store: a [rows]×[bins] ARGB bitmap used as a ring.
- *
- * A new frame writes a single row at the head and moves the head back one; drawing unrolls the
- * ring with two blits so the newest row is always on top. Nothing is shifted and nothing is
- * allocated per frame. The bitmap is mutated on the main thread and HWUI re-uploads it because
- * setPixels bumps its generation id, which is the documented contract for mutable bitmaps.
- */
-private class Waterfall(val bins: Int, val rows: Int) {
-    private val bmp = android.graphics.Bitmap.createBitmap(bins, rows, android.graphics.Bitmap.Config.ARGB_8888)
-        .also { it.eraseColor(FmWaterfallPalette.ARGB[0]) }
-    private val img = bmp.asImageBitmap()
-    private val row = IntArray(bins)
-    private val times = LongArray(rows)
-    private var head = 0
-    private var filled = 0
-
-    fun push(level: FloatArray) {
-        val lut = FmWaterfallPalette.ARGB
-        for (i in 0 until bins) {
-            // A little contrast: the bottom of the dB range is hiss and should sit in the navy,
-            // or the whole spectrogram turns into teal fog.
-            val v = ((level.getOrElse(i) { 0f } - 0.12f) * 1.18f).coerceIn(0f, 1f)
-            row[i] = lut[(v * 255f).toInt()]
-        }
-        head = (head - 1 + rows) % rows
-        bmp.setPixels(row, 0, bins, 0, head, bins, 1)
-        times[head] = android.os.SystemClock.elapsedRealtime()
-        if (filled < rows) filled++
-    }
-
-    /** Age of the oldest row on screen, whole seconds, or null until there is history. */
-    fun ageSeconds(): Long? {
-        if (filled < 2) return null
-        val oldest = times[(head + filled - 1) % rows]
-        return ((android.os.SystemClock.elapsedRealtime() - oldest) / 1000L).takeIf { it >= 1 }
-    }
-
-    fun draw(scope: androidx.compose.ui.graphics.drawscope.DrawScope, x: Float, y: Float, w: Float, h: Float) {
-        if (h <= 0f) return
-        val rowH = h / rows
-        val firstRows = rows - head            // head..rows-1, the newest part
-        val dx = x.roundToInt()
-        val dw = w.roundToInt()
-        val h1 = (firstRows * rowH).roundToInt()
-        scope.drawImage(img, IntOffset(0, head), IntSize(bins, firstRows),
-            IntOffset(dx, y.roundToInt()), IntSize(dw, h1), filterQuality = FilterQuality.Low)
-        if (head > 0) {
-            scope.drawImage(img, IntOffset(0, 0), IntSize(bins, head),
-                IntOffset(dx, y.roundToInt() + h1), IntSize(dw, h.roundToInt() - h1),
-                filterQuality = FilterQuality.Low)
-        }
-    }
-}
-
-/**
- * LIVE with no audio reaching the app (a wired route without a verified siphon): the tuned
- * station's own RSSI over time, which at least moves when the antenna does.
- */
-@Composable
-private fun LiveSignalFallback(signalHistory: FloatArray) {
-    val trace = remember { Path() }
-    Box(Modifier.fillMaxSize()) {
-        Canvas(Modifier.fillMaxSize()) {
-            val w = size.width
-            val h = size.height
-            val top = 16.dp.toPx()
-            val traceH = h * 0.42f
-            val barTop = top + traceH + 6.dp.toPx()
-            val barH = h - barTop - 4.dp.toPx()
-            for (g in 1..3) {
-                val gy = top + traceH * g / 4f
-                drawLine(MikuTeal.copy(alpha = 0.10f), Offset(0f, gy), Offset(w, gy), strokeWidth = 1f)
-            }
-            val cols = signalHistory.size
-            if (cols > 1) {
-                val colW = w / cols
-                for (i in 0 until cols) {
-                    val v = signalHistory[i].coerceIn(0f, 1f)
-                    val bh = v * barH
-                    drawRect(FmWaterfallPalette.lut(v), Offset(w - (i + 1) * colW, barTop + barH - bh), Size(colW + 0.5f, bh))
-                }
-                trace.reset()
-                val dx = w / (cols - 1)
-                for (i in 0 until cols) {
-                    val x = w - i * dx
-                    val y = top + traceH - signalHistory[i].coerceIn(0f, 1f) * (traceH - 4f)
-                    if (i == 0) trace.moveTo(x, y) else trace.lineTo(x, y)
-                }
-                drawPath(trace, MikuTeal, style = Stroke(width = 2.dp.toPx()))
-            }
-        }
-        Text(
-            "LIVE · SIGNAL OF THE TUNED STATION · NO AUDIO TO ANALYSE ON THIS OUTPUT",
-            color = MikuTeal.copy(alpha = 0.85f), fontSize = 7.sp, fontWeight = FontWeight.Bold, maxLines = 1,
-            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp).padding(end = 70.dp)
-        )
-    }
+private fun LivePanel() {
+    AndroidView(
+        factory = { FmSpectrumSurfaceView(it) },
+        modifier = Modifier.fillMaxSize().padding(5.dp),
+    )
 }
 
 // ============================================================================ BAND

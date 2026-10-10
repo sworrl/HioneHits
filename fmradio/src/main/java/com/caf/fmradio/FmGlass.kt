@@ -12,8 +12,14 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Outline
+import androidx.compose.ui.graphics.drawscope.ContentDrawScope
+import androidx.compose.ui.node.DrawModifierNode
+import androidx.compose.ui.node.ModifierNodeElement
+import androidx.compose.ui.node.invalidateDraw
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
@@ -29,12 +35,17 @@ import androidx.compose.ui.unit.dp
  * A small frosted-glass look for panels and buttons, kept local to this app.
  *
  * Real background blur is not affordable here: RenderEffect blur on a full-screen panel costs a
- * whole extra pass per frame on this GPU, and the tuner screen already has a live analyser
- * redrawing at 25 fps. What sells "glass" on a dark UI is cheaper than blur anyway: a
- * translucent fill so the artwork shows through, a specular band along the top edge where light
- * would catch a curved surface, and a rim that picks up colour from its surroundings (teal into
- * pink here). All three are a gradient and an outline, cached per size by drawWithCache, so a
- * glass button costs about what a bordered box did.
+ * whole extra pass per frame on this GPU. What sells "glass" on a dark UI is cheaper than blur
+ * anyway: a translucent fill so the artwork shows through, a specular band along the top edge
+ * where light would catch a curved surface, and a rim that picks up colour from its
+ * surroundings (teal into pink here).
+ *
+ * A Modifier.Node rather than drawWithCache, on purpose. drawWithCache takes a lambda, a lambda
+ * is a new object every recomposition, and a new modifier element means "invalidate the draw".
+ * So every glass panel in a composable that recomposed (the dial card does, on every signal
+ * poll) forced a window frame even when nothing it draws had changed, and a window frame here
+ * is the expensive thing. This element compares by value: same colours, same shape, no
+ * invalidation. Brushes and the outline are rebuilt only when the size or a parameter changes.
  */
 fun Modifier.glass(
     shape: Shape,
@@ -47,33 +58,70 @@ fun Modifier.glass(
     shine: Float = 1f,
 ): Modifier = this
     .clip(shape)
-    .drawWithCache {
-        val outline = shape.createOutline(size, layoutDirection, this)
-        val spec = Brush.verticalGradient(
-            0f to Color.White.copy(alpha = 0.13f * shine),
-            0.42f to Color.White.copy(alpha = 0.02f * shine),
-            1f to Color.Transparent,
-            endY = size.height,
-        )
-        // A faint coloured glow pooled at the bottom, as light through tinted glass does.
-        val pool = Brush.verticalGradient(
-            0f to Color.Transparent, 1f to accent.copy(alpha = 0.10f * shine),
-            startY = size.height * 0.45f, endY = size.height,
-        )
-        val rim = Brush.linearGradient(
-            listOf(accent.copy(alpha = rimAlpha), accent2.copy(alpha = rimAlpha * 0.55f), accent.copy(alpha = rimAlpha * 0.25f)),
-            start = Offset.Zero, end = Offset(size.width, size.height),
-        )
-        // The outline is drawn inside the clip, so half its width is cut away: double it.
-        val stroke = Stroke(width = rimWidth.toPx() * 2f)
-        onDrawWithContent {
-            drawOutline(outline, fill)
-            drawOutline(outline, spec)
-            drawOutline(outline, pool)
-            drawContent()
-            drawOutline(outline, rim, style = stroke)
-        }
+    .then(GlassElement(shape, accent, accent2, fill, rimAlpha, rimWidth, shine))
+
+private data class GlassElement(
+    val shape: Shape,
+    val accent: Color,
+    val accent2: Color,
+    val fill: Color,
+    val rimAlpha: Float,
+    val rimWidth: Dp,
+    val shine: Float,
+) : ModifierNodeElement<GlassNode>() {
+    override fun create() = GlassNode(this)
+    override fun update(node: GlassNode) = node.set(this)
+}
+
+private class GlassNode(private var spec: GlassElement) : Modifier.Node(), DrawModifierNode {
+    private var cachedFor: Size = Size.Unspecified
+    private var cachedDir: LayoutDirection? = null
+    private var outline: Outline? = null
+    private var specular: Brush? = null
+    private var pool: Brush? = null
+    private var rim: Brush? = null
+    private var stroke: Stroke? = null
+
+    fun set(s: GlassElement) {
+        if (s == spec) return
+        spec = s
+        cachedFor = Size.Unspecified
+        invalidateDraw()
     }
+
+    override fun ContentDrawScope.draw() {
+        val s = spec
+        if (size != cachedFor || layoutDirection != cachedDir) {
+            cachedFor = size
+            cachedDir = layoutDirection
+            outline = s.shape.createOutline(size, layoutDirection, this)
+            specular = Brush.verticalGradient(
+                0f to Color.White.copy(alpha = 0.13f * s.shine),
+                0.42f to Color.White.copy(alpha = 0.02f * s.shine),
+                1f to Color.Transparent,
+                endY = size.height,
+            )
+            // A faint coloured glow pooled at the bottom, as light through tinted glass does.
+            pool = Brush.verticalGradient(
+                0f to Color.Transparent, 1f to s.accent.copy(alpha = 0.10f * s.shine),
+                startY = size.height * 0.45f, endY = size.height,
+            )
+            rim = Brush.linearGradient(
+                listOf(s.accent.copy(alpha = s.rimAlpha), s.accent2.copy(alpha = s.rimAlpha * 0.55f),
+                       s.accent.copy(alpha = s.rimAlpha * 0.25f)),
+                start = Offset.Zero, end = Offset(size.width, size.height),
+            )
+            // The outline is drawn inside the clip, so half its width is cut away: double it.
+            stroke = Stroke(width = s.rimWidth.toPx() * 2f)
+        }
+        val o = outline!!
+        if (s.fill.alpha > 0f) drawOutline(o, s.fill)
+        drawOutline(o, specular!!)
+        drawOutline(o, pool!!)
+        drawContent()
+        drawOutline(o, rim!!, style = stroke!!)
+    }
+}
 
 /**
  * Tap / long-press with a soft squash instead of a ripple.

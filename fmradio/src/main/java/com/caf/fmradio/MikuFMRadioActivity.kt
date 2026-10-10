@@ -78,6 +78,8 @@ data class FmState(
     val songId: FmSongId.State = FmSongId.State(),
     /** Nearest NOAA Weather Radio transmitters; reference only, this tuner cannot receive 162 MHz. */
     val weatherRadios: List<FmWeatherRadio.Transmitter> = emptyList(),
+    /** Active NWS alerts here (null = not fetched / unreachable, empty = none active). */
+    val weatherAlerts: List<FmWeatherRadio.Alert>? = null,
     /** Calibration behind every station's reach verdict: offset in dB and how many stations it came from. */
     val reachOffsetDb: Double = FmReach.DEFAULT_OFFSET_DB,
     val reachCalibratedFrom: Int = 0,
@@ -114,7 +116,7 @@ data class FmState(
             siphonState == other.siphonState && siphonReason == other.siphonReason && bandHistoryTimes === other.bandHistoryTimes &&
             tunedProfile === other.tunedProfile &&
             listenerPlace == other.listenerPlace && catalogueSize == other.catalogueSize &&
-            songId == other.songId && weatherRadios === other.weatherRadios &&
+            songId == other.songId && weatherRadios === other.weatherRadios && weatherAlerts === other.weatherAlerts &&
             reachOffsetDb == other.reachOffsetDb && reachCalibratedFrom == other.reachCalibratedFrom
     }
 
@@ -206,6 +208,7 @@ object FmRadioManager {
             }
             launch { FmSongId.state.collect { v -> _state.update { it.copy(songId = v) } } }
             launch { eng.weatherRadios.collect { v -> _state.update { it.copy(weatherRadios = v) } } }
+            launch { eng.weatherAlerts.collect { v -> _state.update { it.copy(weatherAlerts = v) } } }
             // The engine updates the RMS level on every capture block (dozens of times a
             // second). Only a printed number reads it, so it is sampled at 4 Hz and rounded to
             // what is printed; otherwise it alone recomposed the screen at audio-block rate.
@@ -319,6 +322,15 @@ object FmRadioManager {
     /** Blocking terrain fetch for one station; see QualcommFmHardwareEngine.terrainFor. */
     fun terrainFor(st: FmStationCatalogue.Station): FmStationCatalogue.Station? = engine?.terrainFor(st)
     fun dismissSongId() = FmSongId.dismiss()
+    fun refreshWeatherAlerts() { engine?.refreshWeatherAlerts(force = true) }
+
+    /**
+     * Like the identified song: kept with station, frequency, time and position, and handed to
+     * Miku Music as a liked track to acquire. Returns the new liked state.
+     */
+    fun toggleLikeSong(ctx: Context, m: FmSongId.Match): Boolean =
+        FmLikes.toggle(ctx, m, _state.value.stationName.ifBlank { _state.value.tunedStation?.call ?: "FM" })
+    fun isSongLiked(ctx: Context, m: FmSongId.Match): Boolean = FmLikes.isLiked(ctx, m.title, m.artist)
 
     /**
      * Search the whole station catalogue (call, city, format, genre, licensee, or a frequency

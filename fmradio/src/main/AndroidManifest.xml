@@ -33,6 +33,8 @@
     <!-- Song ID (fingerprint to the recognition service), its cover art, and the terrain
          profile behind every line-of-sight verdict all go over the network. -->
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Network goes through com.miku.sysbridge; see FmNet. -->
+    <uses-permission android:name="com.miku.permission.SYSTEM_BRIDGE" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <!-- Now-playing keys the widgets, AOD and lockscreen read (FmNowPlaying). Platform-signed. -->
     <uses-permission android:name="android.permission.WRITE_SECURE_SETTINGS"

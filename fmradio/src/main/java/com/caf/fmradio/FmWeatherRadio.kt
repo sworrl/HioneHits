@@ -78,6 +78,43 @@ object FmWeatherRadio {
         return 2 * 6371.0 * asin(min(1.0, sqrt(h)))
     }
 
+    data class Alert(
+        val event: String,
+        val headline: String?,
+        val severity: String?,
+        val urgency: String?,
+        val areas: String?,
+        val effective: String?,
+        val expires: String?,
+        val description: String?,
+        val instruction: String?,
+        val sender: String?,
+    )
+
+    /**
+     * Active NWS alerts for a point: the same watches and warnings NOAA Weather Radio reads out,
+     * as data from api.weather.gov (the NWS's own public API). Blocking; null when the service
+     * cannot be reached, empty when there is nothing active.
+     */
+    fun alerts(lat: Double, lon: Double): List<Alert>? = runCatching {
+        val r = FmNet.request(
+            "https://api.weather.gov/alerts/active?point=%.4f,%.4f".format(java.util.Locale.US, lat, lon),
+            headers = mapOf(
+                // NWS asks every client to identify itself.
+                "User-Agent" to "MikuOS FM (https://github.com/sworrl/MikuOS)",
+                "Accept" to "application/geo+json",
+            ),
+        )
+        if (r.code != 200) { Log.w(TAG, "NWS alerts: HTTP ${r.code}"); return@runCatching null }
+        val feats = org.json.JSONObject(r.text).optJSONArray("features") ?: return@runCatching emptyList<Alert>()
+        List(feats.length()) { i ->
+            val p = feats.getJSONObject(i).getJSONObject("properties")
+            fun s(k: String) = p.optString(k).ifBlank { null }
+            Alert(s("event") ?: "Alert", s("headline"), s("severity"), s("urgency"), s("areaDesc"),
+                s("effective"), s("expires"), s("description"), s("instruction"), s("senderName"))
+        }
+    }.onFailure { Log.w(TAG, "NWS alerts failed: $it") }.getOrNull()
+
     /**
      * The nearest [n] transmitters within [radiusKm], nearest first. A 1 kW NWR site reaches a
      * handheld at roughly 60–70 km over open ground, so 120 km covers anything plausible.

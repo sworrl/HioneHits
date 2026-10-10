@@ -14,6 +14,8 @@
     <permission
         android:name="com.miku.permission.SYSTEM_BRIDGE"
         android:protectionLevel="signature" />
+    <uses-permission android:name="com.miku.permission.SYSTEM_BRIDGE" />
+    <uses-permission android:name="android.permission.INTERNET" />
 
     <application
         android:label="MikuOS system bridge"
@@ -25,6 +27,14 @@
             android:permission="com.miku.permission.SYSTEM_BRIDGE">
             <intent-filter>
                 <action android:name="com.miku.sysbridge.USB_DAC" />
+            </intent-filter>
+        </receiver>
+        <receiver
+            android:name=".HttpProxyReceiver"
+            android:exported="true"
+            android:permission="com.miku.permission.SYSTEM_BRIDGE">
+            <intent-filter>
+                <action android:name="com.miku.sysbridge.HTTP" />
             </intent-filter>
         </receiver>
     </application>

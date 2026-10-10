@@ -364,6 +364,7 @@ class QualcommFmHardwareEngine(private val context: Context) {
                 terrainByCall.clear()
             }
             weatherRadios.value = FmWeatherRadio.nearest(context, pos.first, pos.second)
+            refreshWeatherAlerts(pos)
             reannotate()
             Log.i(TAG, "catalogue: ${list.size} station(s) within reach of " +
                 "%.4f,%.4f".format(pos.first, pos.second))
@@ -394,6 +395,19 @@ class QualcommFmHardwareEngine(private val context: Context) {
         val plan = band.value
         val sweep = bandRssi.value.takeIf { it.isNotEmpty() && sweepPlace != null }
         return FmReach.annotate(listOf(st), sweep, plan.lowKHz, plan.stepKHz, mapOf(st.call to p)).firstOrNull()
+    }
+
+    /** Active NWS alerts here; null until fetched or when the service could not be reached. */
+    val weatherAlerts = MutableStateFlow<List<FmWeatherRadio.Alert>?>(null)
+    @Volatile private var alertsAt = 0L
+
+    /** At most every 10 minutes; alerts change on that scale and NWS asks clients not to hammer it. */
+    fun refreshWeatherAlerts(pos: Pair<Double, Double>? = FmStationCatalogue.listenerPosition(context), force: Boolean = false) {
+        pos ?: return
+        val now = System.currentTimeMillis()
+        if (!force && now - alertsAt < 10 * 60_000L) return
+        alertsAt = now
+        scope.launch(Dispatchers.IO) { FmWeatherRadio.alerts(pos.first, pos.second)?.let { weatherAlerts.value = it } }
     }
 
     /** NOAA Weather Radio transmitters near here (reference only; see [FmWeatherRadio]). */
@@ -694,6 +708,8 @@ class QualcommFmHardwareEngine(private val context: Context) {
         programmeId.value = null
         rdsAvailable.value = null
     }
+
+    init { FmNet.init(context) }
 
     init {
         loadJni()
