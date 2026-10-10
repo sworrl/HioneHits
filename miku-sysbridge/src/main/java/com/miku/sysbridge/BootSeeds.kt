@@ -59,7 +59,9 @@ import org.json.JSONObject
  * |   CAMERA, BLUETOOTH_CONNECT (see GRANTS)          |                                          |             |
  * | app-ops CAMERA, WRITE_SETTINGS, FINE/COARSE_LOC,  | AppOpsManager.setMode / setUidMode       | every boot  |
  * |   SYSTEM_ALERT_WINDOW, RECORD_AUDIO, MANAGE_EXTERNAL_STORAGE (see OPS) |                                          |             |
- * | theater_mode_on=1 (stops charger-flap wakes)      | Global put                               | every boot  |
+ * | theater_mode_on=0, once (see THEATER MODE below)  | Global put once, marker miku_theater_cleared | seed once |
+ * | vendor.audio.hiby.tp_gesture Global=enable        | Global put once, marker miku_seeded_tp_gesture | seed once |
+ * | double-tap to wake applied (see TouchWake)        | property toggle, again at +20 s and +60 s | every boot  |
  * | accelerometer_rotation=0                          | System put once, marker miku_rotation_seeded; skipped if MikuRotationKeeper has a saved choice | seed once |
  * | vendor.audio.hiby.hw.gain, vendor.audio.hiby.gain | Global put if unset (player gain picker) | seed once   |
  * | miku_dbg_off_stats=0                              | Global put if unset (kill switch must survive reboots) | seed once |
@@ -80,6 +82,14 @@ import org.json.JSONObject
  * | doze_enabled, doze_always_on, doze_pulse_*,       | Secure put 0 (stock DozeService NPEs)    | every boot  |
  * |   doze_tap_gesture                                |                                          |             |
  *
+ * THEATER MODE. This used to set theater_mode_on=1 every boot so a flapping charger could not wake
+ * the screen (PowerManagerService skips plug and unplug wakes in theater mode). It did not hold:
+ * PhoneWindowManager.wakeUp() writes theater_mode_on=0 on every allowed wake in theater mode, and
+ * the power key is allowed (config_allowTheaterModeWakeFromPowerKey=true), so the first press of
+ * the day turned it off until the next boot. Unplug wakes are now off at the source:
+ * config_unplugTurnsOnScreen=false in MikuFrameworkOverlay, whose priority now beats Qualcomm's
+ * FrameworksResCommon_Sys.apk (priority 100, which sets it true). Theater mode is cleared once.
+ *
  * Not here on purpose: `cmd lock_settings set-disabled` (the lockscreen owns it) and the chmod of
  * the SGM31324 LED nodes (no app can open them under enforcing SELinux whatever the mode bits, and
  * nothing in the tree writes them without root; the vendor LED rc drives them from properties).
@@ -90,6 +100,8 @@ object BootSeeds {
     private const val MARK_ROTATION = "miku_rotation_seeded"          // Settings.System, as the rc used
     private const val MARK_LOCATION = "miku_seeded_location"          // Settings.Global
     private const val MARK_NAVIGATION = "miku_seeded_navigation"      // Settings.Global
+    private const val MARK_THEATER = "miku_theater_cleared"           // Settings.Global
+    private const val MARK_TP_GESTURE = "miku_seeded_tp_gesture"      // Settings.Global
 
     private const val A11Y_SERVICE = "com.miku.systemui/.MikuNotificationShadeService"
     private const val ASSISTANT = "com.miku.systemui/.MikuPowerMenuActivity"
@@ -177,7 +189,20 @@ object BootSeeds {
         for ((pkg, perm) in GRANTS) step("grant $perm to $pkg") { grant(ctx, pkg, perm) }
         for ((op, pkg, uidWide) in OPS) step("appop $op ${if (uidWide) "uid " else ""}$pkg") { allowOp(ctx, op, pkg, uidWide) }
 
-        global(ctx, "theater_mode_on", "1")
+        // Was theater_mode_on=1 every boot. See THEATER MODE above.
+        step("theater mode off once") {
+            seedOnceBehindMarker(ctx, MARK_THEATER) { Settings.Global.putString(ctx.contentResolver, "theater_mode_on", "0") }
+        }
+
+        // Double-tap to wake, default on. Stock services.jar writes "disable" into this row when it
+        // is empty, so a plain seed-if-unset would never fire: flip it once behind a marker, then
+        // the MikuSettings switch owns it.
+        step("double-tap to wake seed") {
+            seedOnceBehindMarker(ctx, MARK_TP_GESTURE) {
+                Settings.Global.putString(ctx.contentResolver, TouchWake.GLOBAL, TouchWake.ENABLE)
+            }
+        }
+        step("double-tap to wake apply") { TouchWake.applyAtBoot(ctx); false }
 
         step("rotation seed") { seedRotation(ctx) }
 

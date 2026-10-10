@@ -1477,6 +1477,59 @@ fun DisplayScreen(ctx: Context) {
         }
 
         item {
+            // Double-tap to wake. The switch shows the saved choice. The touch chip picks it up
+            // the next time the screen turns off. See TouchWakeBridge.
+            val scope = rememberCoroutineScope()
+            var tapWake by remember { mutableStateOf(runCatching { TouchWakeBridge.isOn(ctx) }.getOrDefault(true)) }
+            var busy by remember { mutableStateOf(false) }
+
+            Column(Modifier.mikuCard().padding(14.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(Modifier.weight(1f)) {
+                        Text("DOUBLE-TAP TO WAKE", color = MikuTealBright, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        Spacer(Modifier.height(2.dp))
+                        Text("Double-tap the screen while it's off to turn it on", color = MikuMuted, fontSize = 10.sp)
+                    }
+                    Spacer(Modifier.width(12.dp))
+                    Switch(
+                        checked = tapWake,
+                        enabled = !busy,
+                        onCheckedChange = { on ->
+                            busy = true
+                            scope.launch(Dispatchers.IO) {
+                                val r = TouchWakeBridge.set(ctx, on)
+                                val saved = runCatching { TouchWakeBridge.isOn(ctx) }.getOrDefault(!on)
+                                withContext(Dispatchers.Main) {
+                                    tapWake = saved
+                                    busy = false
+                                    Toast.makeText(
+                                        ctx,
+                                        when (r) {
+                                            TouchWakeBridge.Result.APPLIED -> if (on) "Double-tap to wake is on" else "Double-tap to wake is off"
+                                            TouchWakeBridge.Result.SAVED_FOR_REBOOT -> "Saved. It takes effect after a restart"
+                                            TouchWakeBridge.Result.FAILED -> "Could not change double-tap to wake"
+                                        },
+                                        Toast.LENGTH_SHORT
+                                    ).show()
+                                }
+                            }
+                        },
+                        colors = SwitchDefaults.colors(
+                            checkedThumbColor = Color.Black,
+                            checkedTrackColor = MikuTealBright,
+                            uncheckedThumbColor = MikuMuted,
+                            uncheckedTrackColor = MikuSurface2
+                        )
+                    )
+                }
+            }
+        }
+
+        item {
             Column(Modifier.mikuCard().padding(14.dp)) {
                 Text("DISPLAY SIZE", color = MikuTealBright, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                 Text("Makes buttons, touch targets and the rest of the UI bigger", color = MikuMuted, fontSize = 10.sp)

@@ -373,6 +373,11 @@
                 <action android:name="com.miku.player.action.PRESET_SELFTEST" />
                 <action android:name="com.miku.player.action.FORCE_LIBRARY_SCAN" />
                 <action android:name="com.miku.player.action.RESCAN_LIBRARY" />
+                <!-- mikumeasure (see MeasureShell in MikuPrefsReceiver.kt) -->
+                <action android:name="com.miku.player.action.PLAY_FILE" />
+                <action android:name="com.miku.player.action.MEASURE_STOP" />
+                <action android:name="com.miku.player.action.MEASURE_STATUS" />
+                <action android:name="com.miku.player.action.DAC_SET" />
             </intent-filter>
         </receiver>
 

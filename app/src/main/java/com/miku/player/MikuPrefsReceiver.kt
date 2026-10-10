@@ -117,6 +117,140 @@ class MikuPrefsShellReceiver : MikuPrefsReceiver() {
         when (intent.action) {
             ACTION_PROFILE, ACTION_PRESET_SELFTEST, ACTION_FORCE_LIBRARY_SCAN, ACTION_RESCAN_LIBRARY ->
                 super.onReceive(context, intent)
+            MeasureShell.ACTION_PLAY_FILE, MeasureShell.ACTION_STOP, MeasureShell.ACTION_STATUS,
+            MeasureShell.ACTION_DAC_SET -> {
+                val (code, data) = runCatching { MeasureShell.handle(context.applicationContext, intent) }
+                    .getOrElse { 3 to "error: ${it.message ?: it.javaClass.simpleName}" }
+                android.util.Log.i(MeasureShell.TAG, "${intent.action} -> $code $data")
+                // `am broadcast` prints these: "Broadcast completed: result=1, data=..."
+                resultCode = code
+                resultData = data
+            }
         }
+    }
+}
+
+/**
+ * adb commands for mikumeasure (audio measurement from a PC), through [MikuPrefsShellReceiver]
+ * so only the shell (DUMP) can send them:
+ *
+ *   am broadcast -p com.miku.player -a com.miku.player.action.PLAY_FILE --es path /sdcard/Music/mikumeasure/x.wav [--el start_ms 0] [--ez eq_off true]
+ *   am broadcast -p com.miku.player -a com.miku.player.action.MEASURE_STOP
+ *   am broadcast -p com.miku.player -a com.miku.player.action.MEASURE_STATUS
+ *   am broadcast -p com.miku.player -a com.miku.player.action.DAC_SET --es digital_filter nos --es gain high
+ *
+ * PLAY_FILE replaces the queue with the one file (repeat and shuffle off) and turns the live EQ
+ * off unless eq_off is false. The user's queue, position and EQ state are kept and come back on
+ * MEASURE_STOP. DAC_SET forwards the knobs to com.miku.sysbridge like HibyDacBridge does and
+ * returns at once; the caller checks Settings.Global miku_dac_state for what was applied.
+ * Result codes: 1 ok, 2 bad request, 3 failed.
+ */
+object MeasureShell {
+    const val TAG = "MikuMeasure"
+    const val ACTION_PLAY_FILE = "com.miku.player.action.PLAY_FILE"
+    const val ACTION_STOP = "com.miku.player.action.MEASURE_STOP"
+    const val ACTION_STATUS = "com.miku.player.action.MEASURE_STATUS"
+    const val ACTION_DAC_SET = "com.miku.player.action.DAC_SET"
+
+    private val KNOBS: Map<String, Set<String>> = mapOf(
+        "high_power" to setOf("hpower_enable", "hpower_disable"),
+        "dre_mode" to setOf("dremode_enable", "dremode_disable"),
+        "digital_filter" to setOf(
+            "fast_rolloff_low_latency", "fast_rolloff_phase_compensated",
+            "slow_rolloff_low_latency", "slow_rolloff_phase_compensated", "nos",
+        ),
+        "gain" to setOf("low", "middle", "high"),
+    )
+
+    private class Saved(
+        val items: List<androidx.media3.common.MediaItem>,
+        val index: Int,
+        val positionMs: Long,
+        val repeat: Int,
+        val shuffle: Boolean,
+        val eqEnabled: Boolean,
+    )
+
+    @Volatile private var saved: Saved? = null
+
+    /** Runs on the main thread (receiver callback), where the player lives. */
+    fun handle(ctx: Context, intent: Intent): Pair<Int, String> = when (intent.action) {
+        ACTION_PLAY_FILE -> play(ctx, intent)
+        ACTION_STOP -> stop(ctx)
+        ACTION_STATUS -> 1 to status(ctx)
+        ACTION_DAC_SET -> dacSet(ctx, intent)
+        else -> 2 to "unknown action"
+    }
+
+    private fun play(ctx: Context, intent: Intent): Pair<Int, String> {
+        val path = intent.getStringExtra("path") ?: return 2 to "missing --es path"
+        val f = java.io.File(path)
+        if (!f.isFile || !f.canRead()) return 2 to "cannot read $path"
+        val player = PlayerHolder.ensure(ctx)
+        runCatching { PlayerHolder.ensureSession(ctx); PlayerHolder.ensureControllerConnected(ctx) }
+        if (saved == null) {
+            val items = (0 until player.mediaItemCount).map { player.getMediaItemAt(it) }
+            saved = Saved(items, player.currentMediaItemIndex, player.currentPosition.coerceAtLeast(0L),
+                player.repeatMode, player.shuffleModeEnabled, com.miku.player.profiles.MikuEq.state.value.enabled)
+        }
+        if (intent.getBooleanExtra("eq_off", true)) com.miku.player.profiles.MikuEq.setEnabled(false)
+        val item = androidx.media3.common.MediaItem.Builder()
+            .setUri(android.net.Uri.fromFile(f))
+            .setMediaId("mikumeasure:$path")
+            .setMediaMetadata(androidx.media3.common.MediaMetadata.Builder()
+                .setTitle(f.nameWithoutExtension).setArtist("mikumeasure").build())
+            .build()
+        player.shuffleModeEnabled = false
+        player.repeatMode = androidx.media3.common.Player.REPEAT_MODE_OFF
+        player.setMediaItem(item, intent.getLongExtra("start_ms", 0L).coerceAtLeast(0L))
+        player.prepare()
+        player.play()
+        return 1 to "playing $path"
+    }
+
+    private fun stop(ctx: Context): Pair<Int, String> {
+        val player = PlayerHolder.player ?: return 1 to "stopped (no player)"
+        player.pause()
+        val s = saved ?: return 1 to "stopped"
+        saved = null
+        if (s.items.isNotEmpty()) {
+            player.setMediaItems(s.items, s.index.coerceIn(0, s.items.size - 1), s.positionMs)
+            player.prepare()
+        } else {
+            player.clearMediaItems()
+        }
+        player.repeatMode = s.repeat
+        player.shuffleModeEnabled = s.shuffle
+        com.miku.player.profiles.MikuEq.setEnabled(s.eqEnabled)
+        return 1 to "stopped, queue restored (${s.items.size} items)"
+    }
+
+    private fun status(ctx: Context): String {
+        // Creating the player here, before a run, means its start-up DAC policy has already been
+        // applied by the time the caller sets the DAC.
+        val p = PlayerHolder.ensure(ctx)
+        val state = when (p.playbackState) {
+            androidx.media3.common.Player.STATE_IDLE -> "idle"
+            androidx.media3.common.Player.STATE_BUFFERING -> "buffering"
+            androidx.media3.common.Player.STATE_READY -> "ready"
+            else -> "ended"
+        }
+        return "state=$state playing=${p.isPlaying} position_ms=${p.currentPosition} " +
+            "item=${p.currentMediaItem?.mediaId ?: ""} eq=${com.miku.player.profiles.MikuEq.state.value.enabled} " +
+            "measuring=${saved != null}"
+    }
+
+    private fun dacSet(ctx: Context, intent: Intent): Pair<Int, String> {
+        val out = Intent("com.miku.sysbridge.AUDIO").setPackage("com.miku.sysbridge")
+        val sent = ArrayList<String>()
+        for ((knob, allowed) in KNOBS) {
+            val v = intent.getStringExtra(knob) ?: continue
+            if (v !in allowed) return 2 to "refused $knob=$v (allowed: ${allowed.joinToString()})"
+            out.putExtra(knob, v)
+            sent.add("$knob=$v")
+        }
+        if (sent.isEmpty()) return 2 to "no knob given (${KNOBS.keys.joinToString()})"
+        ctx.sendBroadcast(out)
+        return 1 to "sent ${sent.joinToString(" ")}"
     }
 }
