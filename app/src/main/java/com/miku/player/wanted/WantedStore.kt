@@ -291,7 +291,7 @@ object WantedStore {
         else -> null
     }
 
-    /** "Heard on WVAQ 101.9 · Oct 10, 1:14 AM · near Morgantown" */
+    /** "Heard on WXYZ 101.9 · Oct 10, 1:14 AM · near <town>" */
     fun heardLine(it: WantedItem): String {
         val parts = ArrayList<String>(3)
         stationLabel(it).ifBlank { null }?.let { s -> parts.add("Heard on $s") }

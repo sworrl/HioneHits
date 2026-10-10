@@ -9,8 +9,7 @@ import kotlin.math.sqrt
  * Should this station come in here, on this radio?
  *
  * The catalogue's score ranks stations against each other but cannot answer that, and the
- * nearby list was showing Pittsburgh stations from a hollow outside Morgantown that had never
- * once been heard there. This turns transmitter power, height and distance into a predicted
+ * nearby list was showing big-city stations from a valley where they had never once been heard. This turns transmitter power, height and distance into a predicted
  * level at the tuner's input in dBµV (the unit the Si4705's RSSI reports), then corrects that
  * prediction against what this device has actually measured.
  *
@@ -33,11 +32,11 @@ import kotlin.math.sqrt
  * the model or the terrain says; a full-power station whose frequency read at the noise floor
  * is NOT_HEARD.
  *
- * WHY WVAQ READ "OUT OF REACH" (2026-10-10). 50 kW, 152 m HAAT, 12.4 km from the listener, a
+ * WHY A STRONG LOCAL STATION READ "OUT OF REACH" (2026-10-10). 50 kW, 152 m HAAT, close by, a
  * ridge 0.8 km from the listener about 110 m above the line of sight (~23 dB of diffraction).
  * The old sum was Egli 69.6 dBuV, less the -38 dB default offset, less 23 dB of terrain:
  * 8 dBuV, under the 12 dBuV threshold. But the -38 had been fitted without terrain, from a
- * WCLG reading that was itself behind that ridge and taken while 100.1 could not be tuned
+ * reading of another station that was itself behind that ridge and taken while 100.1 could not be tuned
  * (the 200 kHz grid bug), so the ridge was in the offset and then subtracted again. Now:
  * min(Egli 69.6, free space 89.5 - 23.4) = 66.1, less the -25 dB default, is 41 dBuV: LIKELY,
  * and HEARD as soon as the tuner reads it.
@@ -71,9 +70,9 @@ object FmReach {
 
     /**
      * Headphone-cable antenna, indoors, before anything has been measured. From the first
-     * readings on this device (2026-10-09, north-west of Morgantown): WVPM 90.9 at 26 km read
-     * 29 dBµV against 53.6 predicted with its terrain (-24.6). The WCLG 100.1 reading from the
-     * same day (8 dBµV) is left out: it was taken while the dial could not land on 100.1.
+     * readings on this device (2026-10-09): one station read 29 dBµV against 53.6 predicted with
+     * its terrain (-24.6). A second reading from the same day (8 dBµV) is left out: it was taken
+     * while the dial could not land on that station's frequency.
      * Replaced as soon as two stations have been measured.
      */
     const val DEFAULT_OFFSET_DB = -25.0

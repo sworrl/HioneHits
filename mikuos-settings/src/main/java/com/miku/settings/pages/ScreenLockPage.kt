@@ -52,7 +52,7 @@ fun ScreenLockPage() {
                 Section(
                     "When to ask",
                     note = "Android also asks again 24 hours after the last time you entered it, " +
-                        "and when the device was not turned on for 8 hours. MikuOS cannot change that."
+                        "and when the screen stayed off for 8 hours. MikuOS cannot change that."
                 ) {
                     ToggleRow(
                         "Ask for $noun only after restart",

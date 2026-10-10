@@ -96,13 +96,9 @@ class MikuDacBadge(private val ctx: Context, private val wm: WindowManager, priv
             }
             title = "MikuDacBadge"
         }
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            v.setOnApplyWindowInsetsListener { _, insets ->
-                val shown = insets.isVisible(WindowInsets.Type.statusBars())
-                if (shown != statusBarShown) { statusBarShown = shown; applyVisibility() }
-                insets
-            }
-        }
+        // No insets listener: an accessibility overlay is always told the status bar is hidden
+        // (checked on the M500, over Google Play with the bar plainly showing), so the badge shows
+        // everywhere except retro modes and the AOD. The "DAC badge" QS tile turns it off.
         runCatching { wm.addView(v, lp) }.onFailure { Log.w(TAG, "add: $it"); return }
         view = v
         attached = true
@@ -126,10 +122,8 @@ class MikuDacBadge(private val ctx: Context, private val wm: WindowManager, priv
     fun setForeground(pkg: String?, cls: String?) {
         val own = pkg == LAUNCHER_PKG
         val aod = own && (cls?.contains("Aod", ignoreCase = true) == true)
-        if (own != ownRowInFront || aod != onAod) {
-            ownRowInFront = own; onAod = aod
-            applyVisibility()
-        }
+        ownRowInFront = own; onAod = aod
+        applyVisibility()
     }
 
     private fun refresh() {

@@ -351,7 +351,11 @@ class MikuNotificationShadeService : AccessibilityService() {
 
     private fun suppressStockShade() {
         runCatching {
-            val sb = getSystemService(Context.STATUS_BAR_SERVICE)
+            // The application context's StatusBarManager, never this service's: each Context gets
+            // its own manager with its own disable token, so a re-created service used to leave
+            // the previous instance's flags (stock icons hidden) stuck in StatusBarManagerService
+            // and third-party apps showed an empty status bar. One app-wide token replaces itself.
+            val sb = applicationContext.getSystemService(Context.STATUS_BAR_SERVICE)
             // What stays disabled, and why:
             //   EXPAND  the stock shade panel. The Miku top strip opens the Miku shade instead.
             //   HOME, RECENT  the stock home handle and recents. The Miku pill owns those gestures.
