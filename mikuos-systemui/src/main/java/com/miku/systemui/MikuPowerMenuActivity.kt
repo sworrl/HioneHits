@@ -122,6 +122,8 @@ fun MikuPowerMenuScreen(
                     val lockIntent = Intent().apply {
                         setClassName("com.miku.launcher", "com.miku.launcher.lockscreen.MikuLockscreenActivity")
                         flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+                        // Arm it dark. Without this it turns the screen back on right after the sleep below.
+                        putExtra("is_screen_off_transition", true)
                     }
                     try { ctx.startActivity(lockIntent) } catch (_: Throwable) {}
                     MikuLockdown.screenOff(ctx)

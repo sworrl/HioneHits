@@ -80,6 +80,7 @@ private const val POINTS = 260
 /** Gain offset in dB, from HiBy's driver (hiby-audio-knobs.md 3.1: -24/-12/0 half-dB units). */
 private fun gainDb(gain: String?): Float = when (gain) { "low" -> -12f; "middle" -> -6f; else -> 0f }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun DacResponseCard(
     filterId: String?,
@@ -213,7 +214,7 @@ fun DacResponseCard(
         Text(if (preview == null) "Tap a filter to preview it. The DAC is not changed." else "Previewing ${shown.shortLabel}. Tap it again to go back to the applied filter.",
             color = HwMuted, fontSize = 11.sp)
         Spacer(Modifier.height(4.dp))
-        Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             DacFilterModel.Filter.entries.forEach { f ->
                 val c = dacColor(f, gain, dre, highPower)
                 Row(
@@ -365,8 +366,11 @@ private fun FrequencyGraph(
             if (a >= toHz) return@forEachIndexed
             val x0 = x(a); val x1 = x(min(b, toHz))
             drawRect(BAND_COLORS[i].copy(alpha = 0.55f), Offset(x0, 0f), Size(x1 - x0 - 1f, topPad - 4f))
-            val t = tm.measure(name, TextStyle(color = Color.White, fontSize = 8.5.sp, fontWeight = FontWeight.Bold))
-            if (t.size.width < x1 - x0 - 2) drawText(t, topLeft = Offset((x0 + x1 - t.size.width) / 2, (topPad - 4f - t.size.height) / 2))
+            // Narrow bands (Mid high is one octave) fall back to a smaller font, then a short name.
+            val style = TextStyle(color = Color.White, fontSize = 8.5.sp, fontWeight = FontWeight.Bold)
+            val t = listOf(tm.measure(name, style), tm.measure(name, style.copy(fontSize = 7.sp)), tm.measure(name.replace("Mid high", "Mid hi"), style.copy(fontSize = 7.sp)))
+                .firstOrNull { it.size.width < x1 - x0 - 2 }
+            if (t != null) drawText(t, topLeft = Offset((x0 + x1 - t.size.width) / 2, (topPad - 4f - t.size.height) / 2))
         }
 
         // Log grid: 1-2-3-4-5-6-8 per decade, labels on 20/50/100/200/500/1k...
