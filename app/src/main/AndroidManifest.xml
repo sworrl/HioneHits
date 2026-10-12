@@ -178,7 +178,7 @@
             </intent-filter>
         </activity-alias>
         <activity-alias
-            android:name=".MainActivityHione"
+            android:name=".MainActivityHits"
             android:targetActivity=".MainActivity"
             android:exported="true"
             android:enabled="false"

@@ -401,7 +401,7 @@ object Mascot {
         "com.hione.update" to "com.hione.update.ui.MainActivity",
         "com.hione.systemui" to "com.hione.systemui.HioneSystemUIActivity",
     )
-    val ALIAS_SETS = listOf("Hione", "Hione", "Plain")
+    val ALIAS_SETS = listOf("Hione", "Hits", "Plain")
 
     private val state = mutableStateOf(MascotPacks.HIONE)
     private val listeners = java.util.concurrent.CopyOnWriteArrayList<(MascotPack) -> Unit>()

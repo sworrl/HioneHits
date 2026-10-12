@@ -111,7 +111,7 @@
             </intent-filter>
         </activity-alias>
         <activity-alias
-            android:name=".HioneSystemUIActivityHione"
+            android:name=".HioneSystemUIActivityHits"
             android:targetActivity=".HioneSystemUIActivity"
             android:exported="true"
             android:enabled="false"
