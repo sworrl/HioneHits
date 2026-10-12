@@ -1,6 +1,6 @@
-<h1 align="center">Miku Music</h1>
+<h1 align="center">Hione Music</h1>
 
-<p align="center"><em>A bit-perfect music player for the HiBy Digital M500 x Hatsune Miku. Real DACs, real numbers, no invented readings.</em></p>
+<p align="center"><em>A bit-perfect music player for the HiBy Digital M500 x Hatsune Hione. Real DACs, real numbers, no invented readings.</em></p>
 
 <p align="center">
   <img alt="License" src="https://img.shields.io/badge/license-GPL--3.0--or--later-blue">
@@ -15,8 +15,8 @@
 > requests are welcome. The [What is verified](#what-is-verified) table is the honest line between
 > what has been confirmed on hardware and what has not.
 
-Miku Music is the music player for [MikuOS](https://github.com/sworrl/MikuOS), a platform-signed
-Android 14 replacement for the HiBy Digital M500 x Hatsune Miku DAP. It plays local files straight
+Hione Music is the music player for [HioneOS](https://github.com/sworrl/HioneOS), a platform-signed
+Android 14 replacement for the HiBy Digital M500 x Hatsune Hione DAP. It plays local files straight
 to the device's dual Cirrus Logic CS43198 DACs with no resampling and no mixer in the path, draws
 its visuals with real libprojectM, and does not display a number it did not measure.
 
@@ -75,10 +75,10 @@ Legend: ✅ confirmed on a real M500 · ⚠️ implemented, not proven on hardwa
 | DAC register visibility (filter, DRE, gain, high-power) | ✅ | Read and written through `vendor.audio.hiby.*`, verified against the stock app's behavior |
 | Per-track sample rate and bit depth | ✅ | Read from the file with `MediaMetadataRetriever`, never from the extension |
 | libprojectM 4.2.0 rendering | ✅ | Real native library, version read at runtime from `projectm_get_version_string()` |
-| The 80 Miku presets | ⚠️ | Generated and confirmed unpacking into the preset library on device; not yet watched rendering one by one |
+| The 80 Hione presets | ⚠️ | Generated and confirmed unpacking into the preset library on device; not yet watched rendering one by one |
 | CUE sheet splitting | ✅ | Disc images with a sibling `.cue` split into real tracks |
 | Cue-less disc image splitting (MusicBrainz durations) | ⚠️ | Implemented, roughly 489 images in the test library still unsplit |
-| FM tuner | ❌ | SELinux denies `platform_app` direct access to `/dev/radio0`. Two real paths forward are documented in MikuOS, neither is shipped |
+| FM tuner | ❌ | SELinux denies `platform_app` direct access to `/dev/radio0`. Two real paths forward are documented in HioneOS, neither is shipped |
 
 ---
 
@@ -91,7 +91,7 @@ the requested buffer is around 100ms or larger. Qualcomm's AudioPolicyManager on
 `direct_pcm` profile when the flags are NONE. So asking for a comfortable buffer silently opts you
 out of direct output, and every track goes through the mixer at whatever rate the mixer is running.
 
-**What this app does.** `MikuDirectAudioSink` is a Media3 `AudioSink` that requests a buffer
+**What this app does.** `HioneDirectAudioSink` is a Media3 `AudioSink` that requests a buffer
 deliberately under the deep-buffer promotion threshold, so the track is built with no flags and the
 policy manager routes it to the DAC directly. There is a fallback that retries at the platform
 minimum if AudioTrack refuses the small buffer, because a silent failure here means silence.
@@ -130,11 +130,11 @@ is also why volume behaves differently there than through the mixer.
 | **Playback** | Media3 + MediaSession, gapless, FLAC/ALAC/WAV/AIFF/DSF/DFF/MP3/AAC/OGG/Opus, replay from where you stopped |
 | **Library** | Songs, albums, artists, genres, folders, playlists. Per-track true sample rate and bit depth read from the file |
 | **Now Playing** | Full-bleed art, wavy scrubber, dynamic palette taken from the album, a track-facts strip that only shows facts it has |
-| **Visualizer** | Real libprojectM 4.2.0, 80 Miku presets plus whatever else you drop in, swipe to change, fullscreen |
+| **Visualizer** | Real libprojectM 4.2.0, 80 Hione presets plus whatever else you drop in, swipe to change, fullscreen |
 | **Tape mode** | A spec-exact Compact Cassette deck. Real IEC 60094-7 millimeter geometry, wound-pack physics, wow and flutter, 18 shell themes |
 | **Likes** | Track, album and artist hearts. An album like covers every track on it unless you explicitly refuse one |
-| **Taste engine** | Affinity model and a co-occurrence graph over your own listening. Miku Radio station mode, optional smart shuffle |
-| **Listening stats** | A local play database and a Miku Rewind recap. Yours, on device |
+| **Taste engine** | Affinity model and a co-occurrence graph over your own listening. Hione Radio station mode, optional smart shuffle |
+| **Listening stats** | A local play database and a Hione Rewind recap. Yours, on device |
 | **Scrobbling** | Last.fm API 2.0 with an offline queue. Browser sign-in, so the app never handles your password |
 | **Booklet viewer** | Sleeve, booklet and PDF scans from the album folder, rendered as the physical object |
 | **Artist photos** | Exact-match Wikidata/Wikipedia lookups with a local `artist.jpg` override and a reject button |
@@ -151,12 +151,12 @@ It is real [libprojectM](https://github.com/projectM-visualizer/projectm) 4.2.0,
 for arm64, not a shader that looks a bit like Milkdrop. The version shown on screen is read out of
 the loaded library at runtime, not written into our source, so it cannot drift from the truth.
 
-`app/src/main/assets/miku_presets/` holds 80 presets written for this project, in ten families of
-eight: Negi Rain, Twintail Flow, Hatsune Bloom, Vocaloid Circuit, Miku Vortex, Leek Spin, Crystal
+`app/src/main/assets/hione_presets/` holds 80 presets written for this project, in ten families of
+eight: Negi Rain, Twintail Flow, Hatsune Bloom, Vocaloid Circuit, Hione Vortex, Leek Spin, Crystal
 Chorus, Neon Stage, Tidal Teal, Star Aria. Families differ in motion and render math. Variants
 inside a family change symmetry, speed, wave mode, decay and what the audio drives, not just the
 hue. They are classic version-1 `.milk` presets with no HLSL blocks, which is the part of the format
-projectM's GLES path handles without argument. `tools/gen_miku_presets.py` in the MikuOS repo
+projectM's GLES path handles without argument. `tools/gen_hione_presets.py` in the HioneOS repo
 regenerates them.
 
 The rest of the library is projectM's own "cream of the crop" pack, which is not redistributed here
@@ -205,8 +205,8 @@ Last.fm API account, Settings has fields for it and user credentials win over th
 ## Build from source
 
 ```bash
-git clone https://github.com/sworrl/MikuMusic
-cd MikuMusic
+git clone https://github.com/sworrl/HioneMusic
+cd HioneMusic
 
 # Minimum local.properties
 cat > local.properties <<'EOF'
@@ -222,9 +222,9 @@ in Settings rather than crashing or pretending:
 | Key | What it turns on |
 |---|---|
 | `lastfm.api.key` / `lastfm.api.secret` | Scrobbling without the user bringing their own API account |
-| `miku.windy.key` | Windy layers in the weather tile |
-| `miku.entitlement.url` / `miku.entitlement.hmac` | The entitlement client, which is inert without both |
-| `miku.ingest.host` | The library ingest server |
+| `hione.windy.key` | Windy layers in the weather tile |
+| `hione.entitlement.url` / `hione.entitlement.hmac` | The entitlement client, which is inert without both |
+| `hione.ingest.host` | The library ingest server |
 
 Release builds are signed with the Falcon Technix platform key so the OS trusts them as platform
 apps. That key is not in this repo. Without it `assembleRelease` produces an unsigned APK, which is
@@ -235,21 +235,21 @@ through the symlink to know it changed, so after updating it you MUST `rm -rf ap
 silently ships the previous `.so`.
 
 **The JIT ceiling.** ART refuses to compile a method over 16384 dex instructions and interprets it
-forever instead. Compose composables hit this easily. `tools/scan_jit_limit.sh` in the MikuOS repo
+forever instead. Compose composables hit this easily. `tools/scan_jit_limit.sh` in the HioneOS repo
 scans an APK and exits non-zero if anything is over. Run it before shipping.
 
 ---
 
 ## Install
 
-On a MikuOS device the apps come with the ROM. To install a build over the top:
+On a HioneOS device the apps come with the ROM. To install a build over the top:
 
 ```bash
-adb install -r -d MikuMusic-v2.0.287.apk
+adb install -r -d HioneMusic-v2.0.287.apk
 ```
 
 The debug and release builds must be signed with the same key or the install is refused, and
-uninstalling takes your likes and history with it. Back up `/data/data/com.miku.player` first.
+uninstalling takes your likes and history with it. Back up `/data/data/com.hione.player` first.
 
 ---
 
@@ -257,29 +257,29 @@ uninstalling takes your likes and history with it. Back up `/data/data/com.miku.
 
 | Path | What it is |
 |---|---|
-| `app/` | Miku Music itself, `com.miku.player` |
-| `app/src/main/java/androidx/media3/exoplayer/audio/` | `MikuDirectAudioSink`, the bit-perfect sink |
+| `app/` | Hione Music itself, `com.hione.player` |
+| `app/src/main/java/androidx/media3/exoplayer/audio/` | `HioneDirectAudioSink`, the bit-perfect sink |
 | `app/src/main/cpp/` | The projectM JNI bridge |
-| `app/src/main/assets/miku_presets/` | The 80 presets |
-| `mikuos-launcher/` | The MikuOS home screen, `com.miku.launcher` |
-| `mikuos-systemui/` | Navigation gestures, shade, idle dim, `com.miku.systemui` |
-| `mikuos-settings/` | The MikuOS settings app |
+| `app/src/main/assets/hione_presets/` | The 80 presets |
+| `hioneos-launcher/` | The HioneOS home screen, `com.hione.launcher` |
+| `hioneos-systemui/` | Navigation gestures, shade, idle dim, `com.hione.systemui` |
+| `hioneos-settings/` | The HioneOS settings app |
 | `hardware-settings/` | DAC and hardware controls, `com.m500.hardware` |
 | `fmradio/` | FM tuner UI, shipped as `com.caf.fmradio` so vendor SELinux rules apply |
 
-The launcher and system UI live here rather than in MikuOS because they are Gradle modules of the
+The launcher and system UI live here rather than in HioneOS because they are Gradle modules of the
 same build and share the theme and motion code with the player.
 
 ---
 
 ## The device
 
-HiBy Digital M500 x Hatsune Miku edition, product `khaje`. Android 14 base, 3.2 inch 720x1280
-portrait panel at 270dpi. Dual Cirrus Logic CS43198 in the "MIKU DAC" configuration. 3.5mm single
+HiBy Digital M500 x Hatsune Hione edition, product `khaje`. Android 14 base, 3.2 inch 720x1280
+portrait panel at 270dpi. Dual Cirrus Logic CS43198 in the "HIONE DAC" configuration. 3.5mm single
 ended and 4.4mm balanced out, plus USB DAC. Snapdragon 665, four little cores that matter more than
 you would expect. Physical power, volume wheel, play/pause, next, previous and Fn on the right edge.
 
-There is no ambient light sensor. MikuOS measures room brightness with the camera's auto-exposure
+There is no ambient light sensor. HioneOS measures room brightness with the camera's auto-exposure
 instead, which is documented over in that repo.
 
 ---
@@ -317,7 +317,7 @@ not have to rediscover it.
 
 GPL-3.0-or-later. See [LICENSE](LICENSE).
 
-Hatsune Miku and the associated character designs are the property of Crypton Future Media. This is
+Hatsune Hione and the associated character designs are the property of Crypton Future Media. This is
 an unaffiliated hobby project for a device Crypton licensed, and it ships no Crypton artwork. HiBy
 Digital's firmware, applications and assets are theirs and none of them are redistributed here.
 libprojectM is LGPL-2.1 and is used as a library. Media3 and the AndroidX libraries are Apache-2.0.

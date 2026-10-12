@@ -23,18 +23,18 @@ import kotlin.math.max
 
 /**
  * The DAC graph's data from outside the DAC: which listening profile each output uses (published
- * by Miku Music), the headphone curves the user imported, the curves measured with the
+ * by Hione Music), the headphone curves the user imported, the curves measured with the
  * built-in mic, and the sweep measurement itself.
  */
 
 /**
- * Listening profile per output, read-only. Miku Music's ListeningProfileManager publishes it as
- * Settings.Global "miku_listening_outputs" (JSON, see there for the shape) whenever a profile,
+ * Listening profile per output, read-only. Hione Music's ListeningProfileManager publishes it as
+ * Settings.Global "hione_listening_outputs" (JSON, see there for the shape) whenever a profile,
  * a pin or the connected outputs change. Settings.Global is readable by every app, the same way
- * this app reads miku_dac_state.
+ * this app reads hione_dac_state.
  */
 object OutputProfiles {
-    const val KEY = "miku_listening_outputs"
+    const val KEY = "hione_listening_outputs"
     const val PORT_35 = "3.5mm"
     const val PORT_44 = "4.4mm"
 
@@ -107,11 +107,11 @@ object OutputProfiles {
     }
 
     /**
-     * Ask Miku Music to put [bands] (cuts from a measurement) on a profile's EQ. Miku Music
+     * Ask Hione Music to put [bands] (cuts from a measurement) on a profile's EQ. Hione Music
      * registers the receiver at runtime and only accepts it from apps holding
-     * com.miku.permission.SYSTEM_BRIDGE (signature), which this app does.
+     * com.hione.permission.SYSTEM_BRIDGE (signature), which this app does.
      */
-    fun sendEqToMikuMusic(ctx: Context, profileId: String, bands: List<ResponseMath.Band>, preampDb: Double) {
+    fun sendEqToHioneMusic(ctx: Context, profileId: String, bands: List<ResponseMath.Band>, preampDb: Double) {
         val eq = JSONObject().apply {
             put("preamp", preampDb)
             put("bands", JSONArray().apply {
@@ -124,9 +124,9 @@ object OutputProfiles {
             })
         }
         ctx.sendBroadcast(
-            Intent("com.miku.player.profiles.SET_EQ").setPackage("com.miku.player")
+            Intent("com.hione.player.profiles.SET_EQ").setPackage("com.hione.player")
                 .putExtra("profileId", profileId).putExtra("eq", eq.toString()),
-            "com.miku.permission.SYSTEM_BRIDGE",
+            "com.hione.permission.SYSTEM_BRIDGE",
         )
     }
 }
@@ -190,7 +190,7 @@ object SweepMeasurement {
         val wired = am.getDevices(AudioManager.GET_DEVICES_OUTPUTS).filter {
             it.type == AudioDeviceInfo.TYPE_WIRED_HEADSET || it.type == AudioDeviceInfo.TYPE_WIRED_HEADPHONES || it.type == AudioDeviceInfo.TYPE_LINE_ANALOG
         }
-        // HiBy names the balanced jack "balance..." (the same test Miku Music uses).
+        // HiBy names the balanced jack "balance..." (the same test Hione Music uses).
         return if (port == OutputProfiles.PORT_44) wired.firstOrNull { it.productName?.toString()?.contains("balance", true) == true }
         else wired.firstOrNull { it.productName?.toString()?.contains("balance", true) != true }
     }
@@ -218,7 +218,7 @@ object SweepMeasurement {
         val lead = (LEAD_SECONDS * RATE).toInt()
 
         val attrs = AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_MEDIA).setContentType(AudioAttributes.CONTENT_TYPE_MUSIC).build()
-        // Pause whatever is playing (Miku Music gives up focus) for the length of the run.
+        // Pause whatever is playing (Hione Music gives up focus) for the length of the run.
         val focus = AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_EXCLUSIVE).setAudioAttributes(attrs).build()
         runCatching { am.requestAudioFocus(focus) }
 
@@ -306,7 +306,7 @@ internal fun fmtRate(hz: Int): String = when (hz % 1000) {
     else -> String.format(java.util.Locale.US, "%.1f kHz", hz / 1000.0)
 }
 
-/** "24-bit 44.1 kHz · native" (Settings.Global miku_now_playing_format) -> 44100. */
+/** "24-bit 44.1 kHz · native" (Settings.Global hione_now_playing_format) -> 44100. */
 internal fun parseNowPlayingRate(format: String?): Int? {
     val m = Regex("""(\d+(?:\.\d+)?)\s*kHz""").find(format ?: return null) ?: return null
     val hz = (m.groupValues[1].toDoubleOrNull() ?: return null) * 1000

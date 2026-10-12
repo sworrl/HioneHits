@@ -22,7 +22,7 @@ object RootShell {
     @Volatile private var isSessionActive = false
 
     /**
-     * ROOT IS OPTIONAL. MikuOS never requires su for anything: every feature has a platform-signed,
+     * ROOT IS OPTIONAL. HioneOS never requires su for anything: every feature has a platform-signed,
      * root-free path, and that path is what ships. Root is a power-user ENHANCEMENT — where it is
      * present it can unlock extra hardware (the SELinux-locked LED nodes, for one) and this class
      * is how that gets used.

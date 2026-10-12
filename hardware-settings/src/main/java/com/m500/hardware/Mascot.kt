@@ -3,25 +3,25 @@ package com.m500.hardware
 // Mascot packs at runtime: names, colors and art follow the pack the user picked, live, with no
 // reflash and no app restart.
 //
-// The same file (only the package line differs) lives in every MikuOS app module: app,
-// mikuos-launcher, mikuos-systemui, mikuos-settings, hardware-settings, mikuos-tools,
-// mikuos-media, mikuos-update, mikuos-riot, mikuos-wheel. Keep them identical. The launcher copy
-// is the one to edit, then copy it over with mikuos/mascot/runtime/sync_mascot_kt.sh.
+// The same file (only the package line differs) lives in every HioneOS app module: app,
+// hioneos-launcher, hioneos-systemui, hioneos-settings, hardware-settings, hioneos-tools,
+// hioneos-media, hioneos-update, hioneos-riot, hioneos-wheel. Keep them identical. The launcher copy
+// is the one to edit, then copy it over with hioneos/mascot/runtime/sync_mascot_kt.sh.
 //
-// Source of truth: Settings.Global miku_mascot_pack, a pack id. Unset or unknown means "miku".
-// MikuSettings writes it (Theme & mascot page). To test from a computer:
-//   adb shell settings put global miku_mascot_pack hione
-//   adb shell settings put global miku_mascot_pack miku
+// Source of truth: Settings.Global hione_mascot_pack, a pack id. Unset or unknown means "hione".
+// HioneSettings writes it (Theme & mascot page). To test from a computer:
+//   adb shell settings put global hione_mascot_pack hione
+//   adb shell settings put global hione_mascot_pack hione
 //
 // Packs:
-//   miku, hione   built in. Names and palettes are compiled in below (MascotPackTest checks
-//                 them against mikuos/mascot/packs/<id>/pack.json). Hione's art and voice clips
-//                 ship inside Miku Update and are read through its provider.
-//   anything else downloaded by Miku Update ("content packs" in the signed OTA manifest),
-//                 unpacked into Miku Update's private storage and read through the same provider:
-//                 content://com.miku.update.mascot (signature permission MASCOT_PACKS).
+//   hione, hione   built in. Names and palettes are compiled in below (MascotPackTest checks
+//                 them against hioneos/mascot/packs/<id>/pack.json). Hione's art and voice clips
+//                 ship inside Hione Update and are read through its provider.
+//   anything else downloaded by Hione Update ("content packs" in the signed OTA manifest),
+//                 unpacked into Hione Update's private storage and read through the same provider:
+//                 content://com.hione.update.mascot (signature permission MASCOT_PACKS).
 //
-// Colors: the apps keep writing MikuOS hex values. Mascot.color(0xFF39C5BB) returns the active
+// Colors: the apps keep writing HioneOS hex values. Mascot.color(0xFF39C5BB) returns the active
 // pack's replacement (alpha kept), the runtime twin of apply_pack.py's color table. It reads
 // Compose state, so a composable that calls it recomposes when the pack changes.
 // Text: Mascot.osName, musicAppName, name, fullName and friends, or Mascot.fill("{os_name}").
@@ -94,15 +94,15 @@ data class HueRule(
 /** One mascot pack. Field names match pack.json (snake_case there). */
 data class MascotPack(
     val id: String,
-    /** Short mascot name: "Miku". */
+    /** Short mascot name: "Hione". */
     val name: String,
     val nameJa: String,
-    /** "Hatsune Miku", family name first. */
+    /** "Hatsune Hione", family name first. */
     val fullName: String,
     val fullNameJa: String,
-    /** "MikuOS". */
+    /** "HioneOS". */
     val osName: String,
-    /** The music app's name: "Miku Music". */
+    /** The music app's name: "Hione Music". */
     val musicAppName: String,
     val launcherName: String,
     val settingsName: String,
@@ -110,16 +110,16 @@ data class MascotPack(
     val edition: String,
     val bluetoothName: String,
     val palette: MascotPalette,
-    /** MikuOS RGB (no alpha) to pack RGB. Empty for the Miku pack. */
+    /** HioneOS RGB (no alpha) to pack RGB. Empty for the Hione pack. */
     val colorMap: Map<Int, Int>,
-    /** "miku" keeps the Miku-only lore text (leeks, Project DIVA, Mirai Stadium). */
+    /** "hione" keeps the Hione-only lore text (leeks, Project DIVA, Mirai Stadium). */
     val lore: String,
-    /** Which activity-alias set names the apps on the home screen: Miku, Hione or Plain. */
+    /** Which activity-alias set names the apps on the home screen: Hione, Hione or Plain. */
     val labelAlias: String,
     val version: Int = 1,
     /** builtin or download. */
     val source: String = "builtin",
-    /** Shades outside [colorMap], recolored by hue family. Empty for the Miku pack. */
+    /** Shades outside [colorMap], recolored by hue family. Empty for the Hione pack. */
     val hueRules: List<HueRule> = emptyList(),
 ) {
     // Flat arrays for the per-draw color lookup: no boxing, no allocation.
@@ -233,7 +233,7 @@ data class MascotPack(
                 palette = palette,
                 colorMap = map,
                 lore = o.optString("lore", id),
-                labelAlias = o.optString("label_alias", if (id == "miku") "Miku" else "Plain"),
+                labelAlias = o.optString("label_alias", if (id == "hione") "Hione" else "Plain"),
                 version = o.optInt("version", 1),
                 source = source,
                 hueRules = buildList {
@@ -303,26 +303,26 @@ data class MascotPack(
 
 /** The two packs compiled into every app. MascotPackTest keeps them equal to the pack.json files. */
 object MascotPacks {
-    val MIKU = MascotPack(
-        id = "miku",
-        name = "Miku",
+    val HIONE = MascotPack(
+        id = "hione",
+        name = "Hione",
         nameJa = "ミク",
-        fullName = "Hatsune Miku",
+        fullName = "Hatsune Hione",
         fullNameJa = "初音ミク",
-        osName = "MikuOS",
-        musicAppName = "Miku Music",
-        launcherName = "MikuOS Launcher",
-        settingsName = "MikuOS Settings",
-        updateName = "Miku Update",
-        edition = "Hatsune Miku edition",
-        bluetoothName = "Miku M500",
+        osName = "HioneOS",
+        musicAppName = "Hione Music",
+        launcherName = "HioneOS Launcher",
+        settingsName = "HioneOS Settings",
+        updateName = "Hione Update",
+        edition = "Hatsune Hione edition",
+        bluetoothName = "Hione M500",
         palette = MascotPalette(
             primary = 0xFF39C5BB.toInt(), primaryDeep = 0xFF1E8C84.toInt(), secondary = 0xFF0E1A18.toInt(),
             accent = 0xFFFF5FA2.toInt(), dark = 0xFF0B1418.toInt(), light = 0xFFE0F7FA.toInt(), warn = 0xFFFF5A4E.toInt(),
         ),
         colorMap = emptyMap(),
-        lore = "miku",
-        labelAlias = "Miku",
+        lore = "hione",
+        labelAlias = "Hione",
     )
 
     val HIONE = MascotPack(
@@ -372,38 +372,38 @@ object MascotPacks {
         ),
     )
 
-    val BUILT_IN = listOf(MIKU, HIONE)
+    val BUILT_IN = listOf(HIONE, HIONE)
 
     fun builtIn(id: String?): MascotPack? = BUILT_IN.firstOrNull { it.id == id }
 }
 
 object Mascot {
     /** Settings.Global key: the active pack id. */
-    const val SETTING = "miku_mascot_pack"
-    const val DEFAULT_ID = "miku"
-    /** Miku Update's pack provider. */
-    const val AUTHORITY = "com.miku.update.mascot"
-    const val PERMISSION = "com.miku.permission.MASCOT_PACKS"
+    const val SETTING = "hione_mascot_pack"
+    const val DEFAULT_ID = "hione"
+    /** Hione Update's pack provider. */
+    const val AUTHORITY = "com.hione.update.mascot"
+    const val PERMISSION = "com.hione.permission.MASCOT_PACKS"
 
-    /** Holidays and seasons (the launcher reads them, MikuSettings writes them). */
-    const val HOLIDAY_SCOPE = "miku_holiday_scope"          // intl | local | custom | off
-    const val HOLIDAY_CUSTOM = "miku_holiday_custom"        // comma-separated holiday ids
-    const val HOLIDAY_REMINDERS = "miku_holiday_reminders"  // 1 on (default), 0 off
-    const val HOLIDAY_ART = "miku_holiday_art"              // 1 on (default), 0 off
+    /** Holidays and seasons (the launcher reads them, HioneSettings writes them). */
+    const val HOLIDAY_SCOPE = "hione_holiday_scope"          // intl | local | custom | off
+    const val HOLIDAY_CUSTOM = "hione_holiday_custom"        // comma-separated holiday ids
+    const val HOLIDAY_REMINDERS = "hione_holiday_reminders"  // 1 on (default), 0 off
+    const val HOLIDAY_ART = "hione_holiday_art"              // 1 on (default), 0 off
 
     /**
      * Launcher entries that show the OS or mascot name. Each has one activity-alias per label
-     * set ("<activity>Miku", "<activity>Hione", "<activity>Plain"). The Miku alias is enabled in
+     * set ("<activity>Hione", "<activity>Hione", "<activity>Plain"). The Hione alias is enabled in
      * the manifest, the others are disabled until a pack asks for them.
      */
     val ALIASES = listOf(
-        "com.miku.player" to "com.miku.player.MainActivity",
-        "com.miku.update" to "com.miku.update.ui.MainActivity",
-        "com.miku.systemui" to "com.miku.systemui.MikuSystemUIActivity",
+        "com.hione.player" to "com.hione.player.MainActivity",
+        "com.hione.update" to "com.hione.update.ui.MainActivity",
+        "com.hione.systemui" to "com.hione.systemui.HioneSystemUIActivity",
     )
-    val ALIAS_SETS = listOf("Miku", "Hione", "Plain")
+    val ALIAS_SETS = listOf("Hione", "Hione", "Plain")
 
-    private val state = mutableStateOf(MascotPacks.MIKU)
+    private val state = mutableStateOf(MascotPacks.HIONE)
     private val listeners = java.util.concurrent.CopyOnWriteArrayList<(MascotPack) -> Unit>()
     @Volatile private var app: Context? = null
     private var observer: ContentObserver? = null
@@ -424,9 +424,9 @@ object Mascot {
     val updateName: String get() = pack.updateName
     val edition: String get() = pack.edition
     val bluetoothName: String get() = pack.bluetoothName
-    val isMiku: Boolean get() = pack.id == "miku"
-    /** True when Miku-only lore (leeks, Project DIVA, Mirai Stadium) should show. */
-    val hasMikuLore: Boolean get() = pack.lore == "miku"
+    val isHione: Boolean get() = pack.id == "hione"
+    /** True when Hione-only lore (leeks, Project DIVA, Mirai Stadium) should show. */
+    val hasHioneLore: Boolean get() = pack.lore == "hione"
 
     val primary: Color get() = Color(pack.palette.primary)
     val primaryDeep: Color get() = Color(pack.palette.primaryDeep)
@@ -436,7 +436,7 @@ object Mascot {
     val light: Color get() = Color(pack.palette.light)
     val warn: Color get() = Color(pack.palette.warn)
 
-    /** A MikuOS color literal mapped to the active pack, alpha kept. */
+    /** A HioneOS color literal mapped to the active pack, alpha kept. */
     fun color(argb: Long): Color = Color(pack.mapArgb(argb.toInt()))
     fun color(argb: Int): Color = Color(pack.mapArgb(argb))
     /** Same, for View code that works in ARGB ints. */
@@ -446,8 +446,8 @@ object Mascot {
     /** Fill {os_name}, {music_app_name}, {mascot_name} and the rest from the active pack. */
     fun fill(template: String): String = pack.fill(template)
 
-    /** Pick text by lore: [miku] under the Miku pack, [other] under every other pack. */
-    fun lore(miku: String, other: String): String = if (hasMikuLore) miku else other
+    /** Pick text by lore: [hione] under the Hione pack, [other] under every other pack. */
+    fun lore(hione: String, other: String): String = if (hasHioneLore) hione else other
 
     /** Called by View code that does not recompose on its own. Runs on the main thread. */
     fun addListener(l: (MascotPack) -> Unit) { listeners += l }
@@ -474,16 +474,16 @@ object Mascot {
         }
         observer = obs
         runCatching { a.contentResolver.registerContentObserver(Settings.Global.getUriFor(SETTING), false, obs) }
-        // A downloaded pack can be updated in place: Miku Update notifies this URI when it does.
+        // A downloaded pack can be updated in place: Hione Update notifies this URI when it does.
         runCatching { a.contentResolver.registerContentObserver(Uri.parse("content://$AUTHORITY/packs"), true, obs) }
     }
 
     private fun reload(ctx: Context) {
         val id = runCatching { Settings.Global.getString(ctx.contentResolver, SETTING) }.getOrNull()
             ?.trim()?.lowercase()?.ifEmpty { null } ?: DEFAULT_ID
-        val p = resolve(ctx, id) ?: MascotPacks.MIKU
+        val p = resolve(ctx, id) ?: MascotPacks.HIONE
         if (Looper.myLooper() == Looper.getMainLooper()) apply(p) else Handler(Looper.getMainLooper()).post { apply(p) }
-        // The launcher and MikuSettings hold CHANGE_COMPONENT_ENABLED_STATE and put every app's
+        // The launcher and HioneSettings hold CHANGE_COMPONENT_ENABLED_STATE and put every app's
         // labels in line, so a pack set from adb switches the home screen too. Others do their own.
         val all = ctx.checkSelfPermission("android.permission.CHANGE_COMPONENT_ENABLED_STATE") ==
             PackageManager.PERMISSION_GRANTED
@@ -498,7 +498,7 @@ object Mascot {
         for (l in listeners) runCatching { l(p) }
     }
 
-    /** A pack by id: built in, or from Miku Update's provider. Null when nobody has it. */
+    /** A pack by id: built in, or from Hione Update's provider. Null when nobody has it. */
     fun resolve(ctx: Context, id: String): MascotPack? {
         MascotPacks.builtIn(id)?.let { return it }
         return installed(ctx).firstOrNull { it.id == id }
@@ -511,7 +511,7 @@ object Mascot {
         return out
     }
 
-    /** Packs Miku Update holds (downloaded ones; built-in ids it also lists are skipped by callers). */
+    /** Packs Hione Update holds (downloaded ones; built-in ids it also lists are skipped by callers). */
     fun installed(ctx: Context): List<MascotPack> = runCatching {
         val out = ArrayList<MascotPack>()
         ctx.contentResolver.query(Uri.parse("content://$AUTHORITY/packs"), null, null, null, null)?.use { c ->
@@ -528,7 +528,7 @@ object Mascot {
 
     /**
      * Make [id] the active pack: write the setting and switch the home-screen labels of every
-     * MikuOS app. Needs WRITE_SECURE_SETTINGS (MikuSettings and the launcher hold it). Returns
+     * HioneOS app. Needs WRITE_SECURE_SETTINGS (HioneSettings and the launcher hold it). Returns
      * false when the write was refused.
      */
     fun select(ctx: Context, id: String): Boolean {
@@ -540,7 +540,7 @@ object Mascot {
     /**
      * Enable the alias set [p] asks for and disable the others. With [onlyOwn] it touches this
      * app's components only (any app may). Otherwise it needs CHANGE_COMPONENT_ENABLED_STATE,
-     * which the platform-signed launcher and MikuSettings hold. The wanted alias is enabled
+     * which the platform-signed launcher and HioneSettings hold. The wanted alias is enabled
      * before the others are disabled, so an app never drops off the home screen.
      */
     fun syncAliases(ctx: Context, p: MascotPack, onlyOwn: Boolean) {
@@ -551,7 +551,7 @@ object Mascot {
             val order = listOf(want) + ALIAS_SETS.filter { it != want }
             for (set in order) {
                 val cn = ComponentName(pkg, base + set)
-                val manifestOn = set == "Miku"
+                val manifestOn = set == "Hione"
                 val target = when {
                     set == want && manifestOn -> PackageManager.COMPONENT_ENABLED_STATE_DEFAULT
                     set == want -> PackageManager.COMPONENT_ENABLED_STATE_ENABLED
@@ -579,9 +579,9 @@ object Mascot {
         res.getResourceEntryName(id)
     }.getOrNull()?.also { names[id] = it }
 
-    /** The pack's file for a slot or resource name ("miku_wall_00", "avatar", "chibi"), or null. */
+    /** The pack's file for a slot or resource name ("hione_wall_00", "avatar", "chibi"), or null. */
     fun openArt(ctx: Context, key: String, packId: String = id): InputStream? {
-        if (packId == "miku") return null
+        if (packId == "hione") return null
         return runCatching {
             ctx.contentResolver.openInputStream(Uri.parse("content://$AUTHORITY/art/$packId/" + Uri.encode(key)))
         }.getOrNull()
@@ -591,10 +591,10 @@ object Mascot {
     fun fileUri(path: String, packId: String = id): Uri =
         Uri.parse("content://$AUTHORITY/file/$packId/" + path.split('/').joinToString("/") { Uri.encode(it) })
 
-    /** Decoded art for [key] in the active pack, cached. Null under Miku or when the pack has none. */
+    /** Decoded art for [key] in the active pack, cached. Null under Hione or when the pack has none. */
     fun artBitmap(ctx: Context, key: String): Bitmap? {
         val pid = id
-        if (pid == "miku") return null
+        if (pid == "hione") return null
         val ck = "$pid/$key"
         artCache.get(ck)?.let { return it }
         if (ck in missing) return null
@@ -605,7 +605,7 @@ object Mascot {
 
     /** The pack's replacement for drawable [resId] (matched by resource name), or null. */
     fun artFor(ctx: Context, resId: Int): Bitmap? {
-        if (id == "miku") return null
+        if (id == "hione") return null
         val n = entryName(ctx.resources, resId) ?: return null
         return artBitmap(ctx, n)
     }
@@ -613,7 +613,7 @@ object Mascot {
     /** BitmapFactory.decodeResource that honors the active pack. */
     fun decodeResource(res: Resources, resId: Int, opts: BitmapFactory.Options? = null): Bitmap? {
         val c = app
-        if (c != null && id != "miku") {
+        if (c != null && id != "hione") {
             val n = entryName(res, resId)
             if (n != null) artBitmap(c, n)?.let { return it }
         }
@@ -622,7 +622,7 @@ object Mascot {
 
     /** A content URI for the pack's voice clip that replaces raw resource [rawName], or null. */
     fun voiceUri(ctx: Context, rawName: String): Uri? {
-        if (id == "miku") return null
+        if (id == "hione") return null
         val u = Uri.parse("content://$AUTHORITY/voice/$id/" + Uri.encode(rawName))
         return runCatching { ctx.contentResolver.openAssetFileDescriptor(u, "r")?.use { u } }.getOrNull()
     }
@@ -632,7 +632,7 @@ object Mascot {
 @Composable
 fun mascotPainter(id: Int): Painter {
     val pack = Mascot.pack
-    if (pack.id != "miku") {
+    if (pack.id != "hione") {
         val ctx = LocalContext.current
         val bmp = remember(pack.id, id) { Mascot.artFor(ctx, id) }
         if (bmp != null) return remember(bmp) { BitmapPainter(bmp.asImageBitmap()) }

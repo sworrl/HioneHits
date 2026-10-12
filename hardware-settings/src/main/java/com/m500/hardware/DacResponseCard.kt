@@ -103,13 +103,13 @@ fun DacResponseCard(
     var port by remember { mutableStateOf(OutputProfiles.PORT_35) }
     var showEars by remember { mutableStateOf(true) }
 
-    // Sample rate: Miku Music's now-playing format when it publishes one, else 44.1 kHz.
+    // Sample rate: Hione Music's now-playing format when it publishes one, else 44.1 kHz.
     var nowPlayingRate by remember { mutableStateOf<Int?>(null) }
     var pickedRate by remember { mutableStateOf<Int?>(null) }
     var outputs by remember { mutableStateOf(OutputProfiles.Snapshot(null, emptyList())) }
     DisposableEffect(Unit) {
         fun reload() {
-            nowPlayingRate = parseNowPlayingRate(runCatching { Settings.Global.getString(ctx.contentResolver, "miku_now_playing_format") }.getOrNull())
+            nowPlayingRate = parseNowPlayingRate(runCatching { Settings.Global.getString(ctx.contentResolver, "hione_now_playing_format") }.getOrNull())
             outputs = OutputProfiles.read(ctx)
         }
         reload()
@@ -117,12 +117,12 @@ fun DacResponseCard(
             override fun onChange(selfChange: Boolean) = reload()
         }
         runCatching {
-            ctx.contentResolver.registerContentObserver(Settings.Global.getUriFor("miku_now_playing_format"), false, obs)
+            ctx.contentResolver.registerContentObserver(Settings.Global.getUriFor("hione_now_playing_format"), false, obs)
             ctx.contentResolver.registerContentObserver(Settings.Global.getUriFor(OutputProfiles.KEY), false, obs)
         }
         onDispose { runCatching { ctx.contentResolver.unregisterContentObserver(obs) } }
     }
-    // Start on the jack Miku Music says is in use.
+    // Start on the jack Hione Music says is in use.
     LaunchedEffect(outputs.active) { outputs.active?.takeIf { it == OutputProfiles.PORT_35 || it == OutputProfiles.PORT_44 }?.let { port = it } }
     val rate = pickedRate ?: nowPlayingRate ?: 44100
 
@@ -718,7 +718,7 @@ private fun ProfileTools(
         if (entry?.profileId != null) {
             Spacer(Modifier.height(4.dp))
             Chip("Put these on ${entry.name}'s EQ in ${Mascot.musicAppName}", false, secondary) {
-                OutputProfiles.sendEqToMikuMusic(ctx, entry.profileId, list, 0.0)
+                OutputProfiles.sendEqToHioneMusic(ctx, entry.profileId, list, 0.0)
                 status = "Sent to ${Mascot.musicAppName}. It replaces that profile's EQ with these cuts and turns EQ on. Undo it there with Reset to recommended."
             }
         }

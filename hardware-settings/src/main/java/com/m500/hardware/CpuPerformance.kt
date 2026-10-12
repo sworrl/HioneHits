@@ -9,13 +9,13 @@ import android.util.Log
 import java.io.File
 
 /**
- * CPU power profiles, no root. Miku Music publishes Settings.Global miku_power_profile
- * ("perf", "balanced", "audio_only" or "idle"). com.miku.sysbridge mirrors it to
- * vendor.usb.miku.power_profile and the image's miku_powerd.rc writes the cpufreq caps. While
+ * CPU power profiles, no root. Hione Music publishes Settings.Global hione_power_profile
+ * ("perf", "balanced", "audio_only" or "idle"). com.hione.sysbridge mirrors it to
+ * vendor.usb.hione.power_profile and the image's hione_powerd.rc writes the cpufreq caps. While
  * charging, sysbridge runs audio_only and idle as balanced. An unset or unknown row runs as balanced.
  *
  * This app is platform-signed and holds WRITE_SECURE_SETTINGS, so it can write the same row.
- * Miku Music writes it again on its next profile change (playback, screen, charger), so a pick
+ * Hione Music writes it again on its next profile change (playback, screen, charger), so a pick
  * made here holds until then.
  *
  * Replaces the old root path that set every core's scaling_governor to "performance" through su,
@@ -23,7 +23,7 @@ import java.io.File
  */
 object CpuPerformance {
     private const val TAG = "CpuPerformance"
-    const val KEY_PROFILE = "miku_power_profile"
+    const val KEY_PROFILE = "hione_power_profile"
 
     data class Profile(val id: String, val label: String, val summary: String)
 

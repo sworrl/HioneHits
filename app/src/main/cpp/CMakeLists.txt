@@ -48,5 +48,5 @@ target_link_libraries(
         ${android-lib}
 )
 
-# Tempo and beat tracking (QM-DSP TempoTrackV2 + BTrack), its own libmikubeat.so.
-add_subdirectory(mikubeat ${CMAKE_BINARY_DIR}/mikubeat_build)
+# Tempo and beat tracking (QM-DSP TempoTrackV2 + BTrack), its own libhionebeat.so.
+add_subdirectory(hionebeat ${CMAKE_BINARY_DIR}/hionebeat_build)

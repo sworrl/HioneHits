@@ -187,7 +187,7 @@ class QualcommFmHardwareEngine(private val context: Context) {
 
         /**
          * What the Si4705 itself tunes, measured on 0.1.18 with the driver's band clamp removed
-         * (MIKU_FM_UNLOCK): 64.0 MHz up to 108.0 MHz. 63 MHz came back as 64.0 and everything
+         * (HIONE_FM_UNLOCK): 64.0 MHz up to 108.0 MHz. 63 MHz came back as 64.0 and everything
          * from 108.1 to 162.55 MHz as 108.0, so these are the chip's own limits, and NOAA
          * Weather Radio (162.4-162.55) is out of its reach.
          */
@@ -259,8 +259,8 @@ class QualcommFmHardwareEngine(private val context: Context) {
      * PhoneStateListener (needs a Looper) and the library posts to Handlers internally, so a
      * plain IO thread NPEs in Handler.<init> (seen on-device 2026-08-25).
      */
-    private val tunerThread = android.os.HandlerThread("MikuFmTuner").apply { start() }
-    private val tunerDispatcher = Handler(tunerThread.looper).asCoroutineDispatcher("MikuFmTuner")
+    private val tunerThread = android.os.HandlerThread("HioneFmTuner").apply { start() }
+    private val tunerDispatcher = Handler(tunerThread.looper).asCoroutineDispatcher("HioneFmTuner")
 
     private var audioTrackHelper: AudioTrackHelper? = null
     private var audioRecord: AudioRecord? = null
@@ -304,7 +304,7 @@ class QualcommFmHardwareEngine(private val context: Context) {
     @Volatile private var activeRouteCode: Int? = null
     @Volatile private var lastVolumeIndex: Int = -1
 
-    private val prefs = context.getSharedPreferences("miku_fm", Context.MODE_PRIVATE)
+    private val prefs = context.getSharedPreferences("hione_fm", Context.MODE_PRIVATE)
 
     val band = MutableStateFlow(
         runCatching { FmBandPlan.valueOf(prefs.getString("band", FmBandPlan.US.name)!!) }
@@ -801,7 +801,7 @@ class QualcommFmHardwareEngine(private val context: Context) {
         val text = if (!isPoweredOn.value) "off" else
             "%.1f".format(java.util.Locale.US, currentFrequencyKHz.value / 1000.0) +
                 (stationName.value.ifBlank { tunedStation.value?.label ?: "" }.let { if (it.isBlank()) "" else " $it" })
-        runCatching { android.provider.Settings.Global.putString(context.contentResolver, "miku_fm_status", text) }
+        runCatching { android.provider.Settings.Global.putString(context.contentResolver, "hione_fm_status", text) }
     }
 
     /** Everything that is only true of the station we just left. */
@@ -863,7 +863,7 @@ class QualcommFmHardwareEngine(private val context: Context) {
             override fun onChange(selfChange: Boolean) = refreshNearby()
         }
         runCatching {
-            for (key in listOf("miku_loc_lat", "miku_loc_lon")) {
+            for (key in listOf("hione_loc_lat", "hione_loc_lon")) {
                 context.contentResolver.registerContentObserver(
                     android.provider.Settings.Global.getUriFor(key), false, observer)
             }
@@ -1779,7 +1779,7 @@ class QualcommFmHardwareEngine(private val context: Context) {
                     tick++
                     delay(SIGNAL_POLL_MS)
                 } else {
-                    // MikuPod, Riot mode and the car read RSSI and stereo from the media
+                    // HionePod, Riot mode and the car read RSSI and stereo from the media
                     // session, so the background still gets a reading, but slowly: the same
                     // single FmV4L2.signal() read (one ioctl, under chipLock) every
                     // BACKGROUND_POLL_MS instead of every SIGNAL_POLL_MS. Nothing else is read,
@@ -2067,7 +2067,7 @@ class QualcommFmHardwareEngine(private val context: Context) {
             audioLevel.value = 0f
             captureFraming.value = null
             Log.d(TAG, "AudioRecord bridge stopped")
-        }, "MikuFmAudioBridgeThread").apply { start() }
+        }, "HioneFmAudioBridgeThread").apply { start() }
     }
 
     // ------------------------------------------------------------------ RDS
@@ -2152,7 +2152,7 @@ class QualcommFmHardwareEngine(private val context: Context) {
                 Log.i(TAG, "RDS reader stopped (${FmRdsReader.state.groups} group(s), " +
                     "whole=${FmRdsReader.wholeGroups})")
             }
-        }, "MikuFmRdsReader").apply { isDaemon = true; start() }
+        }, "HioneFmRdsReader").apply { isDaemon = true; start() }
     }
 
     private fun publishRds() {

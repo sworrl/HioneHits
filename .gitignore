@@ -45,7 +45,7 @@ __pycache__/
 *.log
 .DS_Store
 
-# 30 MB of packed projectM presets, built from app/src/main/assets/miku_presets. Not tracked in
+# 30 MB of packed projectM presets, built from app/src/main/assets/hione_presets. Not tracked in
 # any of the three repos; listed so it stops reading as an untracked file someone should add.
 app/src/main/assets/presets_pack.zip
 

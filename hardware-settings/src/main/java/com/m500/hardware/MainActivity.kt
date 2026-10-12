@@ -37,8 +37,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-val HwMikuTeal get() = Mascot.color(0xFF00E5FF)
-val HwMikuPink get() = Mascot.color(0xFFFF4081)
+val HwHioneTeal get() = Mascot.color(0xFF00E5FF)
+val HwHionePink get() = Mascot.color(0xFFFF4081)
 val HwBgDark get() = Mascot.color(0xFF04161A)
 val HwSurface1 get() = Mascot.color(0xFF0B242A)
 val HwSurface2 get() = Mascot.color(0xFF13363E)
@@ -60,9 +60,9 @@ fun HardwareSettingsScreen(onBack: () -> Unit) {
     val scope = rememberCoroutineScope()
 
     var isRooted by remember { mutableStateOf(false) }
-    // null = not probed yet; true/false = whether com.miku.sysbridge is installed
+    // null = not probed yet; true/false = whether com.hione.sysbridge is installed
     var bridgeOk by remember { mutableStateOf<Boolean?>(null) }
-    // What the DAC was last told (persist.vendor.audio.miku.*), and the last failed set, if any
+    // What the DAC was last told (persist.vendor.audio.hione.*), and the last failed set, if any
     var dacApplied by remember { mutableStateOf("") }
     var dacProblem by remember { mutableStateOf<String?>(null) }
 
@@ -113,7 +113,7 @@ fun HardwareSettingsScreen(onBack: () -> Unit) {
         }
     }
 
-    // Miku Music changes the profile on its own (playback, screen, charger).
+    // Hione Music changes the profile on its own (playback, screen, charger).
     DisposableEffect(Unit) {
         val obs = object : android.database.ContentObserver(android.os.Handler(android.os.Looper.getMainLooper())) {
             override fun onChange(selfChange: Boolean) { scope.launch { reloadCpu() } }
@@ -145,12 +145,12 @@ fun HardwareSettingsScreen(onBack: () -> Unit) {
         dacGlowBase * t.animateFloat(0.7f, 1f, infiniteRepeatable(tween(1400), RepeatMode.Reverse), label = "dacPulseV").value
     } else dacGlowBase
 
-    // A change made somewhere else (Miku Music, SystemUI tiles) lands in miku_dac_state.
+    // A change made somewhere else (Hione Music, SystemUI tiles) lands in hione_dac_state.
     DisposableEffect(Unit) {
         val obs = object : android.database.ContentObserver(android.os.Handler(android.os.Looper.getMainLooper())) {
             override fun onChange(selfChange: Boolean) { scope.launch { reloadDac() } }
         }
-        runCatching { ctx.contentResolver.registerContentObserver(Settings.Global.getUriFor("miku_dac_state"), false, obs) }
+        runCatching { ctx.contentResolver.registerContentObserver(Settings.Global.getUriFor("hione_dac_state"), false, obs) }
         onDispose { runCatching { ctx.contentResolver.unregisterContentObserver(obs) } }
     }
 
@@ -198,7 +198,7 @@ fun HardwareSettingsScreen(onBack: () -> Unit) {
                 },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = HwMikuTeal)
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = HwHioneTeal)
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = dacBg)
@@ -227,7 +227,7 @@ fun HardwareSettingsScreen(onBack: () -> Unit) {
                     Text(dacPal.label, color = dacPrimary, fontSize = 16.sp, fontWeight = FontWeight.Bold, lineHeight = 20.sp)
                     Spacer(Modifier.height(10.dp))
                     // Status reflects what was actually probed: whether the bridge is installed,
-                    // and the values the DAC was last told (persist.vendor.audio.miku.*).
+                    // and the values the DAC was last told (persist.vendor.audio.hione.*).
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Box(Modifier.size(10.dp).clip(CircleShape).background(when (bridgeOk) { true -> Mascot.color(0xFF1ABC9C); false -> Color(0xFFF1C40F); null -> HwMuted }))
                         Spacer(Modifier.width(8.dp))
@@ -246,7 +246,7 @@ fun HardwareSettingsScreen(onBack: () -> Unit) {
                     Text(
                         when (bridgeOk) {
                             true -> "Applied now. $dacApplied"
-                            false -> "com.miku.sysbridge is not installed, so filter, gain, DRE and high power cannot change. Controls show the last saved choice."
+                            false -> "com.hione.sysbridge is not installed, so filter, gain, DRE and high power cannot change. Controls show the last saved choice."
                             null -> "Reading the DAC settings…"
                         },
                         color = HwMuted,
@@ -336,7 +336,7 @@ fun HardwareSettingsScreen(onBack: () -> Unit) {
                                     .weight(1f)
                                     .height(42.dp)
                                     .clip(RoundedCornerShape(8.dp))
-                                    .background(if (csOutput == mode) HwMikuPink else HwSurface2)
+                                    .background(if (csOutput == mode) HwHionePink else HwSurface2)
                                     .clickable {
                                         csOutput = mode
                                         scope.launch { CirrusLogicManager.setOutputMode(ctx, mode) }
@@ -423,7 +423,7 @@ fun HardwareSettingsScreen(onBack: () -> Unit) {
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(14.dp))
                         .background(HwSurface1)
-                        .border(1.dp, HwMikuTeal.copy(alpha = 0.2f), RoundedCornerShape(14.dp))
+                        .border(1.dp, HwHioneTeal.copy(alpha = 0.2f), RoundedCornerShape(14.dp))
                         .padding(14.dp)
                 ) {
                     HwSettingsToggleRow(
@@ -460,7 +460,7 @@ fun HardwareSettingsScreen(onBack: () -> Unit) {
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(14.dp))
                         .background(HwSurface1)
-                        .border(1.dp, HwMikuTeal.copy(alpha = 0.2f), RoundedCornerShape(14.dp))
+                        .border(1.dp, HwHioneTeal.copy(alpha = 0.2f), RoundedCornerShape(14.dp))
                         .padding(14.dp)
                 ) {
                     HwSettingsToggleRow(
@@ -486,7 +486,7 @@ fun HardwareSettingsScreen(onBack: () -> Unit) {
                     Spacer(Modifier.height(10.dp))
                     Text(
                         if (usbDacRate == null) "SAMPLE RATE  ·  NOT SET (gadget would use ${UsbDacManager.DEFAULT_SAMPLE_RATE / 1000}k)" else "SAMPLE RATE",
-                        color = HwMikuTeal, fontSize = 12.sp, fontWeight = FontWeight.Bold
+                        color = HwHioneTeal, fontSize = 12.sp, fontWeight = FontWeight.Bold
                     )
                     Spacer(Modifier.height(6.dp))
 
@@ -497,7 +497,7 @@ fun HardwareSettingsScreen(onBack: () -> Unit) {
                                     .weight(1f)
                                     .height(34.dp)
                                     .clip(RoundedCornerShape(6.dp))
-                                    .background(if (usbDacRate == rate) HwMikuTeal else HwSurface2)
+                                    .background(if (usbDacRate == rate) HwHioneTeal else HwSurface2)
                                     .clickable {
                                         usbDacRate = rate
                                         scope.launch {
@@ -514,7 +514,7 @@ fun HardwareSettingsScreen(onBack: () -> Unit) {
                     Spacer(Modifier.height(10.dp))
                     Text(
                         if (usbDacBits == null) "BIT DEPTH  ·  NOT SET (gadget would use ${UsbDacManager.DEFAULT_BIT_DEPTH}-bit)" else "BIT DEPTH",
-                        color = HwMikuTeal, fontSize = 12.sp, fontWeight = FontWeight.Bold
+                        color = HwHioneTeal, fontSize = 12.sp, fontWeight = FontWeight.Bold
                     )
                     Spacer(Modifier.height(6.dp))
 
@@ -525,7 +525,7 @@ fun HardwareSettingsScreen(onBack: () -> Unit) {
                                     .weight(1f)
                                     .height(34.dp)
                                     .clip(RoundedCornerShape(6.dp))
-                                    .background(if (usbDacBits == bits) HwMikuTeal else HwSurface2)
+                                    .background(if (usbDacBits == bits) HwHioneTeal else HwSurface2)
                                     .clickable {
                                         usbDacBits = bits
                                         scope.launch {
@@ -541,7 +541,7 @@ fun HardwareSettingsScreen(onBack: () -> Unit) {
                 }
             }
 
-            // Section 5: CPU power profile (no root: Settings.Global -> sysbridge -> miku_powerd.rc)
+            // Section 5: CPU power profile (no root: Settings.Global -> sysbridge -> hione_powerd.rc)
             item {
                 HwSettingsSection("CPU Power Profile")
 
@@ -550,7 +550,7 @@ fun HardwareSettingsScreen(onBack: () -> Unit) {
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(14.dp))
                         .background(HwSurface1)
-                        .border(1.dp, HwMikuTeal.copy(alpha = 0.2f), RoundedCornerShape(14.dp))
+                        .border(1.dp, HwHioneTeal.copy(alpha = 0.2f), RoundedCornerShape(14.dp))
                         .padding(14.dp)
                 ) {
                     val effective = CpuPerformance.effective(cpuProfile, cpuCharging)
@@ -573,8 +573,8 @@ fun HardwareSettingsScreen(onBack: () -> Unit) {
                                 .fillMaxWidth()
                                 .padding(vertical = 3.dp)
                                 .clip(RoundedCornerShape(8.dp))
-                                .background(if (selected) HwMikuTeal.copy(alpha = 0.18f) else HwSurface2)
-                                .border(1.dp, if (selected) HwMikuTeal else Color.Transparent, RoundedCornerShape(8.dp))
+                                .background(if (selected) HwHioneTeal.copy(alpha = 0.18f) else HwSurface2)
+                                .border(1.dp, if (selected) HwHioneTeal else Color.Transparent, RoundedCornerShape(8.dp))
                                 .clickable {
                                     scope.launch {
                                         val ok = withContext(Dispatchers.IO) { CpuPerformance.set(ctx, p.id) }
@@ -586,7 +586,7 @@ fun HardwareSettingsScreen(onBack: () -> Unit) {
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Column(Modifier.weight(1f)) {
-                                Text(p.label, color = if (selected) HwMikuTeal else Color.White, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                                Text(p.label, color = if (selected) HwHioneTeal else Color.White, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
                                 Text(p.summary, color = HwMuted, fontSize = 11.sp, lineHeight = 14.sp)
                             }
                         }
@@ -594,7 +594,7 @@ fun HardwareSettingsScreen(onBack: () -> Unit) {
 
                     cpuProblem?.let {
                         Spacer(Modifier.height(6.dp))
-                        Text(it, color = HwMikuPink, fontSize = 11.5.sp)
+                        Text(it, color = HwHionePink, fontSize = 11.5.sp)
                     }
                     Spacer(Modifier.height(8.dp))
                     Text(
@@ -612,7 +612,7 @@ fun HardwareSettingsScreen(onBack: () -> Unit) {
 fun HwSettingsSection(title: String) {
     Text(
         title.uppercase(),
-        color = HwMikuTeal,
+        color = HwHioneTeal,
         fontSize = 12.sp,
         fontWeight = FontWeight.Bold,
         letterSpacing = 1.sp,
@@ -625,7 +625,7 @@ fun HwSettingsToggleRow(
     title: String,
     subtitle: String,
     checked: Boolean,
-    accent: Color = HwMikuTeal,
+    accent: Color = HwHioneTeal,
     onCheckedChange: (Boolean) -> Unit
 ) {
     Row(

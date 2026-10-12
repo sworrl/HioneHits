@@ -79,8 +79,8 @@ fun ColumnScope.FmStationsSheet(
             }
             Box(
                 Modifier.weight(1f).height(40.dp)
-                    .glass(RoundedCornerShape(12.dp), accent = if (t == StationsTab.WEATHER) CyberAmber else MikuTeal,
-                           fill = if (on) MikuTeal.copy(alpha = 0.25f) else Color(0x880A1E26),
+                    .glass(RoundedCornerShape(12.dp), accent = if (t == StationsTab.WEATHER) CyberAmber else HioneTeal,
+                           fill = if (on) HioneTeal.copy(alpha = 0.25f) else Color(0x880A1E26),
                            rimAlpha = if (on) 1f else 0.35f, shine = if (on) 1.3f else 0.6f)
                     .pressable { tab = t },
                 contentAlignment = Alignment.Center
@@ -89,7 +89,7 @@ fun ColumnScope.FmStationsSheet(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
                         t.label + (count?.let { " · $it" } ?: ""),
-                        color = if (on) Color.White else MikuTextSecondary,
+                        color = if (on) Color.White else HioneTextSecondary,
                         fontSize = 8.5.sp, fontWeight = FontWeight.Bold, fontFamily = AudiowideFont,
                     )
                     // Active NWS alerts: a badge in the worst severity's colour.
@@ -160,22 +160,22 @@ private fun ColumnScope.StationsTabContent(
     // Search field.
     Row(
         Modifier.fillMaxWidth().height(46.dp)
-            .glass(RoundedCornerShape(23.dp), accent = MikuTeal, accent2 = MikuPink, rimAlpha = 0.7f)
+            .glass(RoundedCornerShape(23.dp), accent = HioneTeal, accent2 = HionePink, rimAlpha = 0.7f)
             .padding(start = 14.dp, end = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Icon(Icons.Default.Search, null, tint = MikuTeal, modifier = Modifier.size(18.dp))
+        Icon(Icons.Default.Search, null, tint = HioneTeal, modifier = Modifier.size(18.dp))
         Spacer(Modifier.width(8.dp))
         Box(Modifier.weight(1f)) {
             if (query.isEmpty()) {
-                Text("Call, city, format, or 94.5", color = MikuTextSecondary.copy(alpha = 0.6f), fontSize = 11.sp)
+                Text("Call, city, format, or 94.5", color = HioneTextSecondary.copy(alpha = 0.6f), fontSize = 11.sp)
             }
             BasicTextField(
                 value = query,
                 onValueChange = { query = it.take(40) },
                 singleLine = true,
                 textStyle = TextStyle(color = Color.White, fontSize = 12.sp),
-                cursorBrush = SolidColor(MikuPink),
+                cursorBrush = SolidColor(HionePink),
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
                 keyboardActions = KeyboardActions(onSearch = { focus.clearFocus() }),
                 modifier = Modifier.fillMaxWidth(),
@@ -184,7 +184,7 @@ private fun ColumnScope.StationsTabContent(
         if (query.isNotEmpty()) {
             Box(Modifier.size(40.dp).clip(CircleShape).pressable { query = ""; focus.clearFocus() },
                 contentAlignment = Alignment.Center) {
-                Icon(Icons.Default.Close, "Clear", tint = MikuTextSecondary, modifier = Modifier.size(18.dp))
+                Icon(Icons.Default.Close, "Clear", tint = HioneTextSecondary, modifier = Modifier.size(18.dp))
             }
         }
     }
@@ -193,10 +193,10 @@ private fun ColumnScope.StationsTabContent(
     // Sort + genre filters on one scrolling row: vertical space is the scarce thing here.
     LazyRow(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
         items(StationSort.entries) { s ->
-            FilterChip(s.label, s == sort, MikuCyan) { sort = s }
+            FilterChip(s.label, s == sort, HioneCyan) { sort = s }
         }
-        item { Box(Modifier.width(1.dp).height(30.dp).background(MikuTeal.copy(alpha = 0.3f))) }
-        item { FilterChip("ALL", genre == null, MikuTeal) { genre = null } }
+        item { Box(Modifier.width(1.dp).height(30.dp).background(HioneTeal.copy(alpha = 0.3f))) }
+        item { FilterChip("ALL", genre == null, HioneTeal) { genre = null } }
         items(genres, key = { it.first }) { (g, n) ->
             FilterChip("${g.uppercase(Locale.US)} $n", genre == g, genreColor(g)) { genre = if (genre == g) null else g }
         }
@@ -216,7 +216,7 @@ private fun ColumnScope.StationsTabContent(
                 if (genres.isEmpty() && source.isNotEmpty()) append(" · formats not in this catalog yet")
             }
         },
-        color = MikuTextSecondary, fontSize = 7.5.sp, maxLines = 1, overflow = TextOverflow.Ellipsis,
+        color = HioneTextSecondary, fontSize = 7.5.sp, maxLines = 1, overflow = TextOverflow.Ellipsis,
     )
     Spacer(Modifier.height(4.dp))
 
@@ -224,7 +224,7 @@ private fun ColumnScope.StationsTabContent(
     val farOpen = showFar || (searched != null && near.isEmpty() && unrated.isEmpty())
     LazyColumn(Modifier.fillMaxWidth().weight(1f, fill = false), verticalArrangement = Arrangement.spacedBy(5.dp)) {
         if (near.isNotEmpty()) {
-            item(key = "h-near") { GroupHeader("IN REACH HERE", near.size, MikuTeal) }
+            item(key = "h-near") { GroupHeader("IN REACH HERE", near.size, HioneTeal) }
             items(near, key = { "n" + it.call + "@" + it.khz }) { StationRow(it, st, false, onTuned, onDetails) }
         }
         if (unrated.isNotEmpty()) {
@@ -233,7 +233,7 @@ private fun ColumnScope.StationsTabContent(
         }
         if (far.isNotEmpty()) {
             item(key = "h-far") {
-                GroupHeader("OUT OF REACH HERE", far.size, MikuPink, expandable = true, expanded = farOpen) { showFar = !farOpen }
+                GroupHeader("OUT OF REACH HERE", far.size, HionePink, expandable = true, expanded = farOpen) { showFar = !farOpen }
             }
             if (farOpen) items(far, key = { "f" + it.call + "@" + it.khz }) { StationRow(it, st, true, onTuned, onDetails) }
         }
@@ -241,7 +241,7 @@ private fun ColumnScope.StationsTabContent(
             item {
                 Text(
                     if (searched != null) "Nothing in the catalog matches." else "No stations listed near here yet.",
-                    color = MikuTextPrimary, fontSize = 9.sp, modifier = Modifier.padding(vertical = 12.dp)
+                    color = HioneTextPrimary, fontSize = 9.sp, modifier = Modifier.padding(vertical = 12.dp)
                 )
             }
         }
@@ -320,13 +320,13 @@ private fun StationRow(
                 Text(fmtMhz(s.khz), color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold, fontFamily = AudiowideFont)
                 if (s.service != "FM") {
                     Spacer(Modifier.width(4.dp))
-                    Text(s.kind, color = MikuTextSecondary, fontSize = 7.5.sp)
+                    Text(s.kind, color = HioneTextSecondary, fontSize = 7.5.sp)
                 }
             }
             Text(
                 listOfNotNull(s.altName, listOfNotNull(s.city, s.state).joinToString(", ").ifBlank { null },
                               "${s.distanceKm.toInt()} km").joinToString(" · "),
-                color = MikuTextPrimary.copy(alpha = 0.8f), fontSize = 8.5.sp, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                color = HioneTextPrimary.copy(alpha = 0.8f), fontSize = 8.5.sp, maxLines = 1, overflow = TextOverflow.Ellipsis,
             )
             Row(verticalAlignment = Alignment.CenterVertically) {
                 s.genre?.let { g ->
@@ -338,7 +338,7 @@ private fun StationRow(
                 }
                 Text(
                     s.format ?: if (s.genre == null) "format not listed" else "",
-                    color = MikuTextSecondary, fontSize = 7.5.sp, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                    color = HioneTextSecondary, fontSize = 7.5.sp, maxLines = 1, overflow = TextOverflow.Ellipsis,
                 )
             }
         }
@@ -351,7 +351,7 @@ private fun StationRow(
             contentAlignment = Alignment.Center
         ) {
             Icon(if (fav) Icons.Default.Star else Icons.Default.StarBorder, if (fav) "Remove preset" else "Add preset",
-                 tint = if (fav) MikuNeonPink else MikuTextSecondary, modifier = Modifier.size(20.dp))
+                 tint = if (fav) HioneNeonPink else HioneTextSecondary, modifier = Modifier.size(20.dp))
         }
     }
 }
@@ -389,7 +389,7 @@ fun ColumnScope.FmStationDetail(st: FmState, target: PresetTarget, onClose: () -
                 if (s != null) listOfNotNull(s.altName, "${fmtMhz(s.khz)} MHz", s.kind,
                     listOfNotNull(s.city, s.state).joinToString(", ").ifBlank { null }).joinToString(" · ")
                 else "A preset the station catalog has no entry for here.",
-                color = MikuTextPrimary, fontSize = 9.sp,
+                color = HioneTextPrimary, fontSize = 9.sp,
             )
         }
         if (s != null) ReceptionGauge(s.receptionScore, s.reach, s.fresnelFraction, Modifier.size(52.dp), strokeDp = 4f)
@@ -397,9 +397,9 @@ fun ColumnScope.FmStationDetail(st: FmState, target: PresetTarget, onClose: () -
     Spacer(Modifier.height(10.dp))
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         if (tunable) {
-            DetailAction("TUNE", MikuCyan, Modifier.weight(1f)) { FmRadioManager.tune(target.khz); onClose() }
+            DetailAction("TUNE", HioneCyan, Modifier.weight(1f)) { FmRadioManager.tune(target.khz); onClose() }
         }
-        DetailAction(if (fav) "REMOVE PRESET" else "ADD PRESET", if (fav) MikuNeonPink else MikuPink, Modifier.weight(1f)) {
+        DetailAction(if (fav) "REMOVE PRESET" else "ADD PRESET", if (fav) HioneNeonPink else HionePink, Modifier.weight(1f)) {
             FmRadioManager.togglePreset(target.khz)
             if (fav) onClose()
         }
@@ -444,7 +444,7 @@ fun ColumnScope.FmStationDetail(st: FmState, target: PresetTarget, onClose: () -
         Text(
             "Reach is a calibrated prediction from power, height, distance and (when fetched) the " +
                 "terrain profile. A reading from the tuner here, while tuned or in a band sweep, overrides it.",
-            color = MikuTextSecondary, fontSize = 7.5.sp, lineHeight = 10.sp,
+            color = HioneTextSecondary, fontSize = 7.5.sp, lineHeight = 10.sp,
         )
     }
 }
@@ -464,7 +464,7 @@ private fun DetailAction(label: String, accent: Color, modifier: Modifier, onCli
 @Composable
 private fun DetailRow(label: String, value: String, valueColor: Color = Color.White) {
     Row(Modifier.fillMaxWidth().padding(vertical = 3.dp)) {
-        Text(label, color = MikuTextSecondary, fontSize = 9.sp, modifier = Modifier.width(108.dp))
+        Text(label, color = HioneTextSecondary, fontSize = 9.sp, modifier = Modifier.width(108.dp))
         Text(value, color = valueColor, fontSize = 9.sp, fontWeight = FontWeight.Bold)
     }
 }

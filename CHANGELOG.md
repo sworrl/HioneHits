@@ -1,6 +1,6 @@
-# Miku Music — Changelog
+# Hione Music — Changelog
 
-Native Kotlin/Compose player for the HiBy M500 MIKU (`com.miku.player`).
+Native Kotlin/Compose player for the HiBy M500 HIONE (`com.hione.player`).
 
 ## 0.9.17 — 2026-08-15 — tape materials + OS fn-lock
 
@@ -23,7 +23,7 @@ Native Kotlin/Compose player for the HiBy M500 MIKU (`com.miku.player`).
 
 ### Visualizer
 - **130 real, descriptively-named presets** (from the named projectM library) replace the generic
-  `preset_NNN` pack — so the on-screen name is the actual preset — plus **10 original Miku-themed
+  `preset_NNN` pack — so the on-screen name is the actual preset — plus **10 original Hione-themed
   `.milk` presets** (teal/pink, twin-tail tunnels, 39-pulse, spectrum, etc.).
 - **Runs every preset on the slow GPU** (no presets dropped for weight): mesh lowered to 24×18 and
   the render buffer capped at 800px (upscaled), holding ~60fps.
@@ -36,8 +36,8 @@ Native Kotlin/Compose player for the HiBy M500 MIKU (`com.miku.player`).
 - Live preset name reads fresh (mutex-guarded playlist query).
 
 ### Now Playing
-- Header reads **MIKU MUSIC PLAYER**; album art no longer clipped (Fit); **blurred album-art +
-  Miku background**; the old "Location & Format" card is now an **artistic art + data panel**
+- Header reads **HIONE MUSIC PLAYER**; album art no longer clipped (Fit); **blurred album-art +
+  Hione background**; the old "Location & Format" card is now an **artistic art + data panel**
   (art, album/year, format/bitrate/quality-tier chips).
 - **Embossed, color-shifting scrubber** — recessed groove, raised glossy fill that drifts teal→pink
   with progress and dims when paused, travelling shimmer, raised knob. Feels like a physical control.
@@ -45,7 +45,7 @@ Native Kotlin/Compose player for the HiBy M500 MIKU (`com.miku.player`).
 ### Tape mode — rebuilt to match a real deck
 - Vertical cassette filling the screen (the "sideways" tape): **album art as the tinted background**,
   two stacked reels with metallic 6-hole hubs that turn while playing (top empties, bottom fills),
-  centre teeth + tape strands, vertical serif title clear of the reels, teal artist·album, MIKU mark,
+  centre teeth + tape strands, vertical serif title clear of the reels, teal artist·album, HIONE mark,
   times by each reel, corner screws.
 
 ### Likes / library / QoL
@@ -154,7 +154,7 @@ Full multi-agent review of the codebase; fixed the real bugs found (crashes/leak
 - Physical media keys now route to us system-wide (via the session), not just while foregrounded.
 
 ### Known / next
-- Cross-app interception (re-skinning *other* apps' media, e.g. Spotify, in Miku style) needs a
+- Cross-app interception (re-skinning *other* apps' media, e.g. Spotify, in Hione style) needs a
   `NotificationListenerService` + manual notification-access grant — separate follow-up.
 
 ## 0.9.1 — 2026-08-15
@@ -171,7 +171,7 @@ Full multi-agent review of the codebase; fixed the real bugs found (crashes/leak
   handled in `onKeyDown`, each with a haptic tick.
 
 ### Branding
-- Title bar: teal gradient, Miku launcher icon as the app glyph, faded Miku watermark
+- Title bar: teal gradient, Hione launcher icon as the app glyph, faded Hione watermark
   burned into the trailing edge.
 
 ### Known / next

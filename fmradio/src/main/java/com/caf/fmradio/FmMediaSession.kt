@@ -35,7 +35,7 @@ import kotlinx.coroutines.withContext
  * it, browse it and drive it.
  *
  * There is one session per process and it never owns the tuner. Every command goes through
- * [FmRadioManager] and [MikuFmService], the same calls the tuner screen makes, so there is
+ * [FmRadioManager] and [HioneFmService], the same calls the tuner screen makes, so there is
  * still exactly one engine and one open /dev/radio0. Audio focus is taken by the engine on
  * power-on, as it always was. This only reports state and forwards commands.
  *
@@ -46,7 +46,7 @@ import kotlinx.coroutines.withContext
  *  - play: power the tuner on (or unmute it if a focus loss muted it)
  *  - pause / stop: power it off, the same as the power button
  *  - next / previous: next or previous preset, or a hardware seek when there are no presets
- *  - custom actions: seek up and seek down, and add or remove a preset (MikuPod, Riot mode, the car)
+ *  - custom actions: seek up and seek down, and add or remove a preset (HionePod, Riot mode, the car)
  *  - play from media id: tune to that frequency, powering on if needed
  *  - play from search: a frequency ("101.1") or anything the station catalogue matches
  *
@@ -67,7 +67,7 @@ object FmMediaSession {
 
     /**
      * Add or remove a preset, in the same store the tuner screen's star uses. Offered whether or
-     * not the tuner is on, so MikuPod and Riot mode can tell this FM app takes presets from them.
+     * not the tuner is on, so HionePod and Riot mode can tell this FM app takes presets from them.
      *
      * Extras (both optional):
      *  - [EXTRA_KHZ] (int): the frequency. Without it, the tuned frequency.
@@ -123,7 +123,7 @@ object FmMediaSession {
         val metaKey: List<Any?> get() = listOf(khz, title, subtitle, detail, call, genre)
     }
 
-    // PlaybackState extras for the retro modes (Riot, MikuPod) and anything else that reads the
+    // PlaybackState extras for the retro modes (Riot, HionePod) and anything else that reads the
     // session. Strings are omitted when empty; STEREO is omitted until the chip has said.
     const val EXTRA_PS = "com.caf.fmradio.extra.PS"
     const val EXTRA_RADIOTEXT = "com.caf.fmradio.extra.RADIOTEXT"
@@ -155,7 +155,7 @@ object FmMediaSession {
         // The state flow only moves once the engine exists. Building it does not power anything.
         FmRadioManager.ensure(a)
 
-        val s = MediaSession(a, "MikuFm")
+        val s = MediaSession(a, "HioneFm")
         s.setCallback(callback, main)
         s.setPlaybackToLocal(
             AudioAttributes.Builder()
@@ -166,7 +166,7 @@ object FmMediaSession {
         s.setSessionActivity(
             PendingIntent.getActivity(
                 a, 0,
-                Intent(a, MikuFMRadioActivity::class.java)
+                Intent(a, HioneFMRadioActivity::class.java)
                     .setFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP),
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
             )

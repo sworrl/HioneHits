@@ -1,25 +1,25 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <!-- Mascot packs (Mascot.kt). Every MikuOS app declares the same signature permission, so it
-         exists whichever app is installed first. Miku Update's pack provider requires it. -->
+    <!-- Mascot packs (Mascot.kt). Every HioneOS app declares the same signature permission, so it
+         exists whichever app is installed first. Hione Update's pack provider requires it. -->
     <permission
-        android:name="com.miku.permission.MASCOT_PACKS"
+        android:name="com.hione.permission.MASCOT_PACKS"
         android:protectionLevel="signature" />
-    <uses-permission android:name="com.miku.permission.MASCOT_PACKS" />
+    <uses-permission android:name="com.hione.permission.MASCOT_PACKS" />
     <queries>
-        <provider android:authorities="com.miku.update.mascot" />
+        <provider android:authorities="com.hione.update.mascot" />
     </queries>
 
 
-    <!-- USB DAC mode is switched by com.miku.sysbridge (system UID); see UsbDacManager. -->
-    <uses-permission android:name="com.miku.permission.SYSTEM_BRIDGE" />
+    <!-- USB DAC mode is switched by com.hione.sysbridge (system UID); see UsbDacManager. -->
+    <uses-permission android:name="com.hione.permission.SYSTEM_BRIDGE" />
     <uses-permission android:name="android.permission.INTERNET" />
     <!-- DAC graph: "Measure with the mic" records a sine sweep with the built-in mic (asked at use). -->
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
 
     <!--
-      Position, for MikuLocationFusion. ACCESS_FINE_LOCATION is Android's gate on reading Wi-Fi
+      Position, for HioneLocationFusion. ACCESS_FINE_LOCATION is Android's gate on reading Wi-Fi
       scan results as much as it is on GNSS, so Wi-Fi positioning needs it too. The passive
       provider is used for GNSS, so holding this does not mean the GNSS engine is running: it
       means we are told about fixes other apps already paid for.
@@ -81,10 +81,10 @@
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
             </intent-filter>
-            <!-- The one DAC settings page on MikuOS. Miku Music, MikuSettings, the launcher and
+            <!-- The one DAC settings page on HioneOS. Hione Music, HioneSettings, the launcher and
                  the SystemUI DAC tiles (long-press) all open this. -->
             <intent-filter>
-                <action android:name="com.miku.action.DAC_SETTINGS" />
+                <action android:name="com.hione.action.DAC_SETTINGS" />
                 <action android:name="com.m500.hardware.action.DAC_SETTINGS" />
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
@@ -164,12 +164,12 @@
         </service>
 
 
-        <!-- Started by sysbridge BootSeeds (system uid) and the launcher, both MikuOS-signed.
+        <!-- Started by sysbridge BootSeeds (system uid) and the launcher, both HioneOS-signed.
              Foreground so A14 does not reap the screen-on receiver it hosts. -->
         <service
             android:name=".AmbientBrightnessService"
             android:exported="true"
-            android:permission="com.miku.permission.SYSTEM_BRIDGE"
+            android:permission="com.hione.permission.SYSTEM_BRIDGE"
             android:foregroundServiceType="camera|specialUse"
             android:description="@string/app_name">
             <property
@@ -192,7 +192,7 @@
         <receiver
             android:name=".PocketLockReceiver"
             android:exported="true"
-            android:permission="com.miku.permission.SYSTEM_BRIDGE">
+            android:permission="com.hione.permission.SYSTEM_BRIDGE">
             <intent-filter>
                 <action android:name="FN_BUTTON_STATE_CHANGE" />
             </intent-filter>

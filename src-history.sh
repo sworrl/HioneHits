@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Local-only source revision history for miku-player-kotlin.
+# Local-only source revision history for hione-player-kotlin.
 # The main .git tracks distributable APK artifacts and blanket-ignores source
 # (.gitignore = '*'). This .gitsrc repo tracks the SOURCE for revision history
 # and has NO remote (source stays private per project policy).

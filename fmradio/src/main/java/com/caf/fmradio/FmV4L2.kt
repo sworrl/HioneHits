@@ -102,7 +102,7 @@ object FmV4L2 {
      * because 0 is a legitimate value for most of these.
      *
      * Element 6 is NOT what stock calls it. The stock driver put FM_RSQ_STATUS's VALID bit
-     * there; MikuOS's patched driver (mikuos/build/patch_si4705_rds.py) puts the chip's stereo
+     * there; HioneOS's patched driver (hioneos/build/patch_si4705_rds.py) puts the chip's stereo
      * report there instead, as `pilot << 3 | STBLEND / 16`, because the stock driver reads
      * the pilot and blend and then throws them away, leaving nothing in userspace that can
      * tell stereo from mono.

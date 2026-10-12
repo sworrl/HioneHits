@@ -57,8 +57,8 @@ object ResponseMath {
     data class Band(val type: BandType, val hz: Double, val gainDb: Double, val q: Double)
 
     /**
-     * Magnitude of a parametric EQ at [f], preamp included. The same RBJ cookbook biquads Miku
-     * Music's MikuEq runs (MikuEq.design / responseDb), so the curve here is the one you hear.
+     * Magnitude of a parametric EQ at [f], preamp included. The same RBJ cookbook biquads Hione
+     * Music's HioneEq runs (HioneEq.design / responseDb), so the curve here is the one you hear.
      */
     fun eqDb(preampDb: Double, bands: List<Band>, f: Double, sampleRate: Int = 48000): Double {
         var db = preampDb
@@ -102,7 +102,7 @@ object ResponseMath {
         return db
     }
 
-    /** "PK"/"LSC"/"HSC" and the other spellings MikuEq accepts. */
+    /** "PK"/"LSC"/"HSC" and the other spellings HioneEq accepts. */
     fun bandType(code: String?): BandType = when (code?.uppercase()) {
         "LSC", "LS", "LSQ", "LOW_SHELF" -> BandType.LOW_SHELF
         "HSC", "HS", "HSQ", "HIGH_SHELF" -> BandType.HIGH_SHELF

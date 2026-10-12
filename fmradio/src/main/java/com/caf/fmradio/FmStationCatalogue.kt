@@ -19,7 +19,7 @@ import kotlin.math.sqrt
  *
  * The North American rows are FCC public-record data and the Japanese rows come from Japanese
  * Wikipedia and MLIT place data (see tools/radiodb/README.md). The catalogue is
- * baked into the image at /system_ext/etc/miku/stations.sqlite. Each row carries the
+ * baked into the image at /system_ext/etc/hione/stations.sqlite. Each row carries the
  * transmitter's coordinates, ERP and HAAT, so "what is on 100.1 here" is a lookup rather than
  * a guess, and so the band display can label a peak with the call sign that produced it.
  *
@@ -33,8 +33,8 @@ object FmStationCatalogue {
 
     private const val TAG = "FmStationCatalogue"
     private val PATHS = listOf(
-        "/system_ext/etc/miku/stations.sqlite",
-        "/system/etc/miku/stations.sqlite",
+        "/system_ext/etc/hione/stations.sqlite",
+        "/system/etc/hione/stations.sqlite",
         "/data/local/tmp/stations.sqlite",      // for trying a newer catalogue without a flash
     )
 
@@ -343,11 +343,11 @@ object FmStationCatalogue {
         return got.mapNotNull { it.country }.groupingBy { it }.eachCount().maxByOrNull { it.value }?.key
     }
 
-    /** Where MikuLocationFusion last put us, or null if nothing has placed the device yet. */
+    /** Where HioneLocationFusion last put us, or null if nothing has placed the device yet. */
     fun listenerPosition(ctx: Context): Pair<Double, Double>? = runCatching {
         val cr = ctx.contentResolver
-        val lat = Settings.Global.getString(cr, "miku_loc_lat")?.toDoubleOrNull()
-        val lon = Settings.Global.getString(cr, "miku_loc_lon")?.toDoubleOrNull()
+        val lat = Settings.Global.getString(cr, "hione_loc_lat")?.toDoubleOrNull()
+        val lon = Settings.Global.getString(cr, "hione_loc_lon")?.toDoubleOrNull()
         if (lat == null || lon == null) null else lat to lon
     }.getOrNull()
 

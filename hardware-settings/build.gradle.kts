@@ -15,7 +15,7 @@ android {
         minSdk = 26
         targetSdk = 34
         versionCode = 1014
-        versionName = "1.2.0-mikuos"
+        versionName = "1.2.0-hioneos"
     }
 
     val signingProps = Properties().apply {
@@ -103,7 +103,7 @@ dependencies {
     // BeaconFix Lite, vendored as an .aar from its own repo's release process (see
     // beaconfix/lite/README.md) so an image build needs no network. Wi-Fi positioning: works
     // indoors, needs no Play services, about a millisecond for a repeat look. Not a GNSS
-    // replacement, one of three sources MikuLocationFusion weighs against each other.
+    // replacement, one of three sources HioneLocationFusion weighs against each other.
     implementation(files("../libs/beaconfix-lite-1.0.0.aar"))
     implementation(platform("androidx.compose:compose-bom:2024.09.02"))
     implementation("androidx.compose.material3:material3")

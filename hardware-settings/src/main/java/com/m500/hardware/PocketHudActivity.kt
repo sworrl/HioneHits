@@ -141,7 +141,7 @@ fun CyberPocketHudScreen(mode: String, allowVolumeWheel: Boolean) {
 
     val primaryColor = when {
         isBoth -> Color(0xFFFFB300) // Master Amber
-        isTouch -> Mascot.color(0xFF00E5FF) // Miku Cyan
+        isTouch -> Mascot.color(0xFF00E5FF) // Hione Cyan
         else -> Mascot.color(0xFF06D6A0) // Emerald Jade
     }
 
