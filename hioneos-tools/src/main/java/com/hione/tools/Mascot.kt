@@ -325,8 +325,8 @@ object MascotPacks {
         labelAlias = "Hione",
     )
 
-    val HIONE = MascotPack(
-        id = "hione",
+    val HITS = MascotPack(
+        id = "hits",
         name = "Hione",
         nameJa = "ヒオネ",
         fullName = "Oki Hione",
@@ -363,7 +363,7 @@ object MascotPacks {
             0x80DEEA to 0xFFD59A,
         ),
         lore = "hione",
-        labelAlias = "Hione",
+        labelAlias = "Hits",
         hueRules = listOf(
             HueRule(160f, 192f, 0.25f, 0.2f, 1f, "primary"),   // teal and cyan shades -> amber
             HueRule(300f, 345f, 0.25f, 0.2f, 1f, "accent"),    // pinks -> ice blue
@@ -372,7 +372,7 @@ object MascotPacks {
         ),
     )
 
-    val BUILT_IN = listOf(HIONE, HIONE)
+    val BUILT_IN = listOf(HIONE, HITS)
 
     fun builtIn(id: String?): MascotPack? = BUILT_IN.firstOrNull { it.id == id }
 }
