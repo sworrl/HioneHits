@@ -62,7 +62,7 @@ fun ScrobbleSetupOffer(player: ExoPlayer, onOpenSettings: () -> Unit) {
             Text(
                 "${Mascot.musicAppName} can send what you play to your Last.fm profile, and keep a queue so " +
                     "nothing is lost while you are offline.",
-                color = Mascot.color(0xFFE0F7FA), fontSize = 13.sp
+                color = Mascot.color(0xFFFFF3E0), fontSize = 13.sp
             )
             Spacer(Modifier.height(10.dp))
             Text(
@@ -94,7 +94,7 @@ fun ScrobbleSetupOffer(player: ExoPlayer, onOpenSettings: () -> Unit) {
                 Spacer(Modifier.width(4.dp))
                 Text(
                     "Set it up",
-                    color = Mascot.color(0xFF04161A),
+                    color = Mascot.color(0xFF121318),
                     fontSize = 12.5.sp,
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier

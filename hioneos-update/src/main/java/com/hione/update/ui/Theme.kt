@@ -35,13 +35,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
-// HioneOS palette, same values as hioneos-settings' Theme.kt (#39C5BB teal, diva pink, carbon).
-val HioneTeal get() = Mascot.color(0xFF39C5BB)
-val HioneTealBright get() = Mascot.color(0xFF00F5D4)
-val HionePink get() = Mascot.color(0xFFFF2A85)
-val HionePinkBright get() = Mascot.color(0xFFFF4081)
+// HioneOS palette, same values as hioneos-settings' Theme.kt (#FFAB2E teal, diva pink, carbon).
+val HioneTeal get() = Mascot.color(0xFFFFAB2E)
+val HioneTealBright get() = Mascot.color(0xFFFFC56B)
+val HionePink get() = Mascot.color(0xFF8EC5FF)
+val HionePinkBright get() = Mascot.color(0xFF6FB0FF)
 val HioneGold = Color(0xFFFFD54F)
-val HioneDarkBg get() = Mascot.color(0xFF070B0D)
+val HioneDarkBg get() = Mascot.color(0xFF0D0E11)
 val HioneSurface1 get() = Mascot.color(0xFF0D1417)
 val HioneSurface2 get() = Mascot.color(0xFF131E22)
 val HioneMuted = Color(0xFF7E9AA0)

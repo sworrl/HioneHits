@@ -1053,11 +1053,11 @@ private fun mergeDuplicateAlbumCopies(groups: List<AlbumGroup>): List<AlbumGroup
 }
 
 // ---- Hione palette ----
-val HioneTeal get() = Mascot.color(0xFF39C5BB)
-val HioneTealBright get() = Mascot.color(0xFF7FE6DE)
-val HionePink get() = Mascot.color(0xFFFF5FA2)
+val HioneTeal get() = Mascot.color(0xFFFFAB2E)
+val HioneTealBright get() = Mascot.color(0xFFFFD08A)
+val HionePink get() = Mascot.color(0xFF8EC5FF)
 val HioneGold = Color(0xFFFFCF6B)
-val Ground get() = Mascot.color(0xFF04161A)
+val Ground get() = Mascot.color(0xFF121318)
 val Surface1 get() = Mascot.color(0xFF0C2B2E)
 val Muted = Color(0xFF89ACA7)
 

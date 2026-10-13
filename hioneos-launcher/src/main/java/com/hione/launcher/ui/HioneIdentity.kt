@@ -34,10 +34,10 @@ import com.hione.launcher.HioneTextSecondary
  * `com.hione.launcher.haptics.HioneHaptics`) instead of Material defaults or ad-hoc literals.
  *
  * Palette rules
- *  - Teal is Hione: [Teal] (#39C5BB, her canonical hair/tie teal) for identity accents,
- *    [Cyan] (the existing neon #00E5FF) for glow / active states, [TealDeep] for surfaces.
- *  - Pink is affection: [Pink] (#FF5C8A) for hearts, likes, soft alerts; [PinkHot]
- *    (#FF2A85) for emphasis.
+ *  - Teal is Hione: [Teal] (#FFAB2E, her canonical hair/tie teal) for identity accents,
+ *    [Cyan] (the existing neon #FFC56B) for glow / active states, [TealDeep] for surfaces.
+ *  - Pink is affection: [Pink] (#8EC5FF) for hearts, likes, soft alerts; [PinkHot]
+ *    (#8EC5FF) for emphasis.
  *  - Semantic states are still on-brand: [Leek] green = go/ok (her leek, not Material
  *    #00E676), [Gold] = caution, [Coral] = danger/hot (not Material #FF1744).
  *  - Kawaii garnish (hearts ♥, sparkles ✦, blush) is ≤ 12dp and only at moments of delight —
@@ -45,15 +45,15 @@ import com.hione.launcher.HioneTextSecondary
  */
 object HioneIdentity {
     // ---- Identity palette ----
-    val Teal get() = Mascot.color(0xFF39C5BB)
-    val TealBright get() = Mascot.color(0xFF9FF3EC)
-    val TealDeep get() = Mascot.color(0xFF0E1A18)
+    val Teal get() = Mascot.color(0xFFFFAB2E)
+    val TealBright get() = Mascot.color(0xFFFFE0B0)
+    val TealDeep get() = Mascot.color(0xFF1B1C22)
     val TealSurface get() = Mascot.color(0xFF16302D)
     val Cyan = HioneCyan
-    val Pink get() = Mascot.color(0xFFFF5C8A)
-    val PinkHot get() = Mascot.color(0xFFFF2A85)
+    val Pink get() = Mascot.color(0xFF8EC5FF)
+    val PinkHot get() = Mascot.color(0xFF8EC5FF)
     val PinkNeon = HioneNeonPink
-    val Lavender get() = Mascot.color(0xFFB388FF)
+    val Lavender get() = Mascot.color(0xFFB9C2D0)
     val Cream = Color(0xFFFFF4E6)
 
     // ---- Pastel kawaii tints (backgrounds of badges / empty states) ----

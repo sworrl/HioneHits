@@ -249,7 +249,7 @@ fun ArtistPhotoSettingsCard(ctx: Context) {
             Row(
                 Modifier
                     .clip(RoundedCornerShape(14.dp))
-                    .background(Mascot.color(0x22FF5FA2))
+                    .background(Mascot.color(0x228EC5FF))
                     .border(1.dp, HionePink.copy(alpha = 0.5f), RoundedCornerShape(14.dp))
                     .clickable {
                         ArtistPhotoCache.clearAll(ctx)

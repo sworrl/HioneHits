@@ -191,6 +191,13 @@
                 <action android:name="com.hione.settings.action.MASCOT" />
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
+            <!-- Hand-added: HioneOS Home screen page (status card layout and pop up).
+                 The launcher's home long-press menu > Home settings opens it.
+                 adb shell am start -a com.hione.settings.action.HOME_LAYOUT -->
+            <intent-filter>
+                <action android:name="com.hione.settings.action.HOME_LAYOUT" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
 
             <intent-filter android:priority="10">
                 <action android:name="android.settings.SETTINGS" />

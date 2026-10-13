@@ -53,9 +53,9 @@ import kotlinx.coroutines.delay
  *
  * Every number comes from [HioneWeatherTileEngine]'s snapshot; a missing value renders "—".
  */
-private val Teal get() = Mascot.color(0xFF39C5BB)
-private val TealBright get() = Mascot.color(0xFF9FF3EC)
-private val Pink get() = Mascot.color(0xFFFF5C8A)
+private val Teal get() = Mascot.color(0xFFFFAB2E)
+private val TealBright get() = Mascot.color(0xFFFFE0B0)
+private val Pink get() = Mascot.color(0xFF8EC5FF)
 private val Muted = Color(0xFF8BA6A9)
 
 private fun tileGradient(code: Int?, isDay: Boolean?): List<Color> = when {
@@ -95,7 +95,7 @@ fun HioneWeatherTile(modifier: Modifier = Modifier, onOpenObservatory: (() -> Un
             .fillMaxWidth()
             .clip(shape)
             .background(Brush.linearGradient(gradient))
-            .quiltStitch(fillStart = Mascot.color(0x1A39C5BB), fillEnd = Mascot.color(0x14FF5C8A), seam = Mascot.color(0xB339C5BB), corner = 20.dp)
+            .quiltStitch(fillStart = Mascot.color(0x1AFFAB2E), fillEnd = Mascot.color(0x148EC5FF), seam = Mascot.color(0xB3FFAB2E), corner = 20.dp)
             .border(1.dp, if (stale) Pink.copy(alpha = 0.55f) else Teal.copy(alpha = 0.45f), shape)
             .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) { detailOpen = true }
             .padding(horizontal = 12.dp, vertical = 9.dp)

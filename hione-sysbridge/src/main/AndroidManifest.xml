@@ -61,6 +61,14 @@
             </intent-filter>
         </receiver>
         <receiver
+            android:name=".LedReceiver"
+            android:exported="true"
+            android:permission="com.hione.permission.SYSTEM_BRIDGE">
+            <intent-filter>
+                <action android:name="com.hione.sysbridge.LED" />
+            </intent-filter>
+        </receiver>
+        <receiver
             android:name=".TouchWakeReceiver"
             android:exported="true"
             android:permission="com.hione.permission.SYSTEM_BRIDGE">

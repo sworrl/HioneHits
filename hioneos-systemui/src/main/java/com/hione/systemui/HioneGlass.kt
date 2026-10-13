@@ -182,7 +182,7 @@ object HioneGlass {
          * Draw over an already-filled rounded card, before its content. [alpha] 0..255 fades the
          * whole effect; [withRim] false keeps a surface's own neon border instead of the refraction rim.
          */
-        fun drawOver(canvas: android.graphics.Canvas, r: RectF, radius: Float, accent: Int, accent2: Int = Mascot.argb(0xFFFF4081.toInt()), alpha: Int = 255, withRim: Boolean = true) {
+        fun drawOver(canvas: android.graphics.Canvas, r: RectF, radius: Float, accent: Int, accent2: Int = Mascot.argb(0xFF6FB0FF.toInt()), alpha: Int = 255, withRim: Boolean = true) {
             rebuild(r, accent, accent2)
             sheen.alpha = alpha; edge.alpha = alpha; rim.alpha = alpha
             canvas.drawRoundRect(r, radius, radius, sheen)
@@ -194,7 +194,7 @@ object HioneGlass {
         }
 
         /** Same, for an arbitrary card path (the chamfered volume bar) whose bounds are [r]. */
-        fun drawOver(canvas: android.graphics.Canvas, path: android.graphics.Path, r: RectF, accent: Int, accent2: Int = Mascot.argb(0xFFFF4081.toInt()), alpha: Int = 255, withRim: Boolean = true) {
+        fun drawOver(canvas: android.graphics.Canvas, path: android.graphics.Path, r: RectF, accent: Int, accent2: Int = Mascot.argb(0xFF6FB0FF.toInt()), alpha: Int = 255, withRim: Boolean = true) {
             rebuild(r, accent, accent2)
             sheen.alpha = alpha; edge.alpha = alpha; rim.alpha = alpha
             canvas.drawPath(path, sheen)

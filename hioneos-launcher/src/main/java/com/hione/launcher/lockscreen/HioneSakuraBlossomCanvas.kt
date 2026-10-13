@@ -53,8 +53,8 @@ fun HioneSakuraBlossomCanvas(
             Mascot.color(0xFFFF69B4), // Hatsune Neon Pink
             Mascot.color(0xFFFF80AB), // Vibrant Cyber Pink
             Mascot.color(0xFFFFF0F5), // Pearl White Blossom
-            Mascot.color(0xFFE0F7FA), // Soft Cyan Shimmer
-            Mascot.color(0xFF00E5FF)  // Cyber Cyan Glow
+            Mascot.color(0xFFFFF3E0), // Soft Cyan Shimmer
+            Mascot.color(0xFFFFC56B)  // Cyber Cyan Glow
         )
     }
 

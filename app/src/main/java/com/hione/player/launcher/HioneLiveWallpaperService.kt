@@ -118,6 +118,6 @@ class HioneLiveWallpaperService : WallpaperService() {
         const val PARALLAX_PX = 60f
         const val GLOW_PERIOD_S = 6.0
         const val GLOW_MAX_ALPHA = 36     // out of 255 — subtle
-        val HIONE_TEAL get() = Mascot.argb(Color.parseColor("#39C5BB"))
+        val HIONE_TEAL get() = Mascot.argb(Color.parseColor("#FFAB2E"))
     }
 }

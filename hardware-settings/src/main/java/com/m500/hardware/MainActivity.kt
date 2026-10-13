@@ -37,9 +37,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-val HwHioneTeal get() = Mascot.color(0xFF00E5FF)
-val HwHionePink get() = Mascot.color(0xFFFF4081)
-val HwBgDark get() = Mascot.color(0xFF04161A)
+val HwHioneTeal get() = Mascot.color(0xFFFFC56B)
+val HwHionePink get() = Mascot.color(0xFF6FB0FF)
+val HwBgDark get() = Mascot.color(0xFF121318)
 val HwSurface1 get() = Mascot.color(0xFF0B242A)
 val HwSurface2 get() = Mascot.color(0xFF13363E)
 val HwMuted = Color(0xFF8BA7AB)
@@ -213,6 +213,14 @@ fun HardwareSettingsScreen(onBack: () -> Unit) {
                 .padding(horizontal = 16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
+            // Blackjack: which driver runs the DACs and what it is doing now. Tap for the Monitor.
+            item {
+                Spacer(Modifier.height(4.dp))
+                BlackjackStatusCard(dacPrimary, dacSecondary, dacBg) {
+                    ctx.startActivity(android.content.Intent(ctx, BlackjackMonitorActivity::class.java))
+                }
+            }
+
             // Status Card
             item {
                 Column(

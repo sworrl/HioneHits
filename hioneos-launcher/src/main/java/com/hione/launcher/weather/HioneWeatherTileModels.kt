@@ -280,7 +280,7 @@ object WxFmt {
         usAqi <= 100 -> 0xFFFFD54F
         usAqi <= 150 -> 0xFFFFA040
         usAqi <= 200 -> 0xFFFF5252
-        usAqi <= 300 -> 0xFFB388FF
+        usAqi <= 300 -> 0xFFB9C2D0
         else -> 0xFFC2185B
     }
 }

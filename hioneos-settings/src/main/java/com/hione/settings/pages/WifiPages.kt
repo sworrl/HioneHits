@@ -288,7 +288,7 @@ private fun AddNetworkDialog(onDone: () -> Unit) {
 private fun WifiRow(n: WifiNet, connected: Boolean, onClick: () -> Unit) {
     Row(
         Modifier.fillMaxWidth().padding(vertical = 3.dp).clip(RoundedCornerShape(12.dp))
-            .background(if (connected) Mascot.color(0x2200E5FF) else HioneSurface2)
+            .background(if (connected) Mascot.color(0x22FFC56B) else HioneSurface2)
             .clickable(onClick = onClick).padding(12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {

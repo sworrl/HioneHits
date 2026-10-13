@@ -179,7 +179,7 @@ fun HioneNetworkObservatoryModal(
     Box(
         Modifier
             .fillMaxSize()
-            .background(Mascot.color(0xEB040D12))
+            .background(Mascot.color(0xEB0C0D10))
             .clickable { onDismissRequest() }
             // System-gesture-style dismiss: swipe up starting at the bottom edge of the modal.
             .swipeUpFromBottomToDismiss(onDismiss = onDismissRequest)
@@ -371,7 +371,7 @@ private fun HioneNetObsHeaderBar(
                 Modifier
                     .size(34.dp)
                     .clip(CutCornerShape(8.dp))
-                    .background(Mascot.color(0x3300E5FF))
+                    .background(Mascot.color(0x33FFC56B))
                     .border(1.dp, HioneCyan, CutCornerShape(8.dp)),
                 contentAlignment = Alignment.Center
             ) {
@@ -417,7 +417,7 @@ private fun HioneNetObsHeaderBar(
                 onCheckedChange = { HioneNetworkService.setWifiEnabled(ctx, it) },
                 colors = SwitchDefaults.colors(
                     checkedThumbColor = HioneCyan,
-                    checkedTrackColor = Mascot.color(0x3300E5FF),
+                    checkedTrackColor = Mascot.color(0x33FFC56B),
                     uncheckedThumbColor = Color.Gray,
                     uncheckedTrackColor = Color(0x22FFFFFF)
                 ),
@@ -494,7 +494,7 @@ private fun HioneNetObsConnectedWifiHero(
                     .border(
                         BorderStroke(
                             1.dp,
-                            Brush.linearGradient(listOf(HioneCyan, Mascot.color(0x3300E5FF), Color(0xFF2979FF)))
+                            Brush.linearGradient(listOf(HioneCyan, Mascot.color(0x33FFC56B), Color(0xFF2979FF)))
                         ),
                         CutCornerShape(11.dp)
                     )
@@ -837,7 +837,7 @@ private fun HioneNetObsAvailableApList(
                                         Box(
                                             Modifier
                                                 .clip(CutCornerShape(3.dp))
-                                                .background(if (ap.bandLabel == "5GHz") Mascot.color(0x3300E5FF) else Color(0x22FFFFFF))
+                                                .background(if (ap.bandLabel == "5GHz") Mascot.color(0x33FFC56B) else Color(0x22FFFFFF))
                                                 .padding(horizontal = 4.dp, vertical = 1.dp)
                                         ) {
                                             Text(ap.bandLabel, color = if (ap.bandLabel == "5GHz") HioneCyan else Color.LightGray, fontSize = 10.5.sp, fontWeight = FontWeight.Bold)
@@ -955,7 +955,7 @@ private fun HioneNetObsChannelSpectrogram(
                                 Modifier
                                     .width(42.dp)
                                     .clip(CutCornerShape(4.dp))
-                                    .background(Mascot.color(0x2200E5FF))
+                                    .background(Mascot.color(0x22FFC56B))
                                     .border(0.5.dp, HioneCyan.copy(alpha = 0.4f), CutCornerShape(4.dp))
                                     .padding(4.dp),
                                 contentAlignment = Alignment.Center
@@ -1057,12 +1057,12 @@ private fun HioneNetObsHardwareControls(
                     Switch(
                         checked = wifi.isPowerSaveOn,
                         onCheckedChange = { HioneNetworkService.setPowerSaveMode(it) },
-                        colors = SwitchDefaults.colors(checkedThumbColor = HioneCyan, checkedTrackColor = Mascot.color(0x3300E5FF)),
+                        colors = SwitchDefaults.colors(checkedThumbColor = HioneCyan, checkedTrackColor = Mascot.color(0x33FFC56B)),
                         modifier = Modifier.scale(0.8f)
                     )
                 }
 
-                HorizontalDivider(color = Mascot.color(0x2200E5FF))
+                HorizontalDivider(color = Mascot.color(0x22FFC56B))
 
                 // Radio Band Preference
                 Row(
@@ -1080,7 +1080,7 @@ private fun HioneNetObsHardwareControls(
                             Box(
                                 Modifier
                                     .clip(CutCornerShape(4.dp))
-                                    .background(if (active) HioneCyan else Mascot.color(0x2200E5FF))
+                                    .background(if (active) HioneCyan else Mascot.color(0x22FFC56B))
                                     .border(0.5.dp, HioneCyan, CutCornerShape(4.dp))
                                     .clickable { HioneNetworkService.setBandPreference(mode) }
                                     .padding(horizontal = 6.dp, vertical = 3.dp)
@@ -1155,7 +1155,7 @@ private fun HioneNetObsWireGuardCard(
         else -> "TUNNEL DOWN"
     }
     val tunnelDotColor = when {
-        isHomeWifi -> Mascot.color(0xFF00E5FF)
+        isHomeWifi -> Mascot.color(0xFFFFC56B)
         wgCardUp -> com.hione.launcher.ui.HioneIdentity.Leek
         else -> HioneTextSecondary
     }

@@ -110,7 +110,7 @@ fun rememberNpAccent(): NpAccent {
     val pair by HioneNowPlayingAccent.colors.collectAsState()
     val active = pair.first != 0
     val rawA = if (active) Color(pair.first).copy(alpha = 1f) else HioneCyan
-    val rawB = if (pair.second != 0) Color(pair.second).copy(alpha = 1f) else if (active) rawA else Mascot.color(0xFF7FE6DE)
+    val rawB = if (pair.second != 0) Color(pair.second).copy(alpha = 1f) else if (active) rawA else Mascot.color(0xFFFFD08A)
     val full by animateColorAsState(rawA, NP_TWEEN, label = "npAccentFull")
     val second by animateColorAsState(rawB, NP_TWEEN, label = "npAccentSecond")
     val subtle by animateColorAsState(if (active) HioneNowPlayingAccent.blend(HioneCyan, rawA, 0.25f) else HioneCyan, NP_TWEEN, label = "npAccentSubtle")

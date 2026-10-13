@@ -324,7 +324,9 @@ class HioneNotificationShadeService : AccessibilityService() {
     private val checkOwnBar = Runnable {
         val top = HioneTaskStack.topTask(this)?.second
         val pkg = top?.packageName
-        dacBadge?.setForeground(pkg, top?.className)
+        val cls = top?.className
+        dacBadge?.setForeground(pkg, cls)
+        idleDim?.setForeground(pkg, cls)
         val own = pkg == LAUNCHER_PKG
         val retro = pkg in RETRO_PKGS
         if (own != ownBarInFront || retro != retroInFront) {
@@ -335,6 +337,12 @@ class HioneNotificationShadeService : AccessibilityService() {
             }
             suppressStockShade()
         }
+    }
+
+    override fun onConfigurationChanged(newConfig: android.content.res.Configuration) {
+        super.onConfigurationChanged(newConfig)
+        mainHandler.removeCallbacks(checkOwnBar)
+        mainHandler.post(checkOwnBar)
     }
 
     /** Hide or bring back the Hione overlays for a retro mode. */
@@ -950,7 +958,7 @@ class HioneNotificationShadeService : AccessibilityService() {
         private val points = ArrayList<TouchPt>(64)
 
         private val pillPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL; color = 0xD9FFFFFF.toInt() }
-        private val glowPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL; color = 0x3800F5D4 }
+        private val glowPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL; color = 0x38FFC56B }
         private val rect = RectF()
 
         /**

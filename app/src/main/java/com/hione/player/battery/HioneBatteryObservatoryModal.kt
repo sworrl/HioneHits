@@ -499,8 +499,8 @@ fun HioneBatteryObservatoryModal(
                                 // 7-Cell Vertical Glowing Quantum Core Meter
                                 val cellColors = remember {
                                     listOf(
-                                        Mascot.color(0xFFFF4081), // Cell 7 (85-100%)
-                                        Mascot.color(0xFF00E5FF), // Cell 6 (71-85%)
+                                        Mascot.color(0xFF6FB0FF), // Cell 7 (85-100%)
+                                        Mascot.color(0xFFFFC56B), // Cell 6 (71-85%)
                                         Color(0xFF00E676), // Cell 5 (57-71%)
                                         Color(0xFFAEEA00), // Cell 4 (42-57%)
                                         Color(0xFFFFD600), // Cell 3 (28-42%)

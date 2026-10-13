@@ -529,8 +529,8 @@ fun HioneBatteryObservatoryModal(
                                 // 7-Cell Vertical Meter
                                 val cellColors = remember {
                                     listOf(
-                                        Mascot.color(0xFFFF4081),
-                                        Mascot.color(0xFF00E5FF),
+                                        Mascot.color(0xFF6FB0FF),
+                                        Mascot.color(0xFFFFC56B),
                                         com.hione.launcher.ui.HioneIdentity.Leek,
                                         Color(0xFFAEEA00),
                                         com.hione.launcher.ui.HioneIdentity.Gold,
@@ -626,7 +626,7 @@ fun HioneBatteryObservatoryModal(
                                         // current happens to be right now.
                                         val barColor = if (curVal > 0) com.hione.launcher.ui.HioneIdentity.Leek
                                                        else if (telemetry.isPlugged) Color(0xFFFF9100)
-                                                       else Mascot.color(0xFF00E5FF).copy(alpha = 0.75f)
+                                                       else Mascot.color(0xFFFFC56B).copy(alpha = 0.75f)
 
                                         drawRect(
                                             color = barColor,
@@ -648,7 +648,7 @@ fun HioneBatteryObservatoryModal(
                                     }
                                     if (voltageHistory.size >= 2) drawPath(
                                         path = voltPath,
-                                        color = Mascot.color(0xFFFF4081).copy(alpha = 0.85f),
+                                        color = Mascot.color(0xFF6FB0FF).copy(alpha = 0.85f),
                                         style = Stroke(width = 1.8.dp.toPx(), cap = StrokeCap.Round)
                                     )
                                 }

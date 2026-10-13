@@ -30,7 +30,7 @@ import androidx.compose.ui.unit.dp
 fun Modifier.quiltStitch(
     fillStart: Color = Mascot.color(0x1A0EE7DD),
     fillEnd: Color = Mascot.color(0x14FF4FA3),
-    seam: Color = Mascot.color(0xB339C5BB),
+    seam: Color = Mascot.color(0xB3FFAB2E),
     corner: Dp = 11.dp,
     seamInset: Dp = 3.dp
 ): Modifier = this.drawBehind {

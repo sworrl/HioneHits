@@ -38,7 +38,7 @@ class HioneCompositingMenuActivity : ComponentActivity() {
     }
 }
 
-private val HioneTeal get() = Mascot.color(0xFF00E5FF)
+private val HioneTeal get() = Mascot.color(0xFFFFC56B)
 private val HionePink get() = Mascot.color(0xFFFF80AB)
 private val PanelBg = Color(0xFF0A0F1A)
 

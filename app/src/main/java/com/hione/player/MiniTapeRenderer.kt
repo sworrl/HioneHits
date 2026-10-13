@@ -103,7 +103,7 @@ object MiniTapeRenderer {
             lineTo(labelRect.left + 61f * s, labelRect.bottom)
             close()
         }
-        paint.color = Mascot.argb(Color.parseColor("#39C5BB"))
+        paint.color = Mascot.argb(Color.parseColor("#FFAB2E"))
         canvas.drawPath(slashPath, paint)
 
         // Track Title & Artist Text on Label
@@ -156,7 +156,7 @@ object MiniTapeRenderer {
 
         paint.style = Paint.Style.STROKE
         paint.strokeWidth = 0.6f * s
-        paint.color = Mascot.argb(Color.parseColor("#7FE6DE"))
+        paint.color = Mascot.argb(Color.parseColor("#FFD08A"))
         canvas.drawRoundRect(winRect, 2.5f * s, 2.5f * s, paint)
 
         // 4) Reels & Wound Tape Packs
@@ -237,7 +237,7 @@ object MiniTapeRenderer {
         paint.style = Paint.Style.FILL
         paint.shader = RadialGradient(
             cx, cy, r * 1.6f,
-            Mascot.argb(Color.parseColor("#4439C5BB")), Mascot.argb(Color.parseColor("#0039C5BB")),
+            Mascot.argb(Color.parseColor("#44FFAB2E")), Mascot.argb(Color.parseColor("#00FFAB2E")),
             Shader.TileMode.CLAMP
         )
         canvas.drawCircle(cx, cy, r * 1.6f, paint)
@@ -247,7 +247,7 @@ object MiniTapeRenderer {
     private fun drawPrevGlyph(canvas: Canvas, cx: Float, cy: Float, r: Float, s: Float, paint: Paint) {
         glowBacking(canvas, cx, cy, r, paint)
         paint.style = Paint.Style.FILL
-        paint.color = Mascot.argb(Color.parseColor("#7FE6DE"))
+        paint.color = Mascot.argb(Color.parseColor("#FFD08A"))
         for (i in 0 until 2) {
             val ox = cx - r * 0.55f + i * r * 0.85f
             val tri = Path().apply {
@@ -263,7 +263,7 @@ object MiniTapeRenderer {
     private fun drawNextGlyph(canvas: Canvas, cx: Float, cy: Float, r: Float, s: Float, paint: Paint) {
         glowBacking(canvas, cx, cy, r, paint)
         paint.style = Paint.Style.FILL
-        paint.color = Mascot.argb(Color.parseColor("#7FE6DE"))
+        paint.color = Mascot.argb(Color.parseColor("#FFD08A"))
         for (i in 0 until 2) {
             val ox = cx + r * 0.55f - i * r * 0.85f
             val tri = Path().apply {

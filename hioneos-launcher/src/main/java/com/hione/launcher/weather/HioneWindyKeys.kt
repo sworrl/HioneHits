@@ -19,6 +19,7 @@ import kotlinx.coroutines.flow.update
  *
  *  - webcam: Windy Webcams API key (the widget's `windyApiKey`). Turns on the CAMS tab.
  *  - point:  Windy Point Forecast API key (the widget's `windyPointKey`). Turns on Windy GFS data.
+ *  - map:    Windy Map Forecast API key (`windyMapKey`). Turns on Windy's own map layers in the MAP tab.
  *
  * Everything in the weather screen works with neither. The keys only add things on top.
  *
@@ -30,12 +31,14 @@ object HioneWindyKeys {
     private const val FILE = "hione_windy_keys"
     private const val K_WEBCAM = "webcam_key"
     private const val K_POINT = "point_key"
+    private const val K_MAP = "map_key"
     private const val LEGACY_PREFS = "hione_weather_tile"
     private const val LEGACY_KEY = "windy_key"
 
     data class Keys(
         val webcam: String = "",
         val point: String = "",
+        val map: String = "",
         /** Point key came from the build (local.properties hione.windy.key), not from the user. */
         val pointFromBuild: Boolean = false,
         val loaded: Boolean = false,
@@ -43,7 +46,8 @@ object HioneWindyKeys {
     ) {
         val hasWebcam get() = webcam.isNotBlank()
         val hasPoint get() = point.isNotBlank()
-        val connected get() = hasWebcam || hasPoint
+        val hasMap get() = map.isNotBlank()
+        val connected get() = hasWebcam || hasPoint || hasMap
     }
 
     private val _state = MutableStateFlow(Keys())
@@ -111,6 +115,7 @@ object HioneWindyKeys {
         val build = BuildConfig.HIONE_WINDY_KEY
         _state.value = Keys(
             webcam = webcam,
+            map = p?.getString(K_MAP, "").orEmpty(),
             point = stored.ifBlank { build },
             pointFromBuild = stored.isBlank() && build.isNotBlank(),
             loaded = true,
@@ -125,13 +130,14 @@ object HioneWindyKeys {
      * Save keys. null = leave that one alone, "" = clear it. Returns false when the store is not
      * available or a key does not look like a key. Callers refresh whatever depends on them.
      */
-    fun set(ctx: Context, webcam: String?, point: String?): Boolean {
+    fun set(ctx: Context, webcam: String?, point: String?, map: String? = null): Boolean {
         ensureLoaded(ctx)
-        if ((webcam != null && !valid(webcam)) || (point != null && !valid(point))) return false
+        if (listOfNotNull(webcam, point, map).any { !valid(it) }) return false
         val p = store(ctx) ?: return false
         val e = p.edit()
         webcam?.let { if (it.isBlank()) e.remove(K_WEBCAM) else e.putString(K_WEBCAM, it.trim()) }
         point?.let { if (it.isBlank()) e.remove(K_POINT) else e.putString(K_POINT, it.trim()) }
+        map?.let { if (it.isBlank()) e.remove(K_MAP) else e.putString(K_MAP, it.trim()) }
         val ok = e.commit()
         publish(p)
         return ok
@@ -139,7 +145,7 @@ object HioneWindyKeys {
 
     /** "set" / "not set" / "build", for logs and adb replies. Never the key itself. */
     fun describe(k: Keys = _state.value): String =
-        "webcam=${if (k.hasWebcam) "set" else "not set"} point=${when { k.pointFromBuild -> "build"; k.hasPoint -> "set"; else -> "not set" }}"
+        "webcam=${if (k.hasWebcam) "set" else "not set"} point=${when { k.pointFromBuild -> "build"; k.hasPoint -> "set"; else -> "not set" }} map=${if (k.hasMap) "set" else "not set"}"
 
     /** Masked form for the UI: last 4 characters only. */
     fun masked(k: String) = if (k.length <= 4) "set" else "...." + k.takeLast(4)
@@ -157,8 +163,8 @@ object HioneWindyKeys {
  * shell holds and other apps cannot get, the same gate as the ingest scan and location receivers.
  *
  *   adb shell am broadcast -p com.hione.launcher -a com.hione.launcher.action.WINDY_KEYS \
- *       --es webcam_key <KEY> --es point_key <KEY>
- *   adb shell am broadcast -p com.hione.launcher -a com.hione.launcher.action.WINDY_KEYS --ez clear true
+ *       --es webcam_key <KEY> --es point_key <KEY> --es map_key <KEY>
+ *   adb shell am broadcast -p com.hione.launcher -a com.hione.launcher.action.WINDY_KEYS --ez clear true   (all three)
  *   adb shell am broadcast -p com.hione.launcher -a com.hione.launcher.action.WINDY_KEYS     (status only)
  *
  * Either extra can be left out to keep that key. The reply ("Broadcast completed: result=1,
@@ -180,18 +186,19 @@ class HioneWindyKeyReceiver : BroadcastReceiver() {
             val clear = intent.getBooleanExtra("clear", false)
             val webcam = if (clear) "" else intent.getStringExtra("webcam_key")
             val point = if (clear) "" else intent.getStringExtra("point_key")
-            if (webcam == null && point == null) {
+            val map = if (clear) "" else intent.getStringExtra("map_key")
+            if (webcam == null && point == null && map == null) {
                 resultCode = 1
                 resultData = "ok ${HioneWindyKeys.describe()}"
                 return
             }
-            if ((webcam != null && !HioneWindyKeys.valid(webcam)) || (point != null && !HioneWindyKeys.valid(point))) {
+            if (listOfNotNull(webcam, point, map).any { !HioneWindyKeys.valid(it) }) {
                 resultCode = 2
                 resultData = "that does not look like a Windy key (letters, digits, - and _ only)"
                 Log.w(TAG, "import rejected: malformed key")
                 return
             }
-            if (!HioneWindyKeys.set(app, webcam, point)) {
+            if (!HioneWindyKeys.set(app, webcam, point, map)) {
                 resultCode = 3
                 resultData = "could not save: encrypted store unavailable"
                 return

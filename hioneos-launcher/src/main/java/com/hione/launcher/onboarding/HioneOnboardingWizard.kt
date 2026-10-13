@@ -46,15 +46,15 @@ import java.text.SimpleDateFormat
 import java.util.*
 
 // Cyberpunk Palette
-val HioneOnboardingTeal get() = Mascot.color(0xFF00E5FF)
-val HioneOnboardingPink get() = Mascot.color(0xFFFF4081)
+val HioneOnboardingTeal get() = Mascot.color(0xFFFFC56B)
+val HioneOnboardingPink get() = Mascot.color(0xFF6FB0FF)
 val HioneOnboardingGreen = com.hione.launcher.ui.HioneIdentity.Leek
 val HioneOnboardingGold = com.hione.launcher.ui.HioneIdentity.Gold
-val HioneOnboardingPurple get() = Mascot.color(0xFFB388FF)
+val HioneOnboardingPurple get() = Mascot.color(0xFFB9C2D0)
 val HioneOnboardingBg = Color(0xFF040D14)
 val HioneOnboardingCard = Color(0xDD0A1926)
-val HioneOnboardingCardSelected get() = Mascot.color(0x3300E5FF)
-val HioneOnboardingBorder get() = Mascot.color(0x5500E5FF)
+val HioneOnboardingCardSelected get() = Mascot.color(0x33FFC56B)
+val HioneOnboardingBorder get() = Mascot.color(0x55FFC56B)
 
 data class SupportedLanguage(
     val code: String,

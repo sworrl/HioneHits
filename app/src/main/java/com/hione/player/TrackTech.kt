@@ -388,7 +388,7 @@ object TrackTech {
     /** Sample-rate badge color — Hione teal-mint baseline, radiant gold for 96k, violet-pink for 192k, electric magenta for DXD. */
     fun rateColor(hz: Int): Color = when {
         hz >= 352_800 -> Mascot.color(0xFFFF3399) // DXD / extreme (352.8kHz+) — Hione Neon Magenta
-        hz >= 176_400 -> Mascot.color(0xFFB388FF) // ultra hi-res (176.4/192kHz) — Holographic Violet / Rainbow
+        hz >= 176_400 -> Mascot.color(0xFFB9C2D0) // ultra hi-res (176.4/192kHz) — Holographic Violet / Rainbow
         hz >= 88_200 -> HioneGold           // hi-res (88.2/96kHz) — Radiant Gold
         hz > 0 -> HioneTealBright           // CD-standard (44.1/48kHz) — Hione Bright Teal / Mint
         else -> Muted
@@ -447,6 +447,18 @@ object TrackTech {
         "flac", "x-flac", "wav", "x-wav", "alac", "dsd", "dff", "dsf" -> 3
         "mp4", "m4a", "aac" -> 2
         else -> 1
+    }
+
+    /** 1..4 — overall audio quality tier (1 = Lossy, 2 = CD Lossless, 3 = Studio Hi-Res, 4 = Master/DSD). */
+    fun trackTier(bits: Int, sampleRateHz: Int, mime: String): Int {
+        val fmt = mime.substringAfterLast('/').uppercase().ifBlank { "AUDIO" }
+        val isLossless = formatTier(mime) >= 3
+        return when {
+            sampleRateHz >= 176400 || bits >= 32 || fmt in MASTER_FORMATS -> 4
+            sampleRateHz >= 88200 || bits >= 24 -> 3
+            isLossless -> 2
+            else -> 1
+        }
     }
 
     /** Tier-escalating brush for format — mirrors bitBrush/rateBrush exactly. */
@@ -746,12 +758,12 @@ object TrackTech {
 object HioneBadgePalette {
     // Iridescent Rainbow for Pinnacle Tier (192kHz+, 32-bit, DSD, DXD)
     val RainbowStops get() = listOf(
-        Mascot.color(0xFF00F5D4), // Hione Neon Cyan / Mint
+        Mascot.color(0xFFFFC56B), // Hione Neon Cyan / Mint
         Mascot.color(0xFF00B4D8), // Electric Sky Blue
         Color(0xFF9D4EDD), // Kawaii Holographic Violet
         Mascot.color(0xFFFF3399), // Hione Electric Pink / Magenta
         Color(0xFFFFD166), // Luminous Gold
-        Mascot.color(0xFF00F5D4)  // Loop back
+        Mascot.color(0xFFFFC56B)  // Loop back
     )
     val RainbowBrush = Brush.linearGradient(RainbowStops)
 
@@ -764,24 +776,24 @@ object HioneBadgePalette {
     val HiResGoldStops get() = listOf(
         Color(0xFFFFD166), // Radiant Gold
         Color(0xFFFFA726), // Amber Glow
-        Mascot.color(0xFF7FE6DE), // Cyan Specular Glint
+        Mascot.color(0xFFFFD08A), // Cyan Specular Glint
         Color(0xFFFFD166)
     )
     val HiResBrush = Brush.linearGradient(HiResGoldStops)
 
     // Hione Teal & Mint Glass for Standard Tier (44.1kHz, 48kHz, 16-bit)
     val StandardCyanStops get() = listOf(
-        Mascot.color(0xFF39C5BB),
-        Mascot.color(0xFF7FE6DE),
-        Mascot.color(0xFF39C5BB)
+        Mascot.color(0xFFFFAB2E),
+        Mascot.color(0xFFFFD08A),
+        Mascot.color(0xFFFFAB2E)
     )
     val StandardBrush = Brush.linearGradient(StandardCyanStops)
 
     // Hione Twin-Tail Ribbon Gradient for Audio Format Tags (FLAC, WAV, ALAC)
     val FormatRibbonStops get() = listOf(
-        Mascot.color(0xFF7FE6DE),
-        Mascot.color(0xFFFF5FA2),
-        Mascot.color(0xFF7FE6DE)
+        Mascot.color(0xFFFFD08A),
+        Mascot.color(0xFF8EC5FF),
+        Mascot.color(0xFFFFD08A)
     )
     val FormatBrush = Brush.linearGradient(FormatRibbonStops)
 }

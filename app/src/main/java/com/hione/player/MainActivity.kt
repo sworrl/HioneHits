@@ -2818,7 +2818,7 @@ private fun tabColor(t: Tab): Color = when (t) {
     Tab.HOME -> HioneTealBright
     Tab.ARTISTS -> HionePink
     Tab.ALBUMS -> HioneGold
-    Tab.GENRES -> Mascot.color(0xFFB388FF) // violet — same family used for the "ultra hi-res" tech badge tier
+    Tab.GENRES -> Mascot.color(0xFFB9C2D0) // violet — same family used for the "ultra hi-res" tech badge tier
     Tab.SONGS -> HioneTeal
 }
 
@@ -4159,9 +4159,9 @@ private fun ArtistSortSettingsModal(
                                 .padding(horizontal = 16.dp, vertical = 8.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Icon(Icons.Default.PlayArrow, null, tint = Mascot.color(0xFF04161A), modifier = Modifier.size(18.dp))
+                            Icon(Icons.Default.PlayArrow, null, tint = Mascot.color(0xFF121318), modifier = Modifier.size(18.dp))
                             Spacer(Modifier.width(6.dp))
-                            Text("Play All", color = Mascot.color(0xFF04161A), fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                            Text("Play All", color = Mascot.color(0xFF121318), fontSize = 13.sp, fontWeight = FontWeight.Bold)
                         }
 
                         Spacer(Modifier.width(10.dp))
@@ -4563,9 +4563,9 @@ private fun ArtistSortSettingsModal(
                                 .padding(horizontal = 18.dp, vertical = 8.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Icon(Icons.Default.PlayArrow, null, tint = Mascot.color(0xFF04161A), modifier = Modifier.size(20.dp))
+                            Icon(Icons.Default.PlayArrow, null, tint = Mascot.color(0xFF121318), modifier = Modifier.size(20.dp))
                             Spacer(Modifier.width(6.dp))
-                            Text("Play Album", color = Mascot.color(0xFF04161A), fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                            Text("Play Album", color = Mascot.color(0xFF121318), fontSize = 13.sp, fontWeight = FontWeight.Bold)
                         }
 
                         Spacer(Modifier.width(10.dp))
@@ -4740,7 +4740,7 @@ private fun ArtistSortSettingsModal(
                 if (isRainbow) {
                     drawCircle(
                         Brush.radialGradient(
-                            listOf(Mascot.color(0x35FF3399), Mascot.color(0x2500F5D4), Color.Transparent),
+                            listOf(Mascot.color(0x35FF3399), Mascot.color(0x25FFC56B), Color.Transparent),
                             radius = size.maxDimension * 0.75f
                         ),
                         center = Offset(size.width * 0.5f, size.height * 0.5f)
@@ -4854,7 +4854,7 @@ private fun ArtistSortSettingsModal(
     fontSize: androidx.compose.ui.unit.TextUnit = 9.5.sp
 ) {
     val tier = when {
-        color == HionePink || color == Color(0xFFFF5C5C) || color == Mascot.color(0xFFB388FF) -> 3
+        color == HionePink || color == Color(0xFFFF5C5C) || color == Mascot.color(0xFFB9C2D0) -> 3
         color == HioneGold || color == Color(0xFF4FC3F7) -> 2
         else -> 1
     }
@@ -5143,7 +5143,7 @@ fun AudioQualitySpecLine(
     ) {
         Row(Modifier.fillMaxSize()) {
             if (breakdown.masterFraction > 0f) {
-                Box(Modifier.weight(breakdown.masterFraction).fillMaxHeight().background(Mascot.color(0xFFB388FF)))
+                Box(Modifier.weight(breakdown.masterFraction).fillMaxHeight().background(Mascot.color(0xFFB9C2D0)))
             }
             if (breakdown.studioHiResFraction > 0f) {
                 Box(Modifier.weight(breakdown.studioHiResFraction).fillMaxHeight().background(Color(0xFFFFD166)))
@@ -5197,7 +5197,7 @@ fun AudioQualitySpecLine(
         Box(Modifier.size(48.dp).clip(RoundedCornerShape(10.dp)), contentAlignment = Alignment.Center) {
             AlbumArtImage(trackId = t.id, modifier = Modifier.fillMaxSize(), trackPath = t.path)
             if (isCurrent) {
-                Box(Modifier.matchParentSize().background(Mascot.color(0xAA04161A)), contentAlignment = Alignment.Center) {
+                Box(Modifier.matchParentSize().background(Mascot.color(0xAA121318)), contentAlignment = Alignment.Center) {
                     EqualizerBars(NowPlayingState.playing, Modifier.size(22.dp))
                 }
             }
@@ -5471,7 +5471,7 @@ private fun HioneVibePromptCard(
                 Button(
                     onClick = { executeVibe("") },
                     enabled = !isSynthesizing,
-                    colors = ButtonDefaults.buttonColors(containerColor = Mascot.color(0x33FF4081)),
+                    colors = ButtonDefaults.buttonColors(containerColor = Mascot.color(0x336FB0FF)),
                     contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
                     shape = RoundedCornerShape(12.dp),
                     modifier = Modifier.height(28.dp)
@@ -5513,7 +5513,7 @@ private fun HioneVibePromptCard(
                             .height(6.dp)
                             .clip(RoundedCornerShape(3.dp)),
                         color = HioneCyan,
-                        trackColor = Mascot.color(0x2800E5FF)
+                        trackColor = Mascot.color(0x28FFC56B)
                     )
                 }
             }
@@ -5719,9 +5719,9 @@ private fun HioneVibePromptCard(
             .padding(horizontal = 15.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Icon(Icons.Default.PlayArrow, null, tint = Mascot.color(0xFF04161A), modifier = Modifier.size(16.dp))
+        Icon(Icons.Default.PlayArrow, null, tint = Mascot.color(0xFF121318), modifier = Modifier.size(16.dp))
         Spacer(Modifier.width(4.dp))
-        Text("Play Mix", color = Mascot.color(0xFF04161A), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+        Text("Play Mix", color = Mascot.color(0xFF121318), fontSize = 12.sp, fontWeight = FontWeight.Bold)
     }
 }
 
@@ -5856,6 +5856,7 @@ internal val settingsCategoryRequest = androidx.compose.runtime.mutableStateOf<S
                                 checked = hudOn
                             ) { hudOn = it; HioneTrackHud.setEnabled(ctx, it) }
                         }
+                        item { StatusLightSettings(ctx) }
                         item { SettingsSection("Power Governor") }
                         item { PowerGovernorCard(ctx) }
                         item {
@@ -6168,6 +6169,43 @@ private fun gracefulAppRestart(ctx: android.content.Context) {
     }
 }
 
+/**
+ * The front status light (HionePulse). The switch is the old Pulsar setting (pulsar_light_enabled).
+ * Needs the system bridge's LED receiver; the beat row also needs the image's hione_led_beat.rc.
+ */
+@Composable private fun StatusLightSettings(ctx: android.content.Context) {
+    var lightOn by remember { mutableStateOf(PlayerPreferences.loadPulsarEnabled(ctx)) }
+    var lightBeatOn by remember { mutableStateOf(PlayerPreferences.loadPulsarBeatEnabled(ctx)) }
+    val lightRelay = remember { HionePulse.relayAvailable(ctx) }
+    val lightBeat = remember { HionePulse.beatSupported() }
+    // One lazy-list item: a Column, or the rows would be drawn on top of each other.
+    Column(Modifier.fillMaxWidth()) {
+        if (lightRelay) {
+            SettingsToggleRow(
+                title = "Status light",
+                subtitle = "Shows the playing format and charging. Off keeps it dark.",
+                checked = lightOn
+            ) { lightOn = it; HionePulse.setEnabled(ctx, it) }
+            if (lightOn && lightBeat) {
+                SettingsToggleRow(
+                    title = "Pulse with the beat",
+                    subtitle = "Pulses at the track's tempo",
+                    checked = lightBeatOn
+                ) { lightBeatOn = it; HionePulse.setBeatEnabled(ctx, it) }
+            }
+        } else {
+            Column(Modifier.fillMaxWidth().padding(vertical = 10.dp)) {
+                Text("Status light (unavailable)", color = Color(0xFFFFD166), fontSize = 14.5.sp, fontWeight = FontWeight.SemiBold)
+                Text(
+                    "Needs a newer ${Mascot.osName} system image.",
+                    color = Muted,
+                    fontSize = 12.sp,
+                    lineHeight = 15.sp
+                )
+            }
+        }
+    }
+}
 
 @Composable private fun HioneSyncCard(ctx: android.content.Context) {
     val syncState by HioneSyncTransceiver.state.collectAsState()
@@ -6340,7 +6378,7 @@ private fun gracefulAppRestart(ctx: android.content.Context) {
     Box(
         Modifier
             .fillMaxSize()
-            .background(Mascot.color(0xD904161A))
+            .background(Mascot.color(0xD9121318))
             .statusBarsPadding()
             .navigationBarsPadding()
             .padding(24.dp),
@@ -6397,7 +6435,7 @@ private fun gracefulAppRestart(ctx: android.content.Context) {
     Box(
         Modifier
             .fillMaxSize()
-            .background(Mascot.color(0xFF04161A))
+            .background(Mascot.color(0xFF121318))
             .statusBarsPadding()
             .navigationBarsPadding()
             .padding(24.dp)
@@ -6470,11 +6508,11 @@ private fun gracefulAppRestart(ctx: android.content.Context) {
                         .fillMaxWidth()
                         .height(50.dp)
                         .clip(RoundedCornerShape(25.dp))
-                        .background(Brush.horizontalGradient(listOf(HioneTealBright, Mascot.color(0xFF00E5FF))))
+                        .background(Brush.horizontalGradient(listOf(HioneTealBright, Mascot.color(0xFFFFC56B))))
                         .clickable(onClick = onConfirm),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text("ENABLE PRIVILEGED ACCESS", color = Mascot.color(0xFF04161A), fontSize = 13.sp, fontWeight = FontWeight.Black, letterSpacing = 0.8.sp)
+                    Text("ENABLE PRIVILEGED ACCESS", color = Mascot.color(0xFF121318), fontSize = 13.sp, fontWeight = FontWeight.Black, letterSpacing = 0.8.sp)
                 }
 
                 Spacer(Modifier.height(10.dp))
@@ -7576,9 +7614,9 @@ private val STORAGE_ROOT_RE = Regex("^(/storage/[^/]+)")
 
         Spacer(Modifier.height(10.dp))
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(Icons.Default.Schedule, null, tint = Mascot.color(0xFFB388FF), modifier = Modifier.size(14.dp))
+            Icon(Icons.Default.Schedule, null, tint = Mascot.color(0xFFB9C2D0), modifier = Modifier.size(14.dp))
             Spacer(Modifier.width(6.dp))
-            Text(fmtDurationLong(stats.totalDurationMs), color = Mascot.color(0xFFB388FF), fontSize = 13.sp, fontWeight = FontWeight.Black, fontFamily = OrbitronFont)
+            Text(fmtDurationLong(stats.totalDurationMs), color = Mascot.color(0xFFB9C2D0), fontSize = 13.sp, fontWeight = FontWeight.Black, fontFamily = OrbitronFont)
             Spacer(Modifier.width(5.dp))
             Text("total listening time", color = Muted, fontSize = 10.5.sp)
         }

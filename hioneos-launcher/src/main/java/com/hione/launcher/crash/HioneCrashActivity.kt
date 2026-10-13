@@ -133,7 +133,7 @@ fun HioneCrashScreen(
                         )
                         Text(
                             if (showDetails) "HIDE LOGS" else "SHOW LOGS",
-                            color = Mascot.color(0xFF00E5FF),
+                            color = Mascot.color(0xFFFFC56B),
                             fontSize = 8.sp,
                             fontWeight = FontWeight.Bold,
                             modifier = Modifier.clickable { showDetails = !showDetails }
@@ -163,7 +163,7 @@ fun HioneCrashScreen(
                 // Restart Hione OS Button
                 Button(
                     onClick = onRestartOs,
-                    colors = ButtonDefaults.buttonColors(containerColor = Mascot.color(0xFF00E5FF)),
+                    colors = ButtonDefaults.buttonColors(containerColor = Mascot.color(0xFFFFC56B)),
                     shape = RoundedCornerShape(10.dp),
                     modifier = Modifier.weight(1f).height(44.dp)
                 ) {
@@ -184,13 +184,13 @@ fun HioneCrashScreen(
                             Toast.makeText(ctx, "Crash log copied", Toast.LENGTH_SHORT).show()
                         } catch (_: Throwable) {}
                     },
-                    border = BorderStroke(1.dp, Mascot.color(0xFFFF4081)),
+                    border = BorderStroke(1.dp, Mascot.color(0xFF6FB0FF)),
                     shape = RoundedCornerShape(10.dp),
                     modifier = Modifier.weight(1f).height(44.dp)
                 ) {
                     Text(
                         "COPY LOGS",
-                        color = Mascot.color(0xFFFF4081),
+                        color = Mascot.color(0xFF6FB0FF),
                         fontSize = 10.5.sp,
                         fontWeight = FontWeight.Bold
                     )

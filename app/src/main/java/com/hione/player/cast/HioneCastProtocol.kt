@@ -33,6 +33,7 @@ object HioneCastProtocol {
 
     /** mDNS service type for discovery, so the TV does not need a typed-in address. */
     const val SERVICE_TYPE = "_hionecast._tcp"
+    const val TV_SERVICE_TYPE = "_hionetv._tcp"
     const val SERVICE_NAME = "HioneOS Cast"
 
     val MAGIC = byteArrayOf('M'.code.toByte(), 'I'.code.toByte(), 'K'.code.toByte(), 'U'.code.toByte())

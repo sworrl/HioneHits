@@ -76,8 +76,8 @@ fun HioneTopBarTheme.next(ctx: Context): HioneTopBarTheme {
 /** The gradient stops for the gradient-based themes (PHOTO/MINIMAL handled separately). */
 private fun HioneTopBarTheme.gradientColors(): List<Color> = when (this) {
     HioneTopBarTheme.HIONE     -> listOf(Mascot.color(0xFF0EE7DD), Color(0xFF1B8FB0), Mascot.color(0xFFFF4FA3))
-    HioneTopBarTheme.AURORA   -> listOf(com.hione.launcher.ui.HioneIdentity.Leek, Mascot.color(0xFF00E5FF), Mascot.color(0xFFB388FF))
-    HioneTopBarTheme.SUNSET   -> listOf(Color(0xFFFFB74D), Mascot.color(0xFFFF5C8A), Color(0xFF7C4DFF))
+    HioneTopBarTheme.AURORA   -> listOf(com.hione.launcher.ui.HioneIdentity.Leek, Mascot.color(0xFFFFC56B), Mascot.color(0xFFB9C2D0))
+    HioneTopBarTheme.SUNSET   -> listOf(Color(0xFFFFB74D), Mascot.color(0xFF8EC5FF), Color(0xFF7C4DFF))
     HioneTopBarTheme.OCEAN    -> listOf(Color(0xFF0277BD), Mascot.color(0xFF00B8D4), Mascot.color(0xFF1DE9B6))
     HioneTopBarTheme.MIDNIGHT -> listOf(Color(0xFF0A1024), Color(0xFF1A2350), Color(0xFF3B2E63))
     HioneTopBarTheme.MINIMAL  -> listOf(Color(0xFF0B0F14), Color(0xFF0B0F14))
@@ -90,14 +90,14 @@ private fun HioneTopBarTheme.gradientColors(): List<Color> = when (this) {
  * bar you earned by climbing a season keeps changing with the seasons after you have it.
  */
 private fun seasonalColors(month: Int): List<Color> = when (month) {
-    0 -> listOf(Mascot.color(0xFF00E5FF), Color(0xFF1A2350), Mascot.color(0xFFB388FF))   // Digital Genesis
+    0 -> listOf(Mascot.color(0xFFFFC56B), Color(0xFF1A2350), Mascot.color(0xFFB9C2D0))   // Digital Genesis
     1 -> listOf(Mascot.color(0xFFFF4F8B), Mascot.color(0xFFFF9EC4), Mascot.color(0xFFB0004F))   // Cyber Valentine
-    2 -> listOf(Mascot.color(0xFFFFB7D5), Mascot.color(0xFFFFE3EE), Mascot.color(0xFF39C5BB))   // Sakura Miracle (and 3/9)
+    2 -> listOf(Mascot.color(0xFFFFB7D5), Mascot.color(0xFFFFE3EE), Mascot.color(0xFFFFAB2E))   // Sakura Miracle (and 3/9)
     3 -> listOf(Color(0xFF9BE36A), Color(0xFFFFE680), Mascot.color(0xFFFF9EC4))   // Spring Bloom
-    4 -> listOf(Mascot.color(0xFF00B8D4), Mascot.color(0xFF39C5BB), Color(0xFF00E676))   // Electronic Wave
-    5 -> listOf(Color(0xFFFFD54F), Mascot.color(0xFF00E5FF), Color(0xFFFF6F61))   // Magical Summer
+    4 -> listOf(Mascot.color(0xFF00B8D4), Mascot.color(0xFFFFAB2E), Color(0xFF00E676))   // Electronic Wave
+    5 -> listOf(Color(0xFFFFD54F), Mascot.color(0xFFFFC56B), Color(0xFFFF6F61))   // Magical Summer
     6 -> listOf(Color(0xFF1A237E), Color(0xFF7C4DFF), Color(0xFFFFF59D))   // Starlight Sonata
-    7 -> listOf(Mascot.color(0xFF39C5BB), Mascot.color(0xFF0EE7DD), Mascot.color(0xFFFF4FA3))   // Neon Mirai 39 (8/31)
+    7 -> listOf(Mascot.color(0xFFFFAB2E), Mascot.color(0xFF0EE7DD), Mascot.color(0xFFFF4FA3))   // Neon Mirai 39 (8/31)
     8 -> listOf(Color(0xFFE65100), Color(0xFFFFB74D), Color(0xFF6D4C41))   // Autumn Symphony
     9 -> listOf(Color(0xFFFF6D00), Color(0xFF4A148C), Color(0xFF1B0B2E))   // Midnight Pumpkin
     10 -> listOf(Color(0xFFB3E5FC), Color(0xFF4FC3F7), Color(0xFF0D47A1))  // Frostbite Echo

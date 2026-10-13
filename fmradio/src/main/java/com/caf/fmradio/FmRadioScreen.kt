@@ -586,7 +586,7 @@ private fun FmVolumeHud(level: Int) {
             Spacer(Modifier.height(5.dp))
             Text("$level", color = HioneCyan, fontSize = 26.sp, fontWeight = FontWeight.Black, fontFamily = AudiowideFont)
             Spacer(Modifier.height(6.dp))
-            Box(Modifier.width(150.dp).height(4.dp).clip(RoundedCornerShape(2.dp)).background(Color(0x3300E5FF))) {
+            Box(Modifier.width(150.dp).height(4.dp).clip(RoundedCornerShape(2.dp)).background(Color(0x33FFC56B))) {
                 Box(Modifier.fillMaxWidth(level / 100f).fillMaxHeight().clip(RoundedCornerShape(2.dp)).background(HioneCyan))
             }
             Spacer(Modifier.height(4.dp))
@@ -658,7 +658,7 @@ private fun bakeBackdrop(ctx: Context, w: Int, h: Int): androidx.compose.ui.grap
         ctx.resources, R.drawable.hione_bg_fm, android.graphics.BitmapFactory.Options().apply { inScaled = false })
     val out = android.graphics.Bitmap.createBitmap(w, h, android.graphics.Bitmap.Config.ARGB_8888)
     val c = android.graphics.Canvas(out)
-    c.drawColor(0xFF040D12.toInt())
+    c.drawColor(0xFF0C0D10.toInt())
     // Centre crop.
     val scale = maxOf(w / src.width.toFloat(), h / src.height.toFloat())
     val dw = src.width * scale
@@ -669,7 +669,7 @@ private fun bakeBackdrop(ctx: Context, w: Int, h: Int): androidx.compose.ui.grap
     val g = android.graphics.Paint().apply {
         shader = android.graphics.LinearGradient(
             0f, 0f, 0f, h.toFloat(),
-            intArrayOf(0xCC040D12.toInt(), 0x77000000, 0xF5040D12.toInt()), null,
+            intArrayOf(0xCC0C0D10.toInt(), 0x77000000, 0xF50C0D10.toInt()), null,
             android.graphics.Shader.TileMode.CLAMP)
     }
     c.drawRect(0f, 0f, w.toFloat(), h.toFloat(), g)

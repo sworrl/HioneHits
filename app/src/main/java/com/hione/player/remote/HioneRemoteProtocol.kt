@@ -12,7 +12,7 @@ import java.util.UUID
  * All characteristic payloads are UTF-8 text. JSON where structured, `verb[:arg]` for commands.
  * Every string here is mirrored verbatim in tools/remote-pwa/app.js — change both together.
  *
- * Base UUID 39c5bbXX-4d49-4b55-9d31-3f8a6e7c2a01: "39c5bb" is Hione teal (#39C5BB), "4d494b55"
+ * Base UUID 39c5bbXX-4d49-4b55-9d31-3f8a6e7c2a01: "39c5bb" is Hione teal (#FFAB2E), "4d494b55"
  * is ASCII "HIONE". Fixed for the life of the product so the PWA's filter never has to change.
  */
 object HioneRemoteProtocol {

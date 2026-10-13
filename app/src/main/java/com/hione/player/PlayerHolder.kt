@@ -104,6 +104,7 @@ object PlayerHolder {
         // anatomical observatory shows it unconditionally. Clear it here so the surfaces show
         // "not published" until an AudioTrack actually exists again.
         runCatching { HioneNowPlayingFormat.clear(app) }
+        runCatching { HionePulse.attach(app) }
         runCatching { HioneDirectAudio.ensureAllowListed(app) }
         // Full-range volume: kill HiBy's "volume lock" (Settings.Global vendor.audio.hw.volume_lock)
         // which caps STREAM_MUSIC at index 35/40 on the phone-out jacks — see HioneDirectAudio.
@@ -236,6 +237,7 @@ object PlayerHolder {
                 if (isPlaying) p.currentMediaItem?.mediaId?.toLongOrNull()?.let { HioneArtTheme.updateForTrackId(app, it) }
                 PlayerPreferences.saveWasPlaying(app, isPlaying)
                 com.hione.player.bpm.HioneBpmEngine.onPlaybackChanged(app, p.currentMediaItem, isPlaying)
+                HionePulse.onPlayback(app, p.currentMediaItem, isPlaying)
                 val trackId = p.currentMediaItem?.mediaId?.toLongOrNull()
                 if (trackId != null) {
                     PlayerPreferences.saveLastPlayback(app, trackId, p.currentPosition)
@@ -262,6 +264,7 @@ object PlayerHolder {
                 HioneTrackHud.publish(app, p, "transition:$reason")
                 mediaItem?.mediaId?.toLongOrNull()?.let { HioneArtTheme.updateForTrackId(app, it) }
                 com.hione.player.bpm.HioneBpmEngine.onPlaybackChanged(app, mediaItem, p.isPlaying)
+                HionePulse.onPlayback(app, mediaItem, p.isPlaying)
                 val trackId = mediaItem?.mediaId?.toLongOrNull()
                 if (trackId != null) {
                     PlayerPreferences.saveLastPlayback(app, trackId, p.currentPosition)
@@ -462,7 +465,10 @@ object PlayerHolder {
         controller = null
         controllerFuture = null
         session?.release(); session = null
-        player?.release(); player = null
+        val released = player
+        released?.release(); player = null
+        // A released player plays nothing; the listener above will not hear about it.
+        if (released != null) HionePulse.onStopped()
         com.hione.player.stats.ListenSessionTracker.reset() // closes the open listen + so a later ensure() re-attaches to the NEW player instance
     }
 }

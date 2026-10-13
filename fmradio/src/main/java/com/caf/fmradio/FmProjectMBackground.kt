@@ -135,7 +135,7 @@ fun FmBackgroundSetting() {
                 val enabled = m != FmBackgroundMode.PROJECTM || FmProjectMNative.available
                 Box(
                     Modifier.weight(1f).clip(RoundedCornerShape(8.dp))
-                        .background(if (sel) HioneCyan else Color(0x2200E5FF))
+                        .background(if (sel) HioneCyan else Color(0x22FFC56B))
                         .border(1.dp, if (sel) HioneCyan else CyberGlassBorder, RoundedCornerShape(8.dp))
                         .clickable(enabled = enabled) { FmBackgroundPrefs.set(ctx.applicationContext, m) }
                         .padding(vertical = 6.dp),

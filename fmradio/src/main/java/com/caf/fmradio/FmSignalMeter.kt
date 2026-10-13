@@ -88,7 +88,7 @@ private fun FmSignalDial(value: Float, peak: Float, online: Boolean, modifier: M
         val sweep = 180f
         drawArc(
             brush = Brush.horizontalGradient(
-                listOf(Color(0xFF7A2140), Color(0xFF7A6A21), Color(0xFF00E5FF))
+                listOf(Color(0xFF7A2140), Color(0xFF7A6A21), Color(0xFFFFC56B))
             ),
             startAngle = 180f, sweepAngle = sweep, useCenter = false,
             topLeft = Offset(cx - r, cy - r), size = Size(r * 2, r * 2),

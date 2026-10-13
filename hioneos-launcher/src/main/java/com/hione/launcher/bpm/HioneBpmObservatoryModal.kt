@@ -55,7 +55,7 @@ import kotlin.random.Random
 // =========================================================================
 private val KawaiiSakuraPink get() = Mascot.color(0xFFFF85B3)
 private val KawaiiHotPink get() = Mascot.color(0xFFFF3385)
-private val KawaiiHioneMint get() = Mascot.color(0xFF39C5BB)
+private val KawaiiHioneMint get() = Mascot.color(0xFFFFAB2E)
 private val KawaiiSoftTeal get() = Mascot.color(0xFF66E0D8)
 private val KawaiiLavender = Color(0xFFDFB8FF)
 private val KawaiiGoldenHoney = Color(0xFFFFD166)
@@ -1639,7 +1639,7 @@ private fun BpmTimingCalibrationRow() {
         Box(
             Modifier
                 .clip(RoundedCornerShape(8.dp))
-                .background(Mascot.color(0x2239C5BB))
+                .background(Mascot.color(0x22FFAB2E))
                 .border(1.dp, KawaiiHioneMint, RoundedCornerShape(8.dp))
                 .clickable {
                     HioneRhythmCalibration.nudge(-5)
@@ -1651,7 +1651,7 @@ private fun BpmTimingCalibrationRow() {
         Box(
             Modifier
                 .clip(RoundedCornerShape(8.dp))
-                .background(Mascot.color(0x2239C5BB))
+                .background(Mascot.color(0x22FFAB2E))
                 .border(1.dp, KawaiiHioneMint, RoundedCornerShape(8.dp))
                 .clickable {
                     HioneRhythmCalibration.nudge(5)
@@ -2630,7 +2630,7 @@ private fun BpmCalibrationFooter(
                 Box(
                     Modifier
                         .clip(RoundedCornerShape(10.dp))
-                        .background(Mascot.color(0x3339C5BB))
+                        .background(Mascot.color(0x33FFAB2E))
                         .border(1.dp, KawaiiHioneMint, RoundedCornerShape(10.dp))
                         .clickable {
                             calculatedTapBpm = halfVal
@@ -2658,8 +2658,8 @@ private fun BpmCalibrationFooter(
                 Box(
                     Modifier
                         .clip(RoundedCornerShape(10.dp))
-                        .background(Mascot.color(0x3300E5FF))
-                        .border(1.dp, Mascot.color(0xFF00E5FF), RoundedCornerShape(10.dp))
+                        .background(Mascot.color(0x33FFC56B))
+                        .border(1.dp, Mascot.color(0xFFFFC56B), RoundedCornerShape(10.dp))
                         .clickable {
                             com.hione.launcher.haptics.HioneHaptics.tick(ctx)
                             coroutineScope.launch {
@@ -2679,7 +2679,7 @@ private fun BpmCalibrationFooter(
                         }
                         .padding(horizontal = 6.dp, vertical = 4.dp)
                 ) {
-                    Text("LOOK UP", color = Mascot.color(0xFF00E5FF), fontSize = 11.sp, fontWeight = FontWeight.Bold, fontFamily = AudiowideFont)
+                    Text("LOOK UP", color = Mascot.color(0xFFFFC56B), fontSize = 11.sp, fontWeight = FontWeight.Bold, fontFamily = AudiowideFont)
                 }
             }
         }

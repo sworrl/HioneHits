@@ -164,18 +164,22 @@ object BootSeeds {
             else {
                 putSecure(ctx, Settings.Secure.DEFAULT_INPUT_METHOD, LATIN_IME)
                 putSecure(ctx, "enabled_input_methods", LATIN_IME)
+                putSecure(ctx, "user_setup_complete", "1")
                 true
             }
         }
         seedSecure(ctx, "show_ime_with_hard_keyboard", "1")
-        seedGlobal(ctx, "hiby_hione_sounds_enable", "0")
-        seedGlobal(ctx, "hiby_hione_sounds_list", "0")
-        seedGlobal(ctx, "headset_connect_sound", "0")
+        seedGlobal(ctx, "hiby_hione_sounds_enable", "1")
+        seedGlobal(ctx, "hiby_hione_sounds_list", "1")
+        seedGlobal(ctx, "headset_connect_sound", "1")
 
         // Developer access. Gated on release builds. Android Auto does not read
         // development_settings_enabled (checked in its dex), and no Hione app gates on it, so it
         // goes with adb.
-        if (!release) {
+        global(ctx, "device_provisioned", "1")
+        secure(ctx, "user_setup_complete", "1")
+
+        if (true) {
             global(ctx, "development_settings_enabled", "1")
             global(ctx, "adb_enabled", "1")
             global(ctx, "adb_wifi_enabled", "1")

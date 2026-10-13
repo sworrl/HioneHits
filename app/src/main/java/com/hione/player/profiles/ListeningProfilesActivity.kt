@@ -687,7 +687,7 @@ private fun ProfileRow(p: ListeningProfile, isCurrent: Boolean, isSelected: Bool
         Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(12.dp))
-            .background(if (isSelected) Mascot.color(0x2200E5FF) else CyberGlassCard)
+            .background(if (isSelected) Mascot.color(0x22FFC56B) else CyberGlassCard)
             .border(1.dp, if (isCurrent) HioneCyan else CyberGlassBorder, RoundedCornerShape(12.dp))
             .clickable(onClick = onClick)
             .padding(horizontal = 12.dp, vertical = 9.dp),

@@ -29,7 +29,7 @@ object HioneBpmSeasonsEngine {
         BRONZE("Bronze Diva", "🥉", 0L, 0xFFCD7F32),
         SILVER("Silver Vocalist", "🥈", 1_000L, 0xFFC0C0C0),
         GOLD("Gold Virtuoso", "🥇", 5_000L, 0xFFFFD700),
-        PLATINUM("Platinum Synth", "💠", 15_000L, 0xFF00E5FF),
+        PLATINUM("Platinum Synth", "💠", 15_000L, 0xFFFFC56B),
         DIAMOND("Diamond Producer", "💎", 50_000L, 0xFF9933FF),
         DIVA_MASTER("Diva Master 39", "👑", 150_000L, 0xFFFF2277)
     }

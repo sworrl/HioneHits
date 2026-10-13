@@ -61,7 +61,7 @@ class HioneBpmWidget : AppWidgetProvider() {
             )
             v.setTextColor(
                 R.id.widget_bpm_value,
-                if (playing) Mascot.argb(0xFFFF4FA3.toInt()) else Mascot.argb(0xFF9FF3EC.toInt())
+                if (playing) Mascot.argb(0xFFFF4FA3.toInt()) else Mascot.argb(0xFFFFE0B0.toInt())
             )
 
             // Tapping a BPM widget opens the game itself, not just the home screen.

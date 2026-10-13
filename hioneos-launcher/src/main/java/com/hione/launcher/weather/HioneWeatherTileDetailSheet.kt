@@ -64,9 +64,9 @@ import kotlinx.coroutines.withContext
  * and settings (°C/°F, Windy API key, manual city / lat-lon override). Self-hosted in a Dialog
  * so the tile needs no launcher-level state; back / scrim tap / swipe-up dismisses.
  */
-private val Teal get() = Mascot.color(0xFF39C5BB)
-private val TealBright get() = Mascot.color(0xFF9FF3EC)
-private val Pink get() = Mascot.color(0xFFFF5C8A)
+private val Teal get() = Mascot.color(0xFFFFAB2E)
+private val TealBright get() = Mascot.color(0xFFFFE0B0)
+private val Pink get() = Mascot.color(0xFF8EC5FF)
 private val Muted = Color(0xFF8BA6A9)
 private val SkyBlue = Color(0xFF80D8FF)
 
@@ -89,7 +89,7 @@ fun HioneWeatherTileDetailSheet(onDismiss: () -> Unit, onOpenObservatory: (() ->
         Box(
             Modifier
                 .fillMaxSize()
-                .background(Mascot.color(0xF0040D12))
+                .background(Mascot.color(0xF00C0D10))
                 .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null, onClick = onDismiss)
                 .swipeUpFromBottomToDismiss(onDismiss = onDismiss)
         ) {
@@ -250,7 +250,7 @@ fun HioneWeatherTileDetailSheet(onDismiss: () -> Unit, onOpenObservatory: (() ->
                             SheetCard(title = "OBSERVATORY") {
                                 Text(
                                     "Open the full weather screen (radar, sun times, history)",
-                                    color = Mascot.color(0xFF39C5BB), fontSize = 12.sp,
+                                    color = Mascot.color(0xFFFFAB2E), fontSize = 12.sp,
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .clickable { onDismiss(); onOpenObservatory() }

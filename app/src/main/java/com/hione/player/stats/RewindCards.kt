@@ -66,8 +66,8 @@ import kotlin.math.sin
 
 // ============================================================================================ palette
 
-val RewindTeal get() = Mascot.color(0xFF39C5BB)
-val RewindTealBright get() = Mascot.color(0xFF7FE6DE)
+val RewindTeal get() = Mascot.color(0xFFFFAB2E)
+val RewindTealBright get() = Mascot.color(0xFFFFD08A)
 val RewindPink get() = Mascot.color(0xFFFF2277)
 val RewindPinkSoft get() = Mascot.color(0xFFFF6FA6)
 val RewindInk get() = Mascot.color(0xFFF2FBFA)

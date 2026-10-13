@@ -301,32 +301,10 @@ data class MascotPack(
     }
 }
 
-/** The two packs compiled into every app. MascotPackTest keeps them equal to the pack.json files. */
+/** The pack compiled into every app. MascotPackTest keeps it equal to packs/hione/pack.json. */
 object MascotPacks {
     val HIONE = MascotPack(
         id = "hione",
-        name = "Hione",
-        nameJa = "ミク",
-        fullName = "Hatsune Hione",
-        fullNameJa = "初音ミク",
-        osName = "HioneOS",
-        musicAppName = "Hione Music",
-        launcherName = "HioneOS Launcher",
-        settingsName = "HioneOS Settings",
-        updateName = "Hione Update",
-        edition = "Hatsune Hione edition",
-        bluetoothName = "Hione M500",
-        palette = MascotPalette(
-            primary = 0xFF39C5BB.toInt(), primaryDeep = 0xFF1E8C84.toInt(), secondary = 0xFF0E1A18.toInt(),
-            accent = 0xFFFF5FA2.toInt(), dark = 0xFF0B1418.toInt(), light = 0xFFE0F7FA.toInt(), warn = 0xFFFF5A4E.toInt(),
-        ),
-        colorMap = emptyMap(),
-        lore = "hione",
-        labelAlias = "Hione",
-    )
-
-    val HITS = MascotPack(
-        id = "hits",
         name = "Hione",
         nameJa = "ヒオネ",
         fullName = "Oki Hione",
@@ -363,7 +341,7 @@ object MascotPacks {
             0x80DEEA to 0xFFD59A,
         ),
         lore = "hione",
-        labelAlias = "Hits",
+        labelAlias = "Hits",  // the alias with ic_launcher_hione and "Hione Hits" (0.4.4 called it MainActivityHione)
         hueRules = listOf(
             HueRule(160f, 192f, 0.25f, 0.2f, 1f, "primary"),   // teal and cyan shades -> amber
             HueRule(300f, 345f, 0.25f, 0.2f, 1f, "accent"),    // pinks -> ice blue
@@ -372,7 +350,7 @@ object MascotPacks {
         ),
     )
 
-    val BUILT_IN = listOf(HIONE, HITS)
+    val BUILT_IN = listOf(HIONE)
 
     fun builtIn(id: String?): MascotPack? = BUILT_IN.firstOrNull { it.id == id }
 }

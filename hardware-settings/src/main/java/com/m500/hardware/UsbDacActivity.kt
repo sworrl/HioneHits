@@ -515,7 +515,7 @@ fun VerboseUsbDacScreen(onExit: () -> Unit) {
                         .fillMaxWidth()
                         .height(50.dp)
                         .clip(RoundedCornerShape(25.dp))
-                        .background(Brush.horizontalGradient(listOf(Mascot.color(0xFFFF4081), Color(0xFFFF6E40))))
+                        .background(Brush.horizontalGradient(listOf(Mascot.color(0xFF6FB0FF), Color(0xFFFF6E40))))
                         .clickable {
                             scope.launch {
                                 UsbDacManager.setUsbDacMode(ctx, false)

@@ -12,5 +12,5 @@
     </path>
     <!-- faint scanlines, the cyber panel texture used across HioneOS icons -->
     <path android:pathData="M18,40h72M18,54h72M18,68h72"
-        android:strokeColor="#1439C5BB" android:strokeWidth="1" />
+        android:strokeColor="#14FFAB2E" android:strokeWidth="1" />
 </vector>

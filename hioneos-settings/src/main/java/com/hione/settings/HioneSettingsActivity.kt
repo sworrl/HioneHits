@@ -71,6 +71,7 @@ enum class SettingsSection(val title: String, val icon: ImageVector, val desc: S
     SOUND("Sound & vibration", Icons.Default.VolumeUp, "Volume, ring mode, ringtones and system sounds", "sound"),
     DISPLAY("Display & Light", Icons.Default.BrightnessMedium, "Brightness, light sensor, screen timeout and theme"),
     MASCOT("Theme & mascot", Icons.Default.Palette, "Mascot, colors and names, holiday art and reminders", "mascot"),
+    HOME_LAYOUT("Home screen", Icons.Default.Dashboard, "Where the status card sits, pull up and pop up", "home_layout"),
     BATTERY("Battery & Power", Icons.Default.BatteryChargingFull, "Live readings, battery saver and app battery use"),
     SECURITY("Security & privacy", Icons.Default.Lock, "Screen lock, permissions, device admins", "security"),
     LOCATION("Location", Icons.Default.LocationOn, "Location on or off, app access and scanning", "location"),
@@ -963,12 +964,12 @@ fun BluetoothScreen(ctx: Context) {
 
                         Text(
                             text = if (isScanning) "Searching..." else "+ Scan",
-                            color = if (isScanning) Mascot.color(0xFFFF4081) else HioneTealBright,
+                            color = if (isScanning) Mascot.color(0xFF6FB0FF) else HioneTealBright,
                             fontSize = 11.5.sp,
                             fontWeight = FontWeight.Bold,
                             modifier = Modifier
                                 .clip(RoundedCornerShape(6.dp))
-                                .background(if (isScanning) Mascot.color(0x22FF4081) else Mascot.color(0x2200E5FF))
+                                .background(if (isScanning) Mascot.color(0x226FB0FF) else Mascot.color(0x22FFC56B))
                                 .clickable {
                                     if (isScanning) {
                                         com.hione.settings.bluetooth.HioneBluetoothController.stopScan()
@@ -1005,7 +1006,7 @@ fun BluetoothScreen(ctx: Context) {
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .clip(RoundedCornerShape(12.dp))
-                                        .background(if (devItem.isConnected) Mascot.color(0x2200E5FF) else HioneSurface2)
+                                        .background(if (devItem.isConnected) Mascot.color(0x22FFC56B) else HioneSurface2)
                                         .border(1.dp, if (devItem.isConnected) HioneTealBright else Color.Transparent, RoundedCornerShape(12.dp))
                                         .clickable {
                                             if (!devItem.isConnected && !devItem.isConnecting) {
@@ -1136,7 +1137,7 @@ fun BluetoothScreen(ctx: Context) {
                                     com.hione.settings.bluetooth.HioneBluetoothController.startScan()
                                 }
                             },
-                            colors = ButtonDefaults.buttonColors(containerColor = if (isScanning) Mascot.color(0x33FF4081) else Mascot.color(0x3300E5FF)),
+                            colors = ButtonDefaults.buttonColors(containerColor = if (isScanning) Mascot.color(0x336FB0FF) else Mascot.color(0x33FFC56B)),
                             contentPadding = PaddingValues(horizontal = 10.dp, vertical = 3.dp),
                             shape = RoundedCornerShape(8.dp),
                             modifier = Modifier.height(28.dp)
@@ -1200,7 +1201,7 @@ fun BluetoothScreen(ctx: Context) {
                                     }
                                     Button(
                                         onClick = { com.hione.settings.bluetooth.HioneBluetoothController.pairDevice(devItem.device) },
-                                        colors = ButtonDefaults.buttonColors(containerColor = Mascot.color(0x3300E5FF)),
+                                        colors = ButtonDefaults.buttonColors(containerColor = Mascot.color(0x33FFC56B)),
                                         contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
                                         shape = RoundedCornerShape(8.dp),
                                         modifier = Modifier.height(26.dp)
@@ -1981,7 +1982,7 @@ fun StorageAppsScreen(ctx: Context) {
 fun AboutScreen(ctx: Context) {
     // Everything here is read from the running system (SystemProperties / Build / kernel). A value
     // that is not set on this image prints "unknown" — the old screen printed a literal "0.1.0",
-    // "Android 14 GKI", "M500_HIONE_4G", "Snapdragon 680 8-Core" and "Magisk Privileged" whatever
+    // "Android 14 GKI", "M500_MIKU_4G", "Snapdragon 680 8-Core" and "Magisk Privileged" whatever
     // the device actually was.
     fun prop(key: String): String? = try {
         (Class.forName("android.os.SystemProperties").getMethod("get", String::class.java)
@@ -2005,7 +2006,9 @@ fun AboutScreen(ctx: Context) {
     }
     val gkiTag = prop("ro.kernel.version")?.let { " (GKI $it)" } ?: ""
 
-    Column(Modifier.hioneCard().padding(16.dp)) {
+    // Scrolls: the page is taller than the M500's 720x1280 screen, and without this everything
+    // below the Blackjack picture (its text, the Monitor link, Open Home) was out of reach.
+    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(bottom = 16.dp).hioneCard().padding(16.dp)) {
         Text("ABOUT ${Mascot.osNameUpper}", color = HioneTealBright, fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
         Spacer(Modifier.height(12.dp))
 
@@ -2042,6 +2045,36 @@ fun AboutScreen(ctx: Context) {
         AboutSpecRow("Linux Kernel", "$kernel ($abi)")
         AboutSpecRow("Privilege", privilege)
         AboutSpecRow("Security Patch", android.os.Build.VERSION.SECURITY_PATCH ?: "unknown")
+        // Read from the running kernel: our own driver shows as loaded only when its module is.
+        val blackjackLoaded = DacSettingsLink.blackjackLoaded()
+        AboutSpecRow("Audio Driver", if (blackjackLoaded) "Blackjack (ours) · blackjack_codec + blackjack_hooks"
+            else "HiBy cs43198 · Blackjack, our own driver, is not in this build yet")
+
+        Spacer(Modifier.height(14.dp))
+
+        // Blackjack: the clean-room replacement for HiBy's DAC driver. The name is a Bender joke.
+        Text("BLACKJACK", color = HioneTealBright, fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+        Spacer(Modifier.height(8.dp))
+        androidx.compose.foundation.Image(
+            painter = androidx.compose.ui.res.painterResource(R.drawable.blackjack_meme),
+            contentDescription = "Bender: I'm gonna go build my own audio driver. With blackjack and hook(er)s! In fact, forget the driver!",
+            modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp)),
+            contentScale = androidx.compose.ui.layout.ContentScale.FillWidth
+        )
+        Spacer(Modifier.height(8.dp))
+        Text("HiBy's DAC driver runs both DACs at 192 kHz for every track. HiBy lets us replace anything but won't share source, " +
+            "so we're writing our own, clean room: blackjack_codec for the CS43198s and blackjack_hooks for the platform glue. " +
+            "The goal is native rate. A driver is mostly a pile of hooks anyway.",
+            color = HioneTeal, fontSize = 11.sp)
+
+        Spacer(Modifier.height(10.dp))
+        SettingsLinkRow(
+            icon = Icons.Default.Memory,
+            title = "Open Blackjack Monitor",
+            subtitle = if (blackjackLoaded) "See the driver live: output, power, rate and register writes"
+                else "See which DAC driver runs and what it is doing",
+            onClick = { DacSettingsLink.openBlackjackMonitor(ctx) }
+        )
 
         Spacer(Modifier.height(14.dp))
 

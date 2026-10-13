@@ -88,9 +88,9 @@ fun HardwareSettingsScreen(onBack: () -> Unit) {
                 .background(
                     Brush.verticalGradient(
                         listOf(
-                            Mascot.color(0xEE04161A),
+                            Mascot.color(0xEE121318),
                             Color(0x99000000),
-                            Mascot.color(0xF8040D12)
+                            Mascot.color(0xF80C0D10)
                         )
                     )
                 )

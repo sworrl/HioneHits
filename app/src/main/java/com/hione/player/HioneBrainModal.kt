@@ -68,7 +68,7 @@ fun HioneBrainModal(
                     .fillMaxSize()
                     .padding(1.dp)
                     .clip(CutCornerShape(15.dp))
-                    .background(Mascot.color(0xFF040D12))
+                    .background(Mascot.color(0xFF0C0D10))
                     .border(
                         BorderStroke(
                             1.dp,
@@ -98,9 +98,9 @@ fun HioneBrainModal(
                         .background(
                             Brush.verticalGradient(
                                 listOf(
-                                    Mascot.color(0xF2040D12),
-                                    Mascot.color(0xD8040D12),
-                                    Mascot.color(0xFA040D12)
+                                    Mascot.color(0xF20C0D10),
+                                    Mascot.color(0xD80C0D10),
+                                    Mascot.color(0xFA0C0D10)
                                 )
                             )
                         )

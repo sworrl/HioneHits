@@ -25,8 +25,8 @@ class HioneSignalWidget : AppWidgetProvider() {
     }
 
     companion object {
-        private val TEAL get() = Mascot.argb(0xFF39C5BB.toInt())
-        private val TEAL_LIGHT get() = Mascot.argb(0xFF9FF3EC.toInt())
+        private val TEAL get() = Mascot.argb(0xFFFFAB2E.toInt())
+        private val TEAL_LIGHT get() = Mascot.argb(0xFFFFE0B0.toInt())
         private const val RED = 0xFFFF5252.toInt()
         private const val DIM = 0x80FFFFFF.toInt()
 

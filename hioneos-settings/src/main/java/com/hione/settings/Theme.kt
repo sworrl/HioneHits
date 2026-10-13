@@ -9,16 +9,16 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 
-// Canonical Hatsune Hione Signature Palette (#39C5BB + Obsidian Carbon + Diva Pink)
-val HioneTeal get() = Mascot.color(0xFF39C5BB)
-val HioneTealBright get() = Mascot.color(0xFF00F5D4)
+// Canonical Hatsune Hione Signature Palette (#FFAB2E + Obsidian Carbon + Diva Pink)
+val HioneTeal get() = Mascot.color(0xFFFFAB2E)
+val HioneTealBright get() = Mascot.color(0xFFFFC56B)
 val HioneTealGlow get() = Mascot.color(0xFF56F0E0)
-val HionePurple get() = Mascot.color(0xFFB388FF)
+val HionePurple get() = Mascot.color(0xFFB9C2D0)
 val HionePurpleDeep = Color(0xFF7C4DFF)
-val HionePink get() = Mascot.color(0xFFFF2A85)
-val HionePinkBright get() = Mascot.color(0xFFFF4081)
+val HionePink get() = Mascot.color(0xFF8EC5FF)
+val HionePinkBright get() = Mascot.color(0xFF6FB0FF)
 val HioneGold = Color(0xFFFFD54F)
-val HioneDarkBg get() = Mascot.color(0xFF070B0D)
+val HioneDarkBg get() = Mascot.color(0xFF0D0E11)
 val HioneSurface1 get() = Mascot.color(0xFF0D1417)
 val HioneSurface2 get() = Mascot.color(0xFF131E22)
 val HioneCardBg get() = Mascot.color(0xFF0E191D)

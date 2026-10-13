@@ -26,7 +26,7 @@ import kotlinx.coroutines.withContext
  * Fallback is always the Hione teal identity palette (no art → nothing changes visibly).
  */
 object HioneArtTheme {
-    /** Page backdrop ceiling. Ground #04161A sits at ~0.009, so this still leaves room to tint. */
+    /** Page backdrop ceiling. Ground #121318 sits at ~0.009, so this still leaves room to tint. */
     private const val GROUND_MAX_LUM = 0.030f
     /** Raised card/glass surfaces sit above the ground but still under light body text. */
     private const val SURFACE_MAX_LUM = 0.075f

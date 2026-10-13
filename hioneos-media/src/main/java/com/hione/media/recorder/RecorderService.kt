@@ -326,7 +326,7 @@ class RecorderService : Service() {
             .setOnlyAlertOnce(true)
             .setCategory(Notification.CATEGORY_SERVICE)
             .setForegroundServiceBehavior(Notification.FOREGROUND_SERVICE_IMMEDIATE)
-            .setColor(Mascot.argb(0xFF39C5BB.toInt()))
+            .setColor(Mascot.argb(0xFFFFAB2E.toInt()))
             .setContentIntent(open)
         if (status == RecStatus.PAUSED) {
             b.addAction(Notification.Action.Builder(null, "Resume", pi(ACTION_RESUME, 1)).build())

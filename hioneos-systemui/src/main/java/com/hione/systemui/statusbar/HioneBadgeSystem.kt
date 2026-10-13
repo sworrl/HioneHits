@@ -49,13 +49,13 @@ import androidx.compose.material3.Text
  */
 object HioneBrand {
     // Palette — aligned with the launcher's Cyber tokens so the OS reads as one skin.
-    val Cyan get() = Mascot.color(0xFF00E5FF)
-    val NeonPink get() = Mascot.color(0xFFFF4081)
+    val Cyan get() = Mascot.color(0xFFFFC56B)
+    val NeonPink get() = Mascot.color(0xFF6FB0FF)
     val Gold = Color(0xFFFFD54F)
     val Green = Color(0xFF00FF7F)
-    val TextPrimary get() = Mascot.color(0xFFE0F7FA)
-    val TextSecondary get() = Mascot.color(0xFF80DEEA)
-    val GlassBorder get() = Mascot.color(0x3300E5FF)
+    val TextPrimary get() = Mascot.color(0xFFFFF3E0)
+    val TextSecondary get() = Mascot.color(0xFFFFD59A)
+    val GlassBorder get() = Mascot.color(0x33FFC56B)
 
     // TODO(font): ship Audiowide/Orbitron TTFs to this module's res/font and
     // replace these — launcher/systemui/settings currently fall back to monospace.
@@ -170,7 +170,7 @@ fun HioneIdentityBadge(onClick: (() -> Unit)? = null) {
     HioneStatusBadge(
         accentColor = HioneBrand.Cyan,
         onClick = onClick,
-        bodyGradient = listOf(Mascot.color(0x3300E5FF), Mascot.color(0xFF041218))
+        bodyGradient = listOf(Mascot.color(0x33FFC56B), Mascot.color(0xFF041218))
     ) {
         HioneBadgeLabel(HioneBrand.IdentityMark, HioneBrand.Cyan, sizeSp = 9.5.sp)
     }
@@ -195,7 +195,7 @@ fun HioneNowPlayingBadge(
     HioneStatusBadge(
         accentColor = HioneBrand.NeonPink,
         onClick = onClick,
-        bodyGradient = listOf(Mascot.color(0x44FF4081), Mascot.color(0xFF160410)),
+        bodyGradient = listOf(Mascot.color(0x446FB0FF), Mascot.color(0xFF160410)),
         shape = CutCornerShape(4.dp)
     ) {
         Row(

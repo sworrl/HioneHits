@@ -290,9 +290,9 @@ fun sampleVolumeGradientColor(pct: Int, isMuted: Boolean): Color {
     if (isMuted) return Color(0xFFFF5252)
     return when {
         pct >= 85 -> com.hione.launcher.ui.HioneIdentity.Coral // Danger Red
-        pct >= 70 -> Mascot.color(0xFFFF4081) // Neon Pink
-        pct >= 50 -> Mascot.color(0xFFB388FF) // Electric Purple
-        pct >= 25 -> Mascot.color(0xFF00E5FF) // Hione Cyan
+        pct >= 70 -> Mascot.color(0xFF6FB0FF) // Neon Pink
+        pct >= 50 -> Mascot.color(0xFFB9C2D0) // Electric Purple
+        pct >= 25 -> Mascot.color(0xFFFFC56B) // Hione Cyan
         else -> Color(0xFF00FF88)      // Cyber Emerald
     }
 }
@@ -480,8 +480,8 @@ fun HioneCyberVolumeHudOverlay(
                                     0.12f to Color(0xFFFF5252),
                                     0.25f to Mascot.color(0xFFFF3399),
                                     0.50f to Color(0xFF9D4EDD),
-                                    0.75f to Mascot.color(0xFF00F5D4),
-                                    1.00f to Mascot.color(0xFF00E5FF),
+                                    0.75f to Mascot.color(0xFFFFC56B),
+                                    1.00f to Mascot.color(0xFFFFC56B),
                                     startY = 0f,
                                     endY = h
                                 )
@@ -616,7 +616,7 @@ fun HioneCyberVolumeHudOverlay(
                             1.5.dp,
                             Brush.horizontalGradient(
                                 if (isDanger) listOf(Mascot.color(0xFFFF0044), Color(0xFFFF5500).copy(alpha = hazardPulse))
-                                else listOf(Mascot.color(0xFF39C5BB), Mascot.color(0xFFFF4FA3))
+                                else listOf(Mascot.color(0xFFFFAB2E), Mascot.color(0xFFFF4FA3))
                             ),
                             RoundedCornerShape(20.dp)
                         )
@@ -630,7 +630,7 @@ fun HioneCyberVolumeHudOverlay(
                             modifier = Modifier
                                 .size(34.dp)
                                 .clip(CircleShape)
-                                .background(if (isDanger) Mascot.color(0x44FF0044) else Mascot.color(0x3339C5BB)),
+                                .background(if (isDanger) Mascot.color(0x44FF0044) else Mascot.color(0x33FFAB2E)),
                             contentAlignment = Alignment.Center
                         ) {
                             val icon = when {
@@ -642,7 +642,7 @@ fun HioneCyberVolumeHudOverlay(
                             Icon(
                                 icon,
                                 contentDescription = "Volume",
-                                tint = if (isDanger) Color(0xFFFF2255) else Mascot.color(0xFF39C5BB),
+                                tint = if (isDanger) Color(0xFFFF2255) else Mascot.color(0xFFFFAB2E),
                                 modifier = Modifier.size(20.dp)
                             )
                         }
@@ -658,7 +658,7 @@ fun HioneCyberVolumeHudOverlay(
                                 )
                                 Text(
                                     text = if (isDanger) " / 100 [HIGH]" else " / 100",
-                                    color = if (isDanger) Mascot.color(0xFFFF88AA) else Mascot.color(0xFF9FF3EC),
+                                    color = if (isDanger) Mascot.color(0xFFFF88AA) else Mascot.color(0xFFFFE0B0),
                                     fontSize = 10.5.sp,
                                     fontWeight = FontWeight.Bold,
                                     fontFamily = AudiowideFont,
@@ -682,7 +682,7 @@ fun HioneCyberVolumeHudOverlay(
                                         .background(
                                             Brush.horizontalGradient(
                                                 if (isDanger) listOf(Mascot.color(0xFFFF0055), Color(0xFFFF8800))
-                                                else listOf(Mascot.color(0xFF39C5BB), Mascot.color(0xFFFF4FA3))
+                                                else listOf(Mascot.color(0xFFFFAB2E), Mascot.color(0xFFFF4FA3))
                                             )
                                         )
                                 )

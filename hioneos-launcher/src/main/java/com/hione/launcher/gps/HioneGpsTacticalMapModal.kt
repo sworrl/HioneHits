@@ -213,7 +213,7 @@ fun HioneGpsTacticalMapModal(
                     .border(
                         1.2.dp,
                         Brush.linearGradient(
-                            listOf(Mascot.color(0xFF00E5FF), Mascot.color(0xFFFF4081), Mascot.color(0xFF00E5FF))
+                            listOf(Mascot.color(0xFFFFC56B), Mascot.color(0xFF6FB0FF), Mascot.color(0xFFFFC56B))
                         ),
                         CutCornerShape(18.dp)
                     )
@@ -235,14 +235,14 @@ fun HioneGpsTacticalMapModal(
                                 modifier = Modifier
                                     .size(26.dp)
                                     .clip(CutCornerShape(6.dp))
-                                    .background(Mascot.color(0xFF00E5FF).copy(alpha = 0.2f))
-                                    .border(1.dp, Mascot.color(0xFF00E5FF), CutCornerShape(6.dp)),
+                                    .background(Mascot.color(0xFFFFC56B).copy(alpha = 0.2f))
+                                    .border(1.dp, Mascot.color(0xFFFFC56B), CutCornerShape(6.dp)),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.LocationOn,
                                     contentDescription = "GPS",
-                                    tint = Mascot.color(0xFF00E5FF),
+                                    tint = Mascot.color(0xFFFFC56B),
                                     modifier = Modifier.size(16.dp)
                                 )
                             }
@@ -250,7 +250,7 @@ fun HioneGpsTacticalMapModal(
                             Column {
                                 Text(
                                     text = "GPS",
-                                    color = Mascot.color(0xFF00E5FF),
+                                    color = Mascot.color(0xFFFFC56B),
                                     fontSize = 11.5.sp,
                                     fontWeight = FontWeight.Black,
                                     fontFamily = AudiowideFont,
@@ -276,7 +276,7 @@ fun HioneGpsTacticalMapModal(
                             Icon(
                                 imageVector = Icons.Default.Close,
                                 contentDescription = "Close",
-                                tint = Mascot.color(0xFFFF4081),
+                                tint = Mascot.color(0xFF6FB0FF),
                                 modifier = Modifier.size(16.dp)
                             )
                         }
@@ -291,7 +291,7 @@ fun HioneGpsTacticalMapModal(
                             .height(28.dp)
                             .clip(CutCornerShape(8.dp))
                             .background(Mascot.color(0xFF051218))
-                            .border(0.8.dp, Mascot.color(0xFF00E5FF).copy(alpha = 0.35f), CutCornerShape(8.dp))
+                            .border(0.8.dp, Mascot.color(0xFFFFC56B).copy(alpha = 0.35f), CutCornerShape(8.dp))
                             .padding(2.dp)
                     ) {
                         TabButton(
@@ -342,14 +342,14 @@ fun HioneGpsTacticalMapModal(
                             .fillMaxWidth()
                             .clip(CutCornerShape(6.dp))
                             .background(Mascot.color(0xFF040E14))
-                            .border(0.6.dp, Mascot.color(0xFF00E5FF).copy(alpha = 0.25f), CutCornerShape(6.dp))
+                            .border(0.6.dp, Mascot.color(0xFFFFC56B).copy(alpha = 0.25f), CutCornerShape(6.dp))
                             .padding(horizontal = 8.dp, vertical = 4.dp),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
                             text = "CACHE: ${HioneTopoTileCache.getTileCount(ctx)} TILES (${HioneTopoTileCache.getCacheSizeBytes(ctx) / 1024} KB)",
-                            color = Mascot.color(0xFF80DEEA),
+                            color = Mascot.color(0xFFFFD59A),
                             fontSize = 7.5.sp,
                             fontWeight = FontWeight.Bold,
                             fontFamily = OrbitronFont
@@ -405,7 +405,7 @@ private fun TacticalMapView(
             .fillMaxSize()
             .clip(CutCornerShape(10.dp))
             .background(Mascot.color(0xFF02090D))
-            .border(1.dp, Mascot.color(0xFF00E5FF).copy(alpha = 0.4f), CutCornerShape(10.dp))
+            .border(1.dp, Mascot.color(0xFFFFC56B).copy(alpha = 0.4f), CutCornerShape(10.dp))
             .pointerInput(Unit) {
                 detectDragGestures { change, dragAmount ->
                     change.consume()
@@ -429,7 +429,7 @@ private fun TacticalMapView(
             for (gx in 0..(w.toInt() / gridSize.toInt() + 1)) {
                 val x = (gx * gridSize + (panX % gridSize))
                 drawLine(
-                    color = Mascot.color(0xFF00E5FF).copy(alpha = 0.08f),
+                    color = Mascot.color(0xFFFFC56B).copy(alpha = 0.08f),
                     start = Offset(x, 0f),
                     end = Offset(x, h),
                     strokeWidth = 0.8f
@@ -438,7 +438,7 @@ private fun TacticalMapView(
             for (gy in 0..(h.toInt() / gridSize.toInt() + 1)) {
                 val y = (gy * gridSize + (panY % gridSize))
                 drawLine(
-                    color = Mascot.color(0xFF00E5FF).copy(alpha = 0.08f),
+                    color = Mascot.color(0xFFFFC56B).copy(alpha = 0.08f),
                     start = Offset(0f, y),
                     end = Offset(w, y),
                     strokeWidth = 0.8f
@@ -485,7 +485,7 @@ private fun TacticalMapView(
                 for (ring in 1..4) {
                     val r = ring * 60f
                     drawCircle(
-                        color = Mascot.color(0xFF00E5FF).copy(alpha = 0.12f),
+                        color = Mascot.color(0xFFFFC56B).copy(alpha = 0.12f),
                         radius = r,
                         center = Offset(cx, cy),
                         style = Stroke(width = 1f, pathEffect = PathEffect.dashPathEffect(floatArrayOf(6f, 6f)))
@@ -494,13 +494,13 @@ private fun TacticalMapView(
 
                 // 4. Draw Crosshair Reticle
                 drawLine(
-                    color = Mascot.color(0xFF00E5FF).copy(alpha = 0.4f),
+                    color = Mascot.color(0xFFFFC56B).copy(alpha = 0.4f),
                     start = Offset(cx - 20f, cy),
                     end = Offset(cx + 20f, cy),
                     strokeWidth = 1.2f
                 )
                 drawLine(
-                    color = Mascot.color(0xFF00E5FF).copy(alpha = 0.4f),
+                    color = Mascot.color(0xFFFFC56B).copy(alpha = 0.4f),
                     start = Offset(cx, cy - 20f),
                     end = Offset(cx, cy + 20f),
                     strokeWidth = 1.2f
@@ -508,12 +508,12 @@ private fun TacticalMapView(
 
                 // 5. GPS Pulse Accuracy Disc & Hero Beacon
                 drawCircle(
-                    color = Mascot.color(0xFF00E5FF).copy(alpha = 0.25f * (1f - (pulseRadius - 12f) / 16f)),
+                    color = Mascot.color(0xFFFFC56B).copy(alpha = 0.25f * (1f - (pulseRadius - 12f) / 16f)),
                     radius = pulseRadius,
                     center = Offset(cx, cy)
                 )
                 drawCircle(
-                    color = Mascot.color(0xFFFF4081),
+                    color = Mascot.color(0xFF6FB0FF),
                     radius = 6.5f,
                     center = Offset(cx, cy)
                 )
@@ -532,7 +532,7 @@ private fun TacticalMapView(
                 .padding(top = 6.dp)
                 .clip(CutCornerShape(6.dp))
                 .background(Mascot.color(0xCC05141C))
-                .border(0.6.dp, Mascot.color(0xFF00E5FF).copy(alpha = 0.5f), CutCornerShape(6.dp))
+                .border(0.6.dp, Mascot.color(0xFFFFC56B).copy(alpha = 0.5f), CutCornerShape(6.dp))
                 .padding(horizontal = 8.dp, vertical = 3.dp)
         ) {
             Text(
@@ -554,13 +554,13 @@ private fun TacticalMapView(
             horizontalArrangement = Arrangement.spacedBy(6.dp)
         ) {
             TactileIconButton(onClick = onZoomIn, modifier = Modifier.size(30.dp)) {
-                Icon(Icons.Default.Add, "Zoom In", tint = Mascot.color(0xFF00E5FF), modifier = Modifier.size(16.dp))
+                Icon(Icons.Default.Add, "Zoom In", tint = Mascot.color(0xFFFFC56B), modifier = Modifier.size(16.dp))
             }
             TactileIconButton(onClick = onZoomOut, modifier = Modifier.size(30.dp)) {
-                Icon(Icons.Default.Remove, "Zoom Out", tint = Mascot.color(0xFF00E5FF), modifier = Modifier.size(16.dp))
+                Icon(Icons.Default.Remove, "Zoom Out", tint = Mascot.color(0xFFFFC56B), modifier = Modifier.size(16.dp))
             }
             TactileIconButton(onClick = onCenter, modifier = Modifier.size(30.dp)) {
-                Icon(Icons.Default.MyLocation, "Center", tint = Mascot.color(0xFFFF4081), modifier = Modifier.size(16.dp))
+                Icon(Icons.Default.MyLocation, "Center", tint = Mascot.color(0xFF6FB0FF), modifier = Modifier.size(16.dp))
             }
         }
     }
@@ -574,7 +574,7 @@ private fun GpsTelemetryHudView(gps: HioneWeatherService.GpsTelemetry, isSensorF
             .fillMaxSize()
             .clip(CutCornerShape(10.dp))
             .background(Mascot.color(0xFF02090D))
-            .border(1.dp, Mascot.color(0xFF00E5FF).copy(alpha = 0.4f), CutCornerShape(10.dp))
+            .border(1.dp, Mascot.color(0xFFFFC56B).copy(alpha = 0.4f), CutCornerShape(10.dp))
             .padding(8.dp),
         verticalArrangement = Arrangement.spacedBy(6.dp)
     ) {
@@ -583,13 +583,13 @@ private fun GpsTelemetryHudView(gps: HioneWeatherService.GpsTelemetry, isSensorF
             GpsMetricCard(
                 title = "LATITUDE",
                 value = if (hasCoords) fmtLat(gps.latitude) else "—",
-                color = Mascot.color(0xFF00E5FF),
+                color = Mascot.color(0xFFFFC56B),
                 modifier = Modifier.weight(1f)
             )
             GpsMetricCard(
                 title = "LONGITUDE",
                 value = if (hasCoords) fmtLon(gps.longitude) else "—",
-                color = Mascot.color(0xFF00E5FF),
+                color = Mascot.color(0xFFFFC56B),
                 modifier = Modifier.weight(1f)
             )
         }
@@ -607,7 +607,7 @@ private fun GpsTelemetryHudView(gps: HioneWeatherService.GpsTelemetry, isSensorF
                 // gps.hasSpeed mirrors Location.hasSpeed(): a network/fused fix carries no speed, and
                 // this card used to print a confident "0.0 mph (0 km/h)" for it.
                 value = if (isSensorFix && gps.hasSpeed) "${"%.1f".format(gps.speedMph)} mph (${(gps.speedMph * 1.60934).toInt()} km/h)" else "—",
-                color = Mascot.color(0xFFFF4081),
+                color = Mascot.color(0xFF6FB0FF),
                 modifier = Modifier.weight(1f)
             )
         }
@@ -623,7 +623,7 @@ private fun GpsTelemetryHudView(gps: HioneWeatherService.GpsTelemetry, isSensorF
             GpsMetricCard(
                 title = "FIX ACCURACY",
                 value = if (isSensorFix && gps.accuracyM > 0f) "±${"%.1f".format(gps.accuracyM)} meters" else "—",
-                color = Mascot.color(0xFF80DEEA),
+                color = Mascot.color(0xFFFFD59A),
                 modifier = Modifier.weight(1f)
             )
         }
@@ -634,13 +634,13 @@ private fun GpsTelemetryHudView(gps: HioneWeatherService.GpsTelemetry, isSensorF
                 .fillMaxWidth()
                 .clip(CutCornerShape(8.dp))
                 .background(Mascot.color(0xFF05141C))
-                .border(0.8.dp, Mascot.color(0xFF00E5FF).copy(alpha = 0.3f), CutCornerShape(8.dp))
+                .border(0.8.dp, Mascot.color(0xFFFFC56B).copy(alpha = 0.3f), CutCornerShape(8.dp))
                 .padding(8.dp)
         ) {
             Column {
                 Text(
                     text = "PLACE",
-                    color = Mascot.color(0xFF00E5FF),
+                    color = Mascot.color(0xFFFFC56B),
                     fontSize = 7.5.sp,
                     fontWeight = FontWeight.Bold,
                     fontFamily = AudiowideFont
@@ -713,10 +713,10 @@ private fun TabButton(
         modifier = modifier
             .fillMaxHeight()
             .clip(CutCornerShape(6.dp))
-            .background(if (isSelected) Mascot.color(0xFF00E5FF).copy(alpha = 0.25f) else Color.Transparent)
+            .background(if (isSelected) Mascot.color(0xFFFFC56B).copy(alpha = 0.25f) else Color.Transparent)
             .border(
                 0.8.dp,
-                if (isSelected) Mascot.color(0xFF00E5FF) else Color.Transparent,
+                if (isSelected) Mascot.color(0xFFFFC56B) else Color.Transparent,
                 CutCornerShape(6.dp)
             )
             .clickable(onClick = onClick),
@@ -724,7 +724,7 @@ private fun TabButton(
     ) {
         Text(
             text = title,
-            color = if (isSelected) Mascot.color(0xFF00E5FF) else Color.Gray,
+            color = if (isSelected) Mascot.color(0xFFFFC56B) else Color.Gray,
             fontSize = 8.5.sp,
             fontWeight = FontWeight.Bold,
             fontFamily = AudiowideFont
@@ -743,10 +743,10 @@ private fun TactileIconButton(
     Box(
         modifier = modifier
             .clip(CutCornerShape(6.dp))
-            .background(if (isPressed) Mascot.color(0xFF00E5FF).copy(alpha = 0.3f) else Mascot.color(0xDD041218))
+            .background(if (isPressed) Mascot.color(0xFFFFC56B).copy(alpha = 0.3f) else Mascot.color(0xDD041218))
             .border(
                 1.dp,
-                if (isPressed) Mascot.color(0xFF00E5FF) else Mascot.color(0xFF00E5FF).copy(alpha = 0.4f),
+                if (isPressed) Mascot.color(0xFFFFC56B) else Mascot.color(0xFFFFC56B).copy(alpha = 0.4f),
                 CutCornerShape(6.dp)
             )
             .pointerInput(Unit) {

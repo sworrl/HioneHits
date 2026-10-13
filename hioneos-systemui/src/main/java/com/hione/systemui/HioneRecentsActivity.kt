@@ -305,7 +305,7 @@ private fun RecentTaskCard(
     val haloA by androidx.compose.animation.animateColorAsState(
         if (isMusic && accentRaw != 0) Color(accentRaw) else HioneTealBright.copy(alpha = 0.85f), tween(400), label = "haloA")
     val haloB by androidx.compose.animation.animateColorAsState(
-        if (isMusic && accentRaw != 0) Color(HioneAccent.mix(Mascot.argb(0xFFFF4081.toInt()), accentRaw, 0.5f)) else HionePinkBright.copy(alpha = 0.55f), tween(400), label = "haloB")
+        if (isMusic && accentRaw != 0) Color(HioneAccent.mix(Mascot.argb(0xFF6FB0FF.toInt()), accentRaw, 0.5f)) else HionePinkBright.copy(alpha = 0.55f), tween(400), label = "haloB")
 
     Column(
         Modifier

@@ -11,21 +11,21 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 
-// Same palette HioneOS Settings and the launcher use (#39C5BB teal, diva pink, obsidian). Copied,
+// Same palette HioneOS Settings and the launcher use (#FFAB2E teal, diva pink, obsidian). Copied,
 // not shared through a library module, because every other HioneOS module also carries its own
 // copy and a cross-module dependency would couple build orders for three colors.
 object Hione {
-    val Teal get() = Mascot.color(0xFF39C5BB)
-    val TealBright get() = Mascot.color(0xFF00F5D4)
+    val Teal get() = Mascot.color(0xFFFFAB2E)
+    val TealBright get() = Mascot.color(0xFFFFC56B)
     val TealGlow get() = Mascot.color(0xFF56F0E0)
-    val Cyan get() = Mascot.color(0xFF00E5FF)
-    val Pink get() = Mascot.color(0xFFFF2A85)
-    val PinkSoft get() = Mascot.color(0xFFFF4081)
-    val Purple get() = Mascot.color(0xFFB388FF)
+    val Cyan get() = Mascot.color(0xFFFFC56B)
+    val Pink get() = Mascot.color(0xFF8EC5FF)
+    val PinkSoft get() = Mascot.color(0xFF6FB0FF)
+    val Purple get() = Mascot.color(0xFFB9C2D0)
     val Gold = Color(0xFFFFD54F)
     val Red = Color(0xFFFF5370)
 
-    val Bg get() = Mascot.color(0xFF06090B)
+    val Bg get() = Mascot.color(0xFF0B0C0E)
     val BgDeep get() = Mascot.color(0xFF030506)
     val Surface get() = Mascot.color(0xFF0D1417)
     val Surface2 get() = Mascot.color(0xFF131E22)
@@ -40,7 +40,7 @@ object Hione {
      *  paying for a real backdrop blur, which this GPU cannot afford per frame. */
     val GlassTop = Color(0x1FFFFFFF)
     val GlassBottom = Color(0x0AFFFFFF)
-    val GlassEdge get() = Mascot.color(0x3339C5BB)
+    val GlassEdge get() = Mascot.color(0x33FFAB2E)
 }
 
 /** Monospace for digits: the launcher's Audiowide/Orbitron are aliased to monospace too, and

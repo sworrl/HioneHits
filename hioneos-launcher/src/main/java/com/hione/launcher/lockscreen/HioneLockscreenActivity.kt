@@ -45,6 +45,7 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -861,12 +862,32 @@ fun HioneKawaiiLockscreenScreen(
         //    pack's portrait (holiday/HolidayState).
         remember { com.hione.launcher.holiday.HolidayState.start(context); true }
         val holidayBackdrop = com.hione.launcher.holiday.HolidayState.lockBitmap.value
+        // Focus points (holiday/WallpaperFocus) frame her face into the gap under the weather capsule.
+        val lockFocusTable = com.hione.launcher.holiday.HolidayState.focusTable.value
+        val lockPackId = Mascot.pack.id
+        val focusedPortrait = remember(lockPackId, lockFocusTable) {
+            if (lockPackId == "hione" || lockFocusTable.isEmpty()) null
+            else runCatching {
+                val focus = com.hione.launcher.holiday.WallpaperFocus.lookup(lockFocusTable, "drawable:hione_boot_splash")
+                val bmp = if (focus != null) Mascot.artFor(context, R.drawable.hione_boot_splash) else null
+                if (focus != null && bmp != null) bmp.asImageBitmap() to focus else null
+            }.getOrNull()
+        }
         if (holidayBackdrop != null) {
-            Image(
+            com.hione.launcher.holiday.FocusedWallpaper(
                 bitmap = holidayBackdrop,
+                focus = com.hione.launcher.holiday.HolidayState.lockFocus.value,
+                target = com.hione.launcher.holiday.WallpaperFocus.LOCK,
                 contentDescription = "Lockscreen Wallpaper",
-                modifier = Modifier.fillMaxSize(),
-                contentScale = ContentScale.Crop
+                modifier = Modifier.fillMaxSize()
+            )
+        } else if (focusedPortrait != null) {
+            com.hione.launcher.holiday.FocusedWallpaper(
+                bitmap = focusedPortrait.first,
+                focus = focusedPortrait.second,
+                target = com.hione.launcher.holiday.WallpaperFocus.LOCK,
+                contentDescription = "Lockscreen Wallpaper",
+                modifier = Modifier.fillMaxSize()
             )
         } else {
             Image(
@@ -1304,11 +1325,11 @@ fun HioneLockscreenMegaClock(time: String) {
             modifier = Modifier.size(width = 260.dp, height = 90.dp)
         ) {
             val particles = listOf(
-                Triple(0.10f, 0.20f, Mascot.color(0xFF00E5FF)),
+                Triple(0.10f, 0.20f, Mascot.color(0xFFFFC56B)),
                 Triple(0.25f, 0.70f, Mascot.color(0xFFFF007F)),
                 Triple(0.40f, 0.30f, Mascot.color(0xFF00FFCC)),
                 Triple(0.60f, 0.85f, Color(0xFFFFFFFF)),
-                Triple(0.75f, 0.25f, Mascot.color(0xFF00E5FF)),
+                Triple(0.75f, 0.25f, Mascot.color(0xFFFFC56B)),
                 Triple(0.90f, 0.65f, Mascot.color(0xFFFF007F)),
                 Triple(0.50f, 0.50f, com.hione.launcher.ui.HioneIdentity.Gold)
             )
@@ -1568,7 +1589,7 @@ fun Hione5HourLockscreenTrendCapsule(
                         if (pt.precipProbPct > 0) {
                             Text(
                                 text = "${pt.precipProbPct}%",
-                                color = Mascot.color(0xFF00E5FF),
+                                color = Mascot.color(0xFFFFC56B),
                                 fontSize = 8.5.dampedSp(),
                                 fontWeight = FontWeight.Bold
                             )
@@ -1698,7 +1719,7 @@ private fun LockscreenNowPlayingWidget(
                         Brush.horizontalGradient(
                             listOf(
                                 if (localLikedState) Mascot.color(0xFFFF2277) else com.hione.launcher.ui.HioneNowPlayingAccent.blend(palette.primary, npAccentLock.full, if (npAccentLock.active) 0.3f else 0f).copy(alpha = 0.85f),
-                                com.hione.launcher.ui.HioneNowPlayingAccent.blend(Mascot.color(0xFF39C5BB), npAccentLock.full, if (npAccentLock.active) 0.3f else 0f).copy(alpha = 0.5f),
+                                com.hione.launcher.ui.HioneNowPlayingAccent.blend(Mascot.color(0xFFFFAB2E), npAccentLock.full, if (npAccentLock.active) 0.3f else 0f).copy(alpha = 0.5f),
                                 HioneNeonPink.copy(alpha = 0.7f)
                             )
                         ),
@@ -1776,7 +1797,7 @@ private fun LockscreenNowPlayingWidget(
                                         )
                                     } else {
                                         Brush.verticalGradient(
-                                            listOf(Mascot.color(0x2800E5FF), Mascot.color(0x0C00E5FF))
+                                            listOf(Mascot.color(0x28FFC56B), Mascot.color(0x0CFFC56B))
                                         )
                                     }
                                 )
@@ -1788,7 +1809,7 @@ private fun LockscreenNowPlayingWidget(
                                         )
                                     } else {
                                         Brush.linearGradient(
-                                            listOf(Mascot.color(0x6600E5FF), Mascot.color(0x2200E5FF))
+                                            listOf(Mascot.color(0x66FFC56B), Mascot.color(0x22FFC56B))
                                         )
                                     },
                                     CircleShape
@@ -1825,7 +1846,7 @@ private fun LockscreenNowPlayingWidget(
                             Icon(
                                 imageVector = if (localLikedState) Icons.Filled.Favorite else Icons.Default.FavoriteBorder,
                                 contentDescription = "Like song",
-                                tint = if (localLikedState) Mascot.color(0xFFFF1774) else Mascot.color(0xFF00E5FF),
+                                tint = if (localLikedState) Mascot.color(0xFFFF1774) else Mascot.color(0xFFFFC56B),
                                 modifier = Modifier.size(16.dp)
                             )
                         }
@@ -1836,7 +1857,7 @@ private fun LockscreenNowPlayingWidget(
                         Box(
                             Modifier
                                 .clip(CutCornerShape(6.dp))
-                                .background(if (showHistoryDrawer) Mascot.color(0x5500E5FF) else Mascot.color(0x2200E5FF))
+                                .background(if (showHistoryDrawer) Mascot.color(0x55FFC56B) else Mascot.color(0x22FFC56B))
                                 .border(0.8.dp, palette.primary.copy(alpha = 0.6f), CutCornerShape(6.dp))
                                 .clickable {
                                     onInteraction()
@@ -2179,7 +2200,7 @@ private fun LockscreenNowPlayingWidget(
                             Modifier
                                 .size(30.dp)
                                 .clip(CutCornerShape(6.dp))
-                                .background(Mascot.color(0x3300E5FF))
+                                .background(Mascot.color(0x33FFC56B))
                                 .hionePressScale(pressedScale = 0.9f, glowColor = palette.primary, hapticFeedback = false)
                                 .clickable {
                                     onInteraction()
@@ -2223,7 +2244,7 @@ private fun LockscreenNowPlayingWidget(
                             Modifier
                                 .size(30.dp)
                                 .clip(CutCornerShape(6.dp))
-                                .background(Mascot.color(0x3300E5FF))
+                                .background(Mascot.color(0x33FFC56B))
                                 .hionePressScale(pressedScale = 0.9f, glowColor = palette.primary, hapticFeedback = false)
                                 .clickable {
                                     onInteraction()

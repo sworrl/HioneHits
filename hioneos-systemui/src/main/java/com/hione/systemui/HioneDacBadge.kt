@@ -72,6 +72,7 @@ class HioneDacBadge(private val ctx: Context, private val wm: WindowManager, pri
     private var statusBarShown = true
     private var ownRowInFront = false
     private var onAod = false
+    private var ducked = false
 
     private val observer = object : ContentObserver(handler) {
         override fun onChange(selfChange: Boolean) { refresh() }
@@ -122,14 +123,28 @@ class HioneDacBadge(private val ctx: Context, private val wm: WindowManager, pri
     fun setForeground(pkg: String?, cls: String?) {
         val own = pkg == LAUNCHER_PKG
         val aod = own && (cls?.contains("Aod", ignoreCase = true) == true)
+        val duck = HioneAppClassifier.shouldDuckDacPill(ctx, pkg, cls)
         ownRowInFront = own; onAod = aod
+        ducked = duck
         applyVisibility()
     }
+
+    /**
+     * Blackjack (our own DAC driver) is bound to the DAC at 0x30: the badge then starts with "BJ".
+     * Read from the sysfs driver symlink (apps may read sysfs links, not sysfs files). A driver
+     * cannot change without a reboot, so once per refresh is plenty.
+     */
+    private fun blackjackLoaded(): Boolean = runCatching {
+        android.system.Os.readlink("/sys/bus/i2c/devices/0-0030/driver").substringAfterLast('/').startsWith("blackjack")
+    }.getOrDefault(false)
+
+    private var blackjack = false
 
     private fun refresh() {
         enabled = isEnabled(ctx)
         palette = dacTheme(readState(ctx))
-        view?.setPalette(palette)
+        blackjack = blackjackLoaded()
+        view?.setPalette(palette, blackjack)
         applyVisibility()
     }
 
@@ -142,7 +157,7 @@ class HioneDacBadge(private val ctx: Context, private val wm: WindowManager, pri
 
     private fun applyVisibility() {
         val v = view ?: return
-        val show = enabled && !retro && palette.badge.isNotEmpty() && !onAod && (statusBarShown || ownRowInFront)
+        val show = enabled && !retro && !ducked && palette.badge.isNotEmpty() && !onAod && (statusBarShown || ownRowInFront)
         // Faded rather than GONE: a GONE root makes the window invisible to the window manager,
         // and then it may stop getting the insets that say the status bar came back.
         v.animate().cancel()
@@ -172,9 +187,10 @@ class HioneDacBadge(private val ctx: Context, private val wm: WindowManager, pri
 
         fun stopAnim() { anim?.cancel() }
 
-        fun setPalette(p: DacPalette) {
-            val textChanged = p.badge != text
-            text = p.badge
+        fun setPalette(p: DacPalette, bj: Boolean = false) {
+            val label = if (bj && p.badge.isNotEmpty()) "BJ · ${p.badge}" else p.badge
+            val textChanged = label != text
+            text = label
             val from = intArrayOf(primary, secondary, background)
             val fromGlow = glow
             val to = intArrayOf(p.primary, p.secondary, p.background)

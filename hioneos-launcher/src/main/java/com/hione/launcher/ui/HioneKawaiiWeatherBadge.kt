@@ -80,7 +80,7 @@ private fun backdropFor(sky: Sky, solar: Float, isDay: Boolean): List<Color> {
             "dawn" -> listOf(Mascot.color(0xFFFFB3C6), Color(0xFFFFD6A5))
             "dusk" -> listOf(Mascot.color(0xFFFF8FAB), Color(0xFF7B5EA7))
             "night" -> listOf(Color(0xFF2E2A5E), Color(0xFF141334))
-            else -> listOf(Color(0xFF6ED3F0), Mascot.color(0xFF39C5BB))
+            else -> listOf(Color(0xFF6ED3F0), Mascot.color(0xFFFFAB2E))
         }
     }
 }
@@ -226,10 +226,10 @@ fun HioneKawaiiWeatherBadge(
                 .padding(horizontal = 14.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text("☁", fontSize = 22.sp, color = Mascot.color(0xFF39C5BB))
+            Text("☁", fontSize = 22.sp, color = Mascot.color(0xFFFFAB2E))
             Spacer(Modifier.width(10.dp))
             Column {
-                Text("Weather", color = Mascot.color(0xFF39C5BB), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                Text("Weather", color = Mascot.color(0xFFFFAB2E), fontSize = 12.sp, fontWeight = FontWeight.Bold)
                 Text("No data yet. Tap to fetch.", color = Color(0xB3FFFFFF), fontSize = 11.sp)
             }
         }

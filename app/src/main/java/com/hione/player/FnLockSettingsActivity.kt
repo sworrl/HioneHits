@@ -79,9 +79,9 @@ fun FnLockSettingsScreen(onBack: () -> Unit) {
                 .background(
                     Brush.verticalGradient(
                         listOf(
-                            Mascot.color(0xEE040D12),
+                            Mascot.color(0xEE0C0D10),
                             Color(0xBB000000),
-                            Mascot.color(0xF8040D12)
+                            Mascot.color(0xF80C0D10)
                         )
                     )
                 )
@@ -115,7 +115,7 @@ fun FnLockSettingsScreen(onBack: () -> Unit) {
                 Box(
                     Modifier
                         .clip(RoundedCornerShape(12.dp))
-                        .background(Mascot.color(0x3300E5FF))
+                        .background(Mascot.color(0x33FFC56B))
                         .border(1.dp, HioneCyan, RoundedCornerShape(12.dp))
                         .padding(horizontal = 8.dp, vertical = 4.dp)
                 ) {
@@ -193,7 +193,7 @@ fun FnLockSettingsScreen(onBack: () -> Unit) {
                                 Modifier
                                     .fillMaxWidth()
                                     .clip(RoundedCornerShape(10.dp))
-                                    .background(if (isSel) Mascot.color(0x3300E5FF) else Color.Transparent)
+                                    .background(if (isSel) Mascot.color(0x33FFC56B) else Color.Transparent)
                                     .clickable {
                                         fnMode = id
                                         try {

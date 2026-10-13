@@ -71,7 +71,7 @@ object HioneMediaHub {
     }
 
     /** Average colour of a downsampled bitmap, nudged toward the Hione palette for glows. */
-    fun dominantColor(bmp: Bitmap?, fallback: Int = Mascot.argb(0xFF39C5BB.toInt())): Int {
+    fun dominantColor(bmp: Bitmap?, fallback: Int = Mascot.argb(0xFFFFAB2E.toInt())): Int {
         bmp ?: return fallback
         return runCatching {
             val s = Bitmap.createScaledBitmap(bmp, 12, 12, true)

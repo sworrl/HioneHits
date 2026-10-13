@@ -222,7 +222,7 @@ fun HioneFullscreenChargingModal(
                                 HioneCyan,
                                 HioneNeonPink,
                                 Color(0xFF00FF88),
-                                Mascot.color(0xFFB388FF),
+                                Mascot.color(0xFFB9C2D0),
                                 HioneCyan
                             )
                         ),

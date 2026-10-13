@@ -253,7 +253,7 @@ fun HioneStatusBar(
             .height(HioneDimens.statusBarHeight)
             .then(if (onOpenShade != null) Modifier.clickable(interactionSource = remember { MutableInteractionSource() }, indication = null, onClick = onOpenShade) else Modifier)
             .drawBehind {
-                drawRect(Brush.verticalGradient(listOf(Mascot.color(0x66040D12), Mascot.color(0x22040D12))))
+                drawRect(Brush.verticalGradient(listOf(Mascot.color(0x660C0D10), Mascot.color(0x220C0D10))))
                 val stitch = PathEffect.dashPathEffect(floatArrayOf(6f, 5f), 0f)
                 val y = size.height - 1.dp.toPx()
                 drawLine(seam, Offset(8.dp.toPx(), y), Offset(size.width - 8.dp.toPx(), y), 1.2.dp.toPx(), pathEffect = stitch)

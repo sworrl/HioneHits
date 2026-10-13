@@ -76,7 +76,7 @@ import kotlin.math.sin
 
 /*
  * Weather screen pieces ported from the KDE Windy Weather widget: the rain nowcast radar, a free
- * map (OpenStreetMap/CARTO + RainViewer, Windy layers once a key is in), Windy webcams, the Windy
+ * map (Esri dark canvas + RainViewer, Windy layers once a key is in), Windy webcams, the Windy
  * GFS strip, and the card that explains what Windy adds. All copy is plain and short on purpose.
  */
 
@@ -178,7 +178,7 @@ fun HioneRainNowcastLine(onOpenRadar: () -> Unit) {
         Modifier
             .fillMaxWidth()
             .clip(CutCornerShape(6.dp))
-            .background(if (alert) c.copy(alpha = 0.18f) else Mascot.color(0x2200E5FF))
+            .background(if (alert) c.copy(alpha = 0.18f) else Mascot.color(0x22FFC56B))
             .border(if (alert) 1.5.dp else 0.6.dp, if (alert) c else HioneCyan.copy(alpha = 0.35f), CutCornerShape(6.dp))
             .clickable { onOpenRadar() }
             .padding(horizontal = 8.dp, vertical = 5.dp),
@@ -249,7 +249,7 @@ fun HioneWindyCard(modifier: Modifier = Modifier) {
         modifier
             .fillMaxWidth()
             .clip(shape)
-            .background(Brush.verticalGradient(listOf(Mascot.color(0x33FF4081), Mascot.color(0x2204121A))))
+            .background(Brush.verticalGradient(listOf(Mascot.color(0x336FB0FF), Mascot.color(0x2204121A))))
             .border(1.dp, HioneNeonPink.copy(alpha = 0.55f), shape)
             .padding(9.dp),
         verticalArrangement = Arrangement.spacedBy(6.dp)
@@ -266,7 +266,7 @@ fun HioneWindyCard(modifier: Modifier = Modifier) {
                         }
                         Text(parts.joinToString(", "), color = Color.White, fontSize = 10.sp)
                         if (x.windy?.warning?.isNotBlank() == true)
-                            Text("The point key is a trial key, so Windy sends scrambled sample data.", color = Warn, fontSize = 9.sp)
+                            Text("Your point key is on Windy's free testing plan, so Windy sends shuffled sample numbers. The forecast here stays on Open-Meteo until the key is on a paid plan.", color = Warn, fontSize = 9.sp)
                         if (x.windyError.isNotBlank()) Text(x.windyError, color = Warn, fontSize = 9.sp)
                     }
                     Pill("EDIT", HioneNeonPink) { editing = true; webcamText = ""; pointText = ""; note = "" }
@@ -282,11 +282,11 @@ fun HioneWindyCard(modifier: Modifier = Modifier) {
             else -> {
                 SectionLabel("WINDY", HioneNeonPink)
                 if (!connected) {
-                    Text("Everything on this screen runs on free data: Open-Meteo, RainViewer and OpenStreetMap. Windy can add more on top if you want it.",
+                    Text("Everything on this screen runs on free data: Open-Meteo, RainViewer, NWS and free Esri/OpenStreetMap maps. Windy can add more on top if you want it.",
                         color = Color.White, fontSize = 10.5.sp)
                     Text("Windy Premium gets you hourly forecast steps, more frequent model updates and the full 10 days on windy.com and in the Windy app.",
                         color = HioneTextSecondary, fontSize = 10.sp)
-                    Text("A Windy API key turns on more here: webcams near you, Windy's GFS point forecast next to the free one, and the Windy map layers (wind, temperature, clouds and the rest). The webcam key has a free tier. The Point Forecast key is a paid plan, and a trial key only returns scrambled sample data.",
+                    Text("A Windy API key turns on more here: webcams near you, Windy's GFS point forecast next to the free one, and the Windy map layers (wind, temperature, clouds and the rest). The webcam key has a free tier. The Point Forecast key is a paid plan, and a key on the free testing plan only returns shuffled sample numbers.",
                         color = HioneTextSecondary, fontSize = 10.sp)
                     Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                         Pill("GET PREMIUM", HioneNeonPink, filled = true) { open(WINDY_PREMIUM_URL) }
@@ -339,7 +339,7 @@ private fun KeyField(label: String, value: String, hint: String, onChange: (Stri
         modifier = Modifier.fillMaxWidth(),
         colors = OutlinedTextFieldDefaults.colors(
             focusedTextColor = Color.White, unfocusedTextColor = Color.White,
-            focusedBorderColor = HioneCyan, unfocusedBorderColor = Mascot.color(0x6600E5FF),
+            focusedBorderColor = HioneCyan, unfocusedBorderColor = Mascot.color(0x66FFC56B),
             focusedLabelColor = HioneCyan, unfocusedLabelColor = HioneTextSecondary
         )
     )
@@ -372,7 +372,7 @@ fun HioneWindyPointStrip() {
                 modifier = Modifier.clickable { HioneWeatherExtras.refresh(ctx, force = true) })
         }
         if (w?.warning?.isNotBlank() == true)
-            Text("Trial key: Windy sends scrambled sample data, not a real forecast.", color = Warn, fontSize = 9.sp)
+            Text("Testing plan: Windy sends shuffled sample numbers, not a real forecast.", color = Warn, fontSize = 9.sp)
         if (x.windyError.isNotBlank()) Text(x.windyError, color = Warn, fontSize = 9.sp)
         if (w != null && w.hourly.isNotEmpty()) {
             val fmt = remember { SimpleDateFormat("h a", Locale.US) }
@@ -382,7 +382,7 @@ fun HioneWindyPointStrip() {
                         Modifier
                             .width(56.dp)
                             .clip(CutCornerShape(6.dp))
-                            .background(Mascot.color(0x22FF4081))
+                            .background(Mascot.color(0x226FB0FF))
                             .padding(vertical = 5.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
@@ -404,7 +404,7 @@ fun HioneWindyPointStrip() {
 
 /**
  * Nowcast radar: RainViewer frames decoded to rain intensity and redrawn in Windy's palette over a
- * dark OpenStreetMap basemap, with storm-motion arrows, the arrival line, and a frame scrubber.
+ * dark Esri basemap, with storm-motion arrows, the arrival line, and a frame scrubber.
  * Replaces the old one-tile radar, which had no motion, no arrival estimate and a brand-colour legend.
  */
 @Composable
@@ -491,8 +491,9 @@ fun HioneNowcastRadarTab(gps: HioneWeatherService.GpsTelemetry) {
                         strokeWidth = 3f, pathEffect = PathEffect.dashPathEffect(floatArrayOf(8f, 8f)))
                 }
                 drawCompass(size.width - 30f, 34f)
-                drawScaleBar(14f, size.height - 18f, m.mpp / sc)
-                drawLegend(size.width - 12f, size.height - 12f)
+                // Lifted clear of the provider credit along the bottom edge.
+                drawScaleBar(14f, size.height - 44f, m.mpp / sc)
+                drawLegend(size.width - 12f, size.height - 38f)
                 n.frames.getOrNull(shown)?.let { f ->
                     val mins = ((System.currentTimeMillis() / 1000 - f.time) / 60.0).roundToInt()
                     val badge = when {
@@ -514,6 +515,7 @@ fun HioneNowcastRadarTab(gps: HioneWeatherService.GpsTelemetry) {
                 }
                 m == null && n.error.isNotBlank() -> Overlay("RADAR DID NOT LOAD: ${n.error.uppercase(Locale.US)}")
             }
+            if (m != null) MapCredit("${WxTiles.MAP_CREDIT} | ${WxTiles.RADAR_CREDIT}")
         }
 
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -524,7 +526,7 @@ fun HioneNowcastRadarTab(gps: HioneWeatherService.GpsTelemetry) {
                 valueRange = 0f..(n.frames.size - 1).toFloat(),
                 steps = (n.frames.size - 2).coerceAtLeast(0),
                 modifier = Modifier.weight(1f),
-                colors = SliderDefaults.colors(thumbColor = HioneCyan, activeTrackColor = HioneCyan, inactiveTrackColor = Mascot.color(0x3300E5FF))
+                colors = SliderDefaults.colors(thumbColor = HioneCyan, activeTrackColor = HioneCyan, inactiveTrackColor = Mascot.color(0x33FFC56B))
             ) else Spacer(Modifier.weight(1f))
             Pill("LATEST", HioneTextSecondary, enabled = frameIndex >= 0) { playing = false; frameIndex = -1 }
         }
@@ -539,11 +541,23 @@ fun HioneNowcastRadarTab(gps: HioneWeatherService.GpsTelemetry) {
             }
         }
         Text(
-            "Radar from RainViewer, 10-minute frames. Storm motion comes from matching the last few frames, so treat anything past an hour as a rough guess. Map data from OpenStreetMap and CARTO." +
+            "Radar from RainViewer, 10-minute frames. Storm motion comes from matching the last few frames, so treat anything past an hour as a rough guess. ${WxTiles.ATTRIBUTION}" +
                 if (n.fetchedMs > 0) " Updated ${ageText(n.fetchedMs)}." else "",
             color = HioneTextSecondary.copy(alpha = 0.75f), fontSize = 8.5.sp
         )
     }
+}
+
+/** Provider credit in the map corner, small, the way OSM/Esri/RainViewer/Windy ask for it. */
+@Composable
+private fun BoxScope.MapCredit(text: String, alignment: Alignment = Alignment.BottomEnd) {
+    Text(
+        text, color = Color.White.copy(alpha = 0.85f), fontSize = 7.sp, maxLines = 1,
+        modifier = Modifier
+            .align(alignment)
+            .background(Color(0x99000000), RoundedCornerShape(topStart = 4.dp))
+            .padding(horizontal = 4.dp, vertical = 1.dp)
+    )
 }
 
 @Composable
@@ -617,7 +631,7 @@ private fun windyEmbedUrl(lat: Double, lon: Double, zoom: Int, layer: WindyLayer
 }
 
 /**
- * Map: free by default (CARTO dark tiles from OpenStreetMap data + the latest RainViewer frame),
+ * Map: free by default (Esri dark canvas tiles + the latest RainViewer frame),
  * drag to pan, buttons to zoom. RainViewer stops at z7, so closer zooms stretch the z7 radar tile.
  * With a Windy key the Windy layers (an embed.windy.com page) show up as extra choices.
  */
@@ -667,7 +681,9 @@ fun HioneWeatherMapTab(gps: HioneWeatherService.GpsTelemetry) {
             out
         }
     }
-    fun baseUrl(x: Int, y: Int) = "https://a.basemaps.cartocdn.com/dark_all/$zoom/${((x % (1 shl zoom)) + (1 shl zoom)) % (1 shl zoom)}/$y.png"
+    fun wrapX(x: Int) = ((x % (1 shl zoom)) + (1 shl zoom)) % (1 shl zoom)
+    fun baseUrl(x: Int, y: Int) = WxTiles.base(zoom, wrapX(x), y)
+    fun labelUrl(x: Int, y: Int) = WxTiles.labels(zoom, wrapX(x), y)
     fun rainUrl(x: Int, y: Int): String? {
         val (host, path) = rv ?: return null
         val z = min(zoom, HioneNowcast.RAIN_MAX_ZOOM)
@@ -677,7 +693,7 @@ fun HioneWeatherMapTab(gps: HioneWeatherService.GpsTelemetry) {
     }
     LaunchedEffect(needed, rv, layer) {
         if (layer != null) return@LaunchedEffect
-        val urls = needed.flatMap { (x, y, _) -> listOfNotNull(baseUrl(x, y), rainUrl(x, y)) }.distinct().filter { it !in tiles && it !in failed }
+        val urls = needed.flatMap { (x, y, _) -> listOfNotNull(baseUrl(x, y), rainUrl(x, y), labelUrl(x, y)) }.distinct().filter { it !in tiles && it !in failed }
         withContext(Dispatchers.IO) {
             for (u in urls) {
                 val b = WxHttp.bitmap(u)
@@ -712,6 +728,7 @@ fun HioneWeatherMapTab(gps: HioneWeatherService.GpsTelemetry) {
             else if (l != null) {
                 val url = windyEmbedUrl(center.first, center.second, zoom, l)
                 WindyEmbed(url)
+                MapCredit("Layer: Windy.com", Alignment.BottomStart)
             } else {
                 Canvas(
                     Modifier
@@ -746,23 +763,27 @@ fun HioneWeatherMapTab(gps: HioneWeatherService.GpsTelemetry) {
                             dstOffset = IntOffset(pos.first.roundToInt(), pos.second.roundToInt()), dstSize = IntSize(256, 256),
                             alpha = 0.85f, filterQuality = FilterQuality.Low)
                     }
+                    for ((x, y, pos) in needed) {
+                        tiles[labelUrl(x, y)]?.let { drawImage(it, dstOffset = IntOffset(pos.first.roundToInt(), pos.second.roundToInt()), dstSize = IntSize(256, 256)) }
+                    }
                     // You are here
                     val cx = HioneNowcast.lonToTileX(gps.longitude, zoom) * 256 - (HioneNowcast.lonToTileX(center.second, zoom) * 256 - drag.x - size.width / 2)
                     val cy = HioneNowcast.latToTileY(gps.latitude, zoom) * 256 - (HioneNowcast.latToTileY(center.first, zoom) * 256 - drag.y - size.height / 2)
                     drawCircle(Color.White.copy(alpha = 0.9f), 11f, Offset(cx.toFloat(), cy.toFloat()), style = Stroke(2f))
                     drawCircle(Color(0xFFFF4D4D), 4.5f, Offset(cx.toFloat(), cy.toFloat()))
-                    drawScaleBar(14f, size.height - 18f, HioneNowcast.metersPerPixel(center.first, zoom))
+                    drawScaleBar(14f, size.height - 44f, HioneNowcast.metersPerPixel(center.first, zoom))
                     if (rvTime > 0) drawContext.canvas.nativeCanvas.drawText(
                         "Radar " + SimpleDateFormat("h:mm a", Locale.US).format(Date(rvTime * 1000)) + if (zoom > HioneNowcast.RAIN_MAX_ZOOM) ", stretched past z7" else "",
                         14f, 30f, android.graphics.Paint().label(24f))
                 }
+                MapCredit("${WxTiles.MAP_CREDIT} | ${WxTiles.RADAR_CREDIT}")
             }
         }
 
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             Pill("ZOOM OUT", HioneCyan, enabled = zoom > 3) { zoom--; drag = Offset.Zero }
             Text("z$zoom", color = Color.White, fontSize = 10.sp, fontFamily = AudiowideFont)
-            Pill("ZOOM IN", HioneCyan, enabled = zoom < 11) { zoom++; drag = Offset.Zero }
+            Pill("ZOOM IN", HioneCyan, enabled = zoom < 12) { zoom++; drag = Offset.Zero }
             Pill("CENTER", HioneTextSecondary) { center = gps.latitude to gps.longitude; drag = Offset.Zero }
             Spacer(Modifier.weight(1f))
             Pill("WINDY.COM", HioneNeonPink) {
@@ -771,7 +792,7 @@ fun HioneWeatherMapTab(gps: HioneWeatherService.GpsTelemetry) {
             }
         }
         Text(
-            if (layer == null) "Map data from OpenStreetMap and CARTO. Radar from RainViewer. Drag to move around."
+            if (layer == null) "${WxTiles.ATTRIBUTION} Radar from RainViewer. Drag to move around."
             else "Layer from Windy.com. Pinch and drag inside the map. It runs in a web view, so it is heavier on the battery than the radar map.",
             color = HioneTextSecondary.copy(alpha = 0.75f), fontSize = 8.5.sp
         )
@@ -854,6 +875,7 @@ fun HioneWebcamTab() {
                 cam == null -> Text(x.webcamError.ifBlank { "No webcams yet." }.uppercase(Locale.US), color = Warn, fontSize = 9.sp,
                     fontWeight = FontWeight.Black, fontFamily = AudiowideFont, textAlign = TextAlign.Center, modifier = Modifier.padding(12.dp))
             }
+            if (cam != null) MapCredit("Webcam: windy.com", Alignment.TopEnd)
             if (cams.size > 1) LinearProgressIndicator(
                 progress = { (index + 1) / cams.size.toFloat() },
                 color = HioneNeonPink, trackColor = Color.Transparent,

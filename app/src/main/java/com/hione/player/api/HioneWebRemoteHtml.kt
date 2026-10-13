@@ -24,8 +24,8 @@ object HioneWebRemoteHtml {
     <link href="https://fonts.googleapis.com/css2?family=Audiowide&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
     <style>
         :root {
-            --hione-cyan: #00E5FF;
-            --hione-teal: #39C5BB;
+            --hione-cyan: #FFC56B;
+            --hione-teal: #FFAB2E;
             --hione-pink: #FF1774;
             --hione-purple: #9D4EDD;
             --bg-dark: #030D14;

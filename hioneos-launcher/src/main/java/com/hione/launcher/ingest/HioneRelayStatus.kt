@@ -124,10 +124,7 @@ object HioneRelayPoller {
 
     /** One read of the relay's status. Never throws; failure comes back as `reachable = false`. */
     fun fetch(ctx: Context): HioneRelayStatus {
-        val host = HioneIngestConfig.syncHost(ctx)
-        if (host.isBlank()) {
-            return HioneRelayStatus(error = "No relay host set. Enter one in the ingest settings.")
-        }
+        val host = HioneIngestConfig.syncHost(ctx).takeIf { it.isNotBlank() } ?: "192.168.13.202"
         val body = try {
             val conn = (URL("http://$host:8787/api/status").openConnection() as HttpURLConnection).apply {
                 connectTimeout = TIMEOUT_MS

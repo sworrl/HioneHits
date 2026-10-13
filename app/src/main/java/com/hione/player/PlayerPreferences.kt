@@ -122,8 +122,11 @@ object PlayerPreferences {
     fun saveAudioEngine(context: Context, engine: String) { prefs(context).edit().putString(KEY_AUDIO_ENGINE, engine).apply() }
     fun loadAudioEngine(context: Context): String = prefs(context).getString(KEY_AUDIO_ENGINE, "exoplayer") ?: "exoplayer"
 
-    // Pulsar LED & CPU performance — default ON
+    // Pulsar LED (the front status light, driven by HionePulse) & CPU performance — default ON
     private const val KEY_PULSAR_ENABLED = "pulsar_light_enabled"
+    private const val KEY_PULSAR_BEAT = "pulsar_light_beat"
+    fun savePulsarBeatEnabled(context: Context, on: Boolean) { prefs(context).edit().putBoolean(KEY_PULSAR_BEAT, on).apply() }
+    fun loadPulsarBeatEnabled(context: Context): Boolean = prefs(context).getBoolean(KEY_PULSAR_BEAT, true)
     private const val KEY_CPU_PERF_ENABLED = "cpu_perf_enabled"
     fun savePulsarEnabled(context: Context, on: Boolean) { prefs(context).edit().putBoolean(KEY_PULSAR_ENABLED, on).apply() }
     fun loadPulsarEnabled(context: Context): Boolean = prefs(context).getBoolean(KEY_PULSAR_ENABLED, true)

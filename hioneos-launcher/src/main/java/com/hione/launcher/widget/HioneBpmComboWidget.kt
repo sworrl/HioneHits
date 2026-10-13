@@ -64,7 +64,7 @@ class HioneBpmComboWidget : AppWidgetProvider() {
             )
             v.setTextColor(
                 R.id.widget_combo_live,
-                if (playing) Mascot.argb(0xFFFF4FA3.toInt()) else Mascot.argb(0xFF9FF3EC.toInt())
+                if (playing) Mascot.argb(0xFFFF4FA3.toInt()) else Mascot.argb(0xFFFFE0B0.toInt())
             )
 
             // ---- Tapper half (shared session store) ---------------------------------------

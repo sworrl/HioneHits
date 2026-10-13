@@ -53,6 +53,8 @@ object Routes {
 
             // ---- HioneOS: Theme & mascot (pack picker, holiday settings)
             "com.hione.settings.action.MASCOT" -> Dest.Page("mascot")
+            // ---- HioneOS: Home screen (where the launcher's status card sits, pull up, auto pop)
+            "com.hione.settings.action.HOME_LAYOUT" -> Dest.Page("home_layout")
 
             // ---- Network & internet
             Settings.ACTION_WIRELESS_SETTINGS, Settings.ACTION_AIRPLANE_MODE_SETTINGS,

@@ -108,9 +108,9 @@ fun HioneAnatomicalObservatoryModal(
     androidx.activity.compose.BackHandler(enabled = true) { onDismissRequest() }
 
     val green = Color(0xFF00FF7F)
-    val violet = Mascot.color(0xFFB388FF)
+    val violet = Mascot.color(0xFFB9C2D0)
     val gold = com.hione.launcher.ui.HioneIdentity.Gold
-    val nerveBlue = Mascot.color(0xFF00E5FF)
+    val nerveBlue = Mascot.color(0xFFFFC56B)
 
     Dialog(
         onDismissRequest = onDismissRequest,
@@ -326,7 +326,7 @@ fun HioneAnatomicalObservatoryModal(
                                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                                         MetricPill("GAIN", facts.dacGain, green)
                                         MetricPill("FILTER", facts.dacFilter, HioneCyan)
-                                        MetricPill("DRE", facts.dacDre, Mascot.color(0xFFFF4081))
+                                        MetricPill("DRE", facts.dacDre, Mascot.color(0xFF6FB0FF))
                                     }
                                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                                         MetricPill("MAIN OUTPUT", facts.audioOutput, violet)

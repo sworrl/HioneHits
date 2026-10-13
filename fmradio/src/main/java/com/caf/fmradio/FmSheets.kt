@@ -238,7 +238,7 @@ fun FmSettings(st: FmState) {
                 val sel = i == st.seekSensitivity
                 Box(
                     Modifier.weight(1f).clip(RoundedCornerShape(8.dp))
-                        .background(if (sel) HioneCyan else Color(0x2200E5FF))
+                        .background(if (sel) HioneCyan else Color(0x22FFC56B))
                         .border(1.dp, if (sel) HioneCyan else CyberGlassBorder, RoundedCornerShape(8.dp))
                         .clickable { FmRadioManager.setSeekSensitivity(i) }
                         .padding(vertical = 6.dp),
@@ -292,7 +292,7 @@ private fun SettingSwitch(title: String, detail: String, checked: Boolean, onCha
                 checkedThumbColor = Color.Black,
                 checkedTrackColor = HioneCyan,
                 uncheckedThumbColor = HioneTextSecondary,
-                uncheckedTrackColor = Color(0x2200E5FF),
+                uncheckedTrackColor = Color(0x22FFC56B),
             )
         )
     }

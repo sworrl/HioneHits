@@ -17,7 +17,11 @@ class BootSeedsReceiver : BroadcastReceiver() {
                 val pending = goAsync()
                 val app = context.applicationContext
                 Thread({
-                    try { BootSeeds.apply(app, intent.action!!.substringAfterLast('.')) } finally { pending.finish() }
+                    try {
+                        BootSeeds.apply(app, intent.action!!.substringAfterLast('.'))
+                        // Again here: an image with hione_led.rc switches the light off at boot_completed.
+                        LedReceiver.restore(app)
+                    } finally { pending.finish() }
                 }, "HioneBootSeeds").start()
             }
         }

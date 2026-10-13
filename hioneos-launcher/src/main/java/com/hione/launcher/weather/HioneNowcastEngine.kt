@@ -45,14 +45,32 @@ internal object WxHttp {
     fun json(url: String, timeoutMs: Int = 8000, headers: Map<String, String> = emptyMap()): JSONObject =
         JSONObject(String(bytes(url, timeoutMs, headers + ("Accept" to "application/json")), Charsets.UTF_8))
 
-    /** Decode a PNG/JPEG tile without premultiplying, so palette colours come back exact. */
-    fun bitmap(url: String, timeoutMs: Int = 6000): Bitmap? = runCatching {
+    /**
+     * Decode a PNG/JPEG tile. [forPixels] = not premultiplied, so radar palette colours read back
+     * exact through getPixels; such a bitmap must never be drawn (Canvas throws on it).
+     */
+    fun bitmap(url: String, timeoutMs: Int = 6000, forPixels: Boolean = false): Bitmap? = runCatching {
         val b = bytes(url, timeoutMs)
         BitmapFactory.decodeByteArray(b, 0, b.size, BitmapFactory.Options().apply {
             inPreferredConfig = Bitmap.Config.ARGB_8888
-            inPremultiplied = false
+            inPremultiplied = !forPixels
         })
     }.getOrNull()
+}
+
+/**
+ * Free, keyless dark basemap: Esri's Dark Gray Canvas (base + a labels layer drawn on top).
+ * CARTO's dark_all tiles started stamping "API KEY REQUIRED" on every tile in 2026.
+ */
+internal object WxTiles {
+    const val MAX_ZOOM = 16
+    const val ATTRIBUTION = "Map from Esri, HERE, Garmin and OpenStreetMap contributors."
+    /** The small on-map credits the providers ask for. */
+    const val MAP_CREDIT = "© OpenStreetMap contributors, Esri, HERE, Garmin"
+    const val RADAR_CREDIT = "Radar: RainViewer"
+    private const val ESRI = "https://server.arcgisonline.com/ArcGIS/rest/services/Canvas"
+    fun base(z: Int, x: Int, y: Int) = "$ESRI/World_Dark_Gray_Base/MapServer/tile/$z/$y/$x"
+    fun labels(z: Int, x: Int, y: Int) = "$ESRI/World_Dark_Gray_Reference/MapServer/tile/$z/$y/$x"
 }
 
 /**
@@ -102,7 +120,7 @@ object HioneNowcastEngine {
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     private val mutex = Mutex()
     /** Basemap tiles survive re-analysis; nine z7 tiles barely change. */
-    private val baseCache = LruCache<String, Bitmap>(18)
+    private val baseCache = LruCache<String, Bitmap>(36)
 
     /** Refresh when stale (or moved, or forced). Safe from UI; coalesces with a running one. */
     fun refresh(ctx: Context, lat: Double, lon: Double, force: Boolean = false) {
@@ -158,7 +176,7 @@ object HioneNowcastEngine {
                 var ok = 0
                 for (t in m.tiles) {
                     if (!t.valid) continue
-                    val bmp = WxHttp.bitmap(HioneNowcast.rainviewerTile(host, r.path, m.z, t.x, t.y, false)) ?: continue
+                    val bmp = WxHttp.bitmap(HioneNowcast.rainviewerTile(host, r.path, m.z, t.x, t.y, false), forPixels = true) ?: continue
                     val tile = if (bmp.width == HioneNowcast.TILE && bmp.height == HioneNowcast.TILE) bmp
                         else Bitmap.createScaledBitmap(bmp, HioneNowcast.TILE, HioneNowcast.TILE, false)
                     tile.getPixels(px, t.row * HioneNowcast.TILE * m.size + t.col * HioneNowcast.TILE, m.size, 0, 0, HioneNowcast.TILE, HioneNowcast.TILE)
@@ -210,7 +228,7 @@ object HioneNowcastEngine {
         _state.update { it.copy(busy = false, error = msg, status = msg) }
     }
 
-    /** Dark CARTO basemap (OpenStreetMap data), the same tiles the old radar tab used. */
+    /** Dark Esri basemap with its labels layer baked in (see [WxTiles]). */
     private fun buildBasemap(m: HioneNowcast.Mosaic): Bitmap? = runCatching {
         val out = Bitmap.createBitmap(m.size, m.size, Bitmap.Config.ARGB_8888)
         val c = Canvas(out)
@@ -218,10 +236,12 @@ object HioneNowcastEngine {
         var got = 0
         for (t in m.tiles) {
             if (!t.valid) continue
-            val url = "https://a.basemaps.cartocdn.com/dark_all/${m.z}/${t.x}/${t.y}.png"
-            val bmp = baseCache.get(url) ?: WxHttp.bitmap(url)?.also { baseCache.put(url, it) } ?: continue
-            c.drawBitmap(bmp, null, android.graphics.Rect(t.col * 256, t.row * 256, t.col * 256 + 256, t.row * 256 + 256), null)
-            got++
+            val dst = android.graphics.Rect(t.col * 256, t.row * 256, t.col * 256 + 256, t.row * 256 + 256)
+            for (url in listOf(WxTiles.base(m.z, t.x, t.y), WxTiles.labels(m.z, t.x, t.y))) {
+                val bmp = baseCache.get(url) ?: WxHttp.bitmap(url)?.also { baseCache.put(url, it) } ?: continue
+                c.drawBitmap(bmp, null, dst, null)
+                got++
+            }
         }
         if (got == 0) { out.recycle(); null } else out
     }.getOrNull()

@@ -154,26 +154,26 @@ private data class TapeTheme(
     val brandText: String = "${Mascot.musicAppName.uppercase()}",
     val brandSub: String = "STEREO CASSETTE TAPE",
     val brandFont: FontFamily = AudiowideFont,
-    val brandColor: Color = Mascot.color(0xFF39C5BB),
+    val brandColor: Color = Mascot.color(0xFFFFAB2E),
     val brandSubColor: Color = Mascot.color(0xFF9AECE6),
     val brandTexture: BrandTexture = BrandTexture.SCREENPRINT_NEON,
-    val accent: Color = Mascot.color(0xFF39C5BB),
+    val accent: Color = Mascot.color(0xFFFFAB2E),
     val wallAlpha: Float = 0.88f, val cavityAlpha: Float = 0.30f,
     val welded: Boolean = false,  // premium shells are screwed together; budget shells are melt-welded
     val motif39: Boolean = false  // the secret HIONE 39 shell's holographic "39" foil badge (drawHione39Badge)
 )
 private val TAPE_THEMES get() = listOf(
     TapeTheme("${Mascot.nameUpper} STUDIO",
-        shellHi = Color(0xFF262633), shellLo = Color(0xFF14141B), engrave = Mascot.color(0x5539C5BB),
+        shellHi = Color(0xFF262633), shellLo = Color(0xFF14141B), engrave = Mascot.color(0x55FFAB2E),
         bevelHi = Mascot.color(0xFF9AECE6), bevelLo = Color(0xFF0B0B10),
         hubHi = Mascot.color(0xFFF5FFFE), hubLo = Mascot.color(0xFF2FA39B), holes = Mascot.color(0xFF0F3D39), ink = Mascot.color(0xFFE8FBF8),
         layout = TapeLayout.STUDIO, plasticType = PlasticType.SMOKED_ACRYLIC,
         brandText = "${Mascot.nameUpper} STUDIO 90", brandSub = "TYPE II HIGH BIAS (CrO2) · 70µs EQ",
-        brandFont = AudiowideFont, brandColor = Mascot.color(0xFF39C5BB), brandSubColor = Mascot.color(0xFF9AECE6), brandTexture = BrandTexture.DEBOSSED_ENAMEL,
-        accent = Mascot.color(0xFF39C5BB), wallAlpha = 0.62f, cavityAlpha = 0.22f),
+        brandFont = AudiowideFont, brandColor = Mascot.color(0xFFFFAB2E), brandSubColor = Mascot.color(0xFF9AECE6), brandTexture = BrandTexture.DEBOSSED_ENAMEL,
+        accent = Mascot.color(0xFFFFAB2E), wallAlpha = 0.62f, cavityAlpha = 0.22f),
     TapeTheme("MEMOREX",
-        shellHi = Mascot.color(0xFF2A4A4E), shellLo = Mascot.color(0xFF0E2226), engrave = Mascot.color(0x5539C5BB),
-        bevelHi = Mascot.color(0xFF7FE6DE), bevelLo = Mascot.color(0xFF08181A),
+        shellHi = Mascot.color(0xFF2A4A4E), shellLo = Mascot.color(0xFF0E2226), engrave = Mascot.color(0x55FFAB2E),
+        bevelHi = Mascot.color(0xFFFFD08A), bevelLo = Mascot.color(0xFF08181A),
         hubHi = Color(0xFFFFDD3A), hubLo = Color(0xFFB38F00), holes = Color(0xFF3A2E00), ink = Mascot.color(0xFFE8FBF8),
         plasticType = PlasticType.CLEAR_POLYCARBONATE,
         brandText = "${Mascot.nameUpper} dBS-90", brandSub = "HIGH OUTPUT · LOW NOISE · WIDE DYNAMIC",
@@ -202,13 +202,13 @@ private val TAPE_THEMES get() = listOf(
         brandFont = OrbitronFont, brandColor = Color(0xFFFFD500), brandSubColor = Color(0xFFFFF066), brandTexture = BrandTexture.SCREENPRINT_NEON,
         accent = Color(0xFFFFD500), wallAlpha = 0.94f, cavityAlpha = 0.48f, welded = true),
     TapeTheme("NEON ${Mascot.nameUpper}",
-        shellHi = Color(0xFF1B1B20), shellLo = Color(0xFF0E0E12), engrave = Mascot.color(0x4439C5BB),
+        shellHi = Color(0xFF1B1B20), shellLo = Color(0xFF0E0E12), engrave = Mascot.color(0x44FFAB2E),
         bevelHi = Mascot.color(0xFF9AECE6), bevelLo = Color(0xFF060608),
-        hubHi = Mascot.color(0xFF39C5BB), hubLo = Mascot.color(0xFF1F8079), holes = Mascot.color(0xFF0A2C29), ink = Mascot.color(0xFF39C5BB),
+        hubHi = Mascot.color(0xFFFFAB2E), hubLo = Mascot.color(0xFF1F8079), holes = Mascot.color(0xFF0A2C29), ink = Mascot.color(0xFFFFAB2E),
         layout = TapeLayout.NEON, plasticType = PlasticType.MATTE_COMPOSITE,
         brandText = "${Mascot.nameUpper} CYBER DECK", brandSub = "VOCALOID01 · DIGITAL ACCELERATION",
-        brandFont = OrbitronFont, brandColor = Mascot.color(0xFF39C5BB), brandSubColor = Mascot.color(0xFF8CF0E8), brandTexture = BrandTexture.SCREENPRINT_NEON,
-        accent = Mascot.color(0xFF39C5BB), wallAlpha = 0.94f, cavityAlpha = 0.48f, welded = true),
+        brandFont = OrbitronFont, brandColor = Mascot.color(0xFFFFAB2E), brandSubColor = Mascot.color(0xFF8CF0E8), brandTexture = BrandTexture.SCREENPRINT_NEON,
+        accent = Mascot.color(0xFFFFAB2E), wallAlpha = 0.94f, cavityAlpha = 0.48f, welded = true),
     TapeTheme("EVERMORE",
         shellHi = Color(0xFFB3ADA4), shellLo = Color(0xFF8E887F), engrave = Color(0x333E3A35),
         bevelHi = Color(0xFFD8D3CA), bevelLo = Color(0xFF57524B),
@@ -1081,7 +1081,7 @@ fun TapeScreen(track: Track, player: ExoPlayer, onExit: () -> Unit) {
                                             .background(if (isSelected) Mascot.color(0xFF14403D) else Mascot.color(0xFF0F2B2E))
                                             .border(
                                                 width = if (isSelected) 1.5.dp else 0.5.dp,
-                                                color = if (isSelected) HioneTealBright else Mascot.color(0x2239C5BB),
+                                                color = if (isSelected) HioneTealBright else Mascot.color(0x22FFAB2E),
                                                 shape = androidx.compose.foundation.shape.RoundedCornerShape(8.dp)
                                             )
                                             .clickable(enabled = !isLocked) {
@@ -1236,7 +1236,7 @@ private fun DrawScope.drawStudioBackdrop(t: TapeTheme, light: Float, g: TapeGrad
         Brush.radialGradient(
             listOf(
                 lerp(Color(0xFF0B0F12), t.accent, 0.05f + 0.11f * q).copy(alpha = 0.85f),
-                lerp(Mascot.color(0xFF06090B), t.accent, 0.02f + 0.03f * q).copy(alpha = 0.92f),
+                lerp(Mascot.color(0xFF0B0C0E), t.accent, 0.02f + 0.03f * q).copy(alpha = 0.92f),
                 Color.Black
             ),
             center = keyC,
@@ -2812,7 +2812,7 @@ private fun MiniCassette(t: TapeTheme, modifier: Modifier = Modifier) {
 // The HIONE 39 badge's holographic foil. Built once: the overlay layer redraws with the moving key
 // light, and a Brush per frame would be garbage on every frame for a sheen that never changes.
 private val HIONE39_FOIL get() = Brush.linearGradient(
-    listOf(Mascot.color(0xFF39C5BB), Mascot.color(0xFFB9FFF6), Mascot.color(0xFFFFA6D6), Mascot.color(0xFFE12885), Mascot.color(0xFFB388FF), Mascot.color(0xFF39C5BB)),
+    listOf(Mascot.color(0xFFFFAB2E), Mascot.color(0xFFB9FFF6), Mascot.color(0xFFFFA6D6), Mascot.color(0xFFE12885), Mascot.color(0xFFB9C2D0), Mascot.color(0xFFFFAB2E)),
     start = Offset(66f, 34f), end = Offset(108f, 50f)
 )
 

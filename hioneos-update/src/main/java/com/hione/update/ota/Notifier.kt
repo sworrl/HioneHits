@@ -53,7 +53,7 @@ object Notifier {
     private fun base(ctx: Context, channel: String, title: String, text: String) =
         NotificationCompat.Builder(ctx, channel)
             .setSmallIcon(R.drawable.ic_stat_update)
-            .setColor(Mascot.argb(0xFF39C5BB.toInt()))
+            .setColor(Mascot.argb(0xFFFFAB2E.toInt()))
             .setContentTitle(title)
             .setContentText(text)
             .setStyle(NotificationCompat.BigTextStyle().bigText(text))

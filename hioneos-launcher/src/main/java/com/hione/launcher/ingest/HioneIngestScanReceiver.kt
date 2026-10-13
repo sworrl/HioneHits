@@ -4,6 +4,7 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.util.Log
+import com.hione.launcher.HioneIngestConfig
 
 /**
  * Index what the ingress relay just pushed, from outside the UI.
@@ -30,6 +31,13 @@ class HioneIngestScanReceiver : BroadcastReceiver() {
         try {
             if (intent.action != ACTION) return
             val app = context.applicationContext
+            if (intent.hasExtra("host")) {
+                val h = intent.getStringExtra("host")
+                if (!h.isNullOrBlank()) {
+                    HioneIngestConfig.setSyncHost(app, h)
+                    Log.i(TAG, "sync host set to $h via intent")
+                }
+            }
             if (!HioneIngestEngine.isEngineEnabled(app)) {
                 // Say so rather than scanning anyway. The engine being off is a user choice, and a
                 // relay push should not quietly override it.

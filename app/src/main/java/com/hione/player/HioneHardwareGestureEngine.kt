@@ -326,7 +326,7 @@ fun HioneHeartGestureHudOverlay(modifier: Modifier = Modifier) {
                         1.5.dp,
                         Brush.horizontalGradient(
                             if (toastState.isLiked) listOf(Mascot.color(0xFFFF2277), Mascot.color(0xFFFF88AA))
-                            else listOf(Mascot.color(0xFF39C5BB), Color(0x66FFFFFF))
+                            else listOf(Mascot.color(0xFFFFAB2E), Color(0x66FFFFFF))
                         ),
                         RoundedCornerShape(22.dp)
                     )
@@ -341,14 +341,14 @@ fun HioneHeartGestureHudOverlay(modifier: Modifier = Modifier) {
                             .size(38.dp)
                             .clip(CircleShape)
                             .background(
-                                if (toastState.isLiked) Mascot.color(0x33FF2277) else Mascot.color(0x2239C5BB)
+                                if (toastState.isLiked) Mascot.color(0x33FF2277) else Mascot.color(0x22FFAB2E)
                             ),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
                             imageVector = if (toastState.isLiked) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
                             contentDescription = "Favorite",
-                            tint = if (toastState.isLiked) Mascot.color(0xFFFF2277) else Mascot.color(0xFF39C5BB),
+                            tint = if (toastState.isLiked) Mascot.color(0xFFFF2277) else Mascot.color(0xFFFFAB2E),
                             modifier = Modifier.size(22.dp)
                         )
                     }
@@ -356,7 +356,7 @@ fun HioneHeartGestureHudOverlay(modifier: Modifier = Modifier) {
                     Column(modifier = Modifier.widthIn(max = 240.dp)) {
                         Text(
                             text = if (toastState.isLiked) "ADDED TO LIKED SONGS" else "REMOVED FROM LIKED SONGS",
-                            color = if (toastState.isLiked) Mascot.color(0xFFFF5599) else Mascot.color(0xFF9FF3EC),
+                            color = if (toastState.isLiked) Mascot.color(0xFFFF5599) else Mascot.color(0xFFFFE0B0),
                             fontSize = 9.sp,
                             fontWeight = FontWeight.Black,
                             fontFamily = AudiowideFont,

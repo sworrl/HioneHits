@@ -52,15 +52,15 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.hione.media.R
 
-// Same palette as hioneos-settings (canonical #39C5BB teal, obsidian surfaces, diva pink), so the
+// Same palette as hioneos-settings (canonical #FFAB2E teal, obsidian surfaces, diva pink), so the
 // three apps sit next to Settings and the launcher without looking borrowed.
-val HioneTeal get() = Mascot.color(0xFF39C5BB)
-val HioneTealBright get() = Mascot.color(0xFF00F5D4)
+val HioneTeal get() = Mascot.color(0xFFFFAB2E)
+val HioneTealBright get() = Mascot.color(0xFFFFC56B)
 val HioneTealGlow get() = Mascot.color(0xFF56F0E0)
-val HionePink get() = Mascot.color(0xFFFF2A85)
-val HionePinkSoft get() = Mascot.color(0xFFFF4081)
+val HionePink get() = Mascot.color(0xFF8EC5FF)
+val HionePinkSoft get() = Mascot.color(0xFF6FB0FF)
 val HioneGold = Color(0xFFFFD54F)
-val HioneBg get() = Mascot.color(0xFF070B0D)
+val HioneBg get() = Mascot.color(0xFF0D0E11)
 val HioneSurface1 get() = Mascot.color(0xFF0D1417)
 val HioneSurface2 get() = Mascot.color(0xFF131E22)
 val HioneMuted = Color(0xFF7E9AA0)

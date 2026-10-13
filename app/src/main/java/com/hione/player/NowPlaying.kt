@@ -212,6 +212,7 @@ fun NowPlayingScreen(
 
     // Viz is ALWAYS on while full Now Playing is open (the old 15s art→viz cross-fade is gone);
     // the manual button can still turn it off when auto-viz is disabled in settings.
+    val castState by com.hione.player.cast.HioneCastServer.state.collectAsState()
     var showViz by remember { mutableStateOf(true) }
     var currentPresetIndex by remember { mutableStateOf(PlayerPreferences.loadProjectMPreset(ctx)) }
     val presets = ProjectMPreset.entries
@@ -457,9 +458,9 @@ fun NowPlayingScreen(
                         .padding(horizontal = 18.dp, vertical = 9.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(Icons.Default.GraphicEq, null, tint = Mascot.color(0xFF04161A), modifier = Modifier.size(16.dp))
+                    Icon(Icons.Default.GraphicEq, null, tint = Mascot.color(0xFF121318), modifier = Modifier.size(16.dp))
                     Spacer(Modifier.width(8.dp))
-                    Text(presetToast, color = Mascot.color(0xFF04161A), fontSize = 13.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(presetToast, color = Mascot.color(0xFF121318), fontSize = 13.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
             }
 
@@ -630,7 +631,15 @@ fun NowPlayingScreen(
                     ),
                 contentAlignment = Alignment.Center
             ) {
-                if (showViz) {
+                if (castState.connected) {
+                    StreamingToTargetStage(
+                        targetName = castState.clientLabel.ifBlank { "Sony TV" },
+                        targetAddress = castState.clientAddress,
+                        track = track,
+                        accent = accent,
+                        accent2 = accent2
+                    )
+                } else if (showViz) {
                     StageVisualizer(
                         engine = effectiveEngine,
                         sessionId = player.audioSessionId,
@@ -654,8 +663,29 @@ fun NowPlayingScreen(
                     Icon(Icons.Default.Album, null, tint = accent.copy(alpha = .5f), modifier = Modifier.size(100.dp))
                 }
 
-                // Interactive Gestures on Stage (Visualizer or Album Art)
-                if (showViz) {
+                // Interactive Gestures on Stage (Visualizer or Album Art or Streaming Card)
+                if (castState.connected) {
+                    Box(
+                        Modifier.matchParentSize()
+                            .padding(horizontal = 32.dp)
+                            .edgeSafePointerInput(track.id) { guard ->
+                                detectHorizontalDragGesturesEdgeSafe(
+                                    guard,
+                                    onDragEnd = {
+                                        if (totalDragX < -60f) {
+                                            Haptics.tick(ctx)
+                                            player.seekToNextMediaItem()
+                                        } else if (totalDragX > 60f) {
+                                            Haptics.tick(ctx)
+                                            player.seekToPreviousMediaItem()
+                                        }
+                                        totalDragX = 0f
+                                    },
+                                    onDragCancel = { totalDragX = 0f }
+                                ) { change, amount -> change.consume(); totalDragX += amount }
+                            }
+                    )
+                } else if (showViz) {
                     Box(
                         Modifier.matchParentSize().pointerInput(effectiveEngine) {
                             detectTapGestures(
@@ -1004,7 +1034,7 @@ fun NowPlayingScreen(
             Column(
                 Modifier
                     .fillMaxSize()
-                    .background(Brush.verticalGradient(listOf(Mascot.color(0xFF0C2B2E), Mascot.color(0xFF04161A))))
+                    .background(Brush.verticalGradient(listOf(Mascot.color(0xFF0C2B2E), Mascot.color(0xFF121318))))
                     .padding(horizontal = 16.dp, vertical = 12.dp)
             ) {
                 // Header Row
@@ -1628,10 +1658,10 @@ fun TieredRainbowHeart(
                 drawContext.canvas.restore()
 
                 // Soft teal halo so the un-liked heart still reads as a heart against the
-                // dark card (the old #1B2F33-on-#040D12 deboss was near-invisible until tapped).
+                // dark card (the old #1B2F33-on-#0C0D10 deboss was near-invisible until tapped).
                 drawCircle(
                     brush = Brush.radialGradient(
-                        listOf(Mascot.color(0xFF39C5BB).copy(alpha = 0.22f), Color.Transparent),
+                        listOf(Mascot.color(0xFFFFAB2E).copy(alpha = 0.22f), Color.Transparent),
                         center = Offset(w * 0.5f, h * 0.48f),
                         radius = w * 0.72f
                     )
@@ -1656,7 +1686,7 @@ fun TieredRainbowHeart(
                 drawPath(p, bottomChamfer, style = Stroke(width = 2.0f))
 
                 // Crisp Hione-teal outline - the main visibility cue
-                drawPath(p, Mascot.color(0xFF39C5BB).copy(alpha = 0.95f), style = Stroke(width = 2.8f))
+                drawPath(p, Mascot.color(0xFFFFAB2E).copy(alpha = 0.95f), style = Stroke(width = 2.8f))
             }
         }
         // Cumulative heart-score badge — appears once a track has more than one heart (played
@@ -1779,3 +1809,145 @@ private fun fmtTime(ms: Long): String {
     val s = (ms / 1000).coerceAtLeast(0)
     return "${s / 60}:${(s % 60).toString().padStart(2, '0')}"
 }
+
+@Composable
+private fun StreamingToTargetStage(
+    targetName: String,
+    targetAddress: String,
+    track: Track,
+    accent: Color,
+    accent2: Color,
+    modifier: Modifier = Modifier
+) {
+    val infiniteTransition = rememberInfiniteTransition(label = "castPulse")
+    val pulseScale by infiniteTransition.animateFloat(
+        initialValue = 0.95f,
+        targetValue = 1.08f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1800, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "pulseScale"
+    )
+    val ringAlpha by infiniteTransition.animateFloat(
+        initialValue = 0.25f,
+        targetValue = 0.75f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1800, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "ringAlpha"
+    )
+
+    Box(
+        modifier = modifier
+            .fillMaxSize()
+            .background(
+                Brush.radialGradient(
+                    colors = listOf(
+                        accent.copy(alpha = 0.22f),
+                        Mascot.color(0xFF08181B)
+                    )
+                )
+            ),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
+            modifier = Modifier.padding(horizontal = 24.dp)
+        ) {
+            // Pulsing TV / Cast Icon Emblem
+            Box(
+                contentAlignment = Alignment.Center,
+                modifier = Modifier.size(96.dp)
+            ) {
+                // Expanding ripple ring
+                Box(
+                    modifier = Modifier
+                        .size(86.dp * pulseScale)
+                        .clip(CircleShape)
+                        .border(1.5.dp, accent.copy(alpha = ringAlpha * 0.6f), CircleShape)
+                )
+                // Middle glow circle
+                Box(
+                    modifier = Modifier
+                        .size(64.dp)
+                        .clip(CircleShape)
+                        .background(accent.copy(alpha = 0.15f))
+                        .border(1.5.dp, accent.copy(alpha = 0.85f), CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Tv,
+                        contentDescription = "Streaming to TV",
+                        tint = accent,
+                        modifier = Modifier.size(34.dp)
+                    )
+                }
+            }
+
+            Spacer(Modifier.height(14.dp))
+
+            // Subtitle
+            Text(
+                text = "STREAMING TO",
+                color = accent.copy(alpha = 0.85f),
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Bold,
+                letterSpacing = 2.5.sp
+            )
+
+            Spacer(Modifier.height(4.dp))
+
+            // TV / Target Name
+            Text(
+                text = targetName,
+                color = Color.White,
+                fontSize = 20.sp,
+                fontWeight = FontWeight.ExtraBold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+
+            if (targetAddress.isNotBlank()) {
+                Spacer(Modifier.height(2.dp))
+                Text(
+                    text = targetAddress,
+                    color = Color(0x99FFFFFF),
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Medium
+                )
+            }
+
+            Spacer(Modifier.height(14.dp))
+
+            // Bit-Perfect Lossless Telemetry Pill
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(Color(0x33000000))
+                    .border(1.dp, accent2.copy(alpha = 0.45f), RoundedCornerShape(12.dp))
+                    .padding(horizontal = 14.dp, vertical = 6.dp)
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(
+                        modifier = Modifier
+                            .size(7.dp)
+                            .clip(CircleShape)
+                            .background(Color(0xFF00FF88))
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        text = "BIT-PERFECT DIRECT LINK · 44.1 kHz",
+                        color = Color(0xFFD0F0EA),
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 0.8.sp
+                    )
+                }
+            }
+        }
+    }
+}
+

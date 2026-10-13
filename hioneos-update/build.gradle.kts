@@ -36,7 +36,7 @@ val copyOtaKeys = tasks.register<Copy>("copyOtaKeys") {
 // other apps by MascotPackProvider. Only what the apps read at run time: pack.json, art, the
 // character drawables, the recolored theme icons, the big launcher icon and the voice clips.
 // Popup frames and the boot video are image-only and stay out. So do source photos over 1 MB.
-val mascotPackIds = listOf("hione", "hione")
+val mascotPackIds = listOf("hione")
 val mascotAssetsDir = layout.buildDirectory.dir("generated/mascotPacks")
 val copyMascotPacks = tasks.register<Sync>("copyMascotPacks") {
     val packsDir = rootProject.file("../hioneos/mascot/packs")

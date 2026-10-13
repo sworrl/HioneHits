@@ -83,7 +83,7 @@ class HioneWeatherWidget : AppWidgetProvider() {
             // Severe conditions flip the temp readout red, matching the in-bar badge's urgency cue.
             v.setTextColor(
                 R.id.widget_weather_temp,
-                if (fresh && w.severeWarning != null) 0xFFFF5252.toInt() else Mascot.argb(0xFF39C5BB.toInt())
+                if (fresh && w.severeWarning != null) 0xFFFF5252.toInt() else Mascot.argb(0xFFFFAB2E.toInt())
             )
 
             renderAlertLine(ctx, v)

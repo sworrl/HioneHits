@@ -156,7 +156,7 @@ fun FnLockBespokeHioneModal(
         }
     }
 
-    val primaryColor = if (isLocked) HioneNeonPink else Mascot.color(0xFF00E5FF)
+    val primaryColor = if (isLocked) HioneNeonPink else Mascot.color(0xFFFFC56B)
     val secondaryColor = if (isLocked) Color(0xFFFF5252) else Mascot.color(0xFF00FFCC)
 
     val infiniteTransition = rememberInfiniteTransition(label = "LockGlowPulse")

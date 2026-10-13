@@ -23,7 +23,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="VOL 50%"
-        android:textColor="#39C5BB"
+        android:textColor="#FFAB2E"
         android:textSize="12sp"
         android:textStyle="bold"
         android:maxLines="1" />

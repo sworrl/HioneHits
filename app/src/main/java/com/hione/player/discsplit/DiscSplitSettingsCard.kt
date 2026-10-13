@@ -128,14 +128,14 @@ fun DiscSplitSettingsCard(ctx: Context) {
         Spacer(Modifier.height(10.dp))
         Row(verticalAlignment = Alignment.CenterVertically) {
             DiscActionChip(
-                label = "Re-check unmatched", icon = Icons.Default.Refresh, tint = HioneTealBright, fill = Mascot.color(0x2239C5BB),
+                label = "Re-check unmatched", icon = Icons.Default.Refresh, tint = HioneTealBright, fill = Mascot.color(0x22FFAB2E),
                 enabled = online
             ) {
                 val n = MusicBrainzSplitter.recheckUnmatched(ctx)
                 Toast.makeText(ctx, if (n == 0) "Nothing to re-check" else "Re-checking $n disc image${if (n == 1) "" else "s"}", Toast.LENGTH_SHORT).show()
             }
             Spacer(Modifier.width(8.dp))
-            DiscActionChip(label = "Reset all lookups", icon = Icons.Default.Delete, tint = HionePink, fill = Mascot.color(0x22FF5FA2), enabled = true) {
+            DiscActionChip(label = "Reset all lookups", icon = Icons.Default.Delete, tint = HionePink, fill = Mascot.color(0x228EC5FF), enabled = true) {
                 val n = MusicBrainzSplitter.resetAll(ctx)
                 Toast.makeText(ctx, "Forgot $n lookup${if (n == 1) "" else "s"}. Images re-split on the next refresh", Toast.LENGTH_SHORT).show()
             }

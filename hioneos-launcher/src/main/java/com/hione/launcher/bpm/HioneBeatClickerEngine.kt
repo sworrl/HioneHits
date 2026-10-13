@@ -152,11 +152,11 @@ object HioneBeatClickerEngine {
         val sheetTop: Long,
         val sheetBottom: Long
     ) {
-        SAKURA_DREAM("Sakura Dream", "🌸", 0xFFFF85B3, 0xFF39C5BB, 0xFFFFB5D5, "sakura_lattice",
+        SAKURA_DREAM("Sakura Dream", "🌸", 0xFFFF85B3, 0xFFFFAB2E, 0xFFFFB5D5, "sakura_lattice",
             NodeShape.ORB, AmbientStyle.PETALS, BurstStyle.PETAL_FALL, HitEffect.RING,
             false, 0f, "Round notes, petal lane, soft ring",
             LaneStyle.PETAL_STREAM, 0xF22A0E26, 0xFF12050F),
-        CYBER_MIRAI("Cyber Mirai", "🌟", 0xFF00E5FF, 0xFF9D4EDD, 0xFF7000FF, "hex_matrix",
+        CYBER_MIRAI("Cyber Mirai", "🌟", 0xFFFFC56B, 0xFF9D4EDD, 0xFF7000FF, "hex_matrix",
             NodeShape.HEX, AmbientStyle.HEX_RAIN, BurstStyle.SPARK_SHOT, HitEffect.SHARD,
             true, 1.5f, "Hex notes, neon grid lane, sparks",
             LaneStyle.NEON_GRID, 0xF2061826, 0xFF02060E),
@@ -168,12 +168,12 @@ object HioneBeatClickerEngine {
             NodeShape.STAR, AmbientStyle.DAMASK_VEIL, BurstStyle.RIBBON_SWIRL, HitEffect.VELVET_PULSE,
             true, 2.5f, "Star notes, lace lane, ribbons",
             LaneStyle.VELVET_LACE, 0xF2160410, 0xFF050105),
-        SNOW_CRYSTAL("Snow Crystal", "❄️", 0xFF7FE6DE, 0xFF48CAE4, 0xFFE0F7FA, "frost_shimmer",
+        SNOW_CRYSTAL("Snow Crystal", "❄️", 0xFFFFD08A, 0xFF48CAE4, 0xFFFFF3E0, "frost_shimmer",
             NodeShape.SNOWFLAKE, AmbientStyle.SNOW_DRIFT, BurstStyle.CRYSTAL_DRIFT, HitEffect.FROST_CRACK,
             true, 1.0f, "Snowflake notes, frost lane, ice cracks",
             LaneStyle.FROST_STREAK, 0xF20C2030, 0xFF040C14),
         // Secret skin: not in the selector at all until HioneSecrets.HOLO_SKIN is earned.
-        HOLOGRAM_39("Hologram 39", "", 0xFF39C5BB, 0xFFFF4FA3, 0xFFB8FFF9, "holo_scan",
+        HOLOGRAM_39("Hologram 39", "", 0xFFFFAB2E, 0xFFFF4FA3, 0xFFB8FFF9, "holo_scan",
             NodeShape.HEART, AmbientStyle.HOLO_GRID, BurstStyle.SPARK_SHOT, HitEffect.GLITCH,
             true, 3.0f, "Heart notes, scanline lane, glitchy hits",
             LaneStyle.HOLO_SCAN, 0xF2031A1C, 0xFF000608);
@@ -941,7 +941,7 @@ object HioneBeatClickerEngine {
             _totalEarned.value += DailyChallenge.REWARD_LEEKS
             if (_comboShields.value < MAX_COMBO_SHIELDS) _comboShields.value += 1
             pushFloatingText("Daily challenge done +${formatNumber(DailyChallenge.REWARD_LEEKS)}", isCrit = true)
-            HioneGameFx.pop("CHALLENGE DONE", 0xFF39C5BB, big = true)
+            HioneGameFx.pop("CHALLENGE DONE", 0xFFFFAB2E, big = true)
             HioneStagePerformance.say("daily challenge done. see you tomorrow? please?")
             com.hione.launcher.audio.HioneSeasonalAudioEngine.playLevelUpFanfare()
             saveState()

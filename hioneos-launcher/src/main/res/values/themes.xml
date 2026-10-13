@@ -23,12 +23,12 @@
         <item name="android:windowContentOverlay">@null</item>
         <item name="android:statusBarColor">@android:color/transparent</item>
         <item name="android:navigationBarColor">@android:color/transparent</item>
-        <item name="android:windowBackground">#040D12</item>
+        <item name="android:windowBackground">#0C0D10</item>
         <item name="android:windowIsTranslucent">false</item>
         <item name="android:windowDisablePreview">true</item>
         <item name="android:windowAnimationStyle">@style/HioneLockscreenCurtainAnim</item>
         <item name="android:windowSplashScreenAnimationDuration">0</item>
-        <item name="android:windowSplashScreenBackground">#040D12</item>
+        <item name="android:windowSplashScreenBackground">#0C0D10</item>
         <item name="android:windowSplashScreenAnimatedIcon">@android:color/transparent</item>
         <item name="android:windowDrawsSystemBarBackgrounds">true</item>
     </style>

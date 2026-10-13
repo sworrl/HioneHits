@@ -9,11 +9,11 @@
             <gradient android:type="linear"
                 android:startX="54" android:startY="0"
                 android:endX="54" android:endY="108"
-                android:startColor="#FF17474D" android:endColor="#FF0B1418" />
+                android:startColor="#FF17474D" android:endColor="#FF111216" />
         </aapt:attr>
     </path>
     <path
         android:pathData="M18,32h72M18,44h72M18,56h72M18,68h72M18,80h72"
-        android:strokeColor="#1439C5BB"
+        android:strokeColor="#14FFAB2E"
         android:strokeWidth="1" />
 </vector>

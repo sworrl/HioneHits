@@ -46,7 +46,7 @@ import kotlin.random.Random
 // instructions, so anything new goes beside it as small composables.
 
 private val Gold = Color(0xFFFFD166)
-private val Mint get() = Mascot.color(0xFF39C5BB)
+private val Mint get() = Mascot.color(0xFFFFAB2E)
 private val Muted = Color(0xFFD8B4E2)
 private val Pink get() = Mascot.color(0xFFFF3385)
 
@@ -125,8 +125,8 @@ fun HioneCelebrationOverlay(modifier: Modifier = Modifier) {
     }
     // Confetti, generated once per celebration (not per frame).
     val confetti = remember(item) {
-        val palette = if (item.secret) listOf(0xFF39C5BB, 0xFFFF4FA3, 0xFFB8FFF9, 0xFFFFD166)
-        else listOf(0xFFFFD166, 0xFFFF85B3, 0xFF39C5BB, 0xFFDFB8FF)
+        val palette = if (item.secret) listOf(0xFFFFAB2E, 0xFFFF4FA3, 0xFFB8FFF9, 0xFFFFD166)
+        else listOf(0xFFFFD166, 0xFFFF85B3, 0xFFFFAB2E, 0xFFDFB8FF)
         List(44) {
             floatArrayOf(
                 Random.nextFloat(),                       // x 0..1
@@ -229,7 +229,7 @@ fun BpmSecretMysteryCard() {
             .width(200.dp)
             .fillMaxHeight()
             .clip(RoundedCornerShape(14.dp))
-            .background(Brush.linearGradient(listOf(Mascot.color(0x5539C5BB), Mascot.color(0x55FF4FA3))))
+            .background(Brush.linearGradient(listOf(Mascot.color(0x55FFAB2E), Mascot.color(0x55FF4FA3))))
             .border(1.dp, Mint.copy(alpha = 0.8f), RoundedCornerShape(14.dp))
             .padding(6.dp)
     ) {
@@ -240,7 +240,7 @@ fun BpmSecretMysteryCard() {
             )
             Text(
                 hint?.let { "Clue: $it" } ?: "You found everything. ${Mascot.name} is impressed and a little scared.",
-                color = Mascot.color(0xFFE0F7FA), fontSize = 9.sp, lineHeight = 11.sp,
+                color = Mascot.color(0xFFFFF3E0), fontSize = 9.sp, lineHeight = 11.sp,
                 maxLines = 3, overflow = TextOverflow.Ellipsis
             )
             Text("$found of $total found. New clue every day.", color = Gold, fontSize = 8.5.sp, fontWeight = FontWeight.Bold, maxLines = 1)
@@ -272,7 +272,7 @@ fun BpmSecretCard(secret: HioneSecrets.Secret) {
                 if (openIntent != null) {
                     Text(
                         "OPEN",
-                        color = Mascot.color(0xFF04161A),
+                        color = Mascot.color(0xFF121318),
                         fontSize = 9.sp, fontWeight = FontWeight.Black,
                         modifier = Modifier
                             .clip(RoundedCornerShape(6.dp))
@@ -287,7 +287,7 @@ fun BpmSecretCard(secret: HioneSecrets.Secret) {
                 if (secret.toggleable) {
                     Text(
                         if (enabled) "ON" else "OFF",
-                        color = if (enabled) Mascot.color(0xFF04161A) else Muted,
+                        color = if (enabled) Mascot.color(0xFF121318) else Muted,
                         fontSize = 9.sp, fontWeight = FontWeight.Black,
                         modifier = Modifier
                             .clip(RoundedCornerShape(6.dp))

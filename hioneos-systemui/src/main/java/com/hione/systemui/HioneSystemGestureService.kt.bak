@@ -407,7 +407,7 @@ class HioneSystemGestureService : Service() {
             val pillWidth = (18f + progress * 22f) * density
             
             // Kawaii Hione Teal & Sakura Pink Gradient
-            val baseColor = if (isTriggered) Color.parseColor("#FF69B4") else Color.parseColor("#39C5BB")
+            val baseColor = if (isTriggered) Color.parseColor("#FF69B4") else Color.parseColor("#FFAB2E")
             paint.color = baseColor
             paint.alpha = (180 + (progress * 75)).toInt()
 

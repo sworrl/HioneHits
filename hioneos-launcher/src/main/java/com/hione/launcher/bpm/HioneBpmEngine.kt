@@ -41,7 +41,7 @@ object HioneBpmEngine {
         val bpm: Float = 0f,
         val beatIntervalMs: Long = 500L,
         val isPlaying: Boolean = false,
-        val dominantColor: Int = Mascot.argb(0xFF00E5FF.toInt()),
+        val dominantColor: Int = Mascot.argb(0xFFFFC56B.toInt()),
         val lastPulseEpochMs: Long = 0L
     )
 
@@ -186,7 +186,7 @@ object HioneBpmEngine {
             initBpm
         )
         val initPlaying = try { Settings.Global.getInt(cr, "hione_is_playing", 0) == 1 } catch (_: Throwable) { false }
-        val initColor = try { Settings.Global.getInt(cr, "hione_album_dominant_color", Mascot.argb(0xFF00E5FF.toInt())) } catch (_: Throwable) { Mascot.argb(0xFF00E5FF.toInt()) }
+        val initColor = try { Settings.Global.getInt(cr, "hione_album_dominant_color", Mascot.argb(0xFFFFC56B.toInt())) } catch (_: Throwable) { Mascot.argb(0xFFFFC56B.toInt()) }
 
         _state.value = BpmState(
             bpm = initBpm,

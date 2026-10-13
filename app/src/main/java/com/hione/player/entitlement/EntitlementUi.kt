@@ -99,7 +99,7 @@ fun HioneLicenseModal(onDismissRequest: () -> Unit) {
             .fillMaxWidth(0.96f)
             .fillMaxHeight(0.90f)
             .clip(RoundedCornerShape(24.dp))
-            .background(Brush.verticalGradient(listOf(Mascot.color(0xF0081C24), Mascot.color(0xF5040D12))))
+            .background(Brush.verticalGradient(listOf(Mascot.color(0xF0081C24), Mascot.color(0xF50C0D10))))
             .border(1.5.dp, Brush.horizontalGradient(listOf(Color(0xFFFFD740), HioneCyan)), RoundedCornerShape(24.dp)),
         title = null,
         text = {

@@ -42,7 +42,7 @@ fun QrCode(text: String, size: Dp = 168.dp) {
             val cell = this.size.width / n
             for (y in 0 until n) for (x in 0 until n) {
                 if (matrix[x, y]) {
-                    drawRect(Mascot.color(0xFF070B0D), topLeft = Offset(x * cell, y * cell), size = Size(cell + 0.5f, cell + 0.5f))
+                    drawRect(Mascot.color(0xFF0D0E11), topLeft = Offset(x * cell, y * cell), size = Size(cell + 0.5f, cell + 0.5f))
                 }
             }
         }

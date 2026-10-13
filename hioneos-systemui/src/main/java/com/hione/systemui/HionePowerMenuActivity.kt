@@ -397,8 +397,8 @@ fun HionePowerMenuScreen(
                         } else {
                             PowerPill(0, "LOCK", "Lock the screen now", Icons.Default.Lock, HioneTealBright) { executeAction("lock") }
                         }
-                        PowerPill(1, "REBOOT", "Restart", Icons.Default.RestartAlt, Mascot.color(0xFF00E5FF)) {
-                            pendingActionName = "REBOOT"; pendingActionCommand = "reboot"; pendingActionAccent = Mascot.color(0xFF00E5FF)
+                        PowerPill(1, "REBOOT", "Restart", Icons.Default.RestartAlt, Mascot.color(0xFFFFC56B)) {
+                            pendingActionName = "REBOOT"; pendingActionCommand = "reboot"; pendingActionAccent = Mascot.color(0xFFFFC56B)
                         }
                         PowerPill(2, "POWER OFF", "Turn off", Icons.Default.PowerSettingsNew, HionePinkBright) {
                             pendingActionName = "POWER OFF"; pendingActionCommand = "reboot -p"; pendingActionAccent = HionePinkBright

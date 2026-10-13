@@ -14,7 +14,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="WIFI ▮▮▮▯"
-        android:textColor="#39C5BB"
+        android:textColor="#FFAB2E"
         android:textSize="9sp"
         android:textStyle="bold"
         android:maxLines="1" />
@@ -26,7 +26,7 @@
         android:layout_marginStart="4dp"
         android:layout_marginEnd="4dp"
         android:text="/"
-        android:textColor="#5539C5BB"
+        android:textColor="#55FFAB2E"
         android:textSize="9sp"
         android:maxLines="1" />
 
@@ -35,7 +35,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="LTE ▮▮▯▯"
-        android:textColor="#9FF3EC"
+        android:textColor="#FFE0B0"
         android:textSize="9sp"
         android:textStyle="bold"
         android:maxLines="1" />

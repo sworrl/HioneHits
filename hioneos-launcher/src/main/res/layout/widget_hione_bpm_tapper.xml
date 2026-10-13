@@ -42,7 +42,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="TAP IN"
-            android:textColor="#9FF3EC"
+            android:textColor="#FFE0B0"
             android:textSize="8sp"
             android:maxLines="1" />
     </LinearLayout>

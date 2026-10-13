@@ -470,6 +470,10 @@ fun HioneLauncherScreen() {
     var quiltConfig by remember { mutableStateOf(HioneQuiltPrefs.loadConfig(ctx)) }
     var quiltOrder by remember { mutableStateOf(HioneQuiltPrefs.loadOrder(ctx, HioneQuiltBadgeIds)) }
     var isQuiltOptionsOpen by remember { mutableStateOf(false) }
+    // HioneDeck (ui/HioneDeck.kt): the card above can live in a pull-up sheet over the dock
+    // instead, so the whole wallpaper shows. Layout comes from Settings.Global hione_deck_mode.
+    val hioneDeck = com.hione.launcher.ui.rememberHioneDeckState()
+    val deckConfig by com.hione.launcher.ui.rememberHioneDeckConfig()
     var searchQuery by remember { mutableStateOf("") }
     var selectedCategory by remember { mutableStateOf("All") }
     var chibiReaction by remember { mutableStateOf("🎵") }
@@ -521,7 +525,8 @@ fun HioneLauncherScreen() {
         else if (isRecentsOpen) isRecentsOpen = false
         else if (isWallpaperPickerOpen) isWallpaperPickerOpen = false
         else {
-            // Bare launcher root: absorb back gesture completely
+            // Bare launcher root: put the pulled-up card away, else absorb the back gesture.
+            if (hioneDeck.shown && deckConfig.mode.hidesCard) hioneDeck.close()
         }
     }
 
@@ -567,6 +572,24 @@ fun HioneLauncherScreen() {
     remember { com.hione.launcher.holiday.HolidayState.start(ctx); true }
     val seasonalWallpaper = com.hione.launcher.holiday.HolidayState.homeBitmap.value
         ?.takeIf { currentWallpaperId in com.hione.launcher.holiday.HolidayState.DEFAULT_WALLPAPER_IDS }
+    // Focus points (holiday/WallpaperFocus): frame her face into the gap under the widget card.
+    val seasonalFocus = com.hione.launcher.holiday.HolidayState.homeFocus.value
+    val wallpaperFocusTable = com.hione.launcher.holiday.HolidayState.focusTable.value
+    val wallpaperPackId = Mascot.pack.id
+    // The pack's replacement of the picked drawable, only when the pack has a focus point for it.
+    // Everything else keeps the plain mascotPainter center crop.
+    val focusedPackWallpaper = remember(wallpaperPackId, currentWallpaperRes, wallpaperFocusTable) {
+        if (wallpaperPackId == "hione" || wallpaperFocusTable.isEmpty()) null
+        else runCatching {
+            val name = ctx.resources.getResourceEntryName(currentWallpaperRes)
+            val focus = com.hione.launcher.holiday.WallpaperFocus.lookup(wallpaperFocusTable, "drawable:$name")
+            val bmp = if (focus != null) Mascot.artFor(ctx, currentWallpaperRes) else null
+            if (focus != null && bmp != null) bmp.asImageBitmap() to focus else null
+        }.getOrNull()
+    }
+
+    // The face target follows the card: under it (top), in the open screen (pull-up), above it (pinned).
+    val deckWallTarget = com.hione.launcher.ui.HioneDeck.wallpaperTarget(deckConfig.mode)
 
     var isOnboardingOpen by remember {
         mutableStateOf(!prefs.getBoolean("hione_onboarding_completed", false))
@@ -996,11 +1019,20 @@ fun HioneLauncherScreen() {
                 contentScale = ContentScale.Crop
             )
         } else if (seasonalWallpaper != null) {
-            Image(
+            com.hione.launcher.holiday.FocusedWallpaper(
                 bitmap = seasonalWallpaper,
+                focus = seasonalFocus,
+                target = deckWallTarget,
                 contentDescription = "Wallpaper",
-                modifier = Modifier.fillMaxSize().graphicsLayer(),
-                contentScale = ContentScale.Crop
+                modifier = Modifier.fillMaxSize().graphicsLayer()
+            )
+        } else if (focusedPackWallpaper != null) {
+            com.hione.launcher.holiday.FocusedWallpaper(
+                bitmap = focusedPackWallpaper.first,
+                focus = focusedPackWallpaper.second,
+                target = deckWallTarget,
+                contentDescription = "Wallpaper",
+                modifier = Modifier.fillMaxSize().graphicsLayer()
             )
         } else {
             Image(
@@ -1019,9 +1051,9 @@ fun HioneLauncherScreen() {
                 .background(
                     Brush.verticalGradient(
                         listOf(
-                            Mascot.color(0x66040D12),
+                            Mascot.color(0x660C0D10),
                             Color(0x22000000),
-                            Mascot.color(0xCC040D12)
+                            Mascot.color(0xCC0C0D10)
                         )
                     )
                 )
@@ -1035,27 +1067,9 @@ fun HioneLauncherScreen() {
         HioneSecretHomeFx(isPlaying = isAudioPlaying, accent = npAccent.full)
 
         var rootDragY by remember { mutableFloatStateOf(0f) }
-        Column(
-            Modifier
-                .fillMaxSize()
-                .navigationBarsPadding()
-        ) {
-            // ============================================================
-            // TOP BAR — thin, standard-layout Android status bar (clock left, glyphs right).
-            // NOT a card. The 24dp strip above it belongs to the system gesture layer (shade pull).
-            // ============================================================
-            val statusBarState = com.hione.launcher.ui.rememberHioneStatusBarState(
-                clock = currentTime, isPlaying = isAudioPlaying, thermalC = cpuTempC
-            )
-            Box(Modifier.fillMaxWidth().graphicsLayer()) {
-                val trayApps = com.hione.launcher.ui.rememberNotificationTray()
-                com.hione.launcher.ui.HioneStatusBar(
-                    state = statusBarState,
-                    onClockClick = { launchClockApp(ctx) },
-                    notificationApps = trayApps,
-                    onOpenShade = { expandNotificationShade(ctx) }
-                )
-            }
+        // The card (hearts clock, chips, weather tile, controls row). One definition, placed by the
+        // HioneDeck layout: at the top, pinned above the dock, or in the pull-up sheet.
+        val hioneDeckCard: @Composable () -> Unit = {
             HioneLauncherQuiltSection(
                 currentTime = currentTime,
                 currentDate = currentDate,
@@ -1079,6 +1093,29 @@ fun HioneLauncherScreen() {
                 onOpenBattery = { isBatteryObservatoryOpen = true },
                 onOpenQuickSettings = { isCyberQuickSettingsOpen = true }
             )
+        }
+        Column(
+            Modifier
+                .fillMaxSize()
+                .navigationBarsPadding()
+        ) {
+            // ============================================================
+            // TOP BAR — thin, standard-layout Android status bar (clock left, glyphs right).
+            // NOT a card. The 24dp strip above it belongs to the system gesture layer (shade pull).
+            // ============================================================
+            val statusBarState = com.hione.launcher.ui.rememberHioneStatusBarState(
+                clock = currentTime, isPlaying = isAudioPlaying, thermalC = cpuTempC
+            )
+            Box(Modifier.fillMaxWidth().graphicsLayer()) {
+                val trayApps = com.hione.launcher.ui.rememberNotificationTray()
+                com.hione.launcher.ui.HioneStatusBar(
+                    state = statusBarState,
+                    onClockClick = { launchClockApp(ctx) },
+                    notificationApps = trayApps,
+                    onOpenShade = { expandNotificationShade(ctx) }
+                )
+            }
+            if (deckConfig.mode == com.hione.launcher.ui.HioneDeckMode.TOP) hioneDeckCard()
 
             // ============================================================
             // PAGINATED DESKTOP WORKSPACE
@@ -1133,6 +1170,7 @@ fun HioneLauncherScreen() {
 
 
 
+            com.hione.launcher.ui.HioneDeckDockSlot(hioneDeck, deckConfig.mode, hioneDeckCard)
             HioneLauncherDivaDock(
                 hasActiveAudioOutput = hasActiveAudioOutput,
                 isAudioPlaying = isAudioPlaying,
@@ -1144,6 +1182,15 @@ fun HioneLauncherScreen() {
             // Clearance for the OS-wide gesture pill strip (24dp) + breathing room
             Spacer(Modifier.height(28.dp))
         }
+
+        // The pull-up sheet (pull-up layouts only). Over the workspace, never over the dock.
+        com.hione.launcher.ui.HioneDeckOverlay(
+            state = hioneDeck,
+            config = deckConfig,
+            drawerOpen = { drawerSheet.progress.value > 0.02f },
+            onOpenDrawer = { isAllAppsOpen = true },
+            content = hioneDeckCard
+        )
 
         HioneLauncherShadeAndWallpaperModals(
             isCyberQuickSettingsOpen = isCyberQuickSettingsOpen,
@@ -1337,7 +1384,7 @@ fun HardwareWidgetsPage(
         Box(
             Modifier
                 .fillMaxSize()
-                .background(Mascot.color(0xCC040D12))
+                .background(Mascot.color(0xCC0C0D10))
         )
 
         Column(
@@ -1703,7 +1750,7 @@ fun CyberRecentsOverview(
             if (tasks.isNotEmpty()) {
                 Button(
                     onClick = onClearAll,
-                    colors = ButtonDefaults.buttonColors(containerColor = Mascot.color(0x33FF4081)),
+                    colors = ButtonDefaults.buttonColors(containerColor = Mascot.color(0x336FB0FF)),
                     border = BorderStroke(1.dp, HioneNeonPink),
                     shape = RoundedCornerShape(16.dp),
                     modifier = Modifier.height(42.dp)
@@ -1764,7 +1811,7 @@ fun CyberAppContextDialog(
                         onTogglePinDesktop()
                         onDismiss()
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = Mascot.color(0x3300E5FF)),
+                    colors = ButtonDefaults.buttonColors(containerColor = Mascot.color(0x33FFC56B)),
                     border = BorderStroke(1.dp, HioneCyan.copy(alpha = 0.8f)),
                     shape = RoundedCornerShape(12.dp),
                     modifier = Modifier.fillMaxWidth().height(42.dp)
@@ -1788,7 +1835,7 @@ fun CyberAppContextDialog(
                     modifier = Modifier.fillMaxWidth().height(42.dp)
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Default.Info, contentDescription = null, tint = Mascot.color(0xFF00E5FF), modifier = Modifier.size(16.dp))
+                        Icon(Icons.Default.Info, contentDescription = null, tint = Mascot.color(0xFFFFC56B), modifier = Modifier.size(16.dp))
                         Spacer(Modifier.width(8.dp))
                         Text("App Details", color = Color.White, fontSize = 11.5.sp, fontFamily = AudiowideFont)
                     }
@@ -1902,7 +1949,7 @@ fun CyberDesktopContextMenuModal(
                             onDismiss()
                             onWallpaperAndStyle()
                         },
-                        colors = ButtonDefaults.buttonColors(containerColor = Mascot.color(0x2200E5FF)),
+                        colors = ButtonDefaults.buttonColors(containerColor = Mascot.color(0x22FFC56B)),
                         border = BorderStroke(1.dp, HioneCyan.copy(alpha = 0.7f)),
                         shape = RoundedCornerShape(12.dp),
                         modifier = Modifier.fillMaxWidth().height(42.dp)
@@ -1921,12 +1968,12 @@ fun CyberDesktopContextMenuModal(
                             onWidgets()
                         },
                         colors = ButtonDefaults.buttonColors(containerColor = Color(0x227C4DFF)),
-                        border = BorderStroke(1.dp, Mascot.color(0xFFB388FF).copy(alpha = 0.7f)),
+                        border = BorderStroke(1.dp, Mascot.color(0xFFB9C2D0).copy(alpha = 0.7f)),
                         shape = RoundedCornerShape(12.dp),
                         modifier = Modifier.fillMaxWidth().height(42.dp)
                     ) {
                         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Default.Widgets, contentDescription = null, tint = Mascot.color(0xFFB388FF), modifier = Modifier.size(18.dp))
+                            Icon(Icons.Default.Widgets, contentDescription = null, tint = Mascot.color(0xFFB9C2D0), modifier = Modifier.size(18.dp))
                             Spacer(Modifier.width(10.dp))
                             Text("Widgets", color = Color.White, fontSize = 11.5.sp, fontFamily = AudiowideFont)
                         }
@@ -1938,7 +1985,7 @@ fun CyberDesktopContextMenuModal(
                             onDismiss()
                             onHomeSettings()
                         },
-                        colors = ButtonDefaults.buttonColors(containerColor = Mascot.color(0x22FF4081)),
+                        colors = ButtonDefaults.buttonColors(containerColor = Mascot.color(0x226FB0FF)),
                         border = BorderStroke(1.dp, HioneNeonPink.copy(alpha = 0.7f)),
                         shape = RoundedCornerShape(12.dp),
                         modifier = Modifier.fillMaxWidth().height(42.dp)
@@ -2002,9 +2049,9 @@ fun CyberAllAppsDrawer(
                 .background(
                     Brush.verticalGradient(
                         listOf(
-                            Mascot.color(0x66040D12),
-                            Mascot.color(0x33040D12),
-                            Mascot.color(0x88040D12)
+                            Mascot.color(0x660C0D10),
+                            Mascot.color(0x330C0D10),
+                            Mascot.color(0x880C0D10)
                         )
                     )
                 )
@@ -2250,7 +2297,7 @@ fun DesktopAppIconItem(
                 .size(HioneDimens.appIconArt)
                 .then(if (isBpmGame) Modifier.hioneBeatPulse(Mascot.color(0xFFFF4FA3), corner = 16.dp, insideCover = true) else Modifier)
                 .clip(RoundedCornerShape(16.dp))
-                .background(Mascot.color(0x1A00E5FF))
+                .background(Mascot.color(0x1AFFC56B))
                 .border(0.8.dp, CyberGlassBorder, RoundedCornerShape(16.dp)),
             contentAlignment = Alignment.Center
         ) {
@@ -2917,7 +2964,7 @@ fun HioneCyberWeatherGpsBadge(
 
     val rimColor = when {
         isThunder -> Color(0xFFE040FB)
-        isRain -> Mascot.color(0xFF00E5FF)
+        isRain -> Mascot.color(0xFFFFC56B)
         isSnow -> Color(0xFF80D8FF)
         isNight -> Color(0xFF7C4DFF)
         isCloudy -> Color(0xFF40C4FF)
@@ -2967,7 +3014,7 @@ fun HioneCyberWeatherGpsBadge(
                             strokeWidth = 1.5f
                         )
                         drawLine(
-                            color = Mascot.color(0xFF00E5FF),
+                            color = Mascot.color(0xFFFFC56B),
                             start = Offset(w * 0.52f, h * 0.55f),
                             end = Offset(w * 0.48f, h),
                             strokeWidth = 1.2f
@@ -2980,7 +3027,7 @@ fun HioneCyberWeatherGpsBadge(
                         val rx = (idx * 27f + weatherAnimPhase * 40f) % w
                         val ry = (idx * 13f + weatherAnimPhase * h * 2.2f) % h
                         drawLine(
-                            color = Mascot.color(0x6600E5FF),
+                            color = Mascot.color(0x66FFC56B),
                             start = Offset(rx, ry),
                             end = Offset(rx - 4f, ry + 7f),
                             strokeWidth = 1.1f
@@ -3091,7 +3138,7 @@ fun HioneCyberWeatherGpsBadge(
                     ) {
                         Text("▲${weather.highTempF.toInt()}°", color = Color(0xFFFF5252), fontSize = 11.sp, fontWeight = FontWeight.Bold)
                         Spacer(Modifier.width(3.dp))
-                        Text("▼${weather.lowTempF.toInt()}°", color = Mascot.color(0xFF00E5FF), fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        Text("▼${weather.lowTempF.toInt()}°", color = Mascot.color(0xFFFFC56B), fontSize = 11.sp, fontWeight = FontWeight.Bold)
                     }
                 }
 
@@ -3567,7 +3614,7 @@ fun HioneThermalBadge(
         maxTemp >= 55f -> com.hione.launcher.ui.HioneIdentity.Coral // Hot / Throttle Warning: Red
         maxTemp >= 45f -> Color(0xFFFF9100) // Warm: Amber Orange
         maxTemp >= 38f -> com.hione.launcher.ui.HioneIdentity.Gold // Nominal Warm: Gold
-        maxTemp >= 30f -> Mascot.color(0xFF00E5FF) // Cool Nominal: Cyan
+        maxTemp >= 30f -> Mascot.color(0xFFFFC56B) // Cool Nominal: Cyan
         else -> com.hione.launcher.ui.HioneIdentity.Leek           // Low Ambient: Mint Green
     }
 
@@ -3619,8 +3666,8 @@ fun HioneBpmEngineBadge(
     val bpmColor = when {
         !isPlaying || liveBpm == 0 -> Color(0xFF8BA6A9)
         liveBpm >= 150 -> com.hione.launcher.ui.HioneIdentity.Coral // Hardcore / Fast: Red
-        liveBpm >= 126 -> Mascot.color(0xFFFF4081) // Diva / Vocaloid Dance: Pink
-        liveBpm >= 100 -> Mascot.color(0xFF00E5FF) // Pop / Groove: Cyan
+        liveBpm >= 126 -> Mascot.color(0xFF6FB0FF) // Diva / Vocaloid Dance: Pink
+        liveBpm >= 100 -> Mascot.color(0xFFFFC56B) // Pop / Groove: Cyan
         else -> Color(0xFF00FF7F)           // Lo-Fi / Chill: Mint Green
     }
 
@@ -3669,7 +3716,7 @@ fun HioneQuantumBatteryBadge(
     val batteryColor = when {
         !batteryKnown -> HioneTextSecondary
         isCharging -> com.hione.launcher.ui.HioneIdentity.Leek
-        batteryPct > 50 -> Mascot.color(0xFF00E5FF)
+        batteryPct > 50 -> Mascot.color(0xFFFFC56B)
         batteryPct > 20 -> com.hione.launcher.ui.HioneIdentity.Gold
         else -> com.hione.launcher.ui.HioneIdentity.Coral
     }
@@ -3866,7 +3913,7 @@ fun HioneNowPlayingBadge(
         liveBpm >= 100 -> HioneCyan
         else -> Color(0xFF00FF7F)
     }
-    val bandColors = listOf(Color(0xFF00FF7F), HioneCyan, Mascot.color(0xFF7FE6DE), HioneNeonPink, com.hione.launcher.ui.HioneIdentity.Coral)
+    val bandColors = listOf(Color(0xFF00FF7F), HioneCyan, Mascot.color(0xFFFFD08A), HioneNeonPink, com.hione.launcher.ui.HioneIdentity.Coral)
     val nBars = bandColors.size
     val interval = beatIntervalMs.coerceIn(250L, 1500L).toInt()
 
@@ -3969,7 +4016,7 @@ fun Cyber3dEmbossedPill(
                         Brush.linearGradient(
                             listOf(
                                 borderColor.copy(alpha = shimmerAlpha),
-                                Mascot.color(0x2200E5FF),
+                                Mascot.color(0x22FFC56B),
                                 borderColor.copy(alpha = shimmerAlpha * 0.8f)
                             )
                         )
@@ -4232,14 +4279,14 @@ fun CyberPlasmaGlowClock(
             // Layer 1: Ambient Floating Cyber Particles & Stardust Canvas
             val particles = remember {
                 listOf(
-                    Triple(0.12f, 0.25f, Mascot.color(0xFF00E5FF)),
+                    Triple(0.12f, 0.25f, Mascot.color(0xFFFFC56B)),
                     Triple(0.28f, 0.65f, Mascot.color(0xFFFF007F)),
                     Triple(0.45f, 0.15f, Mascot.color(0xFF00FFCC)),
                     Triple(0.58f, 0.80f, Color(0xFFFFFFFF)),
-                    Triple(0.72f, 0.35f, Mascot.color(0xFF00E5FF)),
+                    Triple(0.72f, 0.35f, Mascot.color(0xFFFFC56B)),
                     Triple(0.85f, 0.70f, Mascot.color(0xFFFF007F)),
                     Triple(0.92f, 0.20f, com.hione.launcher.ui.HioneIdentity.Leek),
-                    Triple(0.38f, 0.90f, Mascot.color(0xFF00E5FF)),
+                    Triple(0.38f, 0.90f, Mascot.color(0xFFFFC56B)),
                     Triple(0.65f, 0.45f, com.hione.launcher.ui.HioneIdentity.Gold)
                 )
             }
@@ -4429,7 +4476,7 @@ fun CyberPlasmaGlowClock(
                     )
                     Text(
                         text = dateParts[2],
-                        color = Mascot.color(0xFFB388FF).copy(alpha = glowAlpha * 0.7f),
+                        color = Mascot.color(0xFFB9C2D0).copy(alpha = glowAlpha * 0.7f),
                         fontSize = 13.5.sp,
                         fontWeight = FontWeight.Black,
                         fontFamily = AudiowideFont,
@@ -4513,7 +4560,7 @@ fun CyberPlasmaGlowClock(
                     modifier = Modifier.height(11.dp)
                 ) {
                     Box(Modifier.width(2.dp).height((11 * bar1).dp).clip(RoundedCornerShape(0.5.dp)).background(Brush.verticalGradient(listOf(HioneCyan, Mascot.color(0xFF00FFCC)))))
-                    Box(Modifier.width(2.dp).height((11 * bar2).dp).clip(RoundedCornerShape(0.5.dp)).background(Brush.verticalGradient(listOf(HioneNeonPink, Mascot.color(0xFFFF4081)))))
+                    Box(Modifier.width(2.dp).height((11 * bar2).dp).clip(RoundedCornerShape(0.5.dp)).background(Brush.verticalGradient(listOf(HioneNeonPink, Mascot.color(0xFF6FB0FF)))))
                     Box(Modifier.width(2.dp).height((11 * bar3).dp).clip(RoundedCornerShape(0.5.dp)).background(Brush.verticalGradient(listOf(Color(0xFF00FF7F), com.hione.launcher.ui.HioneIdentity.Leek))))
                     Box(Modifier.width(2.dp).height((11 * bar4).dp).clip(RoundedCornerShape(0.5.dp)).background(Brush.verticalGradient(listOf(HioneCyan, Color(0xFF00B0FF)))))
                     Box(Modifier.width(2.dp).height((11 * bar5).dp).clip(RoundedCornerShape(0.5.dp)).background(Brush.verticalGradient(listOf(HioneNeonPink, Mascot.color(0xFFFF007F)))))
@@ -4543,7 +4590,7 @@ fun CyberNotificationShadeModal(
     Box(
         Modifier
             .fillMaxSize()
-            .background(Mascot.color(0xE6040D12))
+            .background(Mascot.color(0xE60C0D10))
             .clickable { onClose() }
     ) {
         // High-Tech Cyber Glass Container (Safe screen inset with smooth corners)
@@ -4655,7 +4702,7 @@ fun CyberNotificationShadeModal(
                             modifier = Modifier
                                 .size(32.dp)
                                 .clip(CircleShape)
-                                .background(Mascot.color(0x3300E5FF))
+                                .background(Mascot.color(0x33FFC56B))
                                 .border(1.dp, HioneCyan, CircleShape)
                         ) {
                             Icon(Icons.Default.Settings, contentDescription = "Settings", tint = HioneCyan, modifier = Modifier.size(16.dp))
@@ -4731,7 +4778,7 @@ fun CyberQuickTile(
                         Brush.linearGradient(
                             if (isActive) listOf(
                                 accentColor.copy(alpha = 0.95f),
-                                Mascot.color(0xFFB388FF).copy(alpha = 0.6f),
+                                Mascot.color(0xFFB9C2D0).copy(alpha = 0.6f),
                                 accentColor.copy(alpha = 0.8f)
                             )
                             else listOf(
@@ -5007,7 +5054,7 @@ private fun CyberShadeSliderSection() {
             Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Icon(Icons.Default.VolumeUp, contentDescription = null, tint = Mascot.color(0xFFB388FF), modifier = Modifier.size(18.dp))
+            Icon(Icons.Default.VolumeUp, contentDescription = null, tint = Mascot.color(0xFFB9C2D0), modifier = Modifier.size(18.dp))
             Spacer(Modifier.width(8.dp))
             Slider(
                 value = streamVol.toFloat(),
@@ -5019,14 +5066,14 @@ private fun CyberShadeSliderSection() {
                 },
                 valueRange = 0f..maxVol.toFloat(),
                 colors = SliderDefaults.colors(
-                    thumbColor = Mascot.color(0xFFB388FF),
+                    thumbColor = Mascot.color(0xFFB9C2D0),
                     activeTrackColor = Color(0xFF7C4DFF),
                     inactiveTrackColor = Color(0xFF140D26)
                 ),
                 modifier = Modifier.weight(1f)
             )
             Spacer(Modifier.width(6.dp))
-            Text("${((streamVol.toFloat() / maxVol.toFloat()) * 100).toInt()}%", color = Mascot.color(0xFFB388FF), fontSize = 11.sp, fontFamily = AudiowideFont)
+            Text("${((streamVol.toFloat() / maxVol.toFloat()) * 100).toInt()}%", color = Mascot.color(0xFFB9C2D0), fontSize = 11.sp, fontFamily = AudiowideFont)
         }
     }
 }
@@ -5418,7 +5465,7 @@ private fun CyberShadeFooterSection(onClose: () -> Unit) {
         Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(16.dp))
-            .background(Mascot.color(0x3300E5FF))
+            .background(Mascot.color(0x33FFC56B))
             .border(1.dp, HioneCyan, RoundedCornerShape(16.dp))
             .padding(10.dp)
     ) {
@@ -5464,7 +5511,7 @@ private fun CyberShadeFooterSection(onClose: () -> Unit) {
                     Runtime.getRuntime().exec(arrayOf("su", "-c", "reboot")).waitFor()
                 }
             },
-            colors = ButtonDefaults.buttonColors(containerColor = Mascot.color(0x3300E5FF)),
+            colors = ButtonDefaults.buttonColors(containerColor = Mascot.color(0x33FFC56B)),
             border = BorderStroke(1.dp, HioneCyan),
             shape = RoundedCornerShape(12.dp),
             modifier = Modifier.weight(1f).height(42.dp)
@@ -5478,7 +5525,7 @@ private fun CyberShadeFooterSection(onClose: () -> Unit) {
                     Runtime.getRuntime().exec(arrayOf("su", "-c", "reboot -p")).waitFor()
                 }
             },
-            colors = ButtonDefaults.buttonColors(containerColor = Mascot.color(0x33FF4081)),
+            colors = ButtonDefaults.buttonColors(containerColor = Mascot.color(0x336FB0FF)),
             border = BorderStroke(1.dp, HioneNeonPink),
             shape = RoundedCornerShape(12.dp),
             modifier = Modifier.weight(1f).height(42.dp)
@@ -5623,7 +5670,7 @@ private fun HioneLauncherQuiltSection(
             ) {
                 Box(Modifier.size(5.5.dp).clip(CircleShape).background(Color(0xFF7C4DFF)))
                 Spacer(Modifier.width(3.5.dp))
-                Text("CS43198", color = Mascot.color(0xFFB388FF), fontSize = 11.5.sp, fontWeight = FontWeight.Black, fontFamily = AudiowideFont, maxLines = 1)
+                Text("CS43198", color = Mascot.color(0xFFB9C2D0), fontSize = 11.5.sp, fontWeight = FontWeight.Black, fontFamily = AudiowideFont, maxLines = 1)
             }
         },
         QuiltBadge("ingest", "Network sync") {
@@ -5658,7 +5705,7 @@ private fun HioneLauncherQuiltSection(
                 CyberBespokeBadge(
                     onClick = onOpenQuickSettings,
                     accentColor = HioneCyan,
-                    gradient = listOf(Mascot.color(0x3300E5FF), Mascot.color(0xFF041015)),
+                    gradient = listOf(Mascot.color(0x33FFC56B), Mascot.color(0xFF041015)),
                     shape = IngressStreamShape
                 ) {
                     Icon(Icons.Default.Tune, contentDescription = "${Mascot.osName} control", tint = HioneCyan, modifier = Modifier.size(14.dp))
@@ -5758,12 +5805,12 @@ private fun HioneLauncherDivaDock(
 
     val rainbowStops = remember {
         listOf(
-            Mascot.color(0xFF00E5FF), // Cyan
+            Mascot.color(0xFFFFC56B), // Cyan
             Color(0xFF00FF88), // Mint
             com.hione.launcher.ui.HioneIdentity.Gold, // Gold
-            Mascot.color(0xFFFF4081), // Pink
-            Mascot.color(0xFFB388FF), // Purple
-            Mascot.color(0xFF00E5FF)  // Cyan
+            Mascot.color(0xFF6FB0FF), // Pink
+            Mascot.color(0xFFB9C2D0), // Purple
+            Mascot.color(0xFFFFC56B)  // Cyan
         )
     }
 
@@ -5870,7 +5917,7 @@ private fun HioneLauncherDivaDock(
             )
         }
         }
-        // HIONE PEARL: the Hione Music anchor, larger than the dock icons and protruding above the
+        // MIKU PEARL: the Hione Music anchor, larger than the dock icons and protruding above the
         // bar's top edge (drawn after the tray, so it is above it in z-order). Magic-lamp launch.
             val hioneMusicInteraction = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
             Box(
@@ -5907,7 +5954,7 @@ private fun HioneLauncherDivaDock(
                             Brush.radialGradient(
                                 listOf(
                                     if (isBpmAudioPlaying) Color(bpmState.dominantColor).copy(alpha = bpmAuraAlpha) else npAccent.full.copy(alpha = 0.20f),
-                                    Mascot.color(0xFFB388FF).copy(alpha = if (isBpmAudioPlaying) 0.25f else 0.08f),
+                                    Mascot.color(0xFFB9C2D0).copy(alpha = if (isBpmAudioPlaying) 0.25f else 0.08f),
                                     Color.Transparent
                                 )
                             ),
@@ -5915,7 +5962,7 @@ private fun HioneLauncherDivaDock(
                         ),
                     contentAlignment = Alignment.Center
                 ) {
-                    // GOLDEN HIONE MUSIC (a BPM-game secret): gold art and a gold ring on the pearl.
+                    // GOLDEN MIKU MUSIC (a BPM-game secret): gold art and a gold ring on the pearl.
                     val golden = rememberUnlockEnabled(com.hione.launcher.bpm.HioneSecrets.GOLDEN_ICON)
                     Box(
                         Modifier
@@ -6324,7 +6371,7 @@ private fun BoxScope.HioneLauncherObservatoryModals(
 ) {
     val ctx = LocalContext.current
     // ============================================================
-    // VERBOSE HIONE MONITOR, BRAIN & OBSERVATORY MODALS
+    // VERBOSE MIKU MONITOR, BRAIN & OBSERVATORY MODALS
     // ============================================================
     if (isQuiltOptionsOpen) {
         com.hione.launcher.ui.HioneQuiltOptionsDialog(
@@ -6353,9 +6400,14 @@ private fun BoxScope.HioneLauncherObservatoryModals(
                 }
             },
             onHomeSettings = {
-                val intent = ctx.packageManager.getLaunchIntentForPackage("com.hione.settings")?.apply {
-                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                }
+                // HioneSettings > Home screen (card layout and pop up). Older HioneSettings builds
+                // without that page get their main screen, as before.
+                val page = Intent("com.hione.settings.action.HOME_LAYOUT").setPackage("com.hione.settings")
+                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                val intent = page.takeIf { it.resolveActivity(ctx.packageManager) != null }
+                    ?: ctx.packageManager.getLaunchIntentForPackage("com.hione.settings")?.apply {
+                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    }
                 if (intent != null) ctx.startActivity(intent, HioneCompositing.optionsFor(ctx, HioneTransitionEvent.SETTINGS))
             },
             onDismiss = onCloseDesktopContextMenu
@@ -6464,7 +6516,7 @@ private fun BoxScope.HioneLauncherObservatoryModals(
         label = "verColor"
     )
     // ============================================================
-    // HIONEOS BESPOKE 4-STEP FAST-BOOT ONBOARDING WIZARD MODAL
+    // MIKUOS BESPOKE 4-STEP FAST-BOOT ONBOARDING WIZARD MODAL
     // ============================================================
     if (isOnboardingOpen) {
         com.hione.launcher.onboarding.HioneOnboardingWizardModal(

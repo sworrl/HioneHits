@@ -215,12 +215,12 @@ fun SongIdCard(state: FmSongId.State, onHistory: () -> Unit, modifier: Modifier 
                 if (state.phase == FmSongId.Phase.LISTENING) {
                     LinearProgressIndicator(
                         progress = { (state.bufferedSeconds / SONG_MIN_SECONDS.toFloat()).coerceIn(0f, 1f) },
-                        color = HionePink, trackColor = Color(0x33FF5FA2),
+                        color = HionePink, trackColor = Color(0x338EC5FF),
                         modifier = Modifier.fillMaxWidth().height(4.dp).clip(RoundedCornerShape(2.dp)),
                     )
                 } else {
                     LinearProgressIndicator(
-                        color = HioneTeal, trackColor = Color(0x3339C5BB),
+                        color = HioneTeal, trackColor = Color(0x33FFAB2E),
                         modifier = Modifier.fillMaxWidth().height(4.dp).clip(RoundedCornerShape(2.dp)),
                     )
                 }

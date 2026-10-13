@@ -1,222 +1,287 @@
 package com.hione.tv
 
 import android.os.Bundle
+import android.view.KeyEvent
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
-/**
- * The TV side of the cast.
- *
- * Layout is for a ten-foot view: large type, generous padding inside the overscan margin, and
- * every control reachable with a D-pad because a TV remote has no pointer.
- *
- * The format line is the point of this screen as much as the transport is. It shows what the
- * M500 sent AND what this TV's AudioTrack actually granted, side by side, because the two differ
- * on plenty of sets: many resample everything to 48kHz no matter what an app asks for, and some
- * clamp optical output below what the panel claims. Printing the source rate alone would be a
- * confident lie about the signal reaching the THX system.
- */
+enum class TvViewMode(val title: String) {
+    HITS_UI("Hits 4K"),
+    CASSETTE("Cassette"),
+    VISUALIZER("Visualizer")
+}
+
 class HioneTvActivity : ComponentActivity() {
 
     private lateinit var client: HioneCastClient
+    private var currentMode by mutableStateOf(TvViewMode.HITS_UI)
+    private var themeIndex by mutableIntStateOf(0)
+    private var presetIndex by mutableIntStateOf(0)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        // A cast session is a watch session: nothing here should time out the screen.
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
 
         client = HioneCastClient(applicationContext)
         client.start()
 
-        setContent { CastScreen(client) }
+        setContent {
+            TvRootScreen(
+                client = client,
+                mode = currentMode,
+                themeIndex = themeIndex,
+                presetIndex = presetIndex,
+                lastUserActionTime = lastUserActionTime.longValue,
+                onSelectMode = { currentMode = it },
+                onCycleTheme = { themeIndex = (themeIndex + 1) % REAL_TAPE_THEMES.size },
+                onCyclePreset = { delta ->
+                    val size = VisualizerPreset.entries.size
+                    presetIndex = (presetIndex + delta + size) % size
+                }
+            )
+        }
     }
 
     override fun onDestroy() {
         super.onDestroy()
         client.stop()
     }
+
+    private val lastUserActionTime = mutableLongStateOf(System.currentTimeMillis())
+
+    override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        if (event.action == KeyEvent.ACTION_DOWN) {
+            lastUserActionTime.longValue = System.currentTimeMillis()
+            when (event.keyCode) {
+                KeyEvent.KEYCODE_BACK -> {
+                    if (currentMode != TvViewMode.HITS_UI) {
+                        currentMode = TvViewMode.HITS_UI
+                        return true
+                    }
+                }
+                KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE -> { client.send("playpause"); return true }
+                KeyEvent.KEYCODE_MEDIA_PLAY -> { client.send("play"); return true }
+                KeyEvent.KEYCODE_MEDIA_PAUSE -> { client.send("pause"); return true }
+                KeyEvent.KEYCODE_MEDIA_NEXT -> { client.send("next"); return true }
+                KeyEvent.KEYCODE_MEDIA_PREVIOUS -> { client.send("prev"); return true }
+                KeyEvent.KEYCODE_MEDIA_FAST_FORWARD, KeyEvent.KEYCODE_MEDIA_STEP_FORWARD -> { client.send("forward"); return true }
+                KeyEvent.KEYCODE_MEDIA_REWIND, KeyEvent.KEYCODE_MEDIA_STEP_BACKWARD -> { client.send("rewind"); return true }
+            }
+        }
+        return super.dispatchKeyEvent(event)
+    }
 }
 
-private val Bg = Color(0xFF04100F)
-private val Cyan = Color(0xFF39C5BB)
-private val Pink = Color(0xFFFF5FA2)
-private val Muted = Color(0xFF8FA3A8)
-private val Warn = Color(0xFFFFB020)
-
 @Composable
-private fun CastScreen(client: HioneCastClient) {
-    val s by client.state.collectAsStateWithLifecycle()
+fun TvRootScreen(
+    client: HioneCastClient,
+    mode: TvViewMode,
+    themeIndex: Int,
+    presetIndex: Int,
+    lastUserActionTime: Long,
+    onSelectMode: (TvViewMode) -> Unit,
+    onCycleTheme: () -> Unit,
+    onCyclePreset: (Int) -> Unit
+) {
+    val state by client.state.collectAsStateWithLifecycle()
+    val visuals by client.visuals.collectAsStateWithLifecycle()
+
+    val infinitePulse = rememberInfiniteTransition(label = "beaconPulse")
+    val beaconAlpha by infinitePulse.animateFloat(
+        initialValue = 0.4f,
+        targetValue = 1.0f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1200, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "beaconAlpha"
+    )
 
     Box(
-        Modifier
+        modifier = Modifier
             .fillMaxSize()
-            .background(Bg)
-            // TV overscan: a 5% inset keeps everything on screen on sets that still crop.
-            .padding(horizontal = 48.dp, vertical = 27.dp),
+            .background(Color(0xFF040E10))
     ) {
-        Column(Modifier.fillMaxSize()) {
+        if (state.needsCode) {
+            PairDialog(error = state.pairError, onPair = { client.pairWith(it) })
+            return@Box
+        }
 
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(
-                    Modifier
-                        .size(14.dp)
-                        .clip(CircleShape)
-                        .background(if (s.connected) Cyan else Muted)
-                )
-                Spacer(Modifier.width(12.dp))
-                Text(
-                    if (s.connected) "HIONE CAST  ·  ${s.host}" else "HIONE CAST",
-                    color = Cyan, fontSize = 20.sp, fontWeight = FontWeight.Bold
-                )
-            }
-
-            Spacer(Modifier.height(28.dp))
-
-            if (s.needsCode) {
-                PairPanel(s.pairError) { client.pairWith(it) }
-                return@Column
-            }
-
-            Text(
-                s.title.ifBlank { if (s.connected) "Waiting for audio" else s.status },
-                color = Color.White, fontSize = 44.sp, fontWeight = FontWeight.Bold, maxLines = 2
-            )
-            if (s.artist.isNotBlank()) {
-                Spacer(Modifier.height(6.dp))
-                Text(s.artist, color = Pink, fontSize = 26.sp, maxLines = 1)
-            }
-            if (s.album.isNotBlank()) {
-                Text(s.album, color = Muted, fontSize = 18.sp, maxLines = 1)
-            }
-
-            Spacer(Modifier.height(32.dp))
-
-            // ---- the honest format block ----
-            val src = s.source
-            if (src.sampleRate > 0) {
-                Column(
-                    Modifier
-                        .clip(RoundedCornerShape(10.dp))
-                        .background(Color(0x14FFFFFF))
-                        .padding(18.dp)
+        Column(modifier = Modifier.fillMaxSize()) {
+            // Unified Top Navigation Bar (Hidden in Fullscreen Visualizer mode for edge-to-edge view)
+            if (mode != TvViewMode.VISUALIZER) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(start = 48.dp, end = 48.dp, top = 24.dp, bottom = 8.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("FROM THE M500", color = Muted, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                    Text(
-                        "${src.sampleRate} Hz  ·  ${src.bytesPerSample * 8}-bit  ·  ${src.channelCount} ch",
-                        color = Color.White, fontSize = 22.sp
-                    )
-                    Spacer(Modifier.height(10.dp))
-                    Text("THIS TV ACTUALLY ACCEPTED", color = Muted, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                    Text(
-                        if (s.grantedRate > 0) "${s.grantedRate} Hz  ·  ${s.grantedEncodingLabel}"
-                        else "nothing yet",
-                        color = if (s.passthroughExact) Cyan else Warn, fontSize = 22.sp
-                    )
-                    Spacer(Modifier.height(8.dp))
-                    Text(
-                        if (s.passthroughExact)
-                            "Bit-perfect to the TV. What leaves the optical port is the set's business."
-                        else
-                            "The TV changed the format, so this is no longer the file's own samples.",
-                        color = if (s.passthroughExact) Muted else Warn, fontSize = 14.sp
-                    )
+                    // Left Brand & Telemetry Badge
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(
+                            modifier = Modifier
+                                .size(12.dp)
+                                .clip(CircleShape)
+                                .background(
+                                    (if (state.connected) Color(0xFF00FF88) else Color(0xFFFF3366))
+                                        .copy(alpha = beaconAlpha)
+                                )
+                        )
+                        Spacer(Modifier.width(12.dp))
+                        Text(
+                            text = "HIONE HITS 4K",
+                            color = HioneOrange,
+                            fontSize = 17.sp,
+                            fontWeight = FontWeight.ExtraBold,
+                            fontFamily = AudiowideFont,
+                            letterSpacing = 1.sp
+                        )
+                        Spacer(Modifier.width(16.dp))
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(Color(0x18FFFFFF))
+                                .border(1.dp, Color(0x22FFFFFF), RoundedCornerShape(8.dp))
+                                .padding(horizontal = 10.dp, vertical = 4.dp)
+                        ) {
+                            Text(
+                                text = if (state.connected) "LINKED TO ${state.host}" else "STANDBY BEACON",
+                                color = if (state.connected) Color(0xFF00FF88) else HioneOrange,
+                                fontSize = 12.sp,
+                                fontFamily = OrbitronFont,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                        Spacer(Modifier.width(10.dp))
+                        Text(
+                            text = "TV: ${state.tvIp}:8796",
+                            color = HioneMuted,
+                            fontSize = 12.sp,
+                            fontFamily = OrbitronFont
+                        )
+                    }
+
+                    // Right Focusable View Mode Tabs
+                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        TvViewMode.entries.forEach { m ->
+                            TvModeTab(
+                                title = m.title,
+                                selected = m == mode,
+                                onClick = { onSelectMode(m) }
+                            )
+                        }
+                    }
                 }
             }
 
-            Spacer(Modifier.height(20.dp))
-            Text(s.status, color = Muted, fontSize = 15.sp)
-            if (s.skips > 0) {
-                Text(
-                    "${s.skips} resync${if (s.skips == 1L) "" else "s"} after network stalls",
-                    color = Warn, fontSize = 14.sp
-                )
+            // Main Content Area
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth()
+            ) {
+                when (mode) {
+                    TvViewMode.HITS_UI -> {
+                        HitsView(
+                            client = client,
+                            state = state,
+                            visuals = visuals,
+                            onCommand = { client.send(it) },
+                            onSwitchMode = onSelectMode
+                        )
+                    }
+                    TvViewMode.CASSETTE -> {
+                        RealCassetteView(
+                            client = client,
+                            state = state,
+                            rms = visuals.rms,
+                            selectedThemeIndex = themeIndex,
+                            onCycleTheme = onCycleTheme,
+                            onCommand = { client.send(it) },
+                            onBackToHits = { onSelectMode(TvViewMode.HITS_UI) }
+                        )
+                    }
+                    TvViewMode.VISUALIZER -> {
+                        VisualizerView(
+                            client = client,
+                            state = state,
+                            visuals = visuals,
+                            presetIndex = presetIndex,
+                            lastUserActionTime = lastUserActionTime,
+                            onCommand = { client.send(it) },
+                            onCyclePreset = onCyclePreset,
+                            onBackToHits = { onSelectMode(TvViewMode.HITS_UI) }
+                        )
+                    }
+                }
             }
-            if (s.lastError.isNotBlank()) {
-                Text(s.lastError, color = Warn, fontSize = 13.sp, maxLines = 2)
-            }
+        }
+    }
+}
 
-            Spacer(Modifier.weight(1f))
-
-            Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                TvButton("Previous") { client.send("prev") }
-                TvButton("Play / Pause") { client.send("playpause") }
-                TvButton("Next") { client.send("next") }
-            }
-
+@Composable
+fun PairDialog(error: String, onPair: (String) -> Unit) {
+    var code by remember { mutableStateOf("") }
+    Box(
+        modifier = Modifier.fillMaxSize().padding(48.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            modifier = Modifier
+                .clip(RoundedCornerShape(20.dp))
+                .background(Color(0xFF0A181C))
+                .padding(36.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text("Link with M500 DAP", color = Color.White, fontSize = 32.sp, fontWeight = FontWeight.Bold, fontFamily = AudiowideFont)
             Spacer(Modifier.height(10.dp))
             Text(
-                "projectM on this screen is not wired up yet. See docs/12_tv_companion_design.md.",
-                color = Muted, fontSize = 12.sp
+                "On the M500, turn on 'Cast to a TV' under Settings. Enter the 6-digit code shown.",
+                color = Color(0xFF8FA3A8),
+                fontSize = 16.sp
             )
+            Spacer(Modifier.height(24.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                OutlinedTextField(
+                    value = code,
+                    onValueChange = { v -> code = v.filter { it.isDigit() }.take(6) },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
+                    textStyle = androidx.compose.ui.text.TextStyle(color = Color.White, fontSize = 28.sp),
+                    modifier = Modifier.width(240.dp)
+                )
+                Spacer(Modifier.width(16.dp))
+                TvFocusableButton(
+                    onClick = { if (code.length == 6) onPair(code) },
+                    label = "Link Device",
+                    primary = true,
+                    height = 54.dp
+                )
+            }
+            if (error.isNotBlank()) {
+                Spacer(Modifier.height(14.dp))
+                Text(error, color = Color(0xFFFFB020), fontSize = 15.sp)
+            }
         }
-    }
-}
-
-/** First connect to an M500: type the code it shows under Settings, Wi-Fi Remote, Cast to a TV. */
-@Composable
-private fun PairPanel(error: String, onPair: (String) -> Unit) {
-    var code by remember { mutableStateOf("") }
-    Column {
-        Text("Pair with the M500", color = Color.White, fontSize = 36.sp, fontWeight = FontWeight.Bold)
-        Spacer(Modifier.height(10.dp))
-        Text(
-            "On the M500, open Hione Music Settings, Wi-Fi Remote, and turn on Cast to a TV. Type the 6-digit TV code it shows.",
-            color = Muted, fontSize = 18.sp
-        )
-        Spacer(Modifier.height(20.dp))
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            OutlinedTextField(
-                value = code,
-                onValueChange = { v -> code = v.filter { it.isDigit() }.take(6) },
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
-                textStyle = androidx.compose.ui.text.TextStyle(color = Color.White, fontSize = 28.sp),
-                modifier = Modifier.width(260.dp)
-            )
-            Spacer(Modifier.width(16.dp))
-            TvButton("Pair") { if (code.length == 6) onPair(code) }
-        }
-        if (error.isNotBlank()) {
-            Spacer(Modifier.height(12.dp))
-            Text(error, color = Warn, fontSize = 16.sp)
-        }
-    }
-}
-
-/** Large hit area and a visible focus ring, because this is driven by a D-pad and not a finger. */
-@Composable
-private fun TvButton(label: String, onClick: () -> Unit) {
-    Button(
-        onClick = onClick,
-        shape = RoundedCornerShape(10.dp),
-        colors = ButtonDefaults.buttonColors(containerColor = Color(0x2239C5BB), contentColor = Color.White),
-        modifier = Modifier.height(56.dp)
-    ) {
-        Text(label, fontSize = 18.sp, modifier = Modifier.padding(horizontal = 14.dp))
     }
 }

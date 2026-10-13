@@ -224,6 +224,12 @@ object HioneWeatherTileEngine {
             if (key.isNotBlank()) {
                 try {
                     val w = HioneWeatherTileSources.fetchWindy(loc.lat, loc.lon, key)
+                    // A key on Windy's free testing plan answers with a "warning" and shuffled
+                    // numbers. Those never replace the real forecast: keep Open-Meteo and say why.
+                    if (!w.warning.isNullOrBlank()) {
+                        notes.add("Windy point key is on the testing plan (shuffled data), used Open-Meteo")
+                        throw WindyTestingPlan()
+                    }
                     val om = snap
                     val hourly = w.hourly.map { h -> h.copy(isDay = om.isDayAt(h.epochMs)) }
                     val current = w.current.copy(
@@ -236,6 +242,8 @@ object HioneWeatherTileEngine {
                         if (!w.warning.isNullOrBlank()) append(" Windy: ${w.warning}")
                     }
                     snap = om.copy(current = current, hourly = hourly, source = "Windy·GFS", sourceDetail = detail)
+                } catch (_: WindyTestingPlan) {
+                    Log.i(TAG, "Windy point key is on the testing plan, keeping Open-Meteo")
                 } catch (t: Throwable) {
                     Log.w(TAG, "Windy failed: ${t.message}")
                     notes.add("Windy failed (${t.message ?: "error"}), used Open-Meteo")
@@ -368,3 +376,6 @@ object HioneWeatherTileEngine {
         return String.format(Locale.US, "%.3f, %.3f", lat, lon)
     }
 }
+
+/** Thrown inside the Windy step when the point key is on the free testing plan. */
+private class WindyTestingPlan : Exception()

@@ -245,7 +245,7 @@ fun ScrobbleSettingsCard(ctx: Context) {
                     ) {
                         Text(
                             if (loading) "Finishing…" else "I approved it — finish",
-                            color = Mascot.color(0xFF04161A), fontSize = 13.sp, fontWeight = FontWeight.Bold
+                            color = Mascot.color(0xFF121318), fontSize = 13.sp, fontWeight = FontWeight.Bold
                         )
                     }
                 }

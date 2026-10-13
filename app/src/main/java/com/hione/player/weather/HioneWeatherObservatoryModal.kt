@@ -79,7 +79,7 @@ fun HioneWeatherObservatoryModal(
     Box(
         Modifier
             .fillMaxSize()
-            .background(Mascot.color(0xEB040D12))
+            .background(Mascot.color(0xEB0C0D10))
             .clickable { onDismissRequest() }
             .swipeUpFromBottomToDismiss(onDismiss = onDismissRequest)
     ) {
@@ -155,7 +155,7 @@ fun HioneWeatherObservatoryModal(
                                 Modifier
                                     .size(34.dp)
                                     .clip(CutCornerShape(8.dp))
-                                    .background(Mascot.color(0x3300E5FF))
+                                    .background(Mascot.color(0x33FFC56B))
                                     .border(1.dp, HioneCyan, CutCornerShape(8.dp)),
                                 contentAlignment = Alignment.Center
                             ) {
@@ -251,7 +251,7 @@ fun HioneWeatherObservatoryModal(
                                     Modifier
                                         .fillMaxWidth()
                                         .clip(CutCornerShape(4.dp))
-                                        .background(Mascot.color(0x2200E5FF))
+                                        .background(Mascot.color(0x22FFC56B))
                                         .padding(horizontal = 6.dp, vertical = 2.dp),
                                     horizontalArrangement = Arrangement.SpaceBetween,
                                     verticalAlignment = Alignment.CenterVertically
@@ -282,7 +282,7 @@ fun HioneWeatherObservatoryModal(
                                         .background(
                                             Brush.verticalGradient(
                                                 listOf(
-                                                    Mascot.color(0x4400E5FF),
+                                                    Mascot.color(0x44FFC56B),
                                                     Mascot.color(0x22041D28),
                                                     Mascot.color(0xFF031016)
                                                 )
@@ -291,7 +291,7 @@ fun HioneWeatherObservatoryModal(
                                         .border(
                                             BorderStroke(
                                                 1.dp,
-                                                Brush.linearGradient(listOf(HioneCyan, Mascot.color(0x3300E5FF), HioneNeonPink))
+                                                Brush.linearGradient(listOf(HioneCyan, Mascot.color(0x33FFC56B), HioneNeonPink))
                                             ),
                                             CutCornerShape(12.dp)
                                         )
@@ -341,7 +341,7 @@ fun HioneWeatherObservatoryModal(
                                                 Modifier
                                                     .size(48.dp)
                                                     .clip(CircleShape)
-                                                    .background(Mascot.color(0x3300E5FF))
+                                                    .background(Mascot.color(0x33FFC56B))
                                                     .border(1.2.dp, HioneCyan, CircleShape),
                                                 contentAlignment = Alignment.Center
                                             ) {
@@ -353,7 +353,7 @@ fun HioneWeatherObservatoryModal(
                                             Spacer(Modifier.height(2.dp))
                                             Text(
                                                 text = "${weather.moonPhase.phaseName}",
-                                                color = Mascot.color(0xFF80DEEA),
+                                                color = Mascot.color(0xFFFFD59A),
                                                 fontSize = 7.5.sp,
                                                 fontWeight = FontWeight.Bold,
                                                 fontFamily = AudiowideFont
@@ -399,7 +399,7 @@ fun HioneWeatherObservatoryModal(
                                             )
                                             Text(
                                                 text = if (weather.isDay) "DAYTIME" else "NIGHT",
-                                                color = if (weather.isDay) Color(0xFFFFD600) else Mascot.color(0xFF80DEEA),
+                                                color = if (weather.isDay) Color(0xFFFFD600) else Mascot.color(0xFFFFD59A),
                                                 fontSize = 7.5.sp,
                                                 fontWeight = FontWeight.Black,
                                                 fontFamily = AudiowideFont
@@ -528,7 +528,7 @@ fun HioneWeatherObservatoryModal(
                                                 Modifier
                                                     .width(78.dp)
                                                     .clip(CutCornerShape(8.dp))
-                                                    .background(Mascot.color(0x3300E5FF))
+                                                    .background(Mascot.color(0x33FFC56B))
                                                     .border(1.dp, HioneCyan.copy(alpha = 0.5f), CutCornerShape(8.dp))
                                                     .padding(6.dp),
                                                 contentAlignment = Alignment.Center
@@ -584,7 +584,7 @@ fun TabButton(
         modifier = modifier
             .height(30.dp)
             .clip(RoundedCornerShape(6.dp))
-            .background(if (isSelected) Mascot.color(0x4400E5FF) else Mascot.color(0x1104121A))
+            .background(if (isSelected) Mascot.color(0x44FFC56B) else Mascot.color(0x1104121A))
             .border(
                 1.dp,
                 if (isSelected) HioneCyan else CyberGlassBorder.copy(alpha = 0.4f),
@@ -607,7 +607,7 @@ fun getWeatherTempColor(tempF: Int): Color {
     return when {
         tempF < 32 -> Color(0xFF7C4DFF) // Freezing (Deep Purple)
         tempF < 50 -> Color(0xFF2979FF) // Cold (Sky Blue)
-        tempF < 65 -> Mascot.color(0xFF00E5FF) // Cool (Cyan)
+        tempF < 65 -> Mascot.color(0xFFFFC56B) // Cool (Cyan)
         tempF < 75 -> Color(0xFF00E676) // Mild (Green)
         tempF < 85 -> Color(0xFFFFD600) // Warm (Electric Yellow)
         tempF < 95 -> Color(0xFFFF6D00) // Hot (Orange)
@@ -736,7 +736,7 @@ fun WeatherMetricBadge(
     Box(
         modifier = modifier
             .clip(CutCornerShape(8.dp))
-            .background(Mascot.color(0x3300E5FF))
+            .background(Mascot.color(0x33FFC56B))
             .border(1.dp, color.copy(alpha = 0.45f), CutCornerShape(8.dp))
             .padding(8.dp)
     ) {
@@ -922,7 +922,7 @@ fun HioneLiveDopplerRadarTab(
                 Box(
                     Modifier
                         .clip(CutCornerShape(4.dp))
-                        .background(Mascot.color(0x3300E5FF))
+                        .background(Mascot.color(0x33FFC56B))
                         .border(1.dp, HioneCyan, CutCornerShape(4.dp))
                         .padding(horizontal = 6.dp, vertical = 2.dp)
                 ) {
@@ -1069,7 +1069,7 @@ fun HioneLiveDopplerRadarTab(
         ) {
             Button(
                 onClick = { isPlaying = !isPlaying },
-                colors = ButtonDefaults.buttonColors(containerColor = Mascot.color(0x3300E5FF)),
+                colors = ButtonDefaults.buttonColors(containerColor = Mascot.color(0x33FFC56B)),
                 border = BorderStroke(1.dp, HioneCyan),
                 shape = RoundedCornerShape(6.dp),
                 contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
@@ -1091,7 +1091,7 @@ fun HioneLiveDopplerRadarTab(
                     colors = SliderDefaults.colors(
                         thumbColor = HioneCyan,
                         activeTrackColor = HioneCyan,
-                        inactiveTrackColor = Mascot.color(0x3300E5FF)
+                        inactiveTrackColor = Mascot.color(0x33FFC56B)
                     )
                 )
             }
@@ -1124,7 +1124,7 @@ fun HioneLiveDopplerRadarTab(
                     .background(
                         Brush.horizontalGradient(
                             listOf(
-                                Mascot.color(0xFF00E5FF),
+                                Mascot.color(0xFFFFC56B),
                                 Color(0xFF00E676),
                                 Color(0xFFFFD600),
                                 Color(0xFFFF9100),

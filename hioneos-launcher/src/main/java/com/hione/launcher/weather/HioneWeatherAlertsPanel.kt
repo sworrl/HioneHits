@@ -48,7 +48,7 @@ fun alertColor(severity: String): Color = when (HioneNwsAlerts.severityRank(seve
     3 -> Color(0xFFFF5252)   // Severe
     2 -> Color(0xFFFFB300)   // Moderate
     1 -> Color(0xFFFFE066)   // Minor
-    else -> Mascot.color(0xFF80DEEA)
+    else -> Mascot.color(0xFFFFD59A)
 }
 
 /**
@@ -125,7 +125,7 @@ fun HioneWeatherAlertsPanel(modifier: Modifier = Modifier) {
         val best = st.radios.firstOrNull { it.inService }
         if (best != null) {
             Column(
-                Modifier.fillMaxWidth().clip(CutCornerShape(5.dp)).background(Mascot.color(0x1A00E5FF))
+                Modifier.fillMaxWidth().clip(CutCornerShape(5.dp)).background(Mascot.color(0x1AFFC56B))
                     .border(1.dp, HioneCyan.copy(alpha = 0.35f), CutCornerShape(5.dp))
                     .clickable { radiosOpen = !radiosOpen }
                     .padding(horizontal = 7.dp, vertical = 4.dp)

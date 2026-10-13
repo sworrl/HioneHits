@@ -31,6 +31,8 @@ import java.util.Locale
  *  - Lockscreen: holiday art in a holiday window only. Outside one it keeps its own portrait
  *    (which the pack already swaps).
  *  - Settings.Global hione_holiday_art = 0 turns all of it off.
+ *  - Framing: art with a focus point (WallpaperFocus) is cropped so her face lands in the gap the
+ *    widgets leave. [homeFocus], [lockFocus] and [focusTable] carry the points for the draw code.
  */
 object HolidayState {
     private const val TAG = "HioneHolidays"
@@ -44,6 +46,22 @@ object HolidayState {
     val homeBitmap = mutableStateOf<ImageBitmap?>(null)
     /** Lockscreen backdrop override (holiday windows only), null = normal backdrop. */
     val lockBitmap = mutableStateOf<ImageBitmap?>(null)
+    /** Face center in [homeBitmap], null = center crop. */
+    val homeFocus = mutableStateOf<FocusPoint?>(null)
+    /** Face center in [lockBitmap], null = center crop. */
+    val lockFocus = mutableStateOf<FocusPoint?>(null)
+    /** The active pack's focus points by art path and "drawable:<name>". Empty for Hione. */
+    val focusTable = mutableStateOf<Map<String, FocusPoint>>(emptyMap())
+
+    /** One refresh: the art pick, its bitmaps and their focus points. */
+    private class Computed(
+        val art: ActiveArt? = null,
+        val home: Bitmap? = null,
+        val lock: Bitmap? = null,
+        val homeFocus: FocusPoint? = null,
+        val lockFocus: FocusPoint? = null,
+        val table: Map<String, FocusPoint> = emptyMap(),
+    )
 
     @Volatile private var started = false
     @Volatile private var calendar: List<Holiday>? = null
@@ -74,24 +92,33 @@ object HolidayState {
     fun refresh(ctx: Context) {
         val app = ctx.applicationContext
         Thread {
-            val (art, home, lock) = runCatching { compute(app) }
+            val c = runCatching { compute(app) }
                 .onFailure { Log.w(TAG, "refresh failed: $it") }
-                .getOrElse { Triple(null, null, null) }
+                .getOrElse { Computed(table = runCatching { focusTable(app, Mascot.pack) }.getOrDefault(emptyMap())) }
             main.post {
-                active.value = art
-                homeBitmap.value = home?.asImageBitmap()
-                lockBitmap.value = lock?.asImageBitmap()
+                active.value = c.art
+                homeBitmap.value = c.home?.asImageBitmap()
+                lockBitmap.value = c.lock?.asImageBitmap()
+                homeFocus.value = c.homeFocus
+                lockFocus.value = c.lockFocus
+                focusTable.value = c.table
                 for (l in listeners) runCatching { l() }
             }
         }.apply { isDaemon = true; name = "HioneHolidays" }.start()
     }
 
     /** Blocking: the home wallpaper bitmap for now, or null for the normal one. For the live wallpaper. */
-    fun homeBitmapNow(ctx: Context): Bitmap? = runCatching { compute(ctx.applicationContext).second }.getOrNull()
+    fun homeBitmapNow(ctx: Context): Bitmap? = runCatching { compute(ctx.applicationContext).home }.getOrNull()
 
-    private fun compute(ctx: Context): Triple<ActiveArt?, Bitmap?, Bitmap?> {
-        if (!artEnabled(ctx)) return Triple(null, null, null)
+    /** Blocking: [homeBitmapNow] with its focus point. */
+    fun homeArtNow(ctx: Context): Pair<Bitmap, FocusPoint?>? = runCatching {
+        compute(ctx.applicationContext).let { c -> c.home?.let { it to c.homeFocus } }
+    }.getOrNull()
+
+    private fun compute(ctx: Context): Computed {
         val pack = Mascot.pack
+        val table = focusTable(ctx, pack)
+        if (!artEnabled(ctx)) return Computed(table = table)
         val today = LocalDate.now()
         val lat = latitude(ctx)
         val slots = packSlots(ctx, pack)
@@ -107,8 +134,28 @@ object HolidayState {
         }
         // Lockscreen: its own image when there is one, the holiday's home image in a holiday,
         // otherwise null (the lockscreen keeps its portrait).
-        val lock = art.lockArt?.let { loadArt(ctx, it, pack.id, maxDim) } ?: if (art.kind == "holiday") home else null
-        return Triple(art, home, lock)
+        val lockOwn = art.lockArt?.let { loadArt(ctx, it, pack.id, maxDim) }
+        val lock = lockOwn ?: if (art.kind == "holiday") home else null
+        val homeFocus = home?.let { focusOf(ctx, table, art.art) }
+        val lockFocus = when {
+            lockOwn != null -> focusOf(ctx, table, art.lockArt)
+            lock != null -> homeFocus
+            else -> null
+        }
+        return Computed(art, home, lock, homeFocus, lockFocus, table)
+    }
+
+    /**
+     * The focus for [ref], or null. A "drawable:" ref only has one when the pack really replaces
+     * that drawable: otherwise the bitmap is the launcher's own Hione art, which the point is not for.
+     */
+    private fun focusOf(ctx: Context, table: Map<String, FocusPoint>, ref: String?): FocusPoint? {
+        val p = WallpaperFocus.lookup(table, ref) ?: return null
+        if (ref != null && ref.startsWith("drawable:")) {
+            val id = ctx.resources.getIdentifier(ref.removePrefix("drawable:"), "drawable", ctx.packageName)
+            if (id == 0 || Mascot.artFor(ctx, id) == null) return null
+        }
+        return p
     }
 
     // ── Inputs ──────────────────────────────────────────────────────────────────────────────
@@ -194,6 +241,8 @@ object HolidayState {
     val HIONE_SEASON_LOCKS: Map<String, String?> = emptyMap()
 
     private val packSlotCache = HashMap<String, Pair<Map<String, String?>, Map<String, String?>>>()
+    private val packFocusCache = HashMap<String, Map<String, FocusPoint>>()
+    @Volatile private var calendarFocus: Map<String, FocusPoint>? = null
 
     /** art.wallpaper of the active pack (home), compiled in for Hione, from Hione Update's provider otherwise. */
     fun seasonArt(ctx: Context, pack: MascotPack): Map<String, String?> = packSlots(ctx, pack).first
@@ -203,14 +252,31 @@ object HolidayState {
         if (pack.id == "hione") return HIONE_SEASONS to HIONE_SEASON_LOCKS
         val ck = "${pack.id}@${pack.version}"
         synchronized(packSlotCache) { packSlotCache[ck]?.let { return it } }
+        var focus: Map<String, FocusPoint> = emptyMap()
         val slots = runCatching {
             ctx.contentResolver.openInputStream(Mascot.fileUri("pack.json", pack.id))?.use { s ->
                 val o = JSONObject(s.readBytes().toString(Charsets.UTF_8))
+                focus = runCatching { WallpaperFocus.parsePack(o) }.getOrDefault(emptyMap())
                 parseSeasonSlots(o) to parseSlots(o, "wallpaper_lock")
             }
         }.getOrNull() ?: (mapOf<String, String?>("default" to "drawable:hione_wallpaper") to emptyMap())
-        synchronized(packSlotCache) { packSlotCache[ck] = slots }
+        synchronized(packSlotCache) { packSlotCache[ck] = slots; packFocusCache[ck] = focus }
         return slots
+    }
+
+    /**
+     * Focus points of [pack]: its pack.json art.focus, plus calendar.json's home_focus / lock_focus
+     * when the calendar art is drawn for it. Empty for Hione, whose wallpapers keep the center crop.
+     */
+    fun focusTable(ctx: Context, pack: MascotPack): Map<String, FocusPoint> {
+        if (pack.id == "hione") return emptyMap()
+        val ck = "${pack.id}@${pack.version}"
+        packSlots(ctx, pack)
+        val own = synchronized(packSlotCache) { packFocusCache[ck] } ?: emptyMap()
+        if (pack.id != HolidayCalendar.CALENDAR_ART_PACK) return own
+        val cal = calendarFocus ?: runCatching { WallpaperFocus.parseCalendar(calendarText(ctx) ?: "") }
+            .getOrDefault(emptyMap()).also { calendarFocus = it }
+        return if (own.isEmpty()) cal else cal + own
     }
 
     fun parseSeasonSlots(o: JSONObject): Map<String, String?> {

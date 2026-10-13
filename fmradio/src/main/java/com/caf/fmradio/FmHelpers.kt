@@ -46,7 +46,7 @@ fun HioneBackButton(onClick: () -> Unit) {
     Box(
         Modifier.size(40.dp)
             .clip(CircleShape)
-            .background(Color(0x2200E5FF))
+            .background(Color(0x22FFC56B))
             .border(1.dp, HioneCyan, CircleShape)
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center

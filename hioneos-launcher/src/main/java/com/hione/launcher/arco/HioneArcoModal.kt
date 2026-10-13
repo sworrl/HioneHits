@@ -125,7 +125,7 @@ fun HioneArcoModal(onDismissRequest: () -> Unit) {
             .clickable(onClick = onDismissRequest)
             // System-gesture-style dismiss: swipe up starting at the bottom edge of the sheet.
             .swipeUpFromBottomToDismiss(onDismiss = onDismissRequest)
-            .background(Mascot.color(0xCC040D12)),
+            .background(Mascot.color(0xCC0C0D10)),
         contentAlignment = Alignment.TopEnd
     ) {
         Box(

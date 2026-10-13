@@ -107,7 +107,7 @@ open class ReminderReceiver : BroadcastReceiver() {
         }
         val n = Notification.Builder(ctx, CHANNEL)
             .setSmallIcon(R.drawable.ic_stat_event)
-            .setColor(Mascot.argb(0xFF39C5BB.toInt()))
+            .setColor(Mascot.argb(0xFFFFAB2E.toInt()))
             .setContentTitle(a.title.ifBlank { "(No title)" })
             .setContentText(text)
             .setCategory(Notification.CATEGORY_EVENT)

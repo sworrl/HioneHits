@@ -100,13 +100,13 @@ fun HioneMeteogramForecastView(
                         Box(
                             Modifier
                                 .clip(CutCornerShape(3.dp))
-                                .background(Mascot.color(0xFF00E5FF).copy(alpha = 0.25f))
-                                .border(0.6.dp, Mascot.color(0xFF00E5FF), CutCornerShape(3.dp))
+                                .background(Mascot.color(0xFFFFC56B).copy(alpha = 0.25f))
+                                .border(0.6.dp, Mascot.color(0xFFFFC56B), CutCornerShape(3.dp))
                                 .padding(horizontal = 4.dp, vertical = 1.dp)
                         ) {
                             Text(
                                 text = weather.nextPrecipLabel,
-                                color = Mascot.color(0xFF00E5FF),
+                                color = Mascot.color(0xFFFFC56B),
                                 fontSize = 7.sp,
                                 fontWeight = FontWeight.Black,
                                 fontFamily = AudiowideFont
@@ -198,7 +198,7 @@ fun HioneMeteogramForecastView(
                                                 pt.tempF >= 85f -> Color(0xFFFF5252)
                                                 pt.tempF >= 70f -> Color(0xFFFFD600)
                                                 pt.tempF >= 55f -> Color(0xFF00E676)
-                                                else -> Mascot.color(0xFF00E5FF)
+                                                else -> Mascot.color(0xFFFFC56B)
                                             },
                                             fontSize = 8.5.sp,
                                             fontWeight = FontWeight.Black,
@@ -216,7 +216,7 @@ fun HioneMeteogramForecastView(
                                             Spacer(Modifier.width(1.dp))
                                             Text(
                                                 text = "${pt.precipProbPct}%",
-                                                color = if (pt.precipProbPct > 20) Mascot.color(0xFF00E5FF) else Color.White.copy(alpha = 0.6f),
+                                                color = if (pt.precipProbPct > 20) Mascot.color(0xFFFFC56B) else Color.White.copy(alpha = 0.6f),
                                                 fontSize = 7.sp,
                                                 fontWeight = FontWeight.Bold,
                                                 fontFamily = AudiowideFont
@@ -231,7 +231,7 @@ fun HioneMeteogramForecastView(
                                             windSpd >= 25 -> Color(0xFFFF1744) // Severe gale
                                             windSpd >= 15 -> Color(0xFFFF9100) // Moderate
                                             windSpd >= 8  -> Color(0xFF76FF03) // Light breeze
-                                            else          -> Mascot.color(0xFF00E5FF) // Gentle
+                                            else          -> Mascot.color(0xFFFFC56B) // Gentle
                                         }
                                         Box(
                                             Modifier
@@ -318,7 +318,7 @@ fun HioneSolarArcTrack(
                 )
                 Text(
                     text = if (isDay) "SOLAR TRANSIT · ${(solarFraction * 100).roundToInt()}%" else "LUNAR TRANSIT",
-                    color = if (isDay) HioneCyan else Mascot.color(0xFFB388FF),
+                    color = if (isDay) HioneCyan else Mascot.color(0xFFB9C2D0),
                     fontSize = 7.sp,
                     fontWeight = FontWeight.Black,
                     fontFamily = AudiowideFont
@@ -346,7 +346,7 @@ fun HioneSolarArcTrack(
 
                 // Base Track Line
                 drawLine(
-                    color = Mascot.color(0x3300E5FF),
+                    color = Mascot.color(0x33FFC56B),
                     start = Offset(0f, trackY),
                     end = Offset(w, trackY),
                     strokeWidth = h,
@@ -358,7 +358,7 @@ fun HioneSolarArcTrack(
                     listOf(
                         Color(0xFFFF6D00),
                         Color(0xFFFFD600),
-                        Mascot.color(0xFF00E5FF),
+                        Mascot.color(0xFFFFC56B),
                         Mascot.color(0xFFFF80AB)
                     )
                 )
@@ -373,7 +373,7 @@ fun HioneSolarArcTrack(
 
                 // Sun / Moon Indicator Dot with Glow
                 val dotX = (w * solarFraction.coerceIn(0f, 1f)).coerceIn(h, w - h)
-                val dotColor = if (isDay) Color(0xFFFFD600) else Mascot.color(0xFFB388FF)
+                val dotColor = if (isDay) Color(0xFFFFD600) else Mascot.color(0xFFB9C2D0)
 
                 drawCircle(
                     color = dotColor.copy(alpha = 0.35f),

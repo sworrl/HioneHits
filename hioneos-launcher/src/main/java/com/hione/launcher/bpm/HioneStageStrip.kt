@@ -62,8 +62,8 @@ fun HioneStageStrip(modifier: Modifier = Modifier) {
 private fun CrowdMeter(crowd: Float, mood: HioneStagePerformance.Mood) {
     val animated by animateFloatAsState(crowd, tween(260), label = "crowd")
     val tone = when {
-        animated > 78f -> Mascot.color(0xFF39C5BB)
-        animated > 45f -> Mascot.color(0xFF7FE6DE)
+        animated > 78f -> Mascot.color(0xFFFFAB2E)
+        animated > 45f -> Mascot.color(0xFFFFD08A)
         animated > 22f -> Color(0xFFFFCF6B)
         else -> Color(0xFFFF4D5E)
     }
@@ -123,19 +123,19 @@ private fun ChaosBanner(chaos: HioneStagePerformance.Chaos) {
 @Composable
 private fun HioneSays(mood: HioneStagePerformance.Mood, line: String) {
     val tone = when (mood) {
-        HioneStagePerformance.Mood.UNHINGED, HioneStagePerformance.Mood.HYPED -> Mascot.color(0xFF7FE6DE)
+        HioneStagePerformance.Mood.UNHINGED, HioneStagePerformance.Mood.HYPED -> Mascot.color(0xFFFFD08A)
         HioneStagePerformance.Mood.DEVASTATED, HioneStagePerformance.Mood.WORRIED -> Color(0xFFFFCF6B)
-        else -> Mascot.color(0xFFE0F7FA)
+        else -> Mascot.color(0xFFFFF3E0)
     }
     Row(
         Modifier
             .fillMaxWidth()
             .padding(top = 6.dp)
             .clip(RoundedCornerShape(10.dp))
-            .background(Mascot.color(0x2239C5BB))
+            .background(Mascot.color(0x22FFAB2E))
             .padding(horizontal = 10.dp, vertical = 6.dp)
     ) {
-        Text("${Mascot.nameUpper}", color = Mascot.color(0xFF39C5BB), fontSize = 9.sp, fontWeight = FontWeight.Black)
+        Text("${Mascot.nameUpper}", color = Mascot.color(0xFFFFAB2E), fontSize = 9.sp, fontWeight = FontWeight.Black)
         Spacer(Modifier.width(8.dp))
         Text(line, color = tone, fontSize = 11.sp, lineHeight = 14.sp, modifier = Modifier.weight(1f))
     }
@@ -183,12 +183,12 @@ private fun SetOverCard() {
         Spacer(Modifier.height(10.dp))
         Text(
             "GO BACK ON",
-            color = Mascot.color(0xFF04161A),
+            color = Mascot.color(0xFF121318),
             fontSize = 12.sp,
             fontWeight = FontWeight.Black,
             modifier = Modifier
                 .clip(RoundedCornerShape(8.dp))
-                .background(Mascot.color(0xFF39C5BB))
+                .background(Mascot.color(0xFFFFAB2E))
                 .clickable { HioneStagePerformance.encore() }
                 .padding(horizontal = 14.dp, vertical = 7.dp)
         )

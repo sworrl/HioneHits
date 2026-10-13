@@ -29,6 +29,8 @@ class HioneLiveWallpaperService : WallpaperService() {
         private val handler = Handler(Looper.getMainLooper())
         private var visible = false
         private var bgBitmap: Bitmap? = null
+        /** Face center in [bgBitmap] (holiday/WallpaperFocus), null = no framing. */
+        private var bgFocus: com.hione.launcher.holiday.FocusPoint? = null
 
         private val particles = ArrayList<CyberParticle>()
         private val ripples = ArrayList<TouchRipple>()
@@ -92,10 +94,14 @@ class HioneLiveWallpaperService : WallpaperService() {
 
         private fun loadBackground() {
             // Holiday or season art first, then the pack's wallpaper, then the built-in drawable.
+            val ctx = this@HioneLiveWallpaperService
             runCatching {
-                (com.hione.launcher.holiday.HolidayState.homeBitmapNow(this@HioneLiveWallpaperService)
-                    ?: Mascot.artFor(this@HioneLiveWallpaperService, R.drawable.hione_wallpaper))
-            }.getOrNull()?.let { bgBitmap = it; return }
+                com.hione.launcher.holiday.HolidayState.homeArtNow(ctx)
+                    ?: Mascot.artFor(ctx, R.drawable.hione_wallpaper)?.let { bmp ->
+                        val table = com.hione.launcher.holiday.HolidayState.focusTable(ctx, Mascot.pack)
+                        bmp to com.hione.launcher.holiday.WallpaperFocus.lookup(table, "drawable:hione_wallpaper")
+                    }
+            }.getOrNull()?.let { (bmp, focus) -> bgBitmap = bmp; bgFocus = focus; return }
             try {
                 val drawable = ResourcesCompat.getDrawable(resources, R.drawable.hione_wallpaper, null)
                 if (drawable != null) {
@@ -114,6 +120,24 @@ class HioneLiveWallpaperService : WallpaperService() {
 
         private fun scaleBackground(width: Int, height: Int) {
             val src = bgBitmap ?: return
+            val focus = bgFocus
+            if (focus != null && width > 0 && height > 0) {
+                // Frame her face into the home screen's open band, then fill the surface.
+                runCatching {
+                    val r = com.hione.launcher.holiday.WallpaperFocus.sourceRect(
+                        src.width, src.height, width.toFloat(), height.toFloat(), focus,
+                        // Same target as the home screen for the current HioneDeck layout.
+                        com.hione.launcher.ui.HioneDeck.wallpaperTarget(
+                            com.hione.launcher.ui.HioneDeck.read(this@HioneLiveWallpaperService).mode
+                        )
+                    )
+                    val l = r.left.toInt().coerceIn(0, src.width - 1)
+                    val t = r.top.toInt().coerceIn(0, src.height - 1)
+                    val w = r.width.toInt().coerceIn(1, src.width - l)
+                    val h = r.height.toInt().coerceIn(1, src.height - t)
+                    Bitmap.createScaledBitmap(Bitmap.createBitmap(src, l, t, w, h), width, height, true)
+                }.getOrNull()?.let { bgBitmap = it; bgFocus = null; return }
+            }
             if (width > 0 && height > 0 && (src.width != width || src.height != height)) {
                 bgBitmap = Bitmap.createScaledBitmap(src, width, height, true)
             }
@@ -130,7 +154,7 @@ class HioneLiveWallpaperService : WallpaperService() {
                         speedY = Random.nextFloat() * 1.5f + 0.5f,
                         speedX = (Random.nextFloat() - 0.5f) * 0.8f,
                         alpha = Random.nextInt(120, 240),
-                        color = if (Random.nextBoolean()) Mascot.argb(Color.parseColor("#00E5FF")) else Mascot.argb(Color.parseColor("#FF80AB"))
+                        color = if (Random.nextBoolean()) Mascot.argb(Color.parseColor("#FFC56B")) else Mascot.argb(Color.parseColor("#FF80AB"))
                     )
                 )
             }
@@ -150,7 +174,7 @@ class HioneLiveWallpaperService : WallpaperService() {
                     if (bg != null) {
                         canvas.drawBitmap(bg, 0f, 0f, bgPaint)
                     } else {
-                        canvas.drawColor(Mascot.argb(Color.parseColor("#040D12")))
+                        canvas.drawColor(Mascot.argb(Color.parseColor("#0C0D10")))
                     }
 
                     // Update and draw floating cyber particles / sakura petals
@@ -181,7 +205,7 @@ class HioneLiveWallpaperService : WallpaperService() {
                         if (r.alpha <= 0 || r.radius > 200f) {
                             it.remove()
                         } else {
-                            ripplePaint.color = Mascot.argb(Color.parseColor("#00E5FF"))
+                            ripplePaint.color = Mascot.argb(Color.parseColor("#FFC56B"))
                             ripplePaint.alpha = r.alpha
                             canvas.drawCircle(r.x, r.y, r.radius, ripplePaint)
                         }

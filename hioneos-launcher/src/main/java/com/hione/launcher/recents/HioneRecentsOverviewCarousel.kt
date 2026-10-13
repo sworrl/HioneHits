@@ -145,7 +145,7 @@ fun HioneRecentsOverviewCarousel(
                     Box(
                         modifier = Modifier
                             .clip(RoundedCornerShape(12.dp))
-                            .background(Brush.horizontalGradient(listOf(Color(0x33FF1744), Mascot.color(0x3300E5FF))))
+                            .background(Brush.horizontalGradient(listOf(Color(0x33FF1744), Mascot.color(0x33FFC56B))))
                             .border(1.dp, HioneCyan.copy(alpha = 0.7f), RoundedCornerShape(12.dp))
                             .clickable {
                                 currentTasks.clear()
@@ -260,13 +260,13 @@ fun LiveAppSnapshotCard(task: RecentTaskItem) {
     val brandColor = remember(task.packageName) {
         val p = task.packageName.lowercase()
         when {
-            p.contains("player") || p.contains("music") -> Mascot.color(0xFF00E5FF)
+            p.contains("player") || p.contains("music") -> Mascot.color(0xFFFFC56B)
             p.contains("settings") -> Color(0xFF7C4DFF)
-            p.contains("camera") -> Mascot.color(0xFFFF4081)
+            p.contains("camera") -> Mascot.color(0xFF6FB0FF)
             p.contains("gallery") || p.contains("photo") -> com.hione.launcher.ui.HioneIdentity.Gold
             p.contains("firefox") || p.contains("chrome") || p.contains("browser") -> Color(0xFFFF6D00)
             p.contains("radio") -> com.hione.launcher.ui.HioneIdentity.Leek
-            else -> Mascot.color(0xFF00E5FF)
+            else -> Mascot.color(0xFFFFC56B)
         }
     }
 

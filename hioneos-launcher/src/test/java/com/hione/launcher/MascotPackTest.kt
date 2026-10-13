@@ -81,7 +81,7 @@ class MascotPackTest {
     }
 
     @Test fun downloadedPackDefaults() {
-        val p = MascotPack.fromJson(JSONObject("""{"id":"neo","name":"Neo","palette":{"primary":"#112233"},"replaces":{"#39C5BB":"primary","#FF5FA2":"#445566"}}"""))
+        val p = MascotPack.fromJson(JSONObject("""{"id":"neo","name":"Neo","palette":{"primary":"#112233"},"replaces":{"#FFAB2E":"primary","#FF5FA2":"#445566"}}"""))
         assertEquals("NeoOS", p.osName)
         assertEquals("Neo Music", p.musicAppName)
         assertEquals("Plain", p.labelAlias)

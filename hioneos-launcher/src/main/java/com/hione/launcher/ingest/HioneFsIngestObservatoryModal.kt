@@ -417,7 +417,7 @@ fun HioneFsIngestObservatoryModal(
                                 Button(
                                     onClick = { HioneIngestEngine.triggerForceScan(ctx) },
                                     enabled = !ingestState.isScanning,
-                                    colors = ButtonDefaults.buttonColors(containerColor = Mascot.color(0xFF00E5FF)),
+                                    colors = ButtonDefaults.buttonColors(containerColor = Mascot.color(0xFFFFC56B)),
                                     shape = RoundedCornerShape(12.dp),
                                     modifier = Modifier
                                         .weight(1f)
@@ -499,7 +499,7 @@ fun HioneFsIngestObservatoryModal(
                                     usedStr = HioneIngestEngine.formatBytes(sdUsed),
                                     totalStr = HioneIngestEngine.formatBytes(sdTotal),
                                     pct = sdPct,
-                                    barColor = Mascot.color(0xFFFF4081)
+                                    barColor = Mascot.color(0xFF6FB0FF)
                                 )
                             } else {
                                 Row(
@@ -529,7 +529,7 @@ fun HioneFsIngestObservatoryModal(
                                 .fillMaxWidth()
                                 .clip(RoundedCornerShape(14.dp))
                                 .background(Mascot.color(0xFF07141A))
-                                .border(1.2.dp, Mascot.color(0xFFB388FF).copy(alpha = 0.45f), RoundedCornerShape(14.dp))
+                                .border(1.2.dp, Mascot.color(0xFFB9C2D0).copy(alpha = 0.45f), RoundedCornerShape(14.dp))
                                 .padding(14.dp)
                         ) {
                             Row(
@@ -539,7 +539,7 @@ fun HioneFsIngestObservatoryModal(
                             ) {
                                 Text(
                                     "AUDIO FORMATS",
-                                    color = Mascot.color(0xFFB388FF),
+                                    color = Mascot.color(0xFFB9C2D0),
                                     fontSize = 13.5.sp,
                                     fontWeight = FontWeight.Bold,
                                     fontFamily = AudiowideFont,
@@ -569,7 +569,7 @@ fun HioneFsIngestObservatoryModal(
                                     badge = "FLAC",
                                     count = ingestState.flacCount,
                                     desc = "Free Lossless Audio Codec",
-                                    color = Mascot.color(0xFF00E5FF)
+                                    color = Mascot.color(0xFFFFC56B)
                                 )
                             }
 
@@ -581,7 +581,7 @@ fun HioneFsIngestObservatoryModal(
                                     badge = "WAV / ALAC",
                                     count = ingestState.wavCount + ingestState.alacCount,
                                     desc = "Lossless PCM",
-                                    color = Mascot.color(0xFFB388FF)
+                                    color = Mascot.color(0xFFB9C2D0)
                                 )
                                 CodecMetricPill(
                                     modifier = Modifier.weight(1f),

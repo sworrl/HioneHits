@@ -257,8 +257,8 @@ fun FmTunerUnavailableScreen(onBack: () -> Unit) {
             Spacer(Modifier.height(24.dp))
             Button(
                 onClick = onBack,
-                colors = ButtonDefaults.buttonColors(containerColor = Mascot.color(0x3339C5BB)),
-                border = BorderStroke(1.dp, Mascot.color(0xFF39C5BB)),
+                colors = ButtonDefaults.buttonColors(containerColor = Mascot.color(0x33FFAB2E)),
+                border = BorderStroke(1.dp, Mascot.color(0xFFFFAB2E)),
                 shape = RoundedCornerShape(12.dp)
             ) { Text("BACK", color = Color.White, fontWeight = FontWeight.Bold) }
         }
@@ -293,9 +293,9 @@ fun HioneFMRadioScreen(onBack: () -> Unit) {
                 .background(
                     Brush.verticalGradient(
                         listOf(
-                            Mascot.color(0xCC040D12),
+                            Mascot.color(0xCC0C0D10),
                             Color(0x77000000),
-                            Mascot.color(0xF5040D12)
+                            Mascot.color(0xF50C0D10)
                         )
                     )
                 )
@@ -328,7 +328,7 @@ fun HioneFMRadioScreen(onBack: () -> Unit) {
                 Box(
                     Modifier
                         .clip(RoundedCornerShape(10.dp))
-                        .background(if (fmState.isHeadsetPlugged) Mascot.color(0x3300E5FF) else Mascot.color(0x33FF4081))
+                        .background(if (fmState.isHeadsetPlugged) Mascot.color(0x33FFC56B) else Mascot.color(0x336FB0FF))
                         .border(1.dp, if (fmState.isHeadsetPlugged) HioneCyan else HioneNeonPink, RoundedCornerShape(10.dp))
                         .padding(horizontal = 7.dp, vertical = 3.dp)
                 ) {
@@ -435,7 +435,7 @@ fun HioneFMRadioScreen(onBack: () -> Unit) {
                         .align(Alignment.TopEnd)
                         .size(34.dp)
                         .clip(CircleShape)
-                        .background(Mascot.color(0x3300E5FF))
+                        .background(Mascot.color(0x33FFC56B))
                         .border(1.dp, HioneCyan, CircleShape)
                         .clickable {
                             val reactions = listOf("📻", "🎶", "💙", "⚡", "✨", "🎤", "🎧")
@@ -488,7 +488,7 @@ fun HioneFMRadioScreen(onBack: () -> Unit) {
                         .clip(CircleShape)
                         .background(
                             Brush.radialGradient(
-                                listOf(Mascot.color(0x3300E5FF), Mascot.color(0x0004141E))
+                                listOf(Mascot.color(0x33FFC56B), Mascot.color(0x0004141E))
                             )
                         )
                         .combinedClickable(
@@ -520,7 +520,7 @@ fun HioneFMRadioScreen(onBack: () -> Unit) {
                         .clip(CircleShape)
                         .background(
                             Brush.radialGradient(
-                                listOf(Mascot.color(0x3300E5FF), Mascot.color(0x0004141E))
+                                listOf(Mascot.color(0x33FFC56B), Mascot.color(0x0004141E))
                             )
                         )
                         .combinedClickable(
@@ -610,7 +610,7 @@ fun RadioWaterfallSpectrum(
         Modifier
             .fillMaxSize()
             .clip(RoundedCornerShape(14.dp))
-            .background(Mascot.color(0xFF040D12))
+            .background(Mascot.color(0xFF0C0D10))
             .border(1.2.dp, CyberGlassBorder, RoundedCornerShape(14.dp))
             .pointerInput(Unit) {
                 detectTapGestures { offset ->
@@ -727,7 +727,7 @@ fun FmRecordButton(
                 .clip(CircleShape)
                 .background(
                     if (isRecording) Brush.verticalGradient(listOf(Color(0xFFFF1744), Color(0xFFB71C1C)))
-                    else Brush.verticalGradient(listOf(Mascot.color(0xEE0A1E26), Mascot.color(0xFF040D12)))
+                    else Brush.verticalGradient(listOf(Mascot.color(0xEE0A1E26), Mascot.color(0xFF0C0D10)))
                 )
                 .border(1.5.dp, if (isRecording) Color(0xFFFF5252) else CyberGlassBorder, CircleShape)
         ) {

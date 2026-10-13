@@ -73,7 +73,7 @@ class HioneThermalWidget : AppWidgetProvider() {
                 !haveAny -> 0x80FFFFFF.toInt()
                 maxTemp >= 60f -> 0xFFFF5252.toInt()
                 maxTemp >= 45f -> 0xFFFFD600.toInt()
-                else -> Mascot.argb(0xFF39C5BB.toInt())
+                else -> Mascot.argb(0xFFFFAB2E.toInt())
             }
             v.setTextViewText(R.id.widget_thermal_cpu, if (cpu > 0f) "${cpu.toInt()}°C" else "—°C")
             v.setTextColor(R.id.widget_thermal_cpu, tint)

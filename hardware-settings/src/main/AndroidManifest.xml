@@ -54,6 +54,13 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CAMERA" />
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
     <uses-permission android:name="android.permission.INTERNAL_SYSTEM_WINDOW" />
+    <!-- Blackjack Monitor (BlackjackMonitor.kt), read-only. READ_LOGS: the kernel log carries the
+         driver's power events and one line per register write. DUMP: AudioFlinger's output
+         threads, for the rate Android sends. MODIFY_AUDIO_ROUTING: unanonymized playback
+         configs, the fallback for that rate. All three are granted to the platform signature. -->
+    <uses-permission android:name="android.permission.READ_LOGS" />
+    <uses-permission android:name="android.permission.DUMP" />
+    <uses-permission android:name="android.permission.MODIFY_AUDIO_ROUTING" />
 
     <application
         android:allowBackup="true"
@@ -110,6 +117,20 @@
             <meta-data
                 android:name="com.android.settings.order"
                 android:value="-100" />
+        </activity>
+
+        <!-- Blackjack Monitor: which DAC driver runs and what it is doing. Read-only. Opened from
+             the DAC page's driver card and from HioneSettings > About. -->
+        <activity
+            android:name=".BlackjackMonitorActivity"
+            android:exported="true"
+            android:label="Blackjack Monitor"
+            android:screenOrientation="portrait"
+            android:theme="@style/Theme.M500Hardware">
+            <intent-filter>
+                <action android:name="com.hione.action.BLACKJACK_MONITOR" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
         </activity>
 
         <!-- Bespoke Verbose USB DAC Mode Activity -->

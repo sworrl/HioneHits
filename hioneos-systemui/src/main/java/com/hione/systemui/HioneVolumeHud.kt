@@ -444,9 +444,9 @@ class HioneVolumeHud(
             if (muted) return 0xFFFF5252.toInt()
             return when {
                 pct >= 85 -> 0xFFFF1744.toInt() // Danger Red / Coral
-                pct >= 70 -> Mascot.argb(0xFFFF4081.toInt()) // Neon Pink
-                pct >= 50 -> Mascot.argb(0xFFB388FF.toInt()) // Electric Purple
-                pct >= 25 -> Mascot.argb(0xFF00E5FF.toInt()) // Hione Cyan
+                pct >= 70 -> Mascot.argb(0xFF6FB0FF.toInt()) // Neon Pink
+                pct >= 50 -> Mascot.argb(0xFFB9C2D0.toInt()) // Electric Purple
+                pct >= 25 -> Mascot.argb(0xFFFFC56B.toInt()) // Hione Cyan
                 else -> 0xFF00FF88.toInt()      // Cyber Emerald
             }
         }
@@ -506,7 +506,7 @@ class HioneVolumeHud(
             val borderColors = if (isDanger) {
                 intArrayOf(0xFFFF1744.toInt(), Mascot.argb(0xFFFF007F.toInt()), 0xFFFF5252.toInt())
             } else {
-                intArrayOf(dynColor, Mascot.argb(0xFF00E5FF.toInt()), 0xFF7C4DFF.toInt())
+                intArrayOf(dynColor, Mascot.argb(0xFFFFC56B.toInt()), 0xFF7C4DFF.toInt())
             }
             borderPaint.shader = LinearGradient(0f, top, 0f, bottom, borderColors, null, Shader.TileMode.CLAMP)
             canvas.drawPath(cardPath, borderPaint)
@@ -558,8 +558,8 @@ class HioneVolumeHud(
                         0xFFFF5252.toInt(),
                         Mascot.argb(0xFFFF3399.toInt()),
                         0xFF9D4EDD.toInt(),
-                        Mascot.argb(0xFF00F5D4.toInt()),
-                        Mascot.argb(0xFF00E5FF.toInt())
+                        Mascot.argb(0xFFFFC56B.toInt()),
+                        Mascot.argb(0xFFFFC56B.toInt())
                     )
                 }
                 val fillPositions = if (isMuted) null else floatArrayOf(0.00f, 0.12f, 0.25f, 0.50f, 0.75f, 1.00f)
@@ -654,23 +654,23 @@ class HioneVolumeHud(
             val borderColors = if (isDanger) {
                 intArrayOf(Mascot.argb(0xFFFF0044.toInt()), Color.argb((hazardGlow * 255).toInt(), 255, 85, 0))
             } else {
-                intArrayOf(Mascot.argb(0xFF39C5BB.toInt()), Mascot.argb(0xFFFF4FA3.toInt()))
+                intArrayOf(Mascot.argb(0xFFFFAB2E.toInt()), Mascot.argb(0xFFFF4FA3.toInt()))
             }
             borderPaint.shader = LinearGradient(left, top, right, top, borderColors, null, Shader.TileMode.CLAMP)
             borderPaint.alpha = alpha
             canvas.drawRoundRect(cardRect, cornerR, cornerR, borderPaint)
-            glassFx.drawOver(canvas, cardRect, cornerR, Mascot.argb(0xFF39C5BB.toInt()), Mascot.argb(0xFFFF4FA3.toInt()), alpha, withRim = false)
+            glassFx.drawOver(canvas, cardRect, cornerR, Mascot.argb(0xFFFFAB2E.toInt()), Mascot.argb(0xFFFF4FA3.toInt()), alpha, withRim = false)
 
             // Left: Speaker Circle (34dp)
             val iconCx = left + dp(28f)
             val iconCy = cardRect.centerY()
             val iconR = dp(17f)
-            buttonBgPaint.color = if (isDanger) Mascot.argb(0x44FF0044.toInt()) else Mascot.argb(0x3339C5BB.toInt())
+            buttonBgPaint.color = if (isDanger) Mascot.argb(0x44FF0044.toInt()) else Mascot.argb(0x33FFAB2E.toInt())
             buttonBgPaint.alpha = (alpha * 0.7f).toInt()
             canvas.drawCircle(iconCx, iconCy, iconR, buttonBgPaint)
 
             // Speaker Icon
-            iconPaint.color = if (isDanger) 0xFFFF2255.toInt() else Mascot.argb(0xFF39C5BB.toInt())
+            iconPaint.color = if (isDanger) 0xFFFF2255.toInt() else Mascot.argb(0xFFFFAB2E.toInt())
             iconPaint.alpha = alpha
             val sArm = dp(5f)
             canvas.drawLine(iconCx - sArm, iconCy - sArm, iconCx - sArm, iconCy + sArm, iconPaint)
@@ -695,7 +695,7 @@ class HioneVolumeHud(
 
             // Subtext "/ 100" or "/ 100 [HIGH]"
             textPaint.textSize = dp(10.5f)
-            textPaint.color = if (isDanger) Mascot.argb(0xFFFF88AA.toInt()) else Mascot.argb(0xFF9FF3EC.toInt())
+            textPaint.color = if (isDanger) Mascot.argb(0xFFFF88AA.toInt()) else Mascot.argb(0xFFFFE0B0.toInt())
             textPaint.alpha = alpha
             val subText = if (isDanger) " / 100 [HIGH]" else " / 100"
             canvas.drawText(subText, textLeft + numW + dp(4f), baselineY - dp(1f), textPaint)
@@ -715,7 +715,7 @@ class HioneVolumeHud(
                 val fillColors = if (isDanger) {
                     intArrayOf(Mascot.argb(0xFFFF0055.toInt()), 0xFFFF8800.toInt())
                 } else {
-                    intArrayOf(Mascot.argb(0xFF39C5BB.toInt()), Mascot.argb(0xFFFF4FA3.toInt()))
+                    intArrayOf(Mascot.argb(0xFFFFAB2E.toInt()), Mascot.argb(0xFFFF4FA3.toInt()))
                 }
                 fillPaint.shader = LinearGradient(textLeft, barTop, textLeft + trackW, barTop, fillColors, null, Shader.TileMode.CLAMP)
                 fillPaint.alpha = alpha

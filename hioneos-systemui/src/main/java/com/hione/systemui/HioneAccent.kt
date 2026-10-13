@@ -20,8 +20,8 @@ object HioneAccent {
     const val KEY_ACCENT = "hione_np_accent"
     const val KEY_ACCENT2 = "hione_np_accent2"
     const val KEY_TS = "hione_np_accent_ts"
-    val TEAL get() = Mascot.argb(0xFF39C5BB.toInt())
-    val TEAL_BRIGHT get() = Mascot.argb(0xFF00F5D4.toInt())
+    val TEAL get() = Mascot.argb(0xFFFFAB2E.toInt())
+    val TEAL_BRIGHT get() = Mascot.argb(0xFFFFC56B.toInt())
 
     private val _accent = MutableStateFlow(0)
     private val _accent2 = MutableStateFlow(0)

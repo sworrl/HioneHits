@@ -44,7 +44,7 @@ fun FmFresnelProfileView(
     Box(
         modifier
             .fillMaxWidth()
-            .background(Color(0xFF040D12), RoundedCornerShape(14.dp))
+            .background(Color(0xFF0C0D10), RoundedCornerShape(14.dp))
             .border(1.2.dp, CyberGlassBorder, RoundedCornerShape(14.dp))
     ) {
         if (profile == null) {

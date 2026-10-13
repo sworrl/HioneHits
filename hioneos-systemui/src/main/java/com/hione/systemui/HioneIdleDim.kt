@@ -282,11 +282,12 @@ class HioneIdleDimController(
         val playerHolding = pkg == "com.hione.player" && runCatching {
             Settings.Global.getInt(cr, "hione_idle_hold_awake", 0) == 1
         }.getOrDefault(false)
-        val owns = playerHolding ||
+        val isMediaOrGame = HioneAppClassifier.shouldSuppressIdleDim(ctx, pkg, cls)
+        val owns = playerHolding || isMediaOrGame ||
             (cls != null && (cls.contains("Lockscreen", true) || cls.contains("Aod", true)))
         if (owns != suppressed) {
             suppressed = owns
-            Log.i(TAG, "foreground owns its own ladder=$owns ($pkg/$cls)")
+            Log.i(TAG, "foreground owns its own ladder=$owns ($pkg/$cls, mediaOrGame=$isMediaOrGame)")
             if (suppressed) {
                 main.removeCallbacks(stepRunnable); main.removeCallbacks(rampRunnable)
                 restoreBaseline()

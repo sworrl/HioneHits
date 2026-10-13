@@ -36,7 +36,7 @@ class HioneAodSettingsActivity : ComponentActivity() {
             var showWeather by remember { mutableStateOf(HioneLockscreenPrefs.getAodShowWeather(ctx)) }
             var showNp by remember { mutableStateOf(HioneLockscreenPrefs.getAodShowNowPlaying(ctx)) }
 
-            Box(Modifier.fillMaxSize().background(Mascot.color(0xFF040D12))) {
+            Box(Modifier.fillMaxSize().background(Mascot.color(0xFF0C0D10))) {
                 Column(Modifier.fillMaxSize().padding(18.dp)) {
                     Text(
                         "ALWAYS-ON DISPLAY",
@@ -60,7 +60,7 @@ class HioneAodSettingsActivity : ComponentActivity() {
                                 .fillMaxWidth()
                                 .padding(vertical = 3.dp)
                                 .clip(RoundedCornerShape(12.dp))
-                                .background(if (selected) Mascot.color(0x3300E5FF) else Mascot.color(0xCC07131A))
+                                .background(if (selected) Mascot.color(0x33FFC56B) else Mascot.color(0xCC07131A))
                                 .border(
                                     1.dp,
                                     if (selected) HioneCyan else Color(0x33FFFFFF),

@@ -56,11 +56,11 @@ class HioneBatteryWidget : AppWidgetProvider() {
                 charging -> 0xFF00E676.toInt()
                 pct <= 15 -> 0xFFFF5252.toInt()
                 pct <= 35 -> 0xFFFFD600.toInt()
-                else -> Mascot.argb(0xFF39C5BB.toInt())
+                else -> Mascot.argb(0xFFFFAB2E.toInt())
             }
             val pctText = if (pct < 0) "--%" else "$pct%"
             v.setTextViewText(R.id.widget_battery_text, if (charging) "$pctText CHG" else pctText)
-            v.setTextColor(R.id.widget_battery_text, if (pct in 0..15) tint else Mascot.argb(0xFF9FF3EC.toInt()))
+            v.setTextColor(R.id.widget_battery_text, if (pct in 0..15) tint else Mascot.argb(0xFFFFE0B0.toInt()))
             v.setInt(R.id.widget_battery_icon, "setColorFilter", tint)
 
             v.setOnClickPendingIntent(R.id.widget_battery_root, launchLauncher(ctx))

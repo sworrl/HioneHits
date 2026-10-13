@@ -29,7 +29,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="72°F"
-            android:textColor="#39C5BB"
+            android:textColor="#FFAB2E"
             android:textSize="13sp"
             android:textStyle="bold"
             android:maxLines="1" />
@@ -39,7 +39,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Clear Sky"
-            android:textColor="#9FF3EC"
+            android:textColor="#FFE0B0"
             android:textSize="7sp"
             android:maxLines="1"
             android:ellipsize="end" />

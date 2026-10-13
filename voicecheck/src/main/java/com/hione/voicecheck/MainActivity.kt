@@ -43,9 +43,9 @@ import java.io.File
  */
 class MainActivity : ComponentActivity() {
 
-    private val teal = Color(0xFF39C5BB)
-    private val pink = Color(0xFFFF5FA2)
-    private val bg = Color(0xFF0B1418)
+    private val teal = Color(0xFFFFAB2E)
+    private val pink = Color(0xFF8EC5FF)
+    private val bg = Color(0xFF111216)
     private val card = Color(0xFF13232A)
 
     /** One playable file. */
@@ -213,7 +213,7 @@ class MainActivity : ComponentActivity() {
                     items(shown, key = { it.key }) { c ->
                         val v = verdicts[c.key]
                         Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(card)
-                            .border(1.dp, when (v?.state) { "like" -> teal; "fix" -> pink; else -> Color(0x3339C5BB) }, RoundedCornerShape(14.dp))
+                            .border(1.dp, when (v?.state) { "like" -> teal; "fix" -> pink; else -> Color(0x33FFAB2E) }, RoundedCornerShape(14.dp))
                             .padding(10.dp)) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Box(Modifier.size(52.dp).clip(RoundedCornerShape(26.dp)).background(teal).clickable { play(c.path) },

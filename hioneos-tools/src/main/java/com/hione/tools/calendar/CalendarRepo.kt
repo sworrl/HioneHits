@@ -225,7 +225,7 @@ object CalendarRepo {
             put(Calendars.ACCOUNT_TYPE, CalendarContract.ACCOUNT_TYPE_LOCAL)
             put(Calendars.NAME, "hione_local")
             put(Calendars.CALENDAR_DISPLAY_NAME, "On this device")
-            put(Calendars.CALENDAR_COLOR, Mascot.argb(0xFF39C5BB.toInt()))
+            put(Calendars.CALENDAR_COLOR, Mascot.argb(0xFFFFAB2E.toInt()))
             put(Calendars.CALENDAR_ACCESS_LEVEL, Calendars.CAL_ACCESS_OWNER)
             put(Calendars.OWNER_ACCOUNT, acct)
             put(Calendars.VISIBLE, 1)

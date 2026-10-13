@@ -397,7 +397,7 @@ class HioneApiRouter(private val context: Context) {
         return if (bytes != null && bytes.isNotEmpty()) {
             ApiResponse.bytes(200, "image/jpeg", bytes)
         } else {
-            val svg = """<svg xmlns="http://www.w3.org/2000/svg" width="300" height="300" viewBox="0 0 300 300"><rect width="300" height="300" fill="#05141c"/><circle cx="150" cy="150" r="80" fill="#08202d" stroke="#00e5ff" stroke-width="4"/><text x="150" y="160" font-family="sans-serif" font-size="28" fill="#39c5bb" text-anchor="middle">HIONE</text></svg>"""
+            val svg = """<svg xmlns="http://www.w3.org/2000/svg" width="300" height="300" viewBox="0 0 300 300"><rect width="300" height="300" fill="#05141c"/><circle cx="150" cy="150" r="80" fill="#08202d" stroke="#FFC56B" stroke-width="4"/><text x="150" y="160" font-family="sans-serif" font-size="28" fill="#FFAB2E" text-anchor="middle">HIONE</text></svg>"""
             ApiResponse.bytes(200, "image/svg+xml", svg.toByteArray(Charsets.UTF_8))
         }
     }

@@ -191,7 +191,7 @@ private fun AlbumArtYearBadge(year: Int, modifier: Modifier = Modifier) {
         modifier
             .padding(4.dp)
             .clip(androidx.compose.foundation.shape.RoundedCornerShape(4.dp))
-            .background(Mascot.color(0xCC04161A))
+            .background(Mascot.color(0xCC121318))
             .padding(horizontal = 4.dp, vertical = 1.dp)
     ) {
         androidx.compose.material3.Text(

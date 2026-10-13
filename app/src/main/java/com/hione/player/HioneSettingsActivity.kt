@@ -87,7 +87,7 @@ class HioneSettingsActivity : ComponentActivity() {
                     primary = HioneCyan,
                     secondary = HioneNeonPink,
                     background = CyberDarkBg,
-                    surface = Mascot.color(0xF5040D12),
+                    surface = Mascot.color(0xF50C0D10),
                     surfaceVariant = Mascot.color(0xFF071E28),
                     onPrimary = Color.Black,
                     onSecondary = Color.Black,
@@ -179,7 +179,7 @@ fun HioneSettingsScreen(onBack: () -> Unit) {
                 subtitle = "USB DAC mode, in the Hardware app",
                 icon = Icons.Default.Usb,
                 badge = "UAC2",
-                accentColor = Mascot.color(0xFF00E5FF),
+                accentColor = Mascot.color(0xFFFFC56B),
                 onClick = { DacSettingsLink.open(ctx) }
             ),
             SettingsCategoryItem(
@@ -228,7 +228,7 @@ fun HioneSettingsScreen(onBack: () -> Unit) {
                 title = "Storage",
                 subtitle = "MicroSD and internal storage",
                 icon = Icons.Default.SdCard,
-                accentColor = Mascot.color(0xFF00E5FF),
+                accentColor = Mascot.color(0xFFFFC56B),
                 onClick = { isStorageModalOpen = true }
             ),
             SettingsCategoryItem(
@@ -342,9 +342,9 @@ fun HioneSettingsScreen(onBack: () -> Unit) {
                 .background(
                     Brush.verticalGradient(
                         listOf(
-                            Mascot.color(0xEE040D12),
-                            Mascot.color(0xCC040D12),
-                            Mascot.color(0xF0040D12)
+                            Mascot.color(0xEE0C0D10),
+                            Mascot.color(0xCC0C0D10),
+                            Mascot.color(0xF00C0D10)
                         )
                     )
                 )
@@ -384,7 +384,7 @@ fun HioneSettingsScreen(onBack: () -> Unit) {
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier
                         .clip(RoundedCornerShape(16.dp))
-                        .background(Mascot.color(0x4400E5FF))
+                        .background(Mascot.color(0x44FFC56B))
                         .border(1.dp, HioneCyan, RoundedCornerShape(16.dp))
                         .clickable {
                             chibiReaction = chibiReactions.random()
@@ -703,7 +703,7 @@ fun HioneDisplaySettingsModal(onDismissRequest: () -> Unit) {
             .fillMaxWidth(0.96f)
             .fillMaxHeight(0.90f)
             .clip(RoundedCornerShape(24.dp))
-            .background(Brush.verticalGradient(listOf(Mascot.color(0xF0081C24), Mascot.color(0xF5040D12))))
+            .background(Brush.verticalGradient(listOf(Mascot.color(0xF0081C24), Mascot.color(0xF50C0D10))))
             .border(1.5.dp, Brush.horizontalGradient(listOf(Color(0xFFFFD600), HioneCyan)), RoundedCornerShape(24.dp)),
         title = null,
         text = {
@@ -921,7 +921,7 @@ fun HioneBluetoothSettingsModal(onDismissRequest: () -> Unit) {
             .fillMaxWidth(0.96f)
             .fillMaxHeight(0.90f)
             .clip(RoundedCornerShape(24.dp))
-            .background(Brush.verticalGradient(listOf(Mascot.color(0xF0081C24), Mascot.color(0xF5040D12))))
+            .background(Brush.verticalGradient(listOf(Mascot.color(0xF0081C24), Mascot.color(0xF50C0D10))))
             .border(1.5.dp, Brush.horizontalGradient(listOf(Color(0xFF2979FF), HioneCyan)), RoundedCornerShape(24.dp)),
         title = null,
         text = {
@@ -986,7 +986,7 @@ fun HioneBluetoothSettingsModal(onDismissRequest: () -> Unit) {
                                                 com.hione.player.bluetooth.HioneBluetoothController.startScan()
                                             }
                                         },
-                                        colors = ButtonDefaults.buttonColors(containerColor = if (isScanning) Mascot.color(0x33FF4081) else Color(0x332979FF)),
+                                        colors = ButtonDefaults.buttonColors(containerColor = if (isScanning) Mascot.color(0x336FB0FF) else Color(0x332979FF)),
                                         contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
                                         shape = RoundedCornerShape(8.dp),
                                         modifier = Modifier.height(26.dp)
@@ -1025,7 +1025,7 @@ fun HioneBluetoothSettingsModal(onDismissRequest: () -> Unit) {
                                                         else -> Icons.Default.Bluetooth
                                                     },
                                                     contentDescription = null,
-                                                    tint = if (devItem.isConnected) Mascot.color(0xFF00E5FF) else Color.White,
+                                                    tint = if (devItem.isConnected) Mascot.color(0xFFFFC56B) else Color.White,
                                                     modifier = Modifier.size(20.dp)
                                                 )
                                                 Spacer(Modifier.width(10.dp))
@@ -1037,7 +1037,7 @@ fun HioneBluetoothSettingsModal(onDismissRequest: () -> Unit) {
                                                             devItem.isConnecting -> "Connecting…"
                                                             else -> devItem.address
                                                         },
-                                                        color = if (devItem.isConnected) Mascot.color(0xFF00E5FF) else if (devItem.isConnecting) Color(0xFFFFD54F) else HioneTextSecondary,
+                                                        color = if (devItem.isConnected) Mascot.color(0xFFFFC56B) else if (devItem.isConnecting) Color(0xFFFFD54F) else HioneTextSecondary,
                                                         fontSize = 9.5.sp
                                                     )
                                                 }
@@ -1118,7 +1118,7 @@ fun HioneBluetoothSettingsModal(onDismissRequest: () -> Unit) {
                                                 com.hione.player.bluetooth.HioneBluetoothController.startScan()
                                             }
                                         },
-                                        colors = ButtonDefaults.buttonColors(containerColor = if (isScanning) Mascot.color(0x33FF4081) else Color(0x332979FF)),
+                                        colors = ButtonDefaults.buttonColors(containerColor = if (isScanning) Mascot.color(0x336FB0FF) else Color(0x332979FF)),
                                         contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
                                         shape = RoundedCornerShape(8.dp),
                                         modifier = Modifier.height(26.dp)
@@ -1196,7 +1196,7 @@ fun HioneBluetoothSettingsModal(onDismissRequest: () -> Unit) {
                                 Text("Codecs", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                                 listOf(
                                     "LDAC (990 / 660 / 330 kbps 96kHz/24-Bit)" to Color(0xFF00E676),
-                                    "Qualcomm aptX HD (576 kbps 48kHz/24-Bit)" to Mascot.color(0xFF00E5FF),
+                                    "Qualcomm aptX HD (576 kbps 48kHz/24-Bit)" to Mascot.color(0xFFFFC56B),
                                     "aptX Adaptive (Low Latency / Dynamic)" to Color(0xFF2979FF),
                                     "AAC / SBC (Standard Audio Codec)" to HioneTextSecondary
                                 ).forEach { (codec, col) ->
@@ -1258,8 +1258,8 @@ fun HioneStorageSettingsModal(onDismissRequest: () -> Unit) {
             .fillMaxWidth(0.96f)
             .fillMaxHeight(0.90f)
             .clip(RoundedCornerShape(24.dp))
-            .background(Brush.verticalGradient(listOf(Mascot.color(0xF0081C24), Mascot.color(0xF5040D12))))
-            .border(1.5.dp, Brush.horizontalGradient(listOf(Mascot.color(0xFF00E5FF), HionePink)), RoundedCornerShape(24.dp)),
+            .background(Brush.verticalGradient(listOf(Mascot.color(0xF0081C24), Mascot.color(0xF50C0D10))))
+            .border(1.5.dp, Brush.horizontalGradient(listOf(Mascot.color(0xFFFFC56B), HionePink)), RoundedCornerShape(24.dp)),
         title = null,
         text = {
             Column(Modifier.fillMaxSize().padding(top = 4.dp)) {
@@ -1377,7 +1377,7 @@ fun HioneAppsSettingsModal(onDismissRequest: () -> Unit) {
             .fillMaxWidth(0.96f)
             .fillMaxHeight(0.90f)
             .clip(RoundedCornerShape(24.dp))
-            .background(Brush.verticalGradient(listOf(Mascot.color(0xF0081C24), Mascot.color(0xF5040D12))))
+            .background(Brush.verticalGradient(listOf(Mascot.color(0xF0081C24), Mascot.color(0xF50C0D10))))
             .border(1.5.dp, Brush.horizontalGradient(listOf(Color(0xFFFF9100), HioneCyan)), RoundedCornerShape(24.dp)),
         title = null,
         text = {
@@ -1451,7 +1451,7 @@ fun HioneSecuritySettingsModal(onDismissRequest: () -> Unit) {
             .fillMaxWidth(0.96f)
             .fillMaxHeight(0.90f)
             .clip(RoundedCornerShape(24.dp))
-            .background(Brush.verticalGradient(listOf(Mascot.color(0xF0081C24), Mascot.color(0xF5040D12))))
+            .background(Brush.verticalGradient(listOf(Mascot.color(0xF0081C24), Mascot.color(0xF50C0D10))))
             .border(1.5.dp, Brush.horizontalGradient(listOf(Color(0xFFE040FB), HioneCyan)), RoundedCornerShape(24.dp)),
         title = null,
         text = {
@@ -1763,7 +1763,7 @@ fun HioneAboutDeviceModal(
             .fillMaxWidth(0.96f)
             .fillMaxHeight(0.92f)
             .clip(RoundedCornerShape(24.dp))
-            .background(Brush.verticalGradient(listOf(Mascot.color(0xF0081C24), Mascot.color(0xF5040D12))))
+            .background(Brush.verticalGradient(listOf(Mascot.color(0xF0081C24), Mascot.color(0xF50C0D10))))
             .border(1.5.dp, Brush.horizontalGradient(listOf(HioneCyan, HioneNeonPink)), RoundedCornerShape(24.dp)),
         title = null,
         text = {
@@ -1781,7 +1781,7 @@ fun HioneAboutDeviceModal(
                             Modifier
                                 .fillMaxWidth()
                                 .clip(RoundedCornerShape(16.dp))
-                                .background(Brush.horizontalGradient(listOf(Mascot.color(0x3300E5FF), Mascot.color(0x33FF4081))))
+                                .background(Brush.horizontalGradient(listOf(Mascot.color(0x33FFC56B), Mascot.color(0x336FB0FF))))
                                 .border(1.dp, CyberGlassBorder, RoundedCornerShape(16.dp))
                                 .padding(14.dp)
                         ) {
@@ -2047,7 +2047,7 @@ fun HioneDeveloperOptionsModal(
             .fillMaxWidth(0.96f)
             .fillMaxHeight(0.92f)
             .clip(RoundedCornerShape(24.dp))
-            .background(Brush.verticalGradient(listOf(Mascot.color(0xF0081C24), Mascot.color(0xF5040D12))))
+            .background(Brush.verticalGradient(listOf(Mascot.color(0xF0081C24), Mascot.color(0xF50C0D10))))
             .border(1.5.dp, Brush.horizontalGradient(listOf(Color(0xFF00E676), HioneCyan)), RoundedCornerShape(24.dp)),
         title = null,
         text = {

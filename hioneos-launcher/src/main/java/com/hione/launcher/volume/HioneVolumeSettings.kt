@@ -120,8 +120,8 @@ fun HioneVolumeUiSettingRow(
                     HioneVolumeManager.setUseHibyDialog(ctx, it)
                 },
                 colors = SwitchDefaults.colors(
-                    checkedThumbColor = Mascot.color(0xFF00E5FF),
-                    checkedTrackColor = Mascot.color(0x5500E5FF),
+                    checkedThumbColor = Mascot.color(0xFFFFC56B),
+                    checkedTrackColor = Mascot.color(0x55FFC56B),
                     uncheckedThumbColor = Mascot.color(0xFF7FB9C6),
                     uncheckedTrackColor = Color(0x33FFFFFF)
                 )
@@ -141,7 +141,7 @@ private fun VolumeStyleOptionCard(
         modifier = Modifier
             .fillMaxWidth()
             .background(
-                if (isSelected) Mascot.color(0x3300E5FF) else Color(0x14FFFFFF),
+                if (isSelected) Mascot.color(0x33FFC56B) else Color(0x14FFFFFF),
                 RoundedCornerShape(10.dp)
             )
             .border(
@@ -184,7 +184,7 @@ private fun VolumeStyleOptionCard(
 
 private fun Modifier.clipToRoundedGlass(): Modifier = this
     .background(
-        Brush.horizontalGradient(listOf(Mascot.color(0x2200E5FF), Color(0x11000000))),
+        Brush.horizontalGradient(listOf(Mascot.color(0x22FFC56B), Color(0x11000000))),
         RoundedCornerShape(14.dp)
     )
-    .border(1.2.dp, Mascot.color(0x3300E5FF), RoundedCornerShape(14.dp))
+    .border(1.2.dp, Mascot.color(0x33FFC56B), RoundedCornerShape(14.dp))

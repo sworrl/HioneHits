@@ -189,7 +189,7 @@ fun HioneThermalObservatoryModal(
         peakForColor >= 58f -> com.hione.launcher.ui.HioneIdentity.Coral // Hot / Throttle Red
         peakForColor >= 48f -> Color(0xFFFF9100) // Warm Amber Orange
         peakForColor >= 38f -> com.hione.launcher.ui.HioneIdentity.Gold // Nominal Gold
-        peakForColor >= 30f -> Mascot.color(0xFF00E5FF) // Cool Cyan
+        peakForColor >= 30f -> Mascot.color(0xFFFFC56B) // Cool Cyan
         else -> com.hione.launcher.ui.HioneIdentity.Leek                // Low Ambient Mint Green
     }
 
@@ -198,7 +198,7 @@ fun HioneThermalObservatoryModal(
     Box(
         Modifier
             .fillMaxSize()
-            .background(Mascot.color(0xE6040D12))
+            .background(Mascot.color(0xE60C0D10))
             .clickable { onClose() }
             // System-gesture-style dismiss: swipe up starting at the bottom edge of the modal.
             .swipeUpFromBottomToDismiss(onDismiss = onClose),
@@ -369,7 +369,7 @@ fun HioneThermalObservatoryModal(
 
                             drawLine(Color(0x22FF1744), Offset(0f, y60), Offset(w, y60), strokeWidth = 1f)
                             drawLine(Color(0x22FFD600), Offset(0f, y45), Offset(w, y45), strokeWidth = 1f)
-                            drawLine(Mascot.color(0x2200E5FF), Offset(0f, y30), Offset(w, y30), strokeWidth = 1f)
+                            drawLine(Mascot.color(0x22FFC56B), Offset(0f, y30), Offset(w, y30), strokeWidth = 1f)
 
                             if (pts.size >= 2) {
                                 val dx = w / 29f
@@ -506,7 +506,7 @@ fun HioneThermalObservatoryModal(
                                     zone.tempC >= 55f -> com.hione.launcher.ui.HioneIdentity.Coral
                                     zone.tempC >= 48f -> Color(0xFFFF9100)
                                     zone.tempC >= 38f -> com.hione.launcher.ui.HioneIdentity.Gold
-                                    else -> Mascot.color(0xFF00E5FF)
+                                    else -> Mascot.color(0xFFFFC56B)
                                 }
                                 Box(
                                     Modifier
@@ -529,7 +529,7 @@ fun HioneThermalObservatoryModal(
                         ) {
                             Text("CPU ×${counts["CPU"] ?: 0}", color = Color(0xFFFF9100), fontSize = 6.5.sp, fontWeight = FontWeight.Bold)
                             Text("GPU/DSP ×${(counts["GPU"] ?: 0) + (counts["DSP"] ?: 0)}", color = HioneCyan, fontSize = 6.5.sp, fontWeight = FontWeight.Bold)
-                            Text("AUDIO ×${counts["AUDIO"] ?: 0}", color = Mascot.color(0xFFB388FF), fontSize = 6.5.sp, fontWeight = FontWeight.Bold)
+                            Text("AUDIO ×${counts["AUDIO"] ?: 0}", color = Mascot.color(0xFFB9C2D0), fontSize = 6.5.sp, fontWeight = FontWeight.Bold)
                             Text("BATTERY ×${counts["BATTERY"] ?: 0}", color = Color(0xFF00FF88), fontSize = 6.5.sp, fontWeight = FontWeight.Bold)
                             Text("RF ×${counts["RF"] ?: 0}", color = HioneNeonPink, fontSize = 6.5.sp, fontWeight = FontWeight.Bold)
                             Text("OTHER ×${(counts["SOC"] ?: 0) + (counts["DISPLAY"] ?: 0) + (counts["OTHER"] ?: 0)}", color = HioneTextSecondary, fontSize = 6.5.sp, fontWeight = FontWeight.Bold)
@@ -605,7 +605,7 @@ fun HioneThermalObservatoryModal(
 
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     listOf(
-                        Triple("save", "Battery Saver", Mascot.color(0xFF00E5FF)),
+                        Triple("save", "Battery Saver", Mascot.color(0xFFFFC56B)),
                         Triple("auto", "Auto", com.hione.launcher.ui.HioneIdentity.Gold),
                         Triple("perf", "Performance", com.hione.launcher.ui.HioneIdentity.Coral)
                     ).forEach { (mode, label, color) ->

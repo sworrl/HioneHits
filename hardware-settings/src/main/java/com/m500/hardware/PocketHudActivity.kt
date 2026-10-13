@@ -141,7 +141,7 @@ fun CyberPocketHudScreen(mode: String, allowVolumeWheel: Boolean) {
 
     val primaryColor = when {
         isBoth -> Color(0xFFFFB300) // Master Amber
-        isTouch -> Mascot.color(0xFF00E5FF) // Hione Cyan
+        isTouch -> Mascot.color(0xFFFFC56B) // Hione Cyan
         else -> Mascot.color(0xFF06D6A0) // Emerald Jade
     }
 
@@ -223,12 +223,12 @@ fun CyberPocketHudScreen(mode: String, allowVolumeWheel: Boolean) {
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(8.dp))
                         .background(Color(0xFF13222E))
-                        .border(1.dp, Mascot.color(0xFF00E5FF).copy(alpha = 0.3f), RoundedCornerShape(8.dp))
+                        .border(1.dp, Mascot.color(0xFFFFC56B).copy(alpha = 0.3f), RoundedCornerShape(8.dp))
                         .padding(vertical = 6.dp, horizontal = 10.dp)
                 ) {
                     Text(
                         text = "Volume wheel still works",
-                        color = Mascot.color(0xFF00E5FF),
+                        color = Mascot.color(0xFFFFC56B),
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
                         textAlign = TextAlign.Center,

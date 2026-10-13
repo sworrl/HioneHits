@@ -117,7 +117,7 @@ fun RadioWaterfallSpectrum(
         Modifier
             .fillMaxSize()
             .clip(RoundedCornerShape(14.dp))
-            .background(Color(0xFF040D12))
+            .background(Color(0xFF0C0D10))
             .border(1.2.dp, CyberGlassBorder, RoundedCornerShape(14.dp))
     ) {
         if (mode == QualcommFmHardwareEngine.ViewMode.LIVE || isScanning) {
@@ -321,7 +321,7 @@ private fun BandPanel(
             }
             if (drew) {
                 fillPath.addPath(fftPath); fillPath.lineTo(w, fftHeight); fillPath.lineTo(gutter, fftHeight); fillPath.close()
-                drawPath(fillPath, Brush.verticalGradient(listOf(Color(0x8800E5FF), Color(0x1100E5FF)), 0f, fftHeight))
+                drawPath(fillPath, Brush.verticalGradient(listOf(Color(0x88FFC56B), Color(0x11FFC56B)), 0f, fftHeight))
                 drawPath(fftPath, HioneTeal, style = Stroke(width = 2.dp.toPx()))
             }
 

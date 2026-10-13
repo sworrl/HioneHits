@@ -96,7 +96,7 @@ object HioneThemeRegistry {
         wallpaperDrawableName = "hione_wallpaper", // already exists: R.drawable.hione_wallpaper
         lockscreenDrawableName = "hione_wallpaper",
         accentPalette = HioneAccentPalette(
-            primary = Mascot.color(0xFF39C5BB),   // Hione teal
+            primary = Mascot.color(0xFFFFAB2E),   // Hione teal
             secondary = Mascot.color(0xFF7ED6E0), // sea-foam
             tertiary = Color(0xFFFF9E80),  // coral (her hair-tie / warm accents)
             background = Mascot.color(0xFFEAF6F6)
@@ -117,7 +117,7 @@ object HioneThemeRegistry {
         accentPalette = HioneAccentPalette(
             primary = Color(0xFFFF7518),   // pumpkin orange
             secondary = Color(0xFF6A3FA0), // witch violet
-            tertiary = Mascot.color(0xFF39C5BB),  // keep a sliver of Hione teal so it still reads "Hione"
+            tertiary = Mascot.color(0xFFFFAB2E),  // keep a sliver of Hione teal so it still reads "Hione"
             background = Mascot.color(0xFF140A10)
         ),
         keyboardThemeRef = null,
@@ -135,7 +135,7 @@ object HioneThemeRegistry {
         wallpaperDrawableName = "theme_beach_icecream_wallpaper", // present: res/drawable-nodpi/theme_beach_icecream_wallpaper.jpg
         lockscreenDrawableName = "theme_beach_icecream_wallpaper",
         accentPalette = HioneAccentPalette(
-            primary = Mascot.color(0xFF39C5BB),
+            primary = Mascot.color(0xFFFFAB2E),
             secondary = Color(0xFFFFB6C1), // strawberry ice-cream pink
             tertiary = Color(0xFFFFF3D6),  // vanilla cream
             background = Mascot.color(0xFFEAF6F6)
@@ -156,7 +156,7 @@ object HioneThemeRegistry {
         wallpaperDrawableName = "hione_banner_cyber_stage", // already exists in res/drawable
         lockscreenDrawableName = "hione_banner_cyber_stage",
         accentPalette = HioneAccentPalette(
-            primary = Mascot.color(0xFF39C5BB),
+            primary = Mascot.color(0xFFFFAB2E),
             secondary = Mascot.color(0xFFE03177), // neon magenta
             tertiary = Color(0xFF2F5DFF),  // stage laser blue
             background = Color(0xFF060B18)

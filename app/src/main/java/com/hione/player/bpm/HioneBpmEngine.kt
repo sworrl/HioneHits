@@ -61,7 +61,7 @@ object HioneBpmEngine {
         private set
     @Volatile var isPlaying: Boolean = false
         private set
-    @Volatile var dominantColor: Int = Mascot.argb(0xFF39C5BB.toInt())
+    @Volatile var dominantColor: Int = Mascot.argb(0xFFFFAB2E.toInt())
         private set
 
     /**

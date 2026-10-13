@@ -273,7 +273,7 @@ class LibraryDaemonService : Service() {
 
         return NotificationCompat.Builder(this, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_hione_monitor_status)
-            .setColor(Mascot.argb(0xFF00E5FF.toInt()))
+            .setColor(Mascot.argb(0xFFFFC56B.toInt()))
             .setColorized(true)
             .setContentTitle("${Mascot.name} Monitor")
             .setSubText(if (HioneIngestGate.isEnabled(this)) "rsyncd :${HioneSyncTransceiver.RSYNC_PORT}" else "local SD only")

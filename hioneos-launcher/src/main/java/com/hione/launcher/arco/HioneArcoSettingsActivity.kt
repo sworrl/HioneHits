@@ -331,7 +331,7 @@ private fun ArcoConnectionPane(onPaired: () -> Unit) {
             Text("Check that the notification on ${session.server_name} shows the SAME code:", color = HioneTextSecondary, fontSize = 9.5.sp)
             Spacer(Modifier.height(6.dp))
             Box(
-                Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp)).background(Mascot.color(0x22FF4081)).padding(vertical = 12.dp),
+                Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp)).background(Mascot.color(0x226FB0FF)).padding(vertical = 12.dp),
                 contentAlignment = Alignment.Center
             ) {
                 Text(session.display_code, color = Color.White, fontSize = 26.sp, fontWeight = FontWeight.Black, fontFamily = AudiowideFont, letterSpacing = 2.sp)
@@ -459,7 +459,7 @@ private fun ArcoDashboardPane() {
                     ArcoClient.setMusicVisualizerBridgeEnabled(on)
                     if (on) ArcoMusicVisualizerBridge.start(ctx) else ArcoMusicVisualizerBridge.stop()
                 },
-                colors = SwitchDefaults.colors(checkedThumbColor = HioneNeonPink, checkedTrackColor = Mascot.color(0x33FF4081))
+                colors = SwitchDefaults.colors(checkedThumbColor = HioneNeonPink, checkedTrackColor = Mascot.color(0x336FB0FF))
             )
         }
         Text(

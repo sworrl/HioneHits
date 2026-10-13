@@ -138,6 +138,7 @@ fun pageTitle(route: String): String = when (route.substringBefore('/')) {
     "hione_sound" -> soundCategoryTitle(seg(route, 1))
     "display_more" -> "More display settings"
     "mascot" -> "Theme & mascot"
+    "home_layout" -> "Home screen"
     "storage" -> "Storage"
     "location" -> "Location"
     "security" -> "Security & privacy"
@@ -186,6 +187,7 @@ private fun PageContent(route: String) {
         "hione_sound" -> HioneSoundCategoryPage(seg(route, 1) ?: "")
         "display_more" -> DisplayMorePage()
         "mascot" -> MascotPage()
+        "home_layout" -> HomeLayoutPage()
         "storage" -> StoragePage()
         "location" -> LocationPage()
         "security" -> SecurityPage()
