@@ -153,11 +153,23 @@ fun HioneWebPageDialog(url: String, onDismiss: () -> Unit) {
                     WebView(c).apply {
                         settings.javaScriptEnabled = true
                         settings.domStorageEnabled = true
-                        webViewClient = WebViewClient()
+                        settings.databaseEnabled = true
+                        val cm = android.webkit.CookieManager.getInstance()
+                        cm.setAcceptCookie(true)
+                        cm.setAcceptThirdPartyCookies(this, true)
+                        webViewClient = object : WebViewClient() {
+                            override fun onPageFinished(view: WebView?, url: String?) {
+                                super.onPageFinished(view, url)
+                                android.webkit.CookieManager.getInstance().flush()
+                            }
+                        }
                         loadUrl(url)
                     }
                 },
-                onRelease = { it.destroy() },
+                onRelease = {
+                    android.webkit.CookieManager.getInstance().flush()
+                    it.destroy()
+                },
                 modifier = Modifier.fillMaxSize()
             )
         }
@@ -240,7 +252,19 @@ fun HioneWindyCard(modifier: Modifier = Modifier) {
     var webUrl by remember { mutableStateOf<String?>(null) }
     var webcamText by remember { mutableStateOf("") }
     var pointText by remember { mutableStateOf("") }
+    var mapText by remember { mutableStateOf("") }
     var note by remember { mutableStateOf("") }
+
+    val pm = ctx.packageManager
+    val installedWindyApp = remember(ctx) {
+        listOf("com.windytv.android", "com.windyapp.android", "co.windyapp").firstOrNull { pkg ->
+            runCatching { pm.getPackageInfo(pkg, 0) }.isSuccess
+        }
+    }
+    val isSubscriber = remember(webUrl) {
+        val cookie = runCatching { android.webkit.CookieManager.getInstance().getCookie("https://www.windy.com") }.getOrNull()
+        !cookie.isNullOrBlank() && (cookie.contains("remember_token") || cookie.contains("session") || cookie.contains("user"))
+    }
 
     fun open(url: String) { if (!openWeb(ctx, url)) webUrl = url }
 
@@ -254,43 +278,64 @@ fun HioneWindyCard(modifier: Modifier = Modifier) {
             .padding(9.dp),
         verticalArrangement = Arrangement.spacedBy(6.dp)
     ) {
-        val connected = keys.connected && !keys.pointFromBuild || keys.hasWebcam
+        val connected = keys.connected && !keys.pointFromBuild || keys.hasWebcam || keys.hasMap || isSubscriber
         when {
             connected && !editing -> {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
-                        SectionLabel("WINDY CONNECTED", HioneNeonPink)
+                        SectionLabel(if (isSubscriber) "WINDY PREMIUM ACTIVE" else "WINDY CONNECTED", HioneNeonPink)
                         val parts = buildList {
+                            if (isSubscriber) add("subscriber logged in")
                             add(if (keys.hasWebcam) "webcams on" else "no webcam key")
                             add(if (keys.hasPoint) "point forecast on" else "no point forecast key")
+                            if (keys.hasMap) add("map layers on")
                         }
                         Text(parts.joinToString(", "), color = Color.White, fontSize = 10.sp)
                         if (x.windy?.warning?.isNotBlank() == true)
                             Text("Your point key is on Windy's free testing plan, so Windy sends shuffled sample numbers. The forecast here stays on Open-Meteo until the key is on a paid plan.", color = Warn, fontSize = 9.sp)
                         if (x.windyError.isNotBlank()) Text(x.windyError, color = Warn, fontSize = 9.sp)
                     }
-                    Pill("EDIT", HioneNeonPink) { editing = true; webcamText = ""; pointText = ""; note = "" }
+                    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                        if (installedWindyApp != null) {
+                            Pill("OPEN APP", HioneCyan) {
+                                pm.getLaunchIntentForPackage(installedWindyApp)?.let {
+                                    it.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                    ctx.startActivity(it)
+                                }
+                            }
+                        }
+                        Pill("EDIT", HioneNeonPink) { editing = true; webcamText = ""; pointText = ""; mapText = ""; note = "" }
+                    }
                 }
             }
             folded && !editing -> {
                 Row(Modifier.fillMaxWidth().clickable { folded = false; HioneWeatherExtras.setWindyCardFolded(ctx, false) },
                     verticalAlignment = Alignment.CenterVertically) {
-                    Text("Windy not connected. Tap to see what it adds.", color = HioneTextSecondary, fontSize = 10.sp, modifier = Modifier.weight(1f))
+                    Text("Windy not connected. Tap to log in or add API keys.", color = HioneTextSecondary, fontSize = 10.sp, modifier = Modifier.weight(1f))
                     Text("SHOW", color = HioneNeonPink, fontSize = 9.sp, fontWeight = FontWeight.Black, fontFamily = AudiowideFont)
                 }
             }
             else -> {
-                SectionLabel("WINDY", HioneNeonPink)
+                SectionLabel("WINDY & PREMIUM SUBSCRIPTION", HioneNeonPink)
                 if (!connected) {
-                    Text("Everything on this screen runs on free data: Open-Meteo, RainViewer, NWS and free Esri/OpenStreetMap maps. Windy can add more on top if you want it.",
+                    Text("Everything on this screen runs on free data: Open-Meteo, RainViewer, NWS and free Esri/OpenStreetMap maps. Windy adds premium high-res models, maps and live webcams.",
                         color = Color.White, fontSize = 10.5.sp)
-                    Text("Windy Premium gets you hourly forecast steps, more frequent model updates and the full 10 days on windy.com and in the Windy app.",
+                    Text("Windy Premium gets you 1-hour forecast steps, 4x daily model updates, 10-day lookaheads and full access on windy.com and in the Windy app.",
                         color = HioneTextSecondary, fontSize = 10.sp)
-                    Text("A Windy API key turns on more here: webcams near you, Windy's GFS point forecast next to the free one, and the Windy map layers (wind, temperature, clouds and the rest). The webcam key has a free tier. The Point Forecast key is a paid plan, and a key on the free testing plan only returns shuffled sample numbers.",
+                    Text("Enter your API keys below or log in with your Windy subscription account to unlock premium layers.",
                         color = HioneTextSecondary, fontSize = 10.sp)
                     Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        Pill("GET PREMIUM", HioneNeonPink, filled = true) { open(WINDY_PREMIUM_URL) }
-                        Pill("GET API KEYS", HioneCyan, filled = true) { open(WINDY_KEYS_URL) }
+                        Pill("LOG IN (PREMIUM)", HioneNeonPink, filled = true) { open("https://www.windy.com/login") }
+                        if (installedWindyApp != null) {
+                            Pill("OPEN WINDY APP", HioneCyan, filled = true) {
+                                pm.getLaunchIntentForPackage(installedWindyApp)?.let {
+                                    it.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                    ctx.startActivity(it)
+                                }
+                            }
+                        }
+                        Pill("GET PREMIUM", HioneTextSecondary) { open(WINDY_PREMIUM_URL) }
+                        Pill("GET API KEYS", HioneCyan) { open(WINDY_KEYS_URL) }
                     }
                 }
                 KeyField("Webcam key", webcamText, if (keys.hasWebcam) "saved ${HioneWindyKeys.masked(keys.webcam)}" else "paste the Webcams API key") { webcamText = it }
@@ -299,27 +344,29 @@ fun HioneWindyCard(modifier: Modifier = Modifier) {
                     keys.hasPoint -> "saved ${HioneWindyKeys.masked(keys.point)}"
                     else -> "paste the Point Forecast API key"
                 }) { pointText = it }
+                KeyField("Map Forecast key", mapText, if (keys.hasMap) "saved ${HioneWindyKeys.masked(keys.map)}" else "paste the Map Forecast API key") { mapText = it }
                 if (note.isNotBlank()) Text(note, color = Warn, fontSize = 9.5.sp)
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Pill("SAVE KEYS", HioneCyan, enabled = webcamText.isNotBlank() || pointText.isNotBlank(), filled = true) {
+                    Pill("SAVE KEYS", HioneCyan, enabled = webcamText.isNotBlank() || pointText.isNotBlank() || mapText.isNotBlank(), filled = true) {
                         val w = webcamText.trim().ifBlank { null }
                         val p = pointText.trim().ifBlank { null }
+                        val m = mapText.trim().ifBlank { null }
                         scope.launch {
-                            val ok = withContext(Dispatchers.IO) { HioneWindyKeys.set(ctx, w, p).also { if (it) HioneWindyKeys.applied(ctx) } }
-                            if (ok) { webcamText = ""; pointText = ""; note = ""; editing = false }
+                            val ok = withContext(Dispatchers.IO) { HioneWindyKeys.set(ctx, w, p, m).also { if (it) HioneWindyKeys.applied(ctx) } }
+                            if (ok) { webcamText = ""; pointText = ""; mapText = ""; note = ""; editing = false }
                             else note = "Not saved. A Windy key is letters, digits, - and _ only."
                         }
                     }
                     if (editing && keys.connected) Pill("CLEAR KEYS", Warn) {
                         scope.launch {
-                            withContext(Dispatchers.IO) { HioneWindyKeys.set(ctx, "", "").also { if (it) HioneWindyKeys.applied(ctx) } }
+                            withContext(Dispatchers.IO) { HioneWindyKeys.set(ctx, "", "", "").also { if (it) HioneWindyKeys.applied(ctx) } }
                             editing = false
                         }
                     }
                     if (editing) Pill("DONE", HioneTextSecondary) { editing = false }
                     else if (!connected) Pill("NOT NOW", HioneTextSecondary) { folded = true; HioneWeatherExtras.setWindyCardFolded(ctx, true) }
                 }
-                Text("Keys stay on this device, encrypted with a key from the Android keystore.", color = HioneTextSecondary.copy(alpha = 0.7f), fontSize = 8.5.sp)
+                Text("Keys and sessions stay on this device, encrypted in the Android Keystore.", color = HioneTextSecondary.copy(alpha = 0.7f), fontSize = 8.5.sp)
             }
         }
     }

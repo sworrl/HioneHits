@@ -17,9 +17,13 @@ import java.net.DatagramPacket
 import java.net.DatagramSocket
 import java.net.InetAddress
 import java.net.InetSocketAddress
+import java.net.NetworkInterface
 import java.net.ServerSocket
 import java.net.Socket
-import java.net.NetworkInterface
+import android.graphics.BitmapFactory
+import android.util.Base64
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.asImageBitmap
 import kotlin.math.abs
 import kotlin.math.sqrt
 
@@ -81,6 +85,11 @@ class HioneCastClient(private val ctx: Context) {
         val needsCode: Boolean = false,
         val pairError: String = "",
         val tvIp: String = "",
+        val cacheMs: Long = 1500L,
+        val bufferedMs: Long = 0L,
+        val isBuffering: Boolean = false,
+        val underruns: Int = 0,
+        val artBitmap: ImageBitmap? = null,
     )
 
     data class AudioVisuals(
@@ -113,7 +122,11 @@ class HioneCastClient(private val ctx: Context) {
     private val prefs by lazy { ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE) }
 
     @Volatile private var lastFormatConfig: JSONObject? = null
-    private val audioQueue = java.util.concurrent.LinkedBlockingQueue<ByteArray>(48)
+    @Volatile var targetCacheMs: Long = 1500L
+    @Volatile var underrunCount: Int = 0
+    @Volatile var isBuffering: Boolean = true
+    private val queuedBytes = java.util.concurrent.atomic.AtomicLong(0L)
+    private val audioQueue = java.util.concurrent.LinkedBlockingQueue<ByteArray>(256)
     private var audioLoopJob: Job? = null
 
     @Volatile private var metaBasePosition = 0L
@@ -284,6 +297,8 @@ class HioneCastClient(private val ctx: Context) {
                     TYPE_SKIP -> {
                         val b = ByteArray(len); if (len > 0) input.readFully(b)
                         audioQueue.clear()
+                        queuedBytes.set(0L)
+                        isBuffering = true
                         runCatching { track?.flush() }
                         metaBasePosition = _state.value.positionMs
                         metaBaseBytes = _state.value.bytesPlayed
@@ -306,6 +321,8 @@ class HioneCastClient(private val ctx: Context) {
         } finally {
             audioLoopJob?.cancel()
             audioQueue.clear()
+            queuedBytes.set(0L)
+            isBuffering = true
             runCatching { s.close() }
             if (socket === s) {
                 socket = null; out = null
@@ -436,22 +453,73 @@ class HioneCastClient(private val ctx: Context) {
         // 1. Instantly feed real-time visualizer so visuals never stutter
         processVisuals(b, _state.value.source.bytesPerSample)
 
-        // 2. Bound queue to prevent lag or network blockage
-        while (audioQueue.size >= 24) {
-            audioQueue.poll()
+        // 2. Bound queue to prevent unconstrained memory growth (~4MB max)
+        while (audioQueue.size >= 240) {
+            val dropped = audioQueue.poll()
+            if (dropped != null) {
+                queuedBytes.addAndGet(-dropped.size.toLong())
+            }
         }
         audioQueue.offer(b)
+        queuedBytes.addAndGet(b.size.toLong())
     }
 
     private fun startAudioPlaybackLoop() {
         audioLoopJob?.cancel()
         audioLoopJob = scope.launch(Dispatchers.IO) {
+            isBuffering = true
             while (isActive) {
+                val src = _state.value.source
+                val bytesPerSec = if (src.sampleRate > 0 && src.bytesPerSample > 0 && src.channelCount > 0) {
+                    src.sampleRate.toLong() * src.bytesPerSample * src.channelCount
+                } else 176400L
+
+                val targetBytes = ((bytesPerSec * targetCacheMs) / 1000L).coerceAtLeast(12 * 1024L)
+
+                // Jitter pre-buffering phase
+                if (isBuffering) {
+                    val currentBuffered = queuedBytes.get()
+                    val bufferedMs = (currentBuffered * 1000L / bytesPerSec)
+                    _state.value = _state.value.copy(
+                        isBuffering = true,
+                        cacheMs = targetCacheMs,
+                        bufferedMs = bufferedMs
+                    )
+
+                    if (currentBuffered >= targetBytes) {
+                        isBuffering = false
+                        Log.i(TAG, "Streaming jitter cache filled: ${bufferedMs}ms ($currentBuffered bytes). Resuming smooth playback.")
+                    } else {
+                        delay(20)
+                        continue
+                    }
+                }
+
                 val chunk = try {
-                    audioQueue.poll(150, java.util.concurrent.TimeUnit.MILLISECONDS)
+                    audioQueue.poll(80, java.util.concurrent.TimeUnit.MILLISECONDS)
                 } catch (_: InterruptedException) {
                     break
-                } ?: continue
+                }
+
+                if (chunk == null) {
+                    // Buffer ran empty! Check if this was a network jitter underrun during active playback
+                    if (_state.value.isPlaying && _state.value.connected) {
+                        underrunCount++
+                        // Dynamically scale cache up to absorb slower / jittery networks
+                        targetCacheMs = (targetCacheMs + 500L).coerceAtMost(4000L)
+                        isBuffering = true
+                        Log.w(TAG, "Network stutter detected (underrun #$underrunCount). Dynamically scaling streaming cache to ${targetCacheMs}ms")
+                        _state.value = _state.value.copy(
+                            underruns = underrunCount,
+                            cacheMs = targetCacheMs,
+                            isBuffering = true
+                        )
+                    }
+                    continue
+                }
+
+                queuedBytes.addAndGet(-chunk.size.toLong())
+                val curBufMs = (queuedBytes.get() * 1000L / bytesPerSec)
 
                 var t = track
                 if (t == null) {
@@ -475,19 +543,21 @@ class HioneCastClient(private val ctx: Context) {
                 } else if (written > 0) {
                     val newBytes = _state.value.bytesPlayed + written
                     var newPos = _state.value.positionMs
-                    val src = _state.value.source
-                    if (src.sampleRate > 0 && src.bytesPerSample > 0 && src.channelCount > 0) {
-                        val bytesPerSec = src.sampleRate.toLong() * src.bytesPerSample * src.channelCount
-                        if (bytesPerSec > 0) {
-                            val deltaMs = ((newBytes - metaBaseBytes) * 1000L) / bytesPerSec
-                            newPos = (metaBasePosition + deltaMs).coerceAtLeast(0L)
-                            val dur = _state.value.durationMs
-                            if (dur > 0L && newPos > dur) {
-                                newPos = dur
-                            }
+                    if (bytesPerSec > 0) {
+                        val deltaMs = ((newBytes - metaBaseBytes) * 1000L) / bytesPerSec
+                        newPos = (metaBasePosition + deltaMs).coerceAtLeast(0L)
+                        val dur = _state.value.durationMs
+                        if (dur > 0L && newPos > dur) {
+                            newPos = dur
                         }
                     }
-                    _state.value = _state.value.copy(bytesPlayed = newBytes, positionMs = newPos)
+                    _state.value = _state.value.copy(
+                        bytesPlayed = newBytes,
+                        positionMs = newPos,
+                        bufferedMs = curBufMs,
+                        isBuffering = false,
+                        cacheMs = targetCacheMs
+                    )
                 }
             }
         }
@@ -575,13 +645,24 @@ class HioneCastClient(private val ctx: Context) {
             0L
         }
 
+        val artB64 = j.optString("artB64", "")
+        val resolvedArt = if (artB64.isNotBlank()) {
+            runCatching {
+                val b = Base64.decode(artB64, Base64.DEFAULT)
+                BitmapFactory.decodeByteArray(b, 0, b.size)?.asImageBitmap()
+            }.getOrNull()
+        } else if (title == _state.value.title && artist == _state.value.artist) {
+            _state.value.artBitmap
+        } else null
+
         _state.value = _state.value.copy(
             title = title,
             artist = artist,
             album = album,
             durationMs = resolvedDur,
             positionMs = positionMs,
-            isPlaying = playing
+            isPlaying = playing,
+            artBitmap = resolvedArt
         )
     }
 
@@ -617,10 +698,13 @@ class HioneCastClient(private val ctx: Context) {
 
     private fun getLocalIpAddress(): String {
         return runCatching {
-            val interfaces = NetworkInterface.getNetworkInterfaces().toList()
-            for (intf in interfaces) {
+            val en = NetworkInterface.getNetworkInterfaces()
+            while (en != null && en.hasMoreElements()) {
+                val intf = en.nextElement()
                 if (intf.isLoopback || !intf.isUp) continue
-                for (addr in intf.inetAddresses) {
+                val addrs = intf.inetAddresses
+                while (addrs != null && addrs.hasMoreElements()) {
+                    val addr = addrs.nextElement()
                     if (!addr.isLoopbackAddress && addr is java.net.Inet4Address) {
                         return addr.hostAddress ?: ""
                     }

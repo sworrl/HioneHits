@@ -140,8 +140,8 @@ object HioneCastBridge {
 
             var dur = runCatching { p.duration }.getOrDefault(0L).coerceAtLeast(0L)
             val trackId = runCatching { p.currentMediaItem?.mediaId?.toLongOrNull() }.getOrNull()
+            val app = appContext
             if (dur <= 0L && trackId != null) {
-                val app = appContext
                 val libTrack = FastLibraryStore.peek()?.firstOrNull { it.id == trackId }
                     ?: (if (app != null) runCatching { FastLibraryStore.loadSync(app)?.firstOrNull { it.id == trackId } }.getOrNull() else null)
                 if (libTrack != null && libTrack.durationMs > 0L) {
@@ -170,6 +170,12 @@ object HioneCastBridge {
             lastSentPosMs = pos
             lastSentTimeMs = now
 
+            val artFile: java.io.File? = if (metaChanged && trackId != null && app != null) {
+                runCatching {
+                    com.hione.player.thumbFile(app, trackId).takeIf { it.exists() && it.length() in 100..90_000 }
+                }.getOrNull()
+            } else null
+
             val frame = JSONObject()
                 .put("title", title)
                 .put("artist", artist)
@@ -177,6 +183,14 @@ object HioneCastBridge {
                 .put("durationMs", dur)
                 .put("positionMs", pos)
                 .put("playing", playing)
+
+            if (artFile != null) {
+                runCatching {
+                    val bytes = artFile.readBytes()
+                    val b64 = android.util.Base64.encodeToString(bytes, android.util.Base64.NO_WRAP)
+                    frame.put("artB64", b64)
+                }
+            }
 
             HioneCastServer.sendMeta(frame)
         }

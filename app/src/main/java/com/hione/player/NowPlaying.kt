@@ -632,12 +632,14 @@ fun NowPlayingScreen(
                 contentAlignment = Alignment.Center
             ) {
                 if (castState.connected) {
-                    StreamingToTargetStage(
-                        targetName = castState.clientLabel.ifBlank { "Sony TV" },
+                    com.hione.player.cast.HioneCyberTunnelVisualizer(
+                        targetName = castState.clientLabel.ifBlank { "Sony Bravia 4K" },
                         targetAddress = castState.clientAddress,
                         track = track,
+                        player = player,
                         accent = accent,
-                        accent2 = accent2
+                        accent2 = accent2,
+                        modifier = Modifier.fillMaxSize()
                     )
                 } else if (showViz) {
                     StageVisualizer(

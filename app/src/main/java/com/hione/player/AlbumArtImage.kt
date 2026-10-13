@@ -41,6 +41,21 @@ import java.io.File
 private const val THUMB_PX = 320
 private const val HIRES_PX = 800
 
+private fun artDir(ctx: Context): File {
+    val dir = File(ctx.filesDir, "artcache_v4")
+    if (!dir.exists()) {
+        dir.mkdirs()
+        runCatching { File(ctx.filesDir, "artcache").deleteRecursively() }
+        runCatching { File(ctx.filesDir, "artcache_v2").deleteRecursively() }
+        runCatching { File(ctx.filesDir, "artcache_v3").deleteRecursively() }
+        runCatching { File(ctx.cacheDir, "hud").deleteRecursively() }
+    }
+    return dir
+}
+
+internal fun thumbFile(ctx: Context, id: Long) = File(artDir(ctx), "$id.webp")
+internal fun hiresFile(ctx: Context, id: Long) = File(artDir(ctx), "${id}_hi.webp")
+
 /**
  * Two-tier album-art cache built for INSTANT display and 100% ACCURATE album art matching:
  *  - Memory LruCache holding decoded thumbs + hi-res
@@ -53,19 +68,8 @@ object AlbumArtCache {
     private val mem = object : LruCache<String, ImageBitmap>(cacheSize) {
         override fun sizeOf(key: String, v: ImageBitmap) = (v.width * v.height * 4) / 1024
     }
-    // A "miss" used to be permanent for the whole process lifetime — one transient failure (file
-    // busy mid-ingest, MediaStore row not yet backfilled, storage permission granted a second
-    // later) meant that track showed the placeholder until the app was killed. Misses now expire
-    // after MISS_TTL_MS and are wiped outright whenever a library scan lands (clearMisses()).
     private const val MISS_TTL_MS = 5 * 60_000L
     private val misses = java.util.concurrent.ConcurrentHashMap<String, Long>()
-    // PERF (scroll jank, 2026-09-17): art work ran on Dispatchers.IO, whose threads sit at NORMAL
-    // priority — so up to four concurrent MediaMetadataRetriever opens + bitmap decodes + lossless
-    // WebP encodes competed with the UI thread for CPU on a 4-little-core 665 exactly while the
-    // user was flinging a list. Own pool, one notch below the foreground default: nice enough that
-    // the scheduler always prefers the UI thread, but deliberately NOT full THREAD_PRIORITY_
-    // BACKGROUND (that drops the thread into the bg cgroup's few-percent CPU share, and album art
-    // is something the user is actively waiting to see, unlike the tech/year probes).
     internal val artDispatcher = java.util.concurrent.Executors.newFixedThreadPool(4) { r ->
         Thread({
             android.os.Process.setThreadPriority(
@@ -75,17 +79,16 @@ object AlbumArtCache {
         }, "hione-art").apply { isDaemon = true }
     }.asCoroutineDispatcher()
     private val scope = CoroutineScope(SupervisorJob() + artDispatcher)
-    // PERF: this limiter existed but was only ever applied around [prewarm]'s own loop — the path
-    // every on-screen AlbumArtImage actually takes (loadArtThumb) was completely UNBOUNDED. On a
-    // cold start that meant the prewarm batch plus every art tile the first screen composes all
-    // firing MediaMetadataRetriever + full-size bitmap decodes + WebP encodes at once on the
-    // shared coroutine worker pool: heavy CPU and heavy short-lived allocation exactly while the
-    // app is trying to draw. It is enforced inside loadArtThumb now (see `artGate` usage there),
-    // so it actually bounds the bulk work instead of one caller. There is only ever one prewarm
-    // coroutine, so it can hold at most one of the four permits — visible art is never starved.
     internal val gate = Semaphore(4)
     @Volatile private var prewarmed = false
 
+    data class PrecacheProgress(
+        val active: Boolean = false,
+        val processed: Int = 0,
+        val total: Int = 0,
+        val newlyCached: Int = 0
+    )
+    val precacheProgress = kotlinx.coroutines.flow.MutableStateFlow(PrecacheProgress())
 
     /**
      * Bumped when art arrives in the background (an online cover after a miss). Every
@@ -96,6 +99,49 @@ object AlbumArtCache {
 
     fun get(id: Long): ImageBitmap? = mem.get("$id")
     fun getHi(id: Long): ImageBitmap? = mem.get("$id#hi") ?: mem.get("$id")
+
+    /**
+     * Fast synchronous lookup: checks memory LRU first, then cached WebP on disk,
+     * then sibling tracks on the same album. Prevents placeholder flash and pop-in
+     * by delivering cached art on frame 1.
+     */
+    fun getSync(ctx: Context, id: Long): ImageBitmap? {
+        mem.get("$id")?.let { return it }
+        if (id <= 0 || isMiss("$id")) return null
+        try {
+            val f = thumbFile(ctx, id)
+            if (f.exists() && f.length() > 0) {
+                val b = BitmapFactory.decodeFile(f.absolutePath, thumbDecodeOptions())
+                if (b != null) {
+                    val img = b.asImageBitmap()
+                    put("$id", img)
+                    return img
+                }
+            }
+            // Sibling fallback on frame 1: if another track on the same album is cached, use it immediately
+            val sibs = AlbumScope.siblings(ctx, id, limit = 8)
+            for ((sibId, _) in sibs) {
+                val sm = mem.get("$sibId")
+                if (sm != null) {
+                    put("$id", sm)
+                    return sm
+                }
+                val sf = thumbFile(ctx, sibId)
+                if (sf.exists() && sf.length() > 0) {
+                    val b = BitmapFactory.decodeFile(sf.absolutePath, thumbDecodeOptions())
+                    if (b != null) {
+                        val img = b.asImageBitmap()
+                        put("$id", img)
+                        put("$sibId", img)
+                        runCatching { sf.copyTo(f, overwrite = true) }
+                        return img
+                    }
+                }
+            }
+        } catch (_: Throwable) {}
+        return null
+    }
+
     internal fun put(key: String, b: ImageBitmap) { mem.put(key, b) }
     internal fun forget(id: Long) { mem.remove("$id"); mem.remove("$id#hi"); misses.remove("$id"); misses.remove("$id#hi") }
     /** Online art landed for these tracks: drop their misses and redraw. */
@@ -112,29 +158,84 @@ object AlbumArtCache {
     /** Forget every recorded miss — after a rescan, after storage access is granted, etc. */
     fun clearMisses() { misses.clear(); clearFolderArtIndex(); clearAlbumScope(); SharedCoverGuard.clear() }
 
-    fun prewarm(ctx: Context, tracks: List<Track>, memWarm: Int = 30) {
+    fun prewarm(ctx: Context, tracks: List<Track>, memWarm: Int = 60) {
         if (prewarmed || tracks.isEmpty()) return
         prewarmed = true
         val app = ctx.applicationContext
         scope.launch {
-            // PERF: this speculative batch used to start the instant the library list was known —
-            // i.e. in the middle of cold start, competing with the art the user can actually SEE
-            // and with the library grouping passes. The sample is the first `memWarm` tracks by
-            // title, which is almost never what the first screen shows, so nothing on screen
-            // depends on it. Same work, same tracks, just held until the launch burst is over.
-            // (loadArtThumb now takes the concurrency permit itself — see `gate` above.)
-            kotlinx.coroutines.delay(PREWARM_DELAY_MS)
             val sample = tracks.take(memWarm)
             sample.forEach { tr ->
                 try {
                     loadArtThumb(app, tr.id, tr.path)
                 } catch (_: Throwable) {}
             }
+            // Kick off complete library precaching in the background
+            prewarmAll(app, tracks)
         }
     }
 
-    /** How long the speculative art prewarm waits so it lands after the cold-start burst. */
-    private const val PREWARM_DELAY_MS = 5_000L
+    /**
+     * Exhaustive background precache across the entire library.
+     * Iterates by unique album / directory, decodes once, and clones
+     * the 320px WebP thumb to all sibling tracks so every track in
+     * the library has instantaneous frame 1 art with zero pop-in.
+     */
+    fun prewarmAll(ctx: Context, tracks: List<Track>) {
+        if (tracks.isEmpty()) return
+        val app = ctx.applicationContext
+        scope.launch {
+            kotlinx.coroutines.delay(500L)
+            val albumGroups = tracks.groupBy { tr ->
+                val parentDir = tr.path.substringBeforeLast('/', "")
+                if (parentDir.isNotBlank()) parentDir else "${tr.album}\u0000${tr.artist}"
+            }
+            val total = tracks.size
+            precacheProgress.value = PrecacheProgress(active = true, processed = 0, total = total, newlyCached = 0)
+            var count = 0
+            var processed = 0
+
+            for ((_, group) in albumGroups) {
+                if (group.isEmpty()) continue
+                val lead = group.first()
+                val leadFile = thumbFile(app, lead.id)
+                val leadReady = leadFile.exists() && leadFile.length() > 0
+                val bmp = if (leadReady) {
+                    null
+                } else {
+                    loadArtThumb(app, lead.id, lead.path, keepInMemory = true)
+                }
+                if (bmp != null) count++
+
+                val srcFile = if (leadFile.exists() && leadFile.length() > 0) leadFile else null
+                for (tr in group) {
+                    processed++
+                    if (tr.id != lead.id) {
+                        try {
+                            val tf = thumbFile(app, tr.id)
+                            if (!tf.exists() || tf.length() == 0L) {
+                                if (srcFile != null) {
+                                    srcFile.copyTo(tf, overwrite = true)
+                                    count++
+                                }
+                            }
+                            if (bmp != null) put("${tr.id}", bmp)
+                        } catch (_: Throwable) {}
+                    }
+                }
+
+                if (processed % 20 == 0 || processed == total) {
+                    precacheProgress.value = PrecacheProgress(
+                        active = processed < total,
+                        processed = processed,
+                        total = total,
+                        newlyCached = count
+                    )
+                    kotlinx.coroutines.delay(8L)
+                }
+            }
+            precacheProgress.value = PrecacheProgress(active = false, processed = total, total = total, newlyCached = count)
+        }
+    }
 }
 
 @Composable
@@ -151,21 +252,16 @@ fun AlbumArtImage(
             modifier = Modifier.fillMaxSize()
         )
     },
-    /**
-     * Release year, drawn as a small badge on the bottom-left of the art. 0 = no badge.
-     * NEVER guessed: pass the track's real `year` and nothing else. A wrong year on the sleeve is
-     * worse than no year at all.
-     */
     year: Int = 0
 ) {
     Box(modifier) {
         val artMod = Modifier.fillMaxSize()
         val artVersion = AlbumArtCache.version
-        val cached = AlbumArtCache.get(trackId)
+        val ctx = LocalContext.current
+        val cached = remember(trackId, artVersion) { AlbumArtCache.getSync(ctx, trackId) }
         if (cached != null) {
             Image(bitmap = cached, contentDescription = "Album art", modifier = artMod, contentScale = contentScale)
         } else {
-            val ctx = LocalContext.current
             var art by remember(trackId) { mutableStateOf<ImageBitmap?>(null) }
 
             if (trackId > 0 && !AlbumArtCache.isMiss("$trackId")) {
@@ -203,24 +299,6 @@ private fun AlbumArtYearBadge(year: Int, modifier: Modifier = Modifier) {
         )
     }
 }
-
-private fun artDir(ctx: Context): File {
-    // v4 (2026-10-10): v3 thumbs were written before SharedCoverGuard existed, so every album
-    // tagged with another album's cover (the TRON: Ares cover on 14 NIN albums) has it baked in.
-    // Same for the HUD's exported copies in cacheDir/hud.
-    val dir = File(ctx.filesDir, "artcache_v4")
-    if (!dir.exists()) {
-        dir.mkdirs()
-        runCatching { File(ctx.filesDir, "artcache").deleteRecursively() }
-        runCatching { File(ctx.filesDir, "artcache_v2").deleteRecursively() }
-        runCatching { File(ctx.filesDir, "artcache_v3").deleteRecursively() }
-        runCatching { File(ctx.cacheDir, "hud").deleteRecursively() }
-    }
-    return dir
-}
-
-private fun thumbFile(ctx: Context, id: Long) = File(artDir(ctx), "$id.webp")
-private fun hiresFile(ctx: Context, id: Long) = File(artDir(ctx), "${id}_hi.webp")
 
 /** Forget everything cached for one track (memory, disk, HUD copy), so the next load re-resolves. */
 internal fun dropCachedArt(ctx: Context, id: Long) {
@@ -630,6 +708,16 @@ suspend fun loadArtThumb(ctx: Context, trackId: Long, trackPath: String = "", ke
                 if (SharedCoverGuard.ready()) writeWebp(b, thumbFile(ctx, trackId))
                 val img = b.asImageBitmap()
                 if (keepInMemory) AlbumArtCache.put("$trackId", img)
+                val tf = thumbFile(ctx, trackId)
+                if (tf.exists() && tf.length() > 0) {
+                    AlbumScope.siblings(ctx, trackId, limit = 16).forEach { (sibId, _) ->
+                        val sf = thumbFile(ctx, sibId)
+                        if (!sf.exists() || sf.length() == 0L) {
+                            runCatching { tf.copyTo(sf, overwrite = true) }
+                        }
+                        if (keepInMemory) AlbumArtCache.put("$sibId", img)
+                    }
+                }
                 img
             } else { AlbumArtCache.markMiss("$trackId"); null }
         } catch (_: Throwable) { null }
