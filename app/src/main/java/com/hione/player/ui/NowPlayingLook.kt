@@ -33,17 +33,49 @@ object NowPlayingLook {
 
     fun setDynamicColor(ctx: Context, on: Boolean) { dynamicColor = on; PlayerPreferences.saveDynamicColor(ctx, on) }
     fun setWavyBar(ctx: Context, on: Boolean) { wavyBar = on; PlayerPreferences.saveWavyBar(ctx, on) }
+
+    fun isDynamicColorUnlocked(ctx: Context): Boolean =
+        com.hione.player.HioneUnlocksReader.isUnlocked(ctx, com.hione.player.HioneUnlocksReader.PLAYER_DYNAMIC_COLOR)
 }
+
+/** Desaturates a Color heavily towards a bland, moody dark charcoal/slate. */
+fun desaturateColor(c: Color, factor: Float = 0.08f): Color {
+    val gray = 0.299f * c.red + 0.587f * c.green + 0.114f * c.blue
+    // Subtle cool slate bias to avoid completely flat gray
+    val slateR = gray * 0.92f
+    val slateG = gray * 0.96f
+    val slateB = gray * 1.04f
+    return Color(
+        red = (slateR + (c.red - gray) * factor).coerceIn(0f, 1f),
+        green = (slateG + (c.green - gray) * factor).coerceIn(0f, 1f),
+        blue = (slateB + (c.blue - gray) * factor).coerceIn(0f, 1f),
+        alpha = c.alpha
+    )
+}
+
+fun desaturatePalette(p: ArtPalette, factor: Float = 0.08f): ArtPalette = ArtPalette(
+    color1 = desaturateColor(p.color1, factor),
+    color2 = desaturateColor(p.color2, factor * 0.6f),
+    color3 = desaturateColor(p.color3, factor)
+)
 
 /**
  * The palette every Now Playing surface (background gradient, wavy bar, transport deck, chips)
- * reads: the art-extracted palette when dynamic color is on, the Hione identity palette otherwise,
- * and in both cases ANIMATED — the old `remember(art)` palette hard-cut to the new colors the frame
- * the next track's art decoded, which read as a flash. 700 ms color glide instead.
+ * reads: the art-extracted palette when dynamic color is on AND unlocked, the bland desaturated
+ * palette when locked (to incentivize the BPM game), and the Hione identity palette otherwise.
  */
 @Composable
-fun rememberAnimatedPalette(target: ArtPalette, dynamic: Boolean, durationMs: Int = 700): ArtPalette {
-    val t = if (dynamic) target else ArtPalette()
+fun rememberAnimatedPalette(
+    target: ArtPalette,
+    dynamic: Boolean,
+    isUnlocked: Boolean = true,
+    durationMs: Int = 700
+): ArtPalette {
+    val t = when {
+        !isUnlocked -> desaturatePalette(target, factor = 0.07f)
+        dynamic -> target
+        else -> ArtPalette()
+    }
     val c1 by animateColorAsState(t.color1, tween(durationMs), label = "npC1")
     val c2 by animateColorAsState(t.color2, tween(durationMs + 200), label = "npC2")
     val c3 by animateColorAsState(t.color3, tween(durationMs), label = "npC3")
@@ -52,3 +84,4 @@ fun rememberAnimatedPalette(target: ArtPalette, dynamic: Boolean, durationMs: In
 
 /** Text/glyph color that stays readable on top of [accent] (dark ink on bright faces, white on deep ones). */
 fun onAccentColor(accent: Color): Color = if (accent.luminance() > 0.45f) Mascot.color(0xFF07201F) else Color.White
+

@@ -317,10 +317,11 @@ not have to rediscover it.
 
 GPL-3.0-or-later. See [LICENSE](LICENSE).
 
-Hatsune Hione and the associated character designs are the property of Crypton Future Media. This is
-an unaffiliated hobby project for a device Crypton licensed, and it ships no Crypton artwork. HiBy
-Digital's firmware, applications and assets are theirs and none of them are redistributed here.
-libprojectM is LGPL-2.1 and is used as a library. Media3 and the AndroidX libraries are Apache-2.0.
+Hatsune Miku and the associated character designs are the property of Crypton Future Media, INC.
+Oki Hione is our project mascot. This is an unaffiliated hobby project for a device Crypton licensed,
+and it ships no Crypton artwork. HiBy Digital's firmware, applications and assets are theirs and
+none of them are redistributed here. libprojectM is LGPL-2.1 and is used as a library. Media3 and
+the AndroidX libraries are Apache-2.0.
 
 Flashing a replacement OS onto a device can brick it. This one is used daily on the author's own
 M500, which is a statement about one device and not a warranty about yours.

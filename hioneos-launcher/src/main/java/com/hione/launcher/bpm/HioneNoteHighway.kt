@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
@@ -20,45 +21,28 @@ import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.graphics.drawscope.translate
+import androidx.compose.ui.input.pointer.changedToDown
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.android.awaitFrame
+import kotlin.math.abs
 import kotlin.math.cos
 import kotlin.math.max
 import kotlin.math.sin
 
 /**
- * The thing you actually tap against.
+ * Vertical Multi-Lane Note Highway (Top to Bottom).
  *
- * WHAT WAS MISSING. The game told you how you did AFTER the fact: a judgment word and a deviation
- * bar that moved once per tap. There was nothing to aim AT. Every rhythm game solves this the same
- * way and has since Guitar Hero's calibration screen: notes travel toward a fixed hit line, and you
- * tap when a note reaches it. Your eye leads the note in, so you are anticipating a moment instead
- * of reacting to a sound, which is the difference between guessing and playing.
+ * Supports 1x up to 6x simultaneous noteways (and hidden 8x / 10x past Level 1000)
+ * with full two-thumb multitouch support.
  *
- * HOW IT IS DRIVEN. Entirely by the real beat clock. `lastPulseEpochMs` is the (phase-locked) last
- * beat the detector actually heard; `beatIntervalMs` is the locked tempo. Note n sits at
- * `lastPulse + n * period`, and its position on screen is how far away that time is. Nothing here
- * invents a beat: with no pulse and no lock the highway draws an empty lane and says so, the same
- * way the scoring refuses to judge a tap without one.
- *
- * WHAT MAKES IT A SHOW, not a metronome:
- *  - Colour comes from the album playing (two accents), walking along the run of notes, and goes
- *    rainbow during Fever.
- *  - Every note has the SKIN's silhouette (hex notes for Cyber Mirai, hearts for Hologram 39…)
- *    and the lane itself has the skin's texture, scrolling at exactly note speed, so the whole
- *    strip moves with the music rather than a few dots sliding over a static trough.
- *  - Lucky notes are gold. Hit one GREAT or better for a surprise (see HioneBeatClickerEngine.luckyNote).
- *  - The lane flashes on every beat and its rails brighten with the combo rung.
- *  - Chaos mutators are real here: SILENT DISCO fogs notes out before they arrive, MIRROR STAGE
- *    sends them from the other side, DOUBLE TIME makes them fly twice as fast.
- *
- * The calibration offset is applied to the HIT LINE, not to the notes, so what you see and what
- * you are judged against are the same number.
- *
- * COST. One Canvas, invalidated per frame through float/long state read only in the draw lambda,
- * so nothing around it recomposes. Note shapes are unit Paths built once per skin and drawn with
- * translate+scale, so a frame allocates nothing.
+ * HOW IT WORKS:
+ * - Notes travel from TOP (Y = 0) to BOTTOM, arriving at the hit line (Y = hitY).
+ * - Multi-lane distribution: notes are rhythmically assigned across lanes. On downbeats,
+ *   chords spawn across both halves so players hit notes simultaneously with two thumbs!
+ * - Two-thumb Multitouch: pointerInput detects independent touch downs across all lanes.
+ * - Reactive skin styling: note silhouettes, vertical scrolling textures, and hit effects.
  */
 @Composable
 fun HioneNoteHighway(
@@ -66,31 +50,28 @@ fun HioneNoteHighway(
     beatIntervalMs: Long,
     calibrationMs: Int,
     windows: HioneRhythmTiming.Windows,
-    /** Last judged tap time, for the hit spark. 0 means no tap yet. */
     lastTapMs: Long,
     lastOffsetMs: Int,
     accent: Color,
     accent2: Color = accent,
-    /** Height of the lane. Set to the tap node's size when the node sits on the hit line. */
-    laneHeight: androidx.compose.ui.unit.Dp = 64.dp,
-    /** Where the hit line sits across the lane, 0..1. 0.5 puts it under a centred tap node. */
-    hitFraction: Float = 0.74f,
+    laneHeight: androidx.compose.ui.unit.Dp = 220.dp,
+    hitFraction: Float = 0.82f,
+    laneCount: Int = 1,
+    lastTappedLane: Int = 0,
+    onTapLane: ((laneIndex: Int) -> Unit)? = null,
     modifier: Modifier = Modifier,
     skin: HioneBeatClickerEngine.BpmSkin = HioneBeatClickerEngine.BpmSkin.SAKURA_DREAM,
     fever: Boolean = false,
     chaos: HioneStagePerformance.Chaos = HioneStagePerformance.Chaos.NONE,
-    /** 0..6, the combo rung reached. Brightens the rails. */
     comboRung: Int = 0,
-    /** Tier of the last judged tap, for the spark colour. Null = free tap / none. */
     lastAccuracy: HitAccuracy? = null,
-    /** Drawn ON the hit line, on top of the lane. This is where the tap node goes. */
     content: (@Composable androidx.compose.foundation.layout.BoxScope.() -> Unit)? = null
 ) {
-    // Per-frame clock. Read ONLY in the draw lambda below.
     val now = remember { mutableLongStateOf(System.currentTimeMillis()) }
     val sparkAge = remember { mutableFloatStateOf(1f) }
     val lastSeenTap = remember { mutableLongStateOf(0L) }
-    // Unit-radius silhouettes, built once per skin: drawing them is translate + scale, no Path per frame.
+    val sparkLane = remember { mutableIntStateOf(0) }
+
     val notePath = remember(skin.nodeShape) { unitShapePath(skin.nodeShape) }
     val hexPath = remember { unitShapePath(HioneBeatClickerEngine.NodeShape.HEX) }
 
@@ -98,73 +79,105 @@ fun HioneNoteHighway(
         while (true) {
             awaitFrame()
             now.longValue = System.currentTimeMillis()
-            if (lastSeenTap.longValue != lastTapMs) { lastSeenTap.longValue = lastTapMs; sparkAge.floatValue = 0f }
-            if (sparkAge.floatValue < 1f) sparkAge.floatValue = (sparkAge.floatValue + 0.05f).coerceAtMost(1f)
+            if (lastSeenTap.longValue != lastTapMs) {
+                lastSeenTap.longValue = lastTapMs
+                sparkAge.floatValue = 0f
+                sparkLane.intValue = lastTappedLane.coerceIn(0, (laneCount - 1).coerceAtLeast(0))
+            }
+            if (sparkAge.floatValue < 1f) {
+                sparkAge.floatValue = (sparkAge.floatValue + 0.05f).coerceAtMost(1f)
+            }
         }
     }
 
-    Box(modifier.fillMaxWidth().height(laneHeight), contentAlignment = androidx.compose.ui.Alignment.Center) {
+    val activeLanes = laneCount.coerceIn(1, 10)
+
+    Box(
+        modifier
+            .fillMaxWidth()
+            .height(laneHeight)
+            .pointerInput(activeLanes, onTapLane) {
+                if (onTapLane != null) {
+                    awaitPointerEventScope {
+                        while (true) {
+                            val event = awaitPointerEvent()
+                            for (change in event.changes) {
+                                if (change.changedToDown()) {
+                                    val laneW = size.width.toFloat() / activeLanes
+                                    val lane = (change.position.x / laneW).toInt().coerceIn(0, activeLanes - 1)
+                                    onTapLane(lane)
+                                    change.consume()
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+        contentAlignment = androidx.compose.ui.Alignment.Center
+    ) {
         Canvas(Modifier.fillMaxWidth().height(laneHeight)) {
             val w = size.width
             val h = size.height
-            // The hit line is wherever the caller put the thing you tap. With the beat node on it,
-            // the note arrives UNDER YOUR THUMB: you are not looking at one place and tapping
-            // another, which is the whole reason a note highway works.
-            val hitX = w * hitFraction
+
+            // Hit line sits near bottom (Y = h * hitFraction)
+            val hitY = h * hitFraction
             val period = beatIntervalMs.toFloat()
             val live = lastPulseEpochMs > 0L && beatIntervalMs in 60..3000
-            // MIRROR STAGE: notes arrive from the other side. dir = +1 from the right, -1 from the left.
-            val dir = if (chaos.mirrorsBar) -1f else 1f
-            val runway = if (dir > 0f) (w - hitX) else hitX
 
-            drawLane(h, w, accent, accent2, fever)
-
-            if (!live) {
-                // No tempo lock: draw the lane and nothing else. Never a fake note.
-                drawHitLine(hitX, h, accent.copy(alpha = 0.35f), 0f)
-                return@Canvas
-            }
-
-            // How many ms of future the lane shows. Two beats of run-up, clamped so a very slow or
-            // very fast track still reads: at 60 BPM two beats is 2s, at 200 it is 600ms.
-            // DOUBLE TIME halves the run-up: same beats, they just arrive at twice the speed.
+            val runway = hitY
             val speed = if (chaos == HioneStagePerformance.Chaos.DOUBLE_TIME) 0.5f else 1f
-            val lookaheadMs = (period * 2f).coerceIn(700f, 2200f) * speed
+            val lookaheadMs = (period * 2.2f).coerceIn(700f, 2400f) * speed
             val pxPerMs = runway / lookaheadMs
 
             val t = now.longValue - calibrationMs
             val sinceLast = (t - lastPulseEpochMs).toFloat()
             val nextIdx = kotlin.math.ceil(sinceLast / period).toInt()
 
-            // 0 at the beat, →1 just before the next. Drives the line's breathing and the lane flash.
             val phase = (sinceLast.mod(period)) / period
             val beat = (1f - phase).coerceIn(0f, 1f).let { it * it }
 
-            // The lane texture scrolls at exactly note speed, so the whole strip moves as one.
-            val scrollPx = (t.mod(60_000L)).toFloat() * pxPerMs * dir
-            drawLaneTexture(skin.laneStyle, w, h, scrollPx, beat, accent, accent2, hexPath)
+            // Vertical background wash
+            drawVerticalLane(w, h, hitY, accent, accent2, fever)
 
-            // Beat flash across the whole lane, and rails that glow brighter the higher the rung.
-            drawRect(accent.copy(alpha = 0.07f * beat + if (fever) 0.05f * beat else 0f), size = Size(w, h))
-            val railA = 0.25f + 0.08f * comboRung.coerceIn(0, 6) + 0.25f * beat
-            drawLine(accent.copy(alpha = railA.coerceAtMost(1f)), Offset(0f, h * 0.10f), Offset(w, h * 0.10f), strokeWidth = 1.5f + comboRung * 0.4f)
-            drawLine(accent2.copy(alpha = railA.coerceAtMost(1f)), Offset(0f, h * 0.90f), Offset(w, h * 0.90f), strokeWidth = 1.5f + comboRung * 0.4f)
+            // Texture scrolling downwards
+            val scrollPx = (t.mod(60_000L)).toFloat() * pxPerMs
+            drawVerticalLaneTexture(skin.laneStyle, w, h, scrollPx, beat, accent, accent2, hexPath)
 
-            // Windows as widths on the lane, so the player can SEE how much room each tier has.
-            drawWindowBands(hitX, h, pxPerMs, windows, accent, accent2)
-            drawHitLine(hitX, h, if (fever) Color.White else accent, phase)
+            // Multiple lane dividers
+            val laneW = w / activeLanes
+            for (k in 1 until activeLanes) {
+                val divX = k * laneW
+                val divAlpha = 0.20f + 0.05f * comboRung.coerceIn(0, 6) + 0.15f * beat
+                drawLine(
+                    accent.copy(alpha = divAlpha),
+                    Offset(divX, 0f),
+                    Offset(divX, h),
+                    strokeWidth = 1.2f
+                )
+            }
 
-            // Notes: the one just past the line (so a late tap still has something to point at),
-            // and everything inside the lookahead.
-            for (i in (nextIdx - 1)..(nextIdx + 10)) {
+            // Window timing bands around hit line
+            drawVerticalWindowBands(w, hitY, pxPerMs, windows, accent, accent2)
+
+            // Receptors on the hit line for each lane
+            for (k in 0 until activeLanes) {
+                val receptorX = (k + 0.5f) * laneW
+                drawReceptor(receptorX, hitY, laneW * 0.38f, accent, accent2, beat, fever, k == sparkLane.intValue && sparkAge.floatValue < 0.3f)
+            }
+
+            // Hit line across all lanes
+            drawVerticalHitLine(w, hitY, if (fever) Color.White else accent, phase)
+
+            if (!live) return@Canvas
+
+            // Notes flowing downwards
+            for (i in (nextIdx - 1)..(nextIdx + 12)) {
                 val beatAt = lastPulseEpochMs + i.toLong() * beatIntervalMs
                 val msAway = (beatAt - t).toFloat()
                 if (msAway > lookaheadMs) break
-                val x = hitX + msAway * pxPerMs * dir
-                if (x < -30f || x > w + 30f) continue
-                // A downbeat every fourth note, drawn bigger. The detector does not know the bar
-                // line, so this is honestly just "every fourth pulse since the lock", a visual
-                // rhythm aid and not a claim about the music's meter.
+                val y = hitY - msAway * pxPerMs
+                if (y < -40f || y > h + 40f) continue
+
                 val strong = (i.mod(4)) == 0
                 val lucky = HioneRhythmTiming.isLuckyBeat(beatAt, beatIntervalMs)
                 val noteColor = when {
@@ -172,54 +185,67 @@ fun HioneNoteHighway(
                     fever -> Color.hsv(((i * 47f + t / 9f) % 360f + 360f) % 360f, 0.75f, 1f)
                     else -> lerpColor(accent, accent2, (i.mod(8)) / 8f)
                 }
-                // SILENT DISCO: a note fades into fog before it reaches the line. Go on feel.
+
                 val fog = if (chaos.hidesBeat) ((msAway / lookaheadMs - 0.35f) / 0.25f).coerceIn(0f, 1f) else 1f
                 if (fog <= 0f) continue
-                drawNote(x, h, msAway, lookaheadMs, strong, noteColor, notePath, skin.nodeShape, dir, fog, lucky, t)
+
+                // Which lanes this beat appears in (supports dual chords for thumbs)
+                val targetLanes = noteLanesForBeat(i, activeLanes)
+                for (lane in targetLanes) {
+                    val noteX = (lane + 0.5f) * laneW
+                    drawVerticalNote(
+                        noteX, y, laneW * 0.42f, msAway, lookaheadMs,
+                        strong, noteColor, notePath, skin.nodeShape, fog, lucky, t
+                    )
+                }
             }
 
-            // Hit spark: where the last judged tap landed relative to the line, in the tier's colour.
+            // Hit spark in the tapped lane
             val age = sparkAge.floatValue
             if (lastTapMs > 0L && age < 1f) {
-                val sparkX = hitX + lastOffsetMs * pxPerMs * dir
-                val a = (1f - age)
+                val targetLane = sparkLane.intValue.coerceIn(0, activeLanes - 1)
+                val sparkX = (targetLane + 0.5f) * laneW
+                val sparkY = hitY - lastOffsetMs * pxPerMs
+                val a = 1f - age
                 val c = sparkColor(lastAccuracy, accent)
-                drawCircle(c.copy(alpha = 0.55f * a), radius = h * (0.18f + 0.5f * age), center = Offset(sparkX, h / 2f))
-                drawLine(c.copy(alpha = a), Offset(sparkX, h * 0.1f), Offset(sparkX, h * 0.9f), strokeWidth = 2f)
-                // The reward has to be visible in peripheral vision, because on a hit the eye is
-                // already on the next note: a wider ring on GREAT+, a starburst on PERFECT.
+
+                drawCircle(c.copy(alpha = 0.6f * a), radius = (laneW * 0.35f) * (0.8f + 0.5f * age), center = Offset(sparkX, sparkY))
+                drawLine(c.copy(alpha = a), Offset(sparkX - laneW * 0.4f, sparkY), Offset(sparkX + laneW * 0.4f, sparkY), strokeWidth = 2.5f)
+
                 if (lastAccuracy?.isGreatOrBetter == true) {
                     drawCircle(
-                        c.copy(alpha = 0.35f * a), radius = h * (0.3f + 0.9f * age),
-                        center = Offset(sparkX, h / 2f), style = Stroke(width = 2f)
+                        c.copy(alpha = 0.4f * a),
+                        radius = (laneW * 0.45f) * (1f + 0.8f * age),
+                        center = Offset(sparkX, sparkY),
+                        style = Stroke(width = 2f)
                     )
                 }
                 if (lastAccuracy == HitAccuracy.PERFECT) {
-                    val r1 = h * (0.22f + 0.2f * age)
-                    val r2 = r1 + h * 0.35f * a
+                    val r1 = laneW * (0.25f + 0.2f * age)
+                    val r2 = r1 + laneW * 0.35f * a
                     for (k in 0 until 8) {
                         val ang = k * 0.785398f + age
                         drawLine(
-                            Color.White.copy(alpha = 0.8f * a),
-                            Offset(sparkX + cos(ang) * r1, h / 2f + sin(ang) * r1),
-                            Offset(sparkX + cos(ang) * r2, h / 2f + sin(ang) * r2),
+                            Color.White.copy(alpha = 0.85f * a),
+                            Offset(sparkX + cos(ang) * r1, sparkY + sin(ang) * r1),
+                            Offset(sparkX + cos(ang) * r2, sparkY + sin(ang) * r2),
                             strokeWidth = 2f
                         )
                     }
                 }
             }
         }
-        // The tap node, sitting ON the hit line: the note lands under the thumb that taps it.
-        if (content != null) {
+
+        // Overlay content (e.g. central beat node for 1-lane mode)
+        if (content != null && activeLanes == 1) {
             Box(
                 Modifier
                     .fillMaxWidth()
                     .height(laneHeight)
                     .layout { measurable, constraints ->
                         val p = measurable.measure(constraints.copy(minWidth = 0, minHeight = 0))
-                        // Centre the node on the hit line rather than on the lane.
-                        val x = (constraints.maxWidth * hitFraction).toInt() - p.width / 2
-                        val y = (constraints.maxHeight - p.height) / 2
+                        val x = (constraints.maxWidth - p.width) / 2
+                        val y = (constraints.maxHeight * hitFraction).toInt() - p.height / 2
                         layout(constraints.maxWidth, constraints.maxHeight) { p.place(x, y) }
                     },
                 contentAlignment = androidx.compose.ui.Alignment.Center,
@@ -227,6 +253,25 @@ fun HioneNoteHighway(
             )
         }
     }
+}
+
+/** Determines which lane(s) a beat appears in. Downbeats generate 2-thumb chords! */
+fun noteLanesForBeat(beatIdx: Int, laneCount: Int): List<Int> {
+    if (laneCount <= 1) return listOf(0)
+    if (laneCount == 2) {
+        if (beatIdx.mod(4) == 0) return listOf(0, 1) // Simultaneous 2-thumb downbeat chord!
+        return listOf(beatIdx.mod(2))
+    }
+    // 3 to 10 lanes:
+    if (beatIdx.mod(4) == 0) {
+        // 2 simultaneous notes for two thumbs on downbeats
+        val half = laneCount / 2
+        val left = abs(beatIdx * 2) % half
+        val right = half + (abs(beatIdx * 2 + 1) % (laneCount - half))
+        return listOf(left, right)
+    }
+    val primary = abs(beatIdx * 3 + (beatIdx / 4)) % laneCount
+    return listOf(primary)
 }
 
 private val LUCKY_GOLD = Color(0xFFFFD700)
@@ -247,10 +292,6 @@ private fun lerpColor(a: Color, b: Color, t: Float): Color = Color(
     alpha = 1f
 )
 
-/**
- * A unit-radius silhouette centred on the origin. Built once per skin; every note on the lane is
- * this path translated and scaled, so a skin's notes are recognisably its own shape.
- */
 internal fun unitShapePath(shape: HioneBeatClickerEngine.NodeShape): Path {
     val p = Path()
     fun poly(sides: Int, rot: Double) {
@@ -287,189 +328,208 @@ internal fun unitShapePath(shape: HioneBeatClickerEngine.NodeShape): Path {
     return p
 }
 
-private fun DrawScope.drawLane(h: Float, w: Float, accent: Color, accent2: Color, fever: Boolean) {
-    // The lane itself carries the album's two accents, darkened, so the whole strip belongs to
-    // whatever is playing rather than being a grey trough with coloured dots on it. Fever lifts it.
-    val lift = if (fever) 0.10f else 0f
+private fun DrawScope.drawVerticalLane(w: Float, h: Float, hitY: Float, accent: Color, accent2: Color, fever: Boolean) {
+    val lift = if (fever) 0.12f else 0f
     drawRect(
-        brush = Brush.horizontalGradient(
+        brush = Brush.verticalGradient(
             listOf(
-                accent2.copy(alpha = 0.06f + lift),
-                accent.copy(alpha = 0.18f + lift),
-                accent2.copy(alpha = 0.28f + lift)
+                accent2.copy(alpha = 0.04f + lift),
+                accent.copy(alpha = 0.12f + lift),
+                accent2.copy(alpha = 0.22f + lift),
+                accent.copy(alpha = 0.32f + lift)
             )
         ),
         size = Size(w, h)
     )
 }
 
-/**
- * Per-skin lane texture, scrolling at note speed. Each style is a handful of primitive draws
- * (lines, circles, one reused hex path) — cheap enough for a 60 Hz lane on this GPU.
- */
-private fun DrawScope.drawLaneTexture(
+private fun DrawScope.drawVerticalLaneTexture(
     style: HioneBeatClickerEngine.LaneStyle,
     w: Float, h: Float, scrollPx: Float, beat: Float,
     accent: Color, accent2: Color, hexPath: Path
 ) {
     when (style) {
         HioneBeatClickerEngine.LaneStyle.PETAL_STREAM -> {
-            val spacing = w / 9f
-            for (i in 0 until 11) {
-                val x = ((i * spacing - scrollPx) % w + w) % w
-                val y = h * (0.2f + 0.6f * (((i * 37) % 10) / 10f)) + sin((x / w) * 6.28f + i) * h * 0.05f
-                drawCircle(accent.copy(alpha = 0.16f), radius = h * 0.035f, center = Offset(x, y))
-                drawCircle(accent2.copy(alpha = 0.10f), radius = h * 0.06f, center = Offset(x + h * 0.03f, y))
+            val spacing = h / 7f
+            for (i in 0 until 9) {
+                val y = ((i * spacing + scrollPx) % h + h) % h
+                val x = w * (0.2f + 0.6f * (((i * 37) % 10) / 10f)) + sin((y / h) * 6.28f + i) * w * 0.04f
+                drawCircle(accent.copy(alpha = 0.16f), radius = 6f, center = Offset(x, y))
+                drawCircle(accent2.copy(alpha = 0.10f), radius = 9f, center = Offset(x + 5f, y))
             }
         }
         HioneBeatClickerEngine.LaneStyle.NEON_GRID -> {
-            val spacing = h * 0.32f
-            val n = (w / spacing).toInt() + 2
+            val spacing = h * 0.18f
+            val n = (h / spacing).toInt() + 2
             val off = ((scrollPx % spacing) + spacing) % spacing
             for (i in 0..n) {
-                val x = i * spacing - off
-                drawLine(accent.copy(alpha = 0.10f + 0.12f * beat), Offset(x, h * 0.1f), Offset(x, h * 0.9f), strokeWidth = 1f)
-            }
-            for (j in 1..3) {
-                val y = h * (0.1f + 0.2f * j)
-                drawLine(accent2.copy(alpha = 0.08f), Offset(0f, y), Offset(w, y), strokeWidth = 1f)
+                val y = i * spacing + off
+                drawLine(accent.copy(alpha = 0.10f + 0.12f * beat), Offset(0f, y), Offset(w, y), strokeWidth = 1f)
             }
         }
         HioneBeatClickerEngine.LaneStyle.HONEYCOMB -> {
-            val r = h * 0.13f
-            val spacing = r * 1.8f
-            val n = (w / spacing).toInt() + 2
+            val r = 16f
+            val spacing = r * 2.2f
+            val n = (h / spacing).toInt() + 2
             val off = ((scrollPx % spacing) + spacing) % spacing
             for (i in 0..n) {
-                for (row in 0..1) {
-                    val x = i * spacing - off + if (row == 1) spacing / 2f else 0f
-                    val y = h * (0.33f + 0.34f * row)
-                    translate(x, y) { scale(r, r, pivot = Offset.Zero) {
-                        drawPath(hexPath, accent.copy(alpha = 0.09f + 0.06f * beat))
-                    } }
+                val y = i * spacing + off
+                val x = (w * 0.5f) + sin(i * 1.5f) * (w * 0.3f)
+                translate(x, y) {
+                    scale(r, r, pivot = Offset.Zero) {
+                        drawPath(hexPath, accent.copy(alpha = 0.08f + 0.06f * beat))
+                    }
                 }
             }
         }
         HioneBeatClickerEngine.LaneStyle.VELVET_LACE -> {
-            // A slow heartbeat swell and lace dots along both rails.
-            drawRect(accent2.copy(alpha = 0.10f * beat), size = Size(w, h))
-            val spacing = h * 0.14f
-            val n = (w / spacing).toInt() + 2
+            drawRect(accent2.copy(alpha = 0.08f * beat), size = Size(w, h))
+            val spacing = h * 0.12f
+            val n = (h / spacing).toInt() + 2
             val off = ((scrollPx % spacing) + spacing) % spacing
             for (i in 0..n) {
-                val x = i * spacing - off
-                val big = i % 3 == 0
-                drawCircle(accent.copy(alpha = if (big) 0.30f else 0.16f), radius = if (big) 2.6f else 1.6f, center = Offset(x, h * 0.16f))
-                drawCircle(accent.copy(alpha = if (big) 0.30f else 0.16f), radius = if (big) 2.6f else 1.6f, center = Offset(x, h * 0.84f))
+                val y = i * spacing + off
+                val big = i % 2 == 0
+                drawCircle(accent.copy(alpha = if (big) 0.28f else 0.15f), radius = if (big) 3.5f else 2f, center = Offset(w * 0.1f, y))
+                drawCircle(accent.copy(alpha = if (big) 0.28f else 0.15f), radius = if (big) 3.5f else 2f, center = Offset(w * 0.9f, y))
             }
         }
         HioneBeatClickerEngine.LaneStyle.FROST_STREAK -> {
-            val spacing = w / 7f
-            for (i in 0 until 9) {
-                val x = ((i * spacing - scrollPx) % w + w) % w
-                val y0 = h * (0.2f + 0.15f * (i % 4))
+            val spacing = h / 6f
+            for (i in 0 until 8) {
+                val y = ((i * spacing + scrollPx) % h + h) % h
+                val x = w * (0.2f + 0.15f * (i % 4))
                 drawLine(
-                    Color.White.copy(alpha = 0.10f + 0.08f * beat),
-                    Offset(x, y0), Offset(x + h * 0.45f, y0 + h * 0.18f),
+                    Color.White.copy(alpha = 0.12f + 0.08f * beat),
+                    Offset(x, y), Offset(x + w * 0.15f, y + h * 0.1f),
                     strokeWidth = 1.2f
                 )
-                drawCircle(accent.copy(alpha = 0.18f), radius = 1.8f, center = Offset(x + h * 0.45f, y0 + h * 0.18f))
             }
         }
         HioneBeatClickerEngine.LaneStyle.HOLO_SCAN -> {
-            // Interference bands rolling down the lane, and a glitch slice just after each beat.
-            val band = h * 0.12f
-            val roll = ((scrollPx * 0.15f) % (band * 2f) + band * 2f) % (band * 2f)
+            val band = h * 0.10f
+            val roll = ((scrollPx * 0.2f) % (band * 2f) + band * 2f) % (band * 2f)
             var y = -band * 2f + roll
             while (y < h) {
                 drawRect(accent.copy(alpha = 0.06f), topLeft = Offset(0f, y), size = Size(w, band))
                 y += band * 2f
             }
-            if (beat > 0.75f) {
-                val gy = h * 0.42f
-                drawRect(accent2.copy(alpha = 0.22f), topLeft = Offset(6f, gy), size = Size(w, h * 0.08f))
-                drawRect(accent.copy(alpha = 0.18f), topLeft = Offset(-6f, gy + h * 0.1f), size = Size(w, h * 0.04f))
-            }
         }
     }
 }
 
-/** The hit line: the moment. Everything else on the lane is relative to it. */
-private fun DrawScope.drawHitLine(x: Float, h: Float, c: Color, phase: Float) {
-    // Brightest AT the beat and decaying through it, so the target pulses on tempo.
-    val beat = (1f - phase).coerceIn(0f, 1f).let { it * it }
-    drawLine(c.copy(alpha = 0.55f + 0.45f * beat), Offset(x, 0f), Offset(x, h), strokeWidth = 3f + 2f * beat)
-    drawCircle(c.copy(alpha = 0.10f + 0.30f * beat), radius = h * (0.30f + 0.22f * beat), center = Offset(x, h / 2f))
-    // Catcher bracket, so the line reads as a target rather than a divider.
-    val armW = h * (0.16f + 0.06f * beat)
-    drawLine(c, Offset(x - armW, h * 0.06f), Offset(x + armW, h * 0.06f), strokeWidth = 2f)
-    drawLine(c, Offset(x - armW, h * 0.94f), Offset(x + armW, h * 0.94f), strokeWidth = 2f)
+private fun DrawScope.drawReceptor(
+    x: Float, hitY: Float, radius: Float,
+    accent: Color, accent2: Color, beat: Float, fever: Boolean, tapped: Boolean
+) {
+    val r = radius * (if (tapped) 1.15f else 1.0f)
+    val alpha = if (tapped) 0.85f else (0.25f + 0.25f * beat)
+
+    // Outer glow ring
+    drawCircle(
+        brush = Brush.radialGradient(
+            listOf(accent.copy(alpha = alpha), Color.Transparent),
+            center = Offset(x, hitY),
+            radius = r * 1.5f
+        ),
+        radius = r * 1.5f,
+        center = Offset(x, hitY)
+    )
+
+    // Receptor base
+    drawCircle(
+        color = Color(0x3310121A),
+        radius = r,
+        center = Offset(x, hitY)
+    )
+
+    // Target ring
+    drawCircle(
+        color = if (fever) Color.White else accent.copy(alpha = alpha),
+        radius = r,
+        center = Offset(x, hitY),
+        style = Stroke(width = if (tapped) 3f else 2f)
+    )
+
+    // Inner pip
+    drawCircle(
+        color = (if (fever) Color.White else accent2).copy(alpha = 0.4f + 0.4f * beat),
+        radius = r * 0.35f,
+        center = Offset(x, hitY)
+    )
 }
 
-/**
- * The real timing windows, drawn to scale either side of the hit line. These are the same numbers
- * the judgment uses, so a window that widens on an easier difficulty tier visibly widens here.
- */
-private fun DrawScope.drawWindowBands(
-    hitX: Float, h: Float, pxPerMs: Float,
+private fun DrawScope.drawVerticalHitLine(w: Float, hitY: Float, c: Color, phase: Float) {
+    val beat = (1f - phase).coerceIn(0f, 1f).let { it * it }
+    drawLine(
+        c.copy(alpha = 0.55f + 0.45f * beat),
+        Offset(0f, hitY),
+        Offset(w, hitY),
+        strokeWidth = 3f + 1.5f * beat
+    )
+}
+
+private fun DrawScope.drawVerticalWindowBands(
+    w: Float, hitY: Float, pxPerMs: Float,
     windows: HioneRhythmTiming.Windows, accent: Color, accent2: Color
 ) {
-    // Widest band in the cooler accent, tightening toward the hotter one: the closer to perfect,
-    // the hotter the colour, so the gradient itself teaches the scale.
-    band(hitX, h, windows.okMs * pxPerMs, accent2.copy(alpha = 0.07f))
-    band(hitX, h, windows.goodMs * pxPerMs, accent2.copy(alpha = 0.12f))
-    band(hitX, h, windows.greatMs * pxPerMs, accent.copy(alpha = 0.20f))
-    band(hitX, h, windows.perfectMs * pxPerMs, accent.copy(alpha = 0.34f))
+    bandV(w, hitY, windows.okMs * pxPerMs, accent2.copy(alpha = 0.05f))
+    bandV(w, hitY, windows.goodMs * pxPerMs, accent2.copy(alpha = 0.10f))
+    bandV(w, hitY, windows.greatMs * pxPerMs, accent.copy(alpha = 0.18f))
+    bandV(w, hitY, windows.perfectMs * pxPerMs, accent.copy(alpha = 0.30f))
 }
 
-private fun DrawScope.band(hitX: Float, h: Float, halfPx: Float, color: Color) {
+private fun DrawScope.bandV(w: Float, hitY: Float, halfPx: Float, color: Color) {
     if (halfPx <= 0.5f) return
-    drawRect(color = color, topLeft = Offset(hitX - halfPx, h * 0.12f), size = Size(halfPx * 2f, h * 0.76f))
+    drawRect(color = color, topLeft = Offset(0f, hitY - halfPx), size = Size(w, halfPx * 2f))
 }
 
-/**
- * One note, approaching. It grows and brightens as it nears the line so the eye can lead it in,
- * and a note that has passed the line fades out rather than vanishing, which is what tells you you
- * were late.
- */
-private fun DrawScope.drawNote(
-    x: Float, h: Float, msAway: Float, lookaheadMs: Float,
+private fun DrawScope.drawVerticalNote(
+    x: Float, y: Float, maxRadius: Float, msAway: Float, lookaheadMs: Float,
     strong: Boolean, color: Color, unitPath: Path,
-    shape: HioneBeatClickerEngine.NodeShape, dir: Float, fog: Float, lucky: Boolean, t: Long
+    shape: HioneBeatClickerEngine.NodeShape, fog: Float, lucky: Boolean, t: Long
 ) {
-    // 0 at the far edge, 1 at the line.
     val near = (1f - (msAway / lookaheadMs)).coerceIn(0f, 1f)
     val past = msAway < 0f
     val fade = (if (past) (1f + msAway / 260f).coerceIn(0f, 1f) else 1f) * fog
     if (fade <= 0f) return
 
-    val baseR = h * (if (strong || lucky) 0.27f else 0.19f)
-    val r = baseR * (0.55f + 0.45f * near)
-    val alpha = (0.25f + 0.75f * near) * fade
-    val cy = h / 2f
+    val baseR = maxRadius * (if (strong || lucky) 0.65f else 0.50f)
+    val r = baseR * (0.6f + 0.4f * near)
+    val alpha = (0.35f + 0.65f * near) * fade
 
-    // Trail behind the note (on the side it came from), so motion is legible at 30 fps as well as 60.
+    // Downward trail behind the note
     if (!past && near > 0.15f) {
         drawLine(
-            color.copy(alpha = 0.20f * alpha),
-            Offset(x + r * 2.4f * dir, cy), Offset(x, cy),
-            strokeWidth = max(1f, r * 0.55f)
+            color.copy(alpha = 0.22f * alpha),
+            Offset(x, y - r * 2.2f),
+            Offset(x, y),
+            strokeWidth = max(2f, r * 0.6f)
         )
     }
-    drawCircle(color.copy(alpha = 0.22f * alpha), radius = r * 1.7f, center = Offset(x, cy))
+
+    // Outer glow
+    drawCircle(color.copy(alpha = 0.25f * alpha), radius = r * 1.6f, center = Offset(x, y))
+
+    // Shape body
     if (shape == HioneBeatClickerEngine.NodeShape.ORB) {
-        drawCircle(color.copy(alpha = alpha), radius = r, center = Offset(x, cy))
+        drawCircle(color.copy(alpha = alpha), radius = r, center = Offset(x, y))
     } else {
-        translate(x, cy) { scale(r * 1.15f, r * 1.15f, pivot = Offset.Zero) {
-            drawPath(unitPath, color.copy(alpha = alpha))
-        } }
+        translate(x, y) {
+            scale(r * 1.15f, r * 1.15f, pivot = Offset.Zero) {
+                drawPath(unitPath, color.copy(alpha = alpha))
+            }
+        }
     }
-    drawCircle(Color.White.copy(alpha = 0.7f * alpha * near), radius = r * 0.38f, center = Offset(x, cy))
+
+    // Specular center dot
+    drawCircle(Color.White.copy(alpha = 0.75f * alpha * near), radius = r * 0.35f, center = Offset(x, y))
+
     if (strong && !lucky) {
-        drawCircle(color.copy(alpha = 0.5f * alpha), radius = r * 1.35f, center = Offset(x, cy), style = Stroke(width = 1.5f))
+        drawCircle(color.copy(alpha = 0.6f * alpha), radius = r * 1.3f, center = Offset(x, y), style = Stroke(width = 1.5f))
     }
+
     if (lucky) {
-        // A slowly turning four-point sparkle, so gold reads as "special" and not just "yellow".
         val spin = (t % 2000L) / 2000f * 6.283f
         val r1 = r * 1.3f
         val r2 = r * 2.1f
@@ -477,10 +537,11 @@ private fun DrawScope.drawNote(
             val a = spin + k * 1.5708f
             drawLine(
                 Color.White.copy(alpha = 0.85f * alpha),
-                Offset(x + cos(a) * r1, cy + sin(a) * r1), Offset(x + cos(a) * r2, cy + sin(a) * r2),
+                Offset(x + cos(a) * r1, y + sin(a) * r1),
+                Offset(x + cos(a) * r2, y + sin(a) * r2),
                 strokeWidth = 2f
             )
         }
-        drawCircle(LUCKY_GOLD.copy(alpha = 0.6f * alpha), radius = r * 1.55f, center = Offset(x, cy), style = Stroke(width = 2f))
+        drawCircle(LUCKY_GOLD.copy(alpha = 0.6f * alpha), radius = r * 1.5f, center = Offset(x, y), style = Stroke(width = 2f))
     }
 }

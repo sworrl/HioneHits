@@ -376,27 +376,30 @@ fun NowPlayingScreen(
         val rawPalette = remember(art) { extractArtPalette(art) }
         // Feed the app-wide dynamic theme from the SAME hi-res art this screen decoded.
         LaunchedEffect(rawPalette, track.id) { HioneArtTheme.push(track.id, rawPalette) }
-        // Every surface below reads THIS: art-extracted when "album-art dynamic color" is on
-        // (Hione identity palette when off), gliding between tracks instead of hard-cutting.
-        val palette = rememberAnimatedPalette(rawPalette, NowPlayingLook.dynamicColor)
+        // Every surface below reads THIS: art-extracted when "album-art dynamic color" is on AND unlocked
+        // (desaturated bland palette when locked to incentivize the BPM game), gliding between tracks.
+        val isChromaUnlocked = HioneUnlocksReader.isUnlocked(ctx, HioneUnlocksReader.PLAYER_DYNAMIC_COLOR)
+        val palette = rememberAnimatedPalette(rawPalette, NowPlayingLook.dynamicColor, isUnlocked = isChromaUnlocked)
         val accent = palette.color1
         val accent2 = palette.color3
 
         // Branded 3-color dynamic blended background extracted directly from album artwork
-        art?.let {
-            androidx.compose.foundation.Image(
-                it, null,
-                Modifier.matchParentSize().blur(45.dp),
-                contentScale = ContentScale.Crop, alpha = 0.35f
-            )
+        if (isChromaUnlocked) {
+            art?.let {
+                androidx.compose.foundation.Image(
+                    it, null,
+                    Modifier.matchParentSize().blur(45.dp),
+                    contentScale = ContentScale.Crop, alpha = 0.35f
+                )
+            }
         }
         Box(
             Modifier.matchParentSize().background(
                 Brush.verticalGradient(
                     listOf(
-                        palette.color1.copy(alpha = 0.38f),
-                        palette.color2.copy(alpha = 0.65f),
-                        palette.color3.copy(alpha = 0.30f),
+                        palette.color1.copy(alpha = if (isChromaUnlocked) 0.38f else 0.12f),
+                        palette.color2.copy(alpha = if (isChromaUnlocked) 0.65f else 0.25f),
+                        palette.color3.copy(alpha = if (isChromaUnlocked) 0.30f else 0.10f),
                         Ground
                     )
                 )
@@ -740,6 +743,39 @@ fun NowPlayingScreen(
             }
 
             Spacer(Modifier.height(8.dp))
+
+            if (!isChromaUnlocked) {
+                Box(
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 4.dp, vertical = 2.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(Color(0x44121318))
+                        .border(1.dp, Color(0x77FFAB2E), RoundedCornerShape(12.dp))
+                        .clickable {
+                            HioneBpmGameLink.open(ctx, HioneBpmGameLink.FROM_NOW_PLAYING)
+                        }
+                        .padding(horizontal = 10.dp, vertical = 5.dp)
+                ) {
+                    Row(
+                        Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.Center,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text("🔒", fontSize = 11.sp)
+                        Spacer(Modifier.width(6.dp))
+                        Text(
+                            "CHROMA SHIFT LOCKED · Tap to play BPM Game to Level 3 & ignite color!",
+                            color = Color(0xFFFFD166),
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                }
+                Spacer(Modifier.height(4.dp))
+            }
 
             // Track Info Card: 100% Full Album Art with Text Overlain & Vignette — compact split
             Box(

@@ -47,55 +47,55 @@ object HioneUnlocks {
     // Each one corresponds to something that ACTUALLY EXISTS in this codebase. An unlock that
     // grants nothing is the same fake-reward problem it is supposed to fix.
 
-    /** Launcher wallpaper picker id "w6" (Neon Wave) — prefs hione_launcher_prefs/current_wallpaper_id. */
+    /** Early BPM unlock at Level 3: dynamically colored UI & album art backdrops in Now Playing. */
+    const val PLAYER_DYNAMIC_COLOR = "player.feature.dynamic_color"
+
+    /** BPM game highway lane unlocks */
+    const val GAME_LANES_2X = "game.lanes.2x"
+    const val GAME_LANES_3X = "game.lanes.3x"
+    const val GAME_LANES_4X = "game.lanes.4x"
+    const val GAME_LANES_5X = "game.lanes.5x"
+    const val GAME_LANES_6X = "game.lanes.6x"
+    const val GAME_LANES_8X = "game.lanes.8x"
+    const val GAME_LANES_10X = "game.lanes.10x"
+
+    /** Launcher wallpaper picker ids */
     const val OS_WALLPAPER_NEON_WAVE = "os.wallpaper.w6"
-
-    /** Launcher wallpaper picker id "w7" (Cyber Space Hologram). */
     const val OS_WALLPAPER_CYBER_HOLOGRAM = "os.wallpaper.w7"
+    const val OS_WALLPAPER_QUANTUM_MESH = "os.wallpaper.w8"
+    const val OS_WALLPAPER_SUPERNOVA = "os.wallpaper.w9"
+    const val OS_WALLPAPER_RETRO_SUNSET = "os.wallpaper.w10"
 
-    /** HioneThemeRegistry theme id "cozy_cafe". */
+    /** HioneThemeRegistry theme ids */
     const val OS_THEME_COZY_CAFE = "os.theme.cozy_cafe"
-
-    /** HioneThemeRegistry theme id "cyber_stage". */
     const val OS_THEME_CYBER_STAGE = "os.theme.cyber_stage"
+    const val OS_THEME_TOKYO_NEON = "os.theme.tokyo_neon"
+    const val OS_THEME_SYNTH_SUNSET = "os.theme.synth_sunset"
+    const val OS_THEME_DARK_MATTER = "os.theme.dark_matter"
 
-    /** HioneTopBarTheme.AURORA — prefs hione_launcher_prefs/top_bar_theme. */
+    /** Top bar themes */
     const val OS_TOPBAR_AURORA = "os.topbar.aurora"
-
-    /** HioneTopBarTheme.MIDNIGHT. */
     const val OS_TOPBAR_MIDNIGHT = "os.topbar.midnight"
+    const val OS_TOPBAR_SUNSET = "os.topbar.sunset"
+    const val OS_TOPBAR_MATRIX = "os.topbar.matrix"
 
-    // The three visualiser rewards gate whole .milk families in Hione Music's projectM playlist
-    // ("Hione - Negi Rain 01..08" etc., see app HioneVizPresetGates). They used to gate GLES2
-    // shader-engine ordinals and a ProjectMPreset ordinal, and neither is reachable on a device
-    // where libprojectM loads (the shader engine is only a fallback, nothing ever saved a
-    // ProjectMPreset, and native setPreset is a no-op) — so all three paid out nothing.
-
-    /** projectM family "Hione - Negi Rain" (also ShaderPreset.NEGI_RAIN on the fallback engine). */
+    /** Visualizer presets */
     const val PLAYER_VIZ_NEGI_RAIN = "player.viz.negi_rain"
-
-    /** projectM family "Hione - Vocaloid Circuit" (also ShaderPreset.VOCALOID_CIRCUIT). */
     const val PLAYER_VIZ_VOCALOID_CIRCUIT = "player.viz.vocaloid_circuit"
-
-    /** projectM family "Hione - Hione Vortex". The id keeps its old name: renaming re-locks it. */
     const val PLAYER_PROJECTM_VORTEX_CORE = "player.projectm.vortex_core"
+    const val PLAYER_VIZ_CYBER_TUNNEL = "player.viz.cyber_tunnel"
 
-    /** Tape Mode cassette theme "SAKURA" — prefs hione_player_prefs/tape_theme. */
+    /** Tape Mode cassette themes */
     const val PLAYER_TAPE_SAKURA = "player.tape.sakura"
-
-    /** Tape Mode cassette theme "VAPORWAVE". */
     const val PLAYER_TAPE_VAPORWAVE = "player.tape.vaporwave"
-
-    /** Tape Mode cassette theme "GLOWWORM". */
     const val PLAYER_TAPE_GLOWWORM = "player.tape.glowworm"
+    const val PLAYER_TAPE_CYBERPUNK = "player.tape.cyberpunk"
+    const val PLAYER_TAPE_GOLDEN_REEL = "player.tape.golden_reel"
+    const val PLAYER_TAPE_CLEAR_PRISM = "player.tape.clear_prism"
 
-    /** BPM game skin HONEY_SWEET — gated by this module itself. */
+    /** BPM game skins */
     const val SKIN_HONEY_SWEET = "game.skin.honey_sweet"
-
-    /** BPM game skin GOTHIC_DIVA. */
     const val SKIN_GOTHIC_DIVA = "game.skin.gothic_diva"
-
-    /** BPM game skin SNOW_CRYSTAL. */
     const val SKIN_SNOW_CRYSTAL = "game.skin.snow_crystal"
 
     /** What a player has to do to earn an unlock, in terms the UI can print as progress. */
@@ -103,7 +103,8 @@ object HioneUnlocks {
         JUDGED_TAPS("judged taps"),
         MAX_COMBO("max combo"),
         PERFECT_HITS("PERFECT hits"),
-        SEASON_POINTS("season points")
+        SEASON_POINTS("season points"),
+        USER_LEVEL("player level")
     }
 
     data class Reward(
@@ -117,26 +118,46 @@ object HioneUnlocks {
     )
 
     /**
-     * The ladder, in the order it is earned. Requirements alternate between volume (judged taps),
-     * consistency (PERFECT hits) and nerve (max combo), so no single way of playing unlocks
-     * everything and each type of player has a next thing to chase.
+     * The ladder of 35 progression rewards across HioneOS and Hione Hits.
+     * Requirements alternate between volume (judged taps), consistency (PERFECT hits),
+     * nerve (max combo), and progression (player level / season points).
      */
     val ALL: List<Reward> get() = listOf(
-        Reward(SKIN_HONEY_SWEET, "Honey Sweet skin", "BPM game · Skins", "🍯", Goal.JUDGED_TAPS, 200),
+        Reward(PLAYER_DYNAMIC_COLOR, "Chroma Shift Dynamic Color", "${Mascot.musicAppName} · Dynamic Theme", "🎨", Goal.USER_LEVEL, 3),
+        Reward(GAME_LANES_2X, "Dual Noteway (2 Lanes)", "BPM game · Highway lanes", "⚡", Goal.USER_LEVEL, 10),
         Reward(PLAYER_TAPE_SAKURA, "SAKURA cassette", "${Mascot.musicAppName} · Tape Mode", "📼", Goal.MAX_COMBO, 25),
-        Reward(OS_WALLPAPER_NEON_WAVE, "Neon Wave wallpaper", "${Mascot.osName} · Wallpapers", "🖼️", Goal.JUDGED_TAPS, 500),
+        Reward(GAME_LANES_3X, "Triple Noteway (3 Lanes)", "BPM game · Highway lanes", "⚡", Goal.USER_LEVEL, 25),
+        Reward(SKIN_HONEY_SWEET, "Honey Sweet skin", "BPM game · Skins", "🍯", Goal.JUDGED_TAPS, 200),
         Reward(PLAYER_VIZ_NEGI_RAIN, "Negi Rain visuals", "${Mascot.musicAppName} · visualizer presets", "🌧️", Goal.PERFECT_HITS, 250),
+        Reward(OS_WALLPAPER_NEON_WAVE, "Neon Wave wallpaper", "${Mascot.osName} · Wallpapers", "🖼️", Goal.JUDGED_TAPS, 500),
+        Reward(GAME_LANES_4X, "Quad Noteway (4 Lanes)", "BPM game · Highway lanes", "⚡", Goal.USER_LEVEL, 50),
         Reward(SKIN_GOTHIC_DIVA, "Gothic Lolita skin", "BPM game · Skins", "🖤", Goal.MAX_COMBO, 50),
-        Reward(OS_TOPBAR_AURORA, "Aurora top bar", "${Mascot.osName} · Top bar theme", "🌈", Goal.JUDGED_TAPS, 1_500),
         Reward(PLAYER_TAPE_VAPORWAVE, "VAPORWAVE cassette", "${Mascot.musicAppName} · Tape Mode", "📼", Goal.MAX_COMBO, 75),
+        Reward(GAME_LANES_5X, "Penta Noteway (5 Lanes)", "BPM game · Highway lanes", "⚡", Goal.USER_LEVEL, 100),
         Reward(PLAYER_PROJECTM_VORTEX_CORE, "${Mascot.name} Vortex visuals", "${Mascot.musicAppName} · visualizer presets", "🌀", Goal.PERFECT_HITS, 1_000),
-        Reward(OS_THEME_COZY_CAFE, "Cozy Cafe theme", "${Mascot.osName} · Themes", "☕", Goal.JUDGED_TAPS, 3_000),
+        Reward(OS_TOPBAR_AURORA, "Aurora top bar", "${Mascot.osName} · Top bar theme", "🌈", Goal.JUDGED_TAPS, 1_500),
         Reward(SKIN_SNOW_CRYSTAL, "Snow Crystal skin", "BPM game · Skins", "❄️", Goal.MAX_COMBO, 100),
+        Reward(GAME_LANES_6X, "Hexa Noteway (6 Lanes)", "BPM game · Highway lanes", "⚡", Goal.USER_LEVEL, 250),
         Reward(PLAYER_VIZ_VOCALOID_CIRCUIT, "Vocaloid Circuit visuals", "${Mascot.musicAppName} · visualizer presets", "🔌", Goal.PERFECT_HITS, 2_500),
-        Reward(OS_WALLPAPER_CYBER_HOLOGRAM, "Cyber Space Hologram", "${Mascot.osName} · Wallpapers", "🛸", Goal.JUDGED_TAPS, 5_000),
+        Reward(OS_THEME_COZY_CAFE, "Cozy Cafe theme", "${Mascot.osName} · Themes", "☕", Goal.JUDGED_TAPS, 3_000),
         Reward(PLAYER_TAPE_GLOWWORM, "GLOWWORM cassette", "${Mascot.musicAppName} · Tape Mode", "📼", Goal.MAX_COMBO, 150),
+        Reward(OS_WALLPAPER_CYBER_HOLOGRAM, "Cyber Space Hologram", "${Mascot.osName} · Wallpapers", "🛸", Goal.JUDGED_TAPS, 5_000),
         Reward(OS_THEME_CYBER_STAGE, "Cyber Stage theme", "${Mascot.osName} · Themes", "🎆", Goal.JUDGED_TAPS, 10_000),
-        Reward(OS_TOPBAR_MIDNIGHT, "Midnight top bar", "${Mascot.osName} · Top bar theme", "🌙", Goal.SEASON_POINTS, 50_000)
+        Reward(OS_TOPBAR_MIDNIGHT, "Midnight top bar", "${Mascot.osName} · Top bar theme", "🌙", Goal.SEASON_POINTS, 50_000),
+        Reward(GAME_LANES_8X, "Octa Hyper Noteway (8 Lanes)", "BPM game · Highway lanes", "🔥", Goal.USER_LEVEL, 1000),
+        Reward(GAME_LANES_10X, "Deca God Noteway (10 Lanes)", "BPM game · Highway lanes", "👑", Goal.USER_LEVEL, 1500),
+        Reward(PLAYER_VIZ_CYBER_TUNNEL, "Cyber Plasma Tunnel", "${Mascot.musicAppName} · visualizer presets", "🚀", Goal.PERFECT_HITS, 4_000),
+        Reward(PLAYER_TAPE_CYBERPUNK, "Neon Cyberpunk cassette", "${Mascot.musicAppName} · Tape Mode", "📼", Goal.MAX_COMBO, 200),
+        Reward(PLAYER_TAPE_GOLDEN_REEL, "24K Gold Reel tape", "${Mascot.musicAppName} · Tape Mode", "📼", Goal.MAX_COMBO, 300),
+        Reward(PLAYER_TAPE_CLEAR_PRISM, "Clear Prism Cassette", "${Mascot.musicAppName} · Tape Mode", "📼", Goal.MAX_COMBO, 400),
+        Reward(OS_WALLPAPER_QUANTUM_MESH, "Quantum Neon Mesh", "${Mascot.osName} · Wallpapers", "🌌", Goal.JUDGED_TAPS, 15_000),
+        Reward(OS_WALLPAPER_SUPERNOVA, "Supernova Plasma", "${Mascot.osName} · Wallpapers", "💥", Goal.JUDGED_TAPS, 20_000),
+        Reward(OS_WALLPAPER_RETRO_SUNSET, "Lo-fi Retro Sunset", "${Mascot.osName} · Wallpapers", "🌅", Goal.JUDGED_TAPS, 25_000),
+        Reward(OS_THEME_TOKYO_NEON, "Tokyo Neon Night theme", "${Mascot.osName} · Themes", "🌃", Goal.JUDGED_TAPS, 30_000),
+        Reward(OS_THEME_SYNTH_SUNSET, "Synthwave Sunset theme", "${Mascot.osName} · Themes", "🌇", Goal.JUDGED_TAPS, 40_000),
+        Reward(OS_THEME_DARK_MATTER, "Dark Matter OLED theme", "${Mascot.osName} · Themes", "🖤", Goal.JUDGED_TAPS, 50_000),
+        Reward(OS_TOPBAR_SUNSET, "Synthwave Sunset Topbar", "${Mascot.osName} · Top bar theme", "🌆", Goal.SEASON_POINTS, 100_000),
+        Reward(OS_TOPBAR_MATRIX, "Green Matrix Code Topbar", "${Mascot.osName} · Top bar theme", "💻", Goal.SEASON_POINTS, 250_000)
     )
 
     fun rewardFor(id: String): Reward? = ALL.firstOrNull { it.id == id }
@@ -255,6 +276,7 @@ object HioneUnlocks {
             Goal.MAX_COMBO -> life.maxCombo.toLong()
             Goal.PERFECT_HITS -> life.perfectHits
             Goal.SEASON_POINTS -> HioneBpmSeasonsEngine.currentSeason.value.seasonRankPoints
+            Goal.USER_LEVEL -> HioneBeatClickerEngine.userLevel.value.toLong()
         }
     }
 

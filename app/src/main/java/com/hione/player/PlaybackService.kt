@@ -49,7 +49,25 @@ class PlaybackService : MediaLibraryService() {
 
         // Feed the TV now-playing metadata and act on the transport it sends back.
         com.hione.player.cast.HioneCastBridge.attach(this)
+
+        // Hold low-latency Wi-Fi lock to keep Qualcomm radio active and prevent network stalls
+        val wm = applicationContext.getSystemService(android.content.Context.WIFI_SERVICE) as? android.net.wifi.WifiManager
+        if (wm != null && wifiLock == null) {
+            val mode = if (android.os.Build.VERSION.SDK_INT >= 29) {
+                android.net.wifi.WifiManager.WIFI_MODE_FULL_LOW_LATENCY
+            } else {
+                android.net.wifi.WifiManager.WIFI_MODE_FULL_HIGH_PERF
+            }
+            wifiLock = runCatching {
+                wm.createWifiLock(mode, "HionePlayback:LowLatency").apply {
+                    setReferenceCounted(false)
+                    acquire()
+                }
+            }.getOrNull()
+        }
     }
+
+    private var wifiLock: android.net.wifi.WifiManager.WifiLock? = null
 
     /**
      * Go foreground IMMEDIATELY, before anything else.
@@ -130,6 +148,10 @@ class PlaybackService : MediaLibraryService() {
         try {
             com.hione.player.api.HioneApiServer.stop(this)
         } catch (_: Throwable) {}
+        runCatching {
+            wifiLock?.let { if (it.isHeld) it.release() }
+            wifiLock = null
+        }
         // Player lifecycle is owned by PlayerHolder; only release here on a real teardown.
         super.onDestroy()
     }

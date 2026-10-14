@@ -3,6 +3,7 @@ package com.hione.player
 import android.content.Context
 import android.media.AudioDeviceCallback
 import android.media.AudioDeviceInfo
+import android.media.AudioFormat
 import android.media.AudioManager
 import android.os.Build
 import android.os.Handler
@@ -190,6 +191,24 @@ object HioneUsbDacOutput {
         val am = a.getSystemService(Context.AUDIO_SERVICE) as AudioManager
         val supported = am.getSupportedMixerAttributes(usb)
         val bit = supported.firstOrNull { it.mixerBehavior == android.media.AudioMixerAttributes.MIXER_BEHAVIOR_BIT_PERFECT }
+            ?: runCatching {
+                // If the HAL did not pre-enumerate a bit-perfect configuration, construct one directly
+                // with the DAC's highest bit-depth and sample rate:
+                val bestRate = usb.sampleRates.maxOrNull() ?: 48000
+                val enc = when {
+                    usb.encodings.contains(AudioFormat.ENCODING_PCM_32BIT) -> AudioFormat.ENCODING_PCM_32BIT
+                    usb.encodings.contains(AudioFormat.ENCODING_PCM_24BIT_PACKED) -> AudioFormat.ENCODING_PCM_24BIT_PACKED
+                    else -> AudioFormat.ENCODING_PCM_16BIT
+                }
+                val format = AudioFormat.Builder()
+                    .setSampleRate(bestRate)
+                    .setEncoding(enc)
+                    .setChannelMask(AudioFormat.CHANNEL_OUT_STEREO)
+                    .build()
+                android.media.AudioMixerAttributes.Builder(format)
+                    .setMixerBehavior(android.media.AudioMixerAttributes.MIXER_BEHAVIOR_BIT_PERFECT)
+                    .build()
+            }.getOrNull()
         if (bit == null) {
             Log.i(TAG, "no bit-perfect mixer offered (supported=${supported.size})")
             return false

@@ -2029,11 +2029,197 @@ private fun ColumnScope.BpmBeatNodeStage(
     var lastAccuracy by remember { mutableStateOf<HitAccuracy?>(null) }
     val chaosNow by HioneStagePerformance.chaos.collectAsState()
 
+    val userLevel by HioneBeatClickerEngine.userLevel.collectAsState()
+    val userXp by HioneBeatClickerEngine.userXp.collectAsState()
+    val activeLanes by HioneBeatClickerEngine.activeLanes.collectAsState()
+    val maxLanes = HioneBeatClickerEngine.maxUnlockedLanes(userLevel)
+    val xpNeeded = HioneBeatClickerEngine.xpRequiredForLevel(userLevel)
+    var lastTappedLane by remember { mutableIntStateOf(0) }
+
+    val performTap: (Int) -> Unit = { lane ->
+        val now = SystemClock.elapsedRealtime()
+        lastTapTimeMs = now
+        lastTappedLane = lane
+
+        // Tap tempo tracking
+        if (tapTimestamps.isNotEmpty() && now - tapTimestamps.last() > 2000L) {
+            tapTimestamps.clear()
+            tapCounter = 0
+        }
+        tapTimestamps.add(now)
+        tapCounter++
+        if (tapTimestamps.size > 8) tapTimestamps.removeAt(0)
+        if (tapTimestamps.size >= 2) {
+            val intervals = (1 until tapTimestamps.size).map { (tapTimestamps[it] - tapTimestamps[it - 1]).toDouble() }
+            val avg = intervals.average()
+            if (avg > 0) calculatedTapBpm = (60_000.0 / avg).toFloat().coerceIn(20f, 999f)
+        }
+
+        val tier = HioneBeatClickerEngine.rhythmTier.value
+        val windows = HioneRhythmTiming.windowsFor(
+            beatPeriodMs = beatIntervalMs,
+            leniency = tier.leniency * HioneStagePerformance.windowScale(),
+            bonusMs = HioneBeatClickerEngine.timingWindowBonusMs
+        )
+        val signedOffset: Int? = if (isPlaying) HioneRhythmTiming.signedOffsetToBeat(
+            tapEpochMs = System.currentTimeMillis(),
+            lastPulseEpochMs = HioneBpmEngine.state.value.lastPulseEpochMs,
+            beatPeriodMs = beatIntervalMs,
+            calibrationMs = HioneRhythmCalibration.offsetMs.value
+        ) else null
+        val accuracy: HitAccuracy? = signedOffset?.let { HioneRhythmTiming.judge(it, windows) }
+        timingOffsetMs = if (signedOffset != null) HioneRhythmTiming.displayOffsetMs(signedOffset, windows) else 0
+
+        com.hione.launcher.haptics.HioneHaptics.beat(ctx, accuracy?.hapticStrength ?: 0)
+        lastAccuracy = accuracy
+
+        if (accuracy == null || signedOffset == null) {
+            HioneBeatClickerEngine.freeTap()
+            judgmentTitle = if (isPlaying) "FREE TAP · ${HioneTempoLock.tempo.value.label}" else "FREE TAP · nothing playing"
+            judgmentColor = KawaiiSoftTeal
+            coroutineScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+                HioneBeatClickerEngine.checkAchievements()
+            }
+        } else {
+            val comboBefore = clickerCombo
+            HioneRhythmCalibration.recordJudgedDeviation(signedOffset)
+            HioneBeatClickerEngine.tap(accuracy, liveBpm, tier.scoreScale)
+            val comboAfter = HioneBeatClickerEngine.combo.value
+            if (HioneBeatClickerEngine.comboMultiplier(comboAfter) >
+                HioneBeatClickerEngine.comboMultiplier(comboBefore)) {
+                com.hione.launcher.haptics.HioneHaptics.confirm(ctx)
+            }
+            val pts = ((accuracy.seasonPoints * 5L +
+                comboBefore * (if (accuracy.isGreatOrBetter) 15L else 5L)) * tier.scoreScale).toLong()
+            HioneBpmSeasonsEngine.recordTap(
+                accuracy, comboBefore, pts,
+                if (hasLiveTempo) liveBpm else 0f
+            )
+            if (HioneSongRecords.onJudgedTap(accuracy, pts, HioneBeatClickerEngine.combo.value)) {
+                HioneGameFx.pop("NEW BEST!", 0xFFFFD166, big = true)
+                HioneGameFx.shake(0.7f)
+                HioneStagePerformance.onNewBest()
+                HioneSeasonalAudioEngine.playLevelUpFanfare()
+            }
+            val judgedBeatAt = System.currentTimeMillis() - HioneRhythmCalibration.offsetMs.value - signedOffset
+            if (accuracy.isGreatOrBetter && HioneRhythmTiming.isLuckyBeat(judgedBeatAt, beatIntervalMs)) {
+                HioneBeatClickerEngine.luckyNote()
+                HioneStagePerformance.onLuckyNote()
+            }
+
+            coroutineScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+                bpmDb.logTapTelemetry(
+                    HioneBpmDatabase.TapTelemetryRecord(
+                        artist = trackArtist ?: "",
+                        title = trackTitle ?: "",
+                        tapEpochMs = System.currentTimeMillis(),
+                        targetBeatMs = beatIntervalMs,
+                        deviationMs = signedOffset,
+                        accuracy = accuracy.name,
+                        instantaneousBpm = if (hasLiveTempo) liveBpm else 0f,
+                        comboAtTap = comboBefore,
+                        isFever = feverSeconds > 0
+                    )
+                )
+                HioneBeatClickerEngine.checkAchievements()
+                HioneUnlocks.evaluate(ctx)
+                HioneSecrets.onJudgedTap(ctx, accuracy, if (hasLiveTempo) liveBpm else 0f, trackArtist, trackTitle)
+                dbStats = bpmDb.getCalibrationStats()
+            }
+
+            val nearMs = if (accuracy == HitAccuracy.GREAT) HioneRhythmTiming.nearPerfectMissMs(signedOffset, windows) else null
+            if (nearMs != null) HioneStagePerformance.onNearPerfect()
+            val coach = HioneRhythmTiming.nudgeHint(if (chaosNow.mirrorsBar) -timingOffsetMs else timingOffsetMs, windows)
+            judgmentTitle = if (nearMs != null) "SO CLOSE · ${nearMs}ms off PERFECT"
+                else "${accuracy.label} · $coach"
+            judgmentColor = when (accuracy) {
+                HitAccuracy.PERFECT -> KawaiiHotPink
+                HitAccuracy.GREAT -> KawaiiSakuraPink
+                HitAccuracy.GOOD -> KawaiiSoftTeal
+                HitAccuracy.OK -> KawaiiGoldenHoney
+                HitAccuracy.MISS -> Color(0xFFFF6B8B)
+            }
+            if (accuracy == HitAccuracy.PERFECT) perfectShockwaveTrigger++
+        }
+    }
+
+    // Level Header & Multi-Lane Selector
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 8.dp, vertical = 2.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(
+                Modifier
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(Brush.horizontalGradient(listOf(Color(0xFFFF3385), Color(0xFFFFAB2E))))
+                    .padding(horizontal = 8.dp, vertical = 3.dp)
+            ) {
+                Text("Lv. $userLevel", color = Color.White, fontWeight = FontWeight.Black, fontSize = 12.sp)
+            }
+            Spacer(Modifier.width(8.dp))
+            Column {
+                Text(
+                    "XP $userXp / $xpNeeded",
+                    color = Color.White.copy(alpha = 0.85f),
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Spacer(Modifier.height(2.dp))
+                Box(
+                    Modifier
+                        .width(90.dp)
+                        .height(4.dp)
+                        .clip(RoundedCornerShape(2.dp))
+                        .background(Color(0x33FFFFFF))
+                ) {
+                    val progressFraction = (userXp.toFloat() / xpNeeded.coerceAtLeast(1L)).coerceIn(0f, 1f)
+                    Box(
+                        Modifier
+                            .fillMaxHeight()
+                            .fillMaxWidth(progressFraction)
+                            .background(Color(0xFFFFD166))
+                    )
+                }
+            }
+        }
+
+        // Multi-lane selector chips (1x up to maxUnlockedLanes)
+        if (maxLanes > 1) {
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                val availableLanes = listOf(1, 2, 3, 4, 5, 6, 8, 10).filter { it <= maxLanes }
+                for (l in availableLanes) {
+                    val isSel = activeLanes == l
+                    Box(
+                        Modifier
+                            .clip(RoundedCornerShape(6.dp))
+                            .background(if (isSel) Color(0xFFFF3385) else Color(0x33FFFFFF))
+                            .clickable { HioneBeatClickerEngine.setActiveLanes(l) }
+                            .padding(horizontal = 6.dp, vertical = 2.dp)
+                    ) {
+                        Text(
+                            "${l}x",
+                            color = if (isSel) Color.White else Color.White.copy(alpha = 0.7f),
+                            fontSize = 10.sp,
+                            fontWeight = if (isSel) FontWeight.Bold else FontWeight.Normal
+                        )
+                    }
+                }
+            }
+        }
+    }
+
     Box(
         Modifier
             .fillMaxWidth()
             .weight(1f, fill = false)
-            .padding(vertical = 4.dp),
+            .padding(vertical = 2.dp),
         contentAlignment = Alignment.Center
     ) {
         // Golden Leek lucky target
@@ -2051,20 +2237,15 @@ private fun ColumnScope.BpmBeatNodeStage(
                     }
                     .padding(8.dp)
             ) {
-                // Golden leek for Hione; a golden coda mark under every other pack.
                 if (Mascot.hasHioneLore) Text("✨🥬✨", fontSize = 20.sp)
                 else com.hione.launcher.CodaMarkGlyph(28.dp, ring = Color.White, pip = Mascot.primaryDeep)
             }
         }
 
-        // THE PLAYFIELD. Notes travel the lane and land ON the beat node, so the moment you are
-        // aiming at and the thing you are touching are the same place. The lane, the notes, the
-        // timing windows and the hit line all take their colour from the album that is playing
-        // (Settings.Global hione_np_accent, published by Hione Music), so the game looks like the
-        // record rather than like a fixed theme.
         val npAccents by com.hione.launcher.ui.HioneNowPlayingAccent.colors.collectAsState()
         val laneAccent = if (npAccents.first != 0) Color(npAccents.first) else Color(skin.primaryColor)
         val laneAccent2 = if (npAccents.second != 0) Color(npAccents.second) else Color(skin.accentColor)
+
         HioneNoteHighway(
             lastPulseEpochMs = HioneBpmEngine.state.value.lastPulseEpochMs,
             beatIntervalMs = beatIntervalMs,
@@ -2078,166 +2259,28 @@ private fun ColumnScope.BpmBeatNodeStage(
             lastOffsetMs = timingOffsetMsState.intValue,
             accent = laneAccent,
             accent2 = laneAccent2,
-            laneHeight = 150.dp,
-            hitFraction = 0.5f,
+            laneHeight = 220.dp,
+            hitFraction = 0.82f,
+            laneCount = activeLanes,
+            lastTappedLane = lastTappedLane,
+            onTapLane = { lane -> performTap(lane) },
             skin = skin,
             fever = feverSeconds > 0,
             chaos = chaosNow,
             comboRung = comboRungOf(clickerCombo),
             lastAccuracy = lastAccuracy
         ) {
-        // Interactive Kawaii Project DIVA Beat Node (with Approach Rings, Ripple & Shockwaves)
-        KawaiiProjectDivaBeatNode(
-            approachRadius = approachRadius,
-            pulseScale = pulseScale,
-            isPlaying = isPlaying,
-            feverActive = feverSeconds > 0,
-            perfectShockwaveTrigger = perfectShockwaveTrigger,
-            skin = skin,
-            onTap = {
-                val now = SystemClock.elapsedRealtime()
-                lastTapTimeMs = now
-
-                // Tap tempo tracking
-                if (tapTimestamps.isNotEmpty() && now - tapTimestamps.last() > 2000L) {
-                    tapTimestamps.clear()
-                    tapCounter = 0
-                }
-                tapTimestamps.add(now)
-                tapCounter++
-                if (tapTimestamps.size > 8) tapTimestamps.removeAt(0)
-                if (tapTimestamps.size >= 2) {
-                    val intervals = (1 until tapTimestamps.size).map { (tapTimestamps[it] - tapTimestamps[it - 1]).toDouble() }
-                    val avg = intervals.average()
-                    if (avg > 0) calculatedTapBpm = (60_000.0 / avg).toFloat().coerceIn(20f, 999f)
-                }
-
-                // ---- JUDGMENT ------------------------------------------------------------
-                // A judgment requires a REAL, recent pulse from the detector. Everything below
-                // is measured against that pulse and nothing else — deliberately NOT against
-                // `lastBeatEpochMs`, the local metronome, whose phase is anchored on whenever
-                // isPlaying/beatIntervalMs last changed and is therefore arbitrary. (That, plus
-                // the older `elapsedRealtime % beatPeriod`, is exactly how every tap once scored
-                // PERFECT against a beat that did not exist.) With no pulse this is a FREE TAP:
-                // nothing is scored, nothing is persisted, and the UI says so.
-                val tier = HioneBeatClickerEngine.rhythmTier.value
-                val windows = HioneRhythmTiming.windowsFor(
-                    beatPeriodMs = beatIntervalMs,
-                    leniency = tier.leniency * HioneStagePerformance.windowScale(),
-                    bonusMs = HioneBeatClickerEngine.timingWindowBonusMs
+            if (activeLanes == 1) {
+                KawaiiProjectDivaBeatNode(
+                    approachRadius = approachRadius,
+                    pulseScale = pulseScale,
+                    isPlaying = isPlaying,
+                    feverActive = feverSeconds > 0,
+                    perfectShockwaveTrigger = perfectShockwaveTrigger,
+                    skin = skin,
+                    onTap = { performTap(0) }
                 )
-                // Read the pulse timestamp from the engine: this composable was extracted for the
-                // ART JIT limit and does not receive the whole BpmState.
-                val signedOffset: Int? = if (isPlaying) HioneRhythmTiming.signedOffsetToBeat(
-                    tapEpochMs = System.currentTimeMillis(),
-                    lastPulseEpochMs = HioneBpmEngine.state.value.lastPulseEpochMs,
-                    beatPeriodMs = beatIntervalMs,
-                    // Constant device latency (output + touch) measured out, so a clean tap does
-                    // not read permanently "late". See HioneRhythmCalibration.
-                    calibrationMs = HioneRhythmCalibration.offsetMs.value
-                ) else null
-                val accuracy: HitAccuracy? = signedOffset?.let { HioneRhythmTiming.judge(it, windows) }
-                // Deadzone: inside ~1 frame the deviation is below what this panel can resolve,
-                // so it displays as a clean 0 rather than fake precision.
-                timingOffsetMs = if (signedOffset != null) HioneRhythmTiming.displayOffsetMs(signedOffset, windows) else 0
-
-                // Haptic FIRST — one short sharp pulse the instant the judgment is known,
-                // before any scoring/DB work, so it lands on the finger, not after it.
-                com.hione.launcher.haptics.HioneHaptics.beat(ctx, accuracy?.hapticStrength ?: 0)
-
-                lastAccuracy = accuracy
-                if (accuracy == null || signedOffset == null) {
-                    // FREE TAP: the idle economy still responds to the finger, but no accuracy
-                    // counter, combo, fever, season rank or telemetry row is touched.
-                    HioneBeatClickerEngine.freeTap()
-                    // Say WHY it is not scoring: acquiring a tempo lock, or nothing playing.
-                    judgmentTitle = if (isPlaying) "FREE TAP · ${HioneTempoLock.tempo.value.label}" else "FREE TAP · nothing playing"
-                    judgmentColor = KawaiiSoftTeal
-                    coroutineScope.launch(kotlinx.coroutines.Dispatchers.IO) {
-                        HioneBeatClickerEngine.checkAchievements()
-                    }
-                } else {
-                    val comboBefore = clickerCombo
-                    // Real measured deviation feeds the offset calibrator (judged taps only).
-                    HioneRhythmCalibration.recordJudgedDeviation(signedOffset)
-                    HioneBeatClickerEngine.tap(accuracy, liveBpm, tier.scoreScale)
-                    val comboAfter = HioneBeatClickerEngine.combo.value
-                    // Crossing a combo rung is the moment worth celebrating — a distinct double
-                    // tap of haptics marks it so the player feels the multiplier change.
-                    if (HioneBeatClickerEngine.comboMultiplier(comboAfter) >
-                        HioneBeatClickerEngine.comboMultiplier(comboBefore)) {
-                        com.hione.launcher.haptics.HioneHaptics.confirm(ctx)
-                    }
-                    val pts = ((accuracy.seasonPoints * 5L +
-                        comboBefore * (if (accuracy.isGreatOrBetter) 15L else 5L)) * tier.scoreScale).toLong()
-                    // Only a REAL detected tempo may reach the seasons engine: it feeds
-                    // lifetimeStats.highestBpmLocked, which the "HIGH BPM" badge renders. The
-                    // 120f rhythm-game default used to be persisted there as a measurement.
-                    HioneBpmSeasonsEngine.recordTap(
-                        accuracy, comboBefore, pts,
-                        if (hasLiveTempo) liveBpm else 0f
-                    )
-                    // This song's run and personal best. Fires once per run, on the tap that
-                    // passes a REAL previous best.
-                    if (HioneSongRecords.onJudgedTap(accuracy, pts, HioneBeatClickerEngine.combo.value)) {
-                        HioneGameFx.pop("NEW BEST!", 0xFFFFD166, big = true)
-                        HioneGameFx.shake(0.7f)
-                        HioneStagePerformance.onNewBest()
-                        HioneSeasonalAudioEngine.playLevelUpFanfare()
-                    }
-                    // Lucky note: the beat this tap was judged against is the gold one on the
-                    // highway (same beat time, same hash — see HioneRhythmTiming.isLuckyBeat), and
-                    // it only pays on GREAT or better.
-                    val judgedBeatAt = System.currentTimeMillis() - HioneRhythmCalibration.offsetMs.value - signedOffset
-                    if (accuracy.isGreatOrBetter && HioneRhythmTiming.isLuckyBeat(judgedBeatAt, beatIntervalMs)) {
-                        HioneBeatClickerEngine.luckyNote()
-                        HioneStagePerformance.onLuckyNote()
-                    }
-
-                    // Telemetry Logging to SQLite Database — judged taps only. deviationMs is
-                    // the raw measured value, not the deadzone-flattened display value.
-                    coroutineScope.launch(kotlinx.coroutines.Dispatchers.IO) {
-                        bpmDb.logTapTelemetry(
-                            HioneBpmDatabase.TapTelemetryRecord(
-                                artist = trackArtist ?: "",
-                                title = trackTitle ?: "",
-                                tapEpochMs = System.currentTimeMillis(),
-                                targetBeatMs = beatIntervalMs,
-                                deviationMs = signedOffset,
-                                accuracy = accuracy.name,
-                                // 0 = tempo not detected; never the 120f game default.
-                                instantaneousBpm = if (hasLiveTempo) liveBpm else 0f,
-                                comboAtTap = comboBefore,
-                                isFever = feverSeconds > 0
-                            )
-                        )
-                        HioneBeatClickerEngine.checkAchievements()
-                        // Cross-app unlocks are earned here and ONLY here: this branch is the
-                        // judged-tap branch, so nothing a free tap did can ever pay one out. Both
-                        // tiers announce themselves through HioneCelebrations (the overlay).
-                        HioneUnlocks.evaluate(ctx)
-                        HioneSecrets.onJudgedTap(ctx, accuracy, if (hasLiveTempo) liveBpm else 0f, trackArtist, trackTitle)
-                        dbStats = bpmDb.getCalibrationStats()
-                    }
-
-                    // Feedback that TEACHES: the tier word plus which way to move next time. A GREAT
-                    // that missed PERFECT by a few ms says so — a near-win, not a let-down.
-                    val nearMs = if (accuracy == HitAccuracy.GREAT) HioneRhythmTiming.nearPerfectMissMs(signedOffset, windows) else null
-                    if (nearMs != null) HioneStagePerformance.onNearPerfect()
-                    val coach = HioneRhythmTiming.nudgeHint(if (chaosNow.mirrorsBar) -timingOffsetMs else timingOffsetMs, windows)
-                    judgmentTitle = if (nearMs != null) "SO CLOSE · ${nearMs}ms off PERFECT"
-                        else "${accuracy.label} · $coach"
-                    judgmentColor = when (accuracy) {
-                        HitAccuracy.PERFECT -> KawaiiHotPink
-                        HitAccuracy.GREAT -> KawaiiSakuraPink
-                        HitAccuracy.GOOD -> KawaiiSoftTeal
-                        HitAccuracy.OK -> KawaiiGoldenHoney
-                        HitAccuracy.MISS -> Color(0xFFFF6B8B)
-                    }
-                    if (accuracy == HitAccuracy.PERFECT) perfectShockwaveTrigger++
-                }
             }
-        )
         }
 
         // Floating Numbers / Floating Texts

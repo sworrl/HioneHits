@@ -33,6 +33,7 @@ enum class TvViewMode(val title: String) {
 class HioneTvActivity : ComponentActivity() {
 
     private lateinit var client: HioneCastClient
+    private lateinit var bridgeServer: HioneTvBridgeServer
     private var currentMode by mutableStateOf(TvViewMode.HITS_UI)
     private var themeIndex by mutableIntStateOf(0)
     private var presetIndex by mutableIntStateOf(0)
@@ -43,6 +44,9 @@ class HioneTvActivity : ComponentActivity() {
 
         client = HioneCastClient(applicationContext)
         client.start()
+
+        bridgeServer = HioneTvBridgeServer(applicationContext, client)
+        bridgeServer.start()
 
         setContent {
             TvRootScreen(
@@ -63,6 +67,7 @@ class HioneTvActivity : ComponentActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
+        bridgeServer.stop()
         client.stop()
     }
 

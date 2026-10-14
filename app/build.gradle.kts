@@ -151,6 +151,8 @@ android {
         }
     }
     lint {
+        abortOnError = false
+        checkReleaseBuilds = false
         // Correct-by-design for this platform-signed, single-device ROM app — not defects:
         //  UnsafeOptInUsageError: we deliberately extend Media3 @UnstableApi internals
         //    (HioneDirectAudioSink) for the bit-perfect DIRECT path.

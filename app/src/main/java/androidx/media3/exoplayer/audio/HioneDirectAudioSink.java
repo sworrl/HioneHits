@@ -2534,14 +2534,24 @@ public final class HioneDirectAudioSink implements AudioSink {
           Util.getAudioFormat(outputSampleRate, outputChannelConfig, outputEncoding);
       android.media.AudioAttributes audioTrackAttributes =
           getAudioTrackAttributesV21(audioAttributes, tunneling);
-      return new AudioTrack.Builder()
+      AudioTrack.Builder builder = new AudioTrack.Builder()
           .setAudioAttributes(audioTrackAttributes)
           .setAudioFormat(audioFormat)
           .setTransferMode(AudioTrack.MODE_STREAM)
           .setBufferSizeInBytes(bufferSize)
           .setSessionId(audioSessionId)
-          .setOffloadedPlayback(outputMode == OUTPUT_MODE_OFFLOAD)
-          .build();
+          .setOffloadedPlayback(outputMode == OUTPUT_MODE_OFFLOAD);
+
+      // Generic Android audiophile path (e.g. Google Pixel 10, external USB-C DACs):
+      // Request low-latency performance mode so AudioFlinger routes directly to FastMixer
+      // and bypasses deep buffer resampling. On HiBy M500 hardware, QTI AudioPolicyManager
+      // requires flags to be NONE to match direct_pcm profiles.
+      boolean isHiby = android.os.Build.MANUFACTURER.equalsIgnoreCase("HiBy")
+          || android.os.Build.PRODUCT.toUpperCase().contains("M500");
+      if (!isHiby) {
+        builder.setPerformanceMode(AudioTrack.PERFORMANCE_MODE_LOW_LATENCY);
+      }
+      return builder.build();
     }
 
     @RequiresApi(21)

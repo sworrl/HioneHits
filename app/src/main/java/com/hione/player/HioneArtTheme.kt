@@ -163,10 +163,13 @@ object HioneArtTheme {
     /** Animated, composition-aware colors — call once per screen/section and read fields. */
     @Composable
     fun colors(durationMs: Int = 650): Colors {
-        // derive() now runs five 12-step binary searches for contrast. Cheap, but it was being
-        // re-run on EVERY recomposition of every screen that reads the theme. Once per palette.
+        val ctx = androidx.compose.ui.platform.LocalContext.current
+        val isUnlocked = HioneUnlocksReader.isUnlocked(ctx, HioneUnlocksReader.PLAYER_DYNAMIC_COLOR)
         val p = palette
-        val target = androidx.compose.runtime.remember(p) { derive(p) }
+        val target = androidx.compose.runtime.remember(p, isUnlocked) {
+            val effectiveP = if (!isUnlocked) com.hione.player.ui.desaturatePalette(p, 0.08f) else p
+            derive(effectiveP)
+        }
         val accent by animateColorAsState(target.accent, tween(durationMs), label = "artAccent")
         val accent2 by animateColorAsState(target.accent2, tween(durationMs), label = "artAccent2")
         val ground by animateColorAsState(target.ground, tween(durationMs + 250), label = "artGround")

@@ -44,6 +44,9 @@ object HioneBeatClickerEngine {
     private const val KEY_LEEKS = "leeks"
     private const val KEY_TOTAL_EARNED = "total_earned"
     private const val KEY_LAST_TIMESTAMP = "last_timestamp"
+    private const val KEY_USER_LEVEL = "user_level"
+    private const val KEY_USER_XP = "user_xp"
+    private const val KEY_ACTIVE_LANES = "active_lanes"
 
     data class Building(
         val id: String,
@@ -336,6 +339,100 @@ object HioneBeatClickerEngine {
     private val _achievements = MutableStateFlow(initialAchievements)
     val achievements: StateFlow<List<Achievement>> = _achievements.asStateFlow()
 
+    // Level progression system (1..1000+)
+    private val _userLevel = MutableStateFlow(1)
+    val userLevel: StateFlow<Int> = _userLevel.asStateFlow()
+
+    private val _userXp = MutableStateFlow(0L)
+    val userXp: StateFlow<Long> = _userXp.asStateFlow()
+
+    // Active highway lanes (1x..6x standard, 8x & 10x past Lv 1000)
+    private val _activeLanes = MutableStateFlow(1)
+    val activeLanes: StateFlow<Int> = _activeLanes.asStateFlow()
+
+    /**
+     * XP required to advance from [level] to [level + 1].
+     * Starts easy (~100-200 XP for early levels, reachable in 5-10 taps),
+     * and curves smoothly to 1,000+ levels.
+     */
+    fun xpRequiredForLevel(level: Int): Long {
+        if (level < 1) return 100L
+        return (90.0 + 35.0 * level.toDouble().pow(1.28)).toLong().coerceAtLeast(100L)
+    }
+
+    /** Maximum unlocked simultaneous noteways based on user level. */
+    fun maxUnlockedLanes(level: Int): Int = when {
+        level >= 1500 -> 10
+        level >= 1000 -> 8
+        level >= 250 -> 6
+        level >= 100 -> 5
+        level >= 50 -> 4
+        level >= 25 -> 3
+        level >= 10 -> 2
+        else -> 1
+    }
+
+    fun setActiveLanes(lanes: Int) {
+        val maxAllowed = maxUnlockedLanes(_userLevel.value)
+        val valid = lanes.coerceIn(1, maxAllowed)
+        _activeLanes.value = valid
+        prefs?.edit()?.putInt(KEY_ACTIVE_LANES, valid)?.apply()
+    }
+
+    fun addXp(ctx: Context?, xpAmount: Long) {
+        if (xpAmount <= 0) return
+        var currentXp = _userXp.value + xpAmount
+        var level = _userLevel.value
+        var leveledUp = false
+
+        while (currentXp >= xpRequiredForLevel(level)) {
+            currentXp -= xpRequiredForLevel(level)
+            level += 1
+            leveledUp = true
+
+            // Trigger early unlock of Chroma Shift Dynamic Colors at Level 3!
+            if (level >= 3 && ctx != null) {
+                if (HioneUnlocks.unlock(ctx, HioneUnlocks.PLAYER_DYNAMIC_COLOR)) {
+                    HioneCelebrations.push(
+                        HioneCelebrations.Item(
+                            secret = false,
+                            title = "Chroma Shift Dynamic Color",
+                            where = "Now Playing & Hione Hits",
+                            howTo = "Level 3 reached! Vibrant album-art reactive gradients are now unlocked!"
+                        )
+                    )
+                }
+            }
+
+            // Check if lane capacity expanded
+            val newMax = maxUnlockedLanes(level)
+            val prevMax = maxUnlockedLanes(level - 1)
+            if (newMax > prevMax) {
+                _activeLanes.value = newMax
+                HioneCelebrations.push(
+                    HioneCelebrations.Item(
+                        secret = false,
+                        title = "${newMax}x Noteway Unlocked!",
+                        where = "BPM Highway",
+                        howTo = "You unlocked ${newMax} simultaneous noteways! Use two thumbs to hit incoming beats!"
+                    )
+                )
+            }
+        }
+
+        _userLevel.value = level
+        _userXp.value = currentXp
+
+        if (leveledUp) {
+            pushFloatingText("LEVEL UP! Lv.$level", isCrit = true)
+            HioneGameFx.pop("LEVEL $level!", 0xFFFFD166, big = true)
+            HioneGameFx.shake(0.9f)
+            com.hione.launcher.audio.HioneSeasonalAudioEngine.playLevelUpFanfare()
+            ctx?.let { HioneUnlocks.evaluate(it) }
+        }
+        saveState()
+    }
+
     private val _combo = MutableStateFlow(0)
     val combo: StateFlow<Int> = _combo.asStateFlow()
 
@@ -434,6 +531,11 @@ object HioneBeatClickerEngine {
 
         _leeks.value = p.getFloat(KEY_LEEKS, 0f).toDouble()
         _totalEarned.value = p.getFloat(KEY_TOTAL_EARNED, 0f).toDouble()
+
+        _userLevel.value = p.getInt(KEY_USER_LEVEL, 1).coerceAtLeast(1)
+        _userXp.value = p.getLong(KEY_USER_XP, 0L).coerceAtLeast(0L)
+        val maxLanes = maxUnlockedLanes(_userLevel.value)
+        _activeLanes.value = p.getInt(KEY_ACTIVE_LANES, 1).coerceIn(1, maxLanes)
 
         val updated = initialBuildings.map { b ->
             val count = p.getInt("b_${b.id}", 0)
@@ -737,6 +839,20 @@ object HioneBeatClickerEngine {
         }
         if (isCrit) {
             com.hione.launcher.audio.HioneSeasonalAudioEngine.playCritChime()
+        }
+        // Award Player XP
+        val baseTapXp = when (accuracy) {
+            HitAccuracy.PERFECT -> 25L
+            HitAccuracy.GREAT -> 16L
+            HitAccuracy.GOOD -> 9L
+            HitAccuracy.OK -> 4L
+            HitAccuracy.MISS -> 0L
+        }
+        val feverXpMult = if (_feverSeconds.value > 0) 2L else 1L
+        val critXpMult = if (isCrit) 2L else 1L
+        val gainedXp = baseTapXp * feverXpMult * critXpMult
+        if (gainedXp > 0L) {
+            addXp(appCtx, gainedXp)
         }
 
         recordDailyProgress(accuracy)
@@ -1074,7 +1190,43 @@ object HioneBeatClickerEngine {
         editor.putInt("challenge_progress", c.progress)
         editor.putBoolean("challenge_claimed", c.claimed)
         editor.putInt("golden_pickups", _goldenPickups.value)
+        editor.putInt(KEY_USER_LEVEL, _userLevel.value)
+        editor.putLong(KEY_USER_XP, _userXp.value)
+        editor.putInt(KEY_ACTIVE_LANES, _activeLanes.value)
         editor.apply()
+    }
+
+    /**
+     * Resets the player back to base level (Level 1, 0 XP, 1 Lane) and wipes local and global unlocks.
+     * Used for fresh progression testing from scratch.
+     */
+    fun resetToBaseLevel(ctx: Context) {
+        _userLevel.value = 1
+        _userXp.value = 0L
+        _activeLanes.value = 1
+        _leeks.value = 0.0
+        _totalEarned.value = 0.0
+        _combo.value = 0
+        _comboShields.value = 0
+        _sessionTaps.value = 0
+        _sessionPerfects.value = 0
+        _sessionGreatOrBetter.value = 0
+        _goldenPickups.value = 0
+        _buildings.value = initialBuildings
+        _skills.value = initialSkills
+        _achievements.value = initialAchievements
+
+        val p = prefs ?: ctx.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        p.edit().clear().apply()
+
+        // Clear global unlocks and mirror
+        try {
+            android.provider.Settings.Global.putString(ctx.contentResolver, HioneUnlocks.SETTINGS_KEY, "{}")
+        } catch (_: Throwable) {}
+        try {
+            ctx.getSharedPreferences("hione_unlocks_mirror", Context.MODE_PRIVATE).edit().clear().apply()
+        } catch (_: Throwable) {}
+        saveState()
     }
 
     fun formatNumber(num: Double): String {

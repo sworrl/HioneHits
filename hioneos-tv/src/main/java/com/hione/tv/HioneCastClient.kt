@@ -737,4 +737,50 @@ class HioneCastClient(private val ctx: Context) {
     private fun lengthOf(h: ByteArray) =
         ((h[5].toInt() and 0xFF) shl 24) or ((h[6].toInt() and 0xFF) shl 16) or
             ((h[7].toInt() and 0xFF) shl 8) or (h[8].toInt() and 0xFF)
+
+    fun onExternalFormat(sampleRate: Int, bytesPerSample: Int, channelCount: Int) {
+        val j = JSONObject()
+            .put("sampleRate", sampleRate)
+            .put("bytesPerSample", bytesPerSample)
+            .put("channelCount", channelCount)
+            .put("encoding", when (bytesPerSample) {
+                2 -> AudioFormat.ENCODING_PCM_16BIT
+                3 -> AudioFormat.ENCODING_PCM_24BIT_PACKED
+                4 -> AudioFormat.ENCODING_PCM_32BIT
+                else -> AudioFormat.ENCODING_PCM_16BIT
+            })
+        applyFormat(j)
+        _state.value = _state.value.copy(connected = true, host = "3rd-Party Bridge")
+        startAudioPlaybackLoop()
+    }
+
+    fun onExternalPcm(b: ByteArray) {
+        playPcm(b)
+    }
+
+    fun onExternalMeta(
+        title: String,
+        artist: String,
+        album: String,
+        durationMs: Long,
+        isPlaying: Boolean,
+        artBitmap: ImageBitmap? = null
+    ) {
+        _state.value = _state.value.copy(
+            title = title,
+            artist = artist,
+            album = album,
+            durationMs = durationMs,
+            isPlaying = isPlaying,
+            artBitmap = artBitmap ?: _state.value.artBitmap,
+            connected = true
+        )
+    }
+
+    fun onExternalStop() {
+        _state.value = _state.value.copy(isPlaying = false)
+        audioQueue.clear()
+        queuedBytes.set(0L)
+        runCatching { track?.pause() }
+    }
 }

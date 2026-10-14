@@ -59,6 +59,7 @@ object HioneCastServer {
     private var watchdog: Job? = null
     private var netCallback: android.net.ConnectivityManager.NetworkCallback? = null
     @Volatile private var boundIp: String = ""
+    private var wifiLock: android.net.wifi.WifiManager.WifiLock? = null
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private var acceptJob: Job? = null
@@ -99,6 +100,21 @@ object HioneCastServer {
         if (HioneCastAuth.serverId(app) == null) {
             _state.value = CastState(lastError = "Secure storage unavailable")
             return
+        }
+        val wm = app.getSystemService(Context.WIFI_SERVICE) as? android.net.wifi.WifiManager
+        if (wm != null && wifiLock == null) {
+            val mode = if (android.os.Build.VERSION.SDK_INT >= 29) {
+                android.net.wifi.WifiManager.WIFI_MODE_FULL_LOW_LATENCY
+            } else {
+                android.net.wifi.WifiManager.WIFI_MODE_FULL_HIGH_PERF
+            }
+            wifiLock = runCatching {
+                wm.createWifiLock(mode, "HioneCast:HighPerf").apply {
+                    setReferenceCounted(false)
+                    acquire()
+                }
+            }.getOrNull()
+            Log.i(TAG, "Wi-Fi lock acquired (mode=$mode)")
         }
         HioneCastAuth.newCode()
         _state.value = CastState(active = true)
@@ -184,6 +200,10 @@ object HioneCastServer {
         client = null
         clientOut = null
         boundIp = ""
+        runCatching {
+            wifiLock?.let { if (it.isHeld) it.release() }
+            wifiLock = null
+        }
         HioneCastTap.setEnabled(false)
         HioneCastAuth.clearCode()
         _state.value = CastState()

@@ -30,6 +30,9 @@ import org.json.JSONObject
 object HioneUnlocksReader {
     private const val SETTINGS_KEY = "hione_unlocks"
 
+    /** Dynamic color shifting in Now Playing & chrome (unlocked early in BPM Game). */
+    const val PLAYER_DYNAMIC_COLOR = "player.feature.dynamic_color"
+
     const val PLAYER_VIZ_NEGI_RAIN = "player.viz.negi_rain"
     const val PLAYER_VIZ_VOCALOID_CIRCUIT = "player.viz.vocaloid_circuit"
     const val PLAYER_PROJECTM_VORTEX_CORE = "player.projectm.vortex_core"
