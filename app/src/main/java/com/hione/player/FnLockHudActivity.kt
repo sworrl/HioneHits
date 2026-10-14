@@ -123,7 +123,7 @@ class FnLockHudActivity : ComponentActivity() {
 }
 
 /**
- * Hatsune Hione Bespoke Hardware Pocket Lock & Touch Shield Modal.
+ * Oki Hione Bespoke Hardware Pocket Lock & Touch Shield Modal.
  * Unified 3D double-beveled cyber container with task-specific Hione artwork,
  * persistent touch barrier protection, animated status glowing badges,
  * and tactile kawaii feedback on touch attempts.

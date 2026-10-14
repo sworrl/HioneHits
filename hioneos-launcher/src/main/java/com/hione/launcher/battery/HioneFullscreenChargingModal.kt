@@ -37,7 +37,7 @@ import com.hione.launcher.ui.swipeUpFromBottomToDismiss
 import java.io.File
 
 /**
- * Hatsune Hione Fullscreen Quantum Charging Modal.
+ * Oki Hione Fullscreen Quantum Charging Modal.
  * High-tech holographic power reactor displaying real-time charging wattage,
  * battery cell temperature, MP2731 PMIC status, and fluid wave charge animations.
  */

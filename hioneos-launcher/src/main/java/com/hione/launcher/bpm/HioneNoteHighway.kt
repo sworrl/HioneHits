@@ -44,6 +44,80 @@ import kotlin.math.sin
  * - Two-thumb Multitouch: pointerInput detects independent touch downs across all lanes.
  * - Reactive skin styling: note silhouettes, vertical scrolling textures, and hit effects.
  */
+/**
+ * Phase-locked, monotonic beat grid for the vertical Note Highway.
+ *
+ * WHY THIS EXISTS:
+ * Previously, notes were indexed by relative offset `i` from `lastPulseEpochMs`. Every time a new
+ * beat pulse arrived, `lastPulseEpochMs` jumped forward by one beat, shifting `i` by 1 for every
+ * note on screen and causing notes to teleport between lanes on every beat!
+ *
+ * [HioneHighwayGrid] maintains a continuous `originEpochMs` and assigns every beat an unchanging
+ * absolute integer index (`absBeatIdx`). Beat #1042 stays Beat #1042 in its assigned lane from the
+ * moment it enters the top of the screen until it passes the bottom receptor.
+ */
+object HioneHighwayGrid {
+    @Volatile private var originEpochMs: Long = 0L
+    @Volatile private var currentPeriodMs: Long = 500L
+    private val hitLaneMaskByBeat = java.util.concurrent.ConcurrentHashMap<Long, Int>()
+
+    fun syncAnchor(lastPulseEpochMs: Long, beatIntervalMs: Long, nowMs: Long): Long {
+        val period = beatIntervalMs.coerceIn(60L, 3000L)
+        if (originEpochMs <= 0L || abs(period - currentPeriodMs) > 6L) {
+            currentPeriodMs = period
+            originEpochMs = if (lastPulseEpochMs > 0L && abs(nowMs - lastPulseEpochMs) < 10_000L) {
+                lastPulseEpochMs
+            } else {
+                nowMs
+            }
+            return originEpochMs
+        }
+        currentPeriodMs = period
+        if (lastPulseEpochMs > 0L && abs(nowMs - lastPulseEpochMs) < 5_000L) {
+            val k = Math.round((lastPulseEpochMs - originEpochMs).toDouble() / period.toDouble())
+            val predicted = originEpochMs + k * period
+            val err = lastPulseEpochMs - predicted
+            // Smoothly slew phase without ever changing the integer beat index k
+            originEpochMs += if (abs(err) > period / 2) err else (err * 0.20).toLong()
+        }
+        return originEpochMs
+    }
+
+    fun nearestBeatIndex(targetEpochMs: Long, beatIntervalMs: Long): Long {
+        val period = beatIntervalMs.coerceIn(60L, 3000L)
+        val origin = if (originEpochMs > 0L) originEpochMs else syncAnchor(0L, period, targetEpochMs)
+        return Math.round((targetEpochMs - origin).toDouble() / period.toDouble())
+    }
+
+    fun beatEpochAt(absBeatIdx: Long, beatIntervalMs: Long): Long {
+        val period = beatIntervalMs.coerceIn(60L, 3000L)
+        return originEpochMs + absBeatIdx * period
+    }
+
+    fun markLaneHit(absBeatIdx: Long, lane: Int) {
+        val bit = 1 shl lane.coerceIn(0, 15)
+        val prev = hitLaneMaskByBeat[absBeatIdx] ?: 0
+        hitLaneMaskByBeat[absBeatIdx] = prev or bit
+        if (hitLaneMaskByBeat.size > 64) {
+            val cutoff = absBeatIdx - 24L
+            val it = hitLaneMaskByBeat.keys.iterator()
+            while (it.hasNext()) {
+                if (it.next() < cutoff) it.remove()
+            }
+        }
+    }
+
+    fun isLaneHit(absBeatIdx: Long, lane: Int): Boolean {
+        val mask = hitLaneMaskByBeat[absBeatIdx] ?: return false
+        return (mask and (1 shl lane.coerceIn(0, 15))) != 0
+    }
+
+    fun areAllLanesHit(absBeatIdx: Long, requiredLanes: List<Int>): Boolean {
+        val mask = hitLaneMaskByBeat[absBeatIdx] ?: return false
+        return requiredLanes.all { l -> (mask and (1 shl l.coerceIn(0, 15))) != 0 }
+    }
+}
+
 @Composable
 fun HioneNoteHighway(
     lastPulseEpochMs: Long,
@@ -54,10 +128,11 @@ fun HioneNoteHighway(
     lastOffsetMs: Int,
     accent: Color,
     accent2: Color = accent,
-    laneHeight: androidx.compose.ui.unit.Dp = 220.dp,
+    laneHeight: androidx.compose.ui.unit.Dp = 230.dp,
     hitFraction: Float = 0.82f,
     laneCount: Int = 1,
     lastTappedLane: Int = 0,
+    isPlaying: Boolean = true,
     onTapLane: ((laneIndex: Int) -> Unit)? = null,
     modifier: Modifier = Modifier,
     skin: HioneBeatClickerEngine.BpmSkin = HioneBeatClickerEngine.BpmSkin.SAKURA_DREAM,
@@ -68,9 +143,13 @@ fun HioneNoteHighway(
     content: (@Composable androidx.compose.foundation.layout.BoxScope.() -> Unit)? = null
 ) {
     val now = remember { mutableLongStateOf(System.currentTimeMillis()) }
-    val sparkAge = remember { mutableFloatStateOf(1f) }
+    val laneSparkAge = remember { FloatArray(10) { 1f } }
+    val lanePressed = remember { BooleanArray(10) { false } }
     val lastSeenTap = remember { mutableLongStateOf(0L) }
-    val sparkLane = remember { mutableIntStateOf(0) }
+
+    val activeLanes = laneCount.coerceIn(1, 10)
+    // Keep the callback reference updated without restarting pointerInput on recomposition!
+    val currentOnTapLane = androidx.compose.runtime.rememberUpdatedState(onTapLane)
 
     val notePath = remember(skin.nodeShape) { unitShapePath(skin.nodeShape) }
     val hexPath = remember { unitShapePath(HioneBeatClickerEngine.NodeShape.HEX) }
@@ -78,36 +157,40 @@ fun HioneNoteHighway(
     LaunchedEffect(Unit) {
         while (true) {
             awaitFrame()
-            now.longValue = System.currentTimeMillis()
-            if (lastSeenTap.longValue != lastTapMs) {
+            val curNow = System.currentTimeMillis()
+            now.longValue = curNow
+            HioneHighwayGrid.syncAnchor(lastPulseEpochMs, beatIntervalMs, curNow)
+            if (lastSeenTap.longValue != lastTapMs && lastTapMs > 0L) {
                 lastSeenTap.longValue = lastTapMs
-                sparkAge.floatValue = 0f
-                sparkLane.intValue = lastTappedLane.coerceIn(0, (laneCount - 1).coerceAtLeast(0))
+                val l = lastTappedLane.coerceIn(0, activeLanes - 1)
+                laneSparkAge[l] = 0f
             }
-            if (sparkAge.floatValue < 1f) {
-                sparkAge.floatValue = (sparkAge.floatValue + 0.05f).coerceAtMost(1f)
+            for (k in 0 until 10) {
+                if (laneSparkAge[k] < 1f) {
+                    laneSparkAge[k] = (laneSparkAge[k] + 0.055f).coerceAtMost(1f)
+                }
             }
         }
     }
-
-    val activeLanes = laneCount.coerceIn(1, 10)
 
     Box(
         modifier
             .fillMaxWidth()
             .height(laneHeight)
-            .pointerInput(activeLanes, onTapLane) {
-                if (onTapLane != null) {
-                    awaitPointerEventScope {
-                        while (true) {
-                            val event = awaitPointerEvent()
-                            for (change in event.changes) {
-                                if (change.changedToDown()) {
-                                    val laneW = size.width.toFloat() / activeLanes
-                                    val lane = (change.position.x / laneW).toInt().coerceIn(0, activeLanes - 1)
-                                    onTapLane(lane)
-                                    change.consume()
-                                }
+            .pointerInput(activeLanes) {
+                awaitPointerEventScope {
+                    while (true) {
+                        val event = awaitPointerEvent()
+                        val laneW = (size.width.toFloat() / activeLanes).coerceAtLeast(1f)
+                        for (change in event.changes) {
+                            val lane = (change.position.x / laneW).toInt().coerceIn(0, activeLanes - 1)
+                            if (change.changedToDown()) {
+                                lanePressed[lane] = true
+                                laneSparkAge[lane] = 0f
+                                currentOnTapLane.value?.invoke(lane)
+                                change.consume()
+                            } else if (!change.pressed) {
+                                lanePressed[lane] = false
                             }
                         }
                     }
@@ -121,19 +204,20 @@ fun HioneNoteHighway(
 
             // Hit line sits near bottom (Y = h * hitFraction)
             val hitY = h * hitFraction
-            val period = beatIntervalMs.toFloat()
-            val live = lastPulseEpochMs > 0L && beatIntervalMs in 60..3000
+            val period = beatIntervalMs.coerceIn(60L, 3000L).toFloat()
+            val live = isPlaying && beatIntervalMs in 60..3000
 
             val runway = hitY
             val speed = if (chaos == HioneStagePerformance.Chaos.DOUBLE_TIME) 0.5f else 1f
-            val lookaheadMs = (period * 2.2f).coerceIn(700f, 2400f) * speed
+            val lookaheadMs = (period * 2.3f).coerceIn(750f, 2400f) * speed
             val pxPerMs = runway / lookaheadMs
 
             val t = now.longValue - calibrationMs
-            val sinceLast = (t - lastPulseEpochMs).toFloat()
-            val nextIdx = kotlin.math.ceil(sinceLast / period).toInt()
+            val originMs = HioneHighwayGrid.syncAnchor(lastPulseEpochMs, beatIntervalMs, now.longValue)
+            val sinceOrigin = (t - originMs).toFloat()
+            val centerBeatIdx = Math.round((t - originMs).toDouble() / period.toDouble())
 
-            val phase = (sinceLast.mod(period)) / period
+            val phase = ((sinceOrigin.mod(period)) / period).coerceIn(0f, 1f)
             val beat = (1f - phase).coerceIn(0f, 1f).let { it * it }
 
             // Vertical background wash
@@ -143,26 +227,51 @@ fun HioneNoteHighway(
             val scrollPx = (t.mod(60_000L)).toFloat() * pxPerMs
             drawVerticalLaneTexture(skin.laneStyle, w, h, scrollPx, beat, accent, accent2, hexPath)
 
-            // Multiple lane dividers
             val laneW = w / activeLanes
+
+            // Highlight pressed / recently tapped lane columns (Guitar Hero fret column glow)
+            if (activeLanes > 1) {
+                for (k in 0 until activeLanes) {
+                    val fAge = laneSparkAge[k]
+                    val colAlpha = if (lanePressed[k]) 0.22f else if (fAge < 0.5f) (0.5f - fAge) * 0.35f else 0f
+                    if (colAlpha > 0f) {
+                        val fretC = laneFretColor(k, activeLanes, accent, accent2)
+                        drawRect(
+                            brush = Brush.verticalGradient(
+                                listOf(Color.Transparent, fretC.copy(alpha = colAlpha), fretC.copy(alpha = colAlpha * 1.4f))
+                            ),
+                            topLeft = Offset(k * laneW, 0f),
+                            size = Size(laneW, h)
+                        )
+                    }
+                }
+            }
+
+            // Multiple lane dividers
             for (k in 1 until activeLanes) {
                 val divX = k * laneW
-                val divAlpha = 0.20f + 0.05f * comboRung.coerceIn(0, 6) + 0.15f * beat
+                val divAlpha = 0.28f + 0.05f * comboRung.coerceIn(0, 6) + 0.15f * beat
                 drawLine(
                     accent.copy(alpha = divAlpha),
                     Offset(divX, 0f),
                     Offset(divX, h),
-                    strokeWidth = 1.2f
+                    strokeWidth = 2.2f
                 )
             }
 
             // Window timing bands around hit line
             drawVerticalWindowBands(w, hitY, pxPerMs, windows, accent, accent2)
 
-            // Receptors on the hit line for each lane
+            // Receptors on the hit line for each lane (colored per fret in multi-lane mode!)
             for (k in 0 until activeLanes) {
                 val receptorX = (k + 0.5f) * laneW
-                drawReceptor(receptorX, hitY, laneW * 0.38f, accent, accent2, beat, fever, k == sparkLane.intValue && sparkAge.floatValue < 0.3f)
+                val fretColor = laneFretColor(k, activeLanes, accent, accent2)
+                val tappedNow = lanePressed[k] || laneSparkAge[k] < 0.32f
+                drawReceptor(
+                    receptorX, hitY,
+                    (laneW * 0.38f).coerceAtMost(46f),
+                    fretColor, accent2, beat, fever, tappedNow
+                )
             }
 
             // Hit line across all lanes
@@ -170,67 +279,90 @@ fun HioneNoteHighway(
 
             if (!live) return@Canvas
 
-            // Notes flowing downwards
-            for (i in (nextIdx - 1)..(nextIdx + 12)) {
-                val beatAt = lastPulseEpochMs + i.toLong() * beatIntervalMs
+            // Notes flowing downwards — indexed by monotonic absBeatIdx so notes NEVER jump lanes!
+            for (step in -1..10) {
+                val absBeatIdx = centerBeatIdx + step
+                val beatAt = originMs + absBeatIdx * beatIntervalMs
                 val msAway = (beatAt - t).toFloat()
                 if (msAway > lookaheadMs) break
                 val y = hitY - msAway * pxPerMs
                 if (y < -40f || y > h + 40f) continue
 
-                val strong = (i.mod(4)) == 0
+                val idxInt = absBeatIdx.toInt()
+                val strong = (idxInt.mod(4)) == 0
                 val lucky = HioneRhythmTiming.isLuckyBeat(beatAt, beatIntervalMs)
-                val noteColor = when {
-                    lucky -> LUCKY_GOLD
-                    fever -> Color.hsv(((i * 47f + t / 9f) % 360f + 360f) % 360f, 0.75f, 1f)
-                    else -> lerpColor(accent, accent2, (i.mod(8)) / 8f)
-                }
 
                 val fog = if (chaos.hidesBeat) ((msAway / lookaheadMs - 0.35f) / 0.25f).coerceIn(0f, 1f) else 1f
                 if (fog <= 0f) continue
 
-                // Which lanes this beat appears in (supports dual chords for thumbs)
-                val targetLanes = noteLanesForBeat(i, activeLanes)
+                // Deterministic lane assignment for this absolute beat index
+                val targetLanes = noteLanesForBeat(idxInt, activeLanes)
+                val isChord = targetLanes.size > 1
+
+                // Draw chord tie-bar connecting simultaneous 2-thumb notes (like Guitar Hero power chords)
+                if (isChord && !HioneHighwayGrid.areAllLanesHit(absBeatIdx, targetLanes)) {
+                    val firstX = (targetLanes.first() + 0.5f) * laneW
+                    val lastX = (targetLanes.last() + 0.5f) * laneW
+                    drawLine(
+                        Color.White.copy(alpha = 0.65f * fog),
+                        Offset(firstX, y),
+                        Offset(lastX, y),
+                        strokeWidth = 4.5f
+                    )
+                }
+
                 for (lane in targetLanes) {
+                    // Consumed notes that were already hit explode at the receptor and don't fall past
+                    if (HioneHighwayGrid.isLaneHit(absBeatIdx, lane)) continue
+
+                    val laneColor = laneFretColor(lane, activeLanes, accent, accent2)
+                    val noteColor = when {
+                        lucky -> LUCKY_GOLD
+                        fever -> Color.hsv(((idxInt * 47f + t / 9f) % 360f + 360f) % 360f, 0.75f, 1f)
+                        activeLanes > 1 -> laneColor
+                        else -> lerpColor(accent, accent2, (idxInt.mod(8)) / 8f)
+                    }
                     val noteX = (lane + 0.5f) * laneW
                     drawVerticalNote(
-                        noteX, y, laneW * 0.42f, msAway, lookaheadMs,
-                        strong, noteColor, notePath, skin.nodeShape, fog, lucky, t
+                        noteX, y, (laneW * 0.42f).coerceAtMost(50f), msAway, lookaheadMs,
+                        strong || isChord, noteColor, notePath, skin.nodeShape, fog, lucky, t
                     )
                 }
             }
 
-            // Hit spark in the tapped lane
-            val age = sparkAge.floatValue
-            if (lastTapMs > 0L && age < 1f) {
-                val targetLane = sparkLane.intValue.coerceIn(0, activeLanes - 1)
-                val sparkX = (targetLane + 0.5f) * laneW
-                val sparkY = hitY - lastOffsetMs * pxPerMs
-                val a = 1f - age
-                val c = sparkColor(lastAccuracy, accent)
+            // Per-lane hit sparks (supports simultaneous two-thumb sparks!)
+            for (lane in 0 until activeLanes) {
+                val age = laneSparkAge[lane]
+                if (age < 1f) {
+                    val sparkX = (lane + 0.5f) * laneW
+                    val sparkY = hitY - (if (lane == lastTappedLane) lastOffsetMs else 0) * pxPerMs
+                    val a = 1f - age
+                    val fretC = laneFretColor(lane, activeLanes, accent, accent2)
+                    val c = if (activeLanes > 1 && lastAccuracy?.isGreatOrBetter == true) fretC else sparkColor(lastAccuracy, fretC)
 
-                drawCircle(c.copy(alpha = 0.6f * a), radius = (laneW * 0.35f) * (0.8f + 0.5f * age), center = Offset(sparkX, sparkY))
-                drawLine(c.copy(alpha = a), Offset(sparkX - laneW * 0.4f, sparkY), Offset(sparkX + laneW * 0.4f, sparkY), strokeWidth = 2.5f)
+                    drawCircle(c.copy(alpha = 0.65f * a), radius = (laneW * 0.36f).coerceAtMost(48f) * (0.8f + 0.55f * age), center = Offset(sparkX, sparkY))
+                    drawLine(c.copy(alpha = a), Offset(sparkX - laneW * 0.42f, sparkY), Offset(sparkX + laneW * 0.42f, sparkY), strokeWidth = 3f)
 
-                if (lastAccuracy?.isGreatOrBetter == true) {
-                    drawCircle(
-                        c.copy(alpha = 0.4f * a),
-                        radius = (laneW * 0.45f) * (1f + 0.8f * age),
-                        center = Offset(sparkX, sparkY),
-                        style = Stroke(width = 2f)
-                    )
-                }
-                if (lastAccuracy == HitAccuracy.PERFECT) {
-                    val r1 = laneW * (0.25f + 0.2f * age)
-                    val r2 = r1 + laneW * 0.35f * a
-                    for (k in 0 until 8) {
-                        val ang = k * 0.785398f + age
-                        drawLine(
-                            Color.White.copy(alpha = 0.85f * a),
-                            Offset(sparkX + cos(ang) * r1, sparkY + sin(ang) * r1),
-                            Offset(sparkX + cos(ang) * r2, sparkY + sin(ang) * r2),
-                            strokeWidth = 2f
+                    if (lastAccuracy?.isGreatOrBetter == true) {
+                        drawCircle(
+                            c.copy(alpha = 0.45f * a),
+                            radius = (laneW * 0.46f).coerceAtMost(58f) * (1f + 0.85f * age),
+                            center = Offset(sparkX, sparkY),
+                            style = Stroke(width = 2.5f)
                         )
+                    }
+                    if (lastAccuracy == HitAccuracy.PERFECT) {
+                        val r1 = (laneW * 0.25f).coerceAtMost(32f) * (1f + 0.6f * age)
+                        val r2 = r1 + (laneW * 0.32f).coerceAtMost(40f) * a
+                        for (k in 0 until 8) {
+                            val ang = k * 0.785398f + age
+                            drawLine(
+                                Color.White.copy(alpha = 0.88f * a),
+                                Offset(sparkX + cos(ang) * r1, sparkY + sin(ang) * r1),
+                                Offset(sparkX + cos(ang) * r2, sparkY + sin(ang) * r2),
+                                strokeWidth = 2.2f
+                            )
+                        }
                     }
                 }
             }
@@ -255,23 +387,63 @@ fun HioneNoteHighway(
     }
 }
 
-/** Determines which lane(s) a beat appears in. Downbeats generate 2-thumb chords! */
-fun noteLanesForBeat(beatIdx: Int, laneCount: Int): List<Int> {
+/** Distinct Guitar Hero / Arcade Fret Colors per lane when in multi-lane mode. */
+private fun laneFretColor(lane: Int, laneCount: Int, accent: Color, accent2: Color): Color {
+    if (laneCount <= 1) return accent
+    return when (lane % 6) {
+        0 -> Color(0xFF00FFCC) // Left Fret 1: Cyber Mint / Green
+        1 -> Color(0xFFFF3385) // Right Fret 2: Neon Pink / Red
+        2 -> Color(0xFFFFD166) // Fret 3: Solar Gold / Yellow
+        3 -> Color(0xFF00B8FF) // Fret 4: Electric Blue
+        4 -> Color(0xFFFF6600) // Fret 5: Hyper Orange
+        else -> Color(0xFFCC66FF) // Fret 6: Plasma Purple
+    }
+}
+
+/**
+ * Guitar-Hero style musical riff generator for [absBeatIdx].
+ *
+ * Because [absBeatIdx] is monotonic from [HioneHighwayGrid], a note's lane never changes while
+ * falling down the screen.
+ * - 1x mode (Easy): Single central lane.
+ * - 2x mode (Medium): Alternating L/R grooves, double-taps (L-L / R-R), and 2-thumb Power Chords!
+ * - 3x..10x mode (Hard/Expert): Melodic step riffs across all lanes + downbeat 2-thumb chords.
+ */
+fun noteLanesForBeat(absBeatIdx: Int, laneCount: Int): List<Int> {
     if (laneCount <= 1) return listOf(0)
+    val m16 = absBeatIdx.mod(16)
     if (laneCount == 2) {
-        if (beatIdx.mod(4) == 0) return listOf(0, 1) // Simultaneous 2-thumb downbeat chord!
-        return listOf(beatIdx.mod(2))
+        return when (m16) {
+            0 -> listOf(0)
+            1 -> listOf(1)
+            2 -> listOf(0)
+            3 -> listOf(1)
+            4 -> listOf(0)
+            5 -> listOf(0) // Double Left
+            6 -> listOf(1)
+            7 -> listOf(0, 1) // 2-Thumb Power Chord!
+            8 -> listOf(1)
+            9 -> listOf(0)
+            10 -> listOf(1)
+            11 -> listOf(1) // Double Right
+            12 -> listOf(0)
+            13 -> listOf(1)
+            14 -> listOf(0)
+            else -> listOf(0, 1) // 2-Thumb Power Chord!
+        }
     }
-    // 3 to 10 lanes:
-    if (beatIdx.mod(4) == 0) {
-        // 2 simultaneous notes for two thumbs on downbeats
-        val half = laneCount / 2
-        val left = abs(beatIdx * 2) % half
-        val right = half + (abs(beatIdx * 2 + 1) % (laneCount - half))
-        return listOf(left, right)
+    // 3 to 10 lanes: Power chord every 8th beat, melodic staircase/alternating riff otherwise
+    if (m16 == 7 || m16 == 15) {
+        val half = (laneCount / 2).coerceAtLeast(1)
+        val left = (absBeatIdx / 8).mod(half)
+        val right = half + ((absBeatIdx / 8 + 1).mod((laneCount - half).coerceAtLeast(1)))
+        return if (left != right) listOf(left, right) else listOf(0, laneCount - 1)
     }
-    val primary = abs(beatIdx * 3 + (beatIdx / 4)) % laneCount
-    return listOf(primary)
+    // Smooth Guitar Hero style stepping pattern across 0 until laneCount
+    val cycle = (laneCount * 2 - 2).coerceAtLeast(2)
+    val pos = (absBeatIdx + (absBeatIdx / 8)).mod(cycle)
+    val primary = if (pos < laneCount) pos else cycle - pos
+    return listOf(primary.coerceIn(0, laneCount - 1))
 }
 
 private val LUCKY_GOLD = Color(0xFFFFD700)

@@ -121,6 +121,20 @@ object HioneSecrets {
     const val GAME_STEALTH_NOTES = "secret.game.stealth_notes"
     const val GAME_GOD_TIER_BADGE = "secret.game.god_tier_badge"
 
+    // ---- DankPods Easter Eggs (Australia's Finest) ----
+    const val DANKPODS_ONE_GRIT = "secret.dankpods.one_grit"
+    const val DANKPODS_PKCELL = "secret.dankpods.pkcell"
+    const val DANKPODS_NANO = "secret.dankpods.na_no"
+    const val DANKPODS_CRAIG = "secret.dankpods.craig"
+    const val DANKPODS_FRANK = "secret.dankpods.frank"
+    const val DANKPODS_DIRTY_BUDS = "secret.dankpods.dirty_buds"
+    const val DANKPODS_MARACA = "secret.dankpods.baby_maraca"
+    const val DANKPODS_DIABEETUS = "secret.dankpods.diabeetus"
+
+    // ---- Global Shrek Swamp Theme for Everything ----
+    const val THEME_SHREK_SWAMP = "secret.theme.shrek_swamp"
+    const val WHEEL_SHREK_GREEN = "secret.wheel.shrek_green"
+
     data class Secret(
         val id: String,
         val title: String,
@@ -343,7 +357,38 @@ object HioneSecrets {
             "Play blind: hit thirty notes relying solely on your rhythm ear.", true),
         Secret(GAME_GOD_TIER_BADGE, "DIVA Transcendence Crown", "BPM game & Profile",
             "The mythical DIVA Transcendence crest bestowed upon master tappers.",
-            "Reach Player Level 1000 and conquer the 8-lane noteway.", false)
+            "Reach Player Level 1000 and conquer the 8-lane noteway.", false),
+
+        Secret(DANKPODS_ONE_GRIT, "The 1-Grit", "Screen Breaker & Soundboard",
+            "The most abrasive rock in existence. Triggers the 1-Grit screen breaker shatter animation! Tap SMASH to fire anytime.",
+            "Find a rock hard enough to fix any nugget.", true),
+        Secret(DANKPODS_PKCELL, "Oh, My PKCELL!", "Top Bar Battery Icon",
+            "Replaces the status bar battery icon with an authentic green & gold PKCELL AA battery.",
+            "Look inside the battery compartment of a bootleg nugget.", true),
+        Secret(DANKPODS_NANO, "na-no", "HionePod (Wheel)",
+            "Shrinks the HionePod interface to microscopic 'na-no' dimensions.",
+            "Whisper 'na-no' into the void.", true),
+        Secret(DANKPODS_CRAIG, "Craig Old Mate", "Player & Audio Profile",
+            "Transforms the DAP into an authentic Craig MP3 nugget with CRT LCD fonts and mono FM tuner warmth.",
+            "An old mate you can always trust at the flea market.", true),
+        Secret(DANKPODS_FRANK, "Frank the Snake", "DankPods Arcade Mini-Game",
+            "Tap OPEN to play Frank the Snake! Guide Frank around the Cashies arena eating PKCELLs and dodging 1-Grit rocks.",
+            "She doesn't have arms or legs, but she loves big bass.", false),
+        Secret(DANKPODS_DIRTY_BUDS, "The Dirty Buds", "Audio DSP & Equalizer",
+            "Enables the vintage Dirty Buds EQ profile: glorious muddy mids and zero sub-bass.",
+            "Found in the bottom of an old backpack from 2004.", true),
+        Secret(DANKPODS_MARACA, "Baby Maraca", "BPM Game & Player",
+            "Replaces the beat tap chime with authentic baby maraca shakes.",
+            "Shake it like a baby maraca.", true),
+        Secret(DANKPODS_DIABEETUS, "Diabeetus Bass", "DSP Engine",
+            "12dB pure analog sub-bass boost with transformer saturation.",
+            "Too sweet for regular listening.", true),
+        Secret(THEME_SHREK_SWAMP, "Shrek Swamp Theme", "System-Wide & Launcher",
+            "Turns all OS backgrounds, borders, and accents into swamp moss green (#7BB31A), ogre lime (#A2D032), and mud brown (#5A381E).",
+            "WHAT ARE YE DOIN' IN MY SWAMP?! Late-stage mastery reward.", true),
+        Secret(WHEEL_SHREK_GREEN, "HionePod Ogre Edition", "HionePod (Wheel)",
+            "Exclusive swamp-green anodized aluminum chassis with toxic lime click wheel.",
+            "Layers. Like an onion.", true)
     )
 
     fun byId(id: String): Secret? = ALL.firstOrNull { it.id == id }
@@ -562,6 +607,18 @@ object HioneSecrets {
             if (HioneBeatClickerEngine.goldenPickups.value >= 15) earned.add(GAME_GOLDEN_HIGHWAY)
             if (accuracy == HitAccuracy.PERFECT && curCombo >= 30) earned.add(ARCADE_CLICK_SFX)
             if (accuracy == HitAccuracy.PERFECT && minute == 33 && hour == 3) earned.add(MATRIX_RAIN_LOCK)
+
+            // DankPods & Shrek Easter Egg Unlocks
+            if (sessionTaps >= 12) earned.add(DANKPODS_PKCELL)
+            if (sessionTaps >= 20) earned.add(DANKPODS_FRANK)
+            if (sessionTaps >= 28 || (accuracy == HitAccuracy.PERFECT && curCombo >= 8)) earned.add(DANKPODS_ONE_GRIT)
+            if (sessionTaps >= 36) earned.add(DANKPODS_CRAIG)
+            if (sessionTaps >= 44) earned.add(DANKPODS_NANO)
+            if (sessionTaps >= 52) earned.add(DANKPODS_DIRTY_BUDS)
+            if (sessionTaps >= 60) earned.add(DANKPODS_MARACA)
+            if (sessionTaps >= 70) earned.add(DANKPODS_DIABEETUS)
+            if (curLevel >= 15 || sessionTaps >= 85) earned.add(THEME_SHREK_SWAMP)
+            if (curLevel >= 20 || sessionTaps >= 105) earned.add(WHEEL_SHREK_GREEN)
         }
         if (earned.isEmpty()) return emptyList()
         val out = ArrayList<Secret>()
@@ -615,6 +672,9 @@ object HioneSecrets {
         if (!HioneUnlocks.unlock(ctx, id)) return emptyList()
         refreshFound(ctx)
         val s = byId(id) ?: return emptyList()
+        if (id == DANKPODS_ONE_GRIT) {
+            com.hione.launcher.HioneOneGritScreenBreaker.smash(ctx)
+        }
         HioneCelebrations.push(
             HioneCelebrations.Item(true, s.title, s.where, s.howTo)
         )

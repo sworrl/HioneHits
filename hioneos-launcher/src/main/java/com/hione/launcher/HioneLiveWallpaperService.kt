@@ -16,7 +16,7 @@ import kotlin.random.Random
 /**
  * 100% Kotlin Native Hione Cyber Live Wallpaper Engine.
  * Features:
- * - High-res official Hatsune Hione artwork backdrop.
+ * - High-res official Oki Hione artwork backdrop.
  * - Floating glowing Sakura petals & cyan cyber particles with 60fps physics.
  * - Interactive glowing ripple rings responding to multi-touch gestures.
  * - Gentle pulsing ambient lighting effects.

@@ -9,7 +9,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 
-// Canonical Hatsune Hione Signature Palette (#FFAB2E + Obsidian Carbon + Diva Pink)
+// Canonical Oki Hione Signature Palette (#FFAB2E + Obsidian Carbon + Diva Pink)
 val HioneTeal get() = Mascot.color(0xFFFFAB2E)
 val HioneTealBright get() = Mascot.color(0xFFFFC56B)
 val HioneTealGlow get() = Mascot.color(0xFF56F0E0)

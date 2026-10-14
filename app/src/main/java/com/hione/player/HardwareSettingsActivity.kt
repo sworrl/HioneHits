@@ -112,7 +112,7 @@ fun HardwareSettingsScreen(onBack: () -> Unit) {
                 Text(
                     "PLAYBACK SETTINGS",
                     color = HioneCyan,
-                    fontSize = 13.5.sp,
+                    fontSize = 16.sp,
                     fontWeight = FontWeight.Black,
                     fontFamily = AudiowideFont,
                     letterSpacing = 1.sp
@@ -137,14 +137,16 @@ fun HardwareSettingsScreen(onBack: () -> Unit) {
                             .background(Mascot.color(0xDD0A1E26))
                             .border(1.dp, HioneCyan, RoundedCornerShape(16.dp))
                             .clickable { DacSettingsLink.open(ctx) }
-                            .padding(14.dp),
+                            .padding(16.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Column(Modifier.weight(1f)) {
-                            Text("DAC SETTINGS", color = HioneCyan, fontSize = 11.sp, fontWeight = FontWeight.Bold, fontFamily = AudiowideFont)
-                            Text("Filter, gain, DRE, high power, output and USB DAC mode. Opens the Hardware app.", color = HioneTextSecondary, fontSize = 10.5.sp)
+                            Text("DAC SETTINGS", color = HioneCyan, fontSize = 14.5.sp, fontWeight = FontWeight.Bold, fontFamily = AudiowideFont)
+                            Spacer(Modifier.height(4.dp))
+                            Text("Filter, gain, DRE, high power, output and USB DAC mode. Opens the Hardware app.", color = HioneTextSecondary, fontSize = 13.5.sp, lineHeight = 18.sp)
                         }
-                        Text("OPEN", color = HioneCyan, fontSize = 10.sp, fontWeight = FontWeight.Bold, fontFamily = AudiowideFont)
+                        Spacer(Modifier.width(10.dp))
+                        Text("OPEN", color = HioneCyan, fontSize = 13.sp, fontWeight = FontWeight.Bold, fontFamily = AudiowideFont)
                     }
                 }
 
@@ -167,17 +169,19 @@ fun HardwareSettingsScreen(onBack: () -> Unit) {
                             .clickable {
                                 ctx.startActivity(android.content.Intent(ctx, com.hione.player.profiles.ListeningProfilesActivity::class.java))
                             }
-                            .padding(14.dp),
+                            .padding(16.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Column(Modifier.weight(1f)) {
-                            Text("LISTENING PROFILES", color = HioneNeonPink, fontSize = 11.sp, fontWeight = FontWeight.Bold, fontFamily = AudiowideFont)
+                            Text("LISTENING PROFILES", color = HioneNeonPink, fontSize = 14.5.sp, fontWeight = FontWeight.Bold, fontFamily = AudiowideFont)
+                            Spacer(Modifier.height(4.dp))
                             Text(
                                 currentName?.let { "Current: $it" } ?: "Pick your headphones: EQ and DAC settings that follow them",
-                                color = HioneTextSecondary, fontSize = 10.5.sp
+                                color = HioneTextSecondary, fontSize = 13.5.sp, lineHeight = 18.sp
                             )
                         }
-                        Text("OPEN", color = HioneNeonPink, fontSize = 10.sp, fontWeight = FontWeight.Bold, fontFamily = AudiowideFont)
+                        Spacer(Modifier.width(10.dp))
+                        Text("OPEN", color = HioneNeonPink, fontSize = 13.sp, fontWeight = FontWeight.Bold, fontFamily = AudiowideFont)
                     }
                 }
 
@@ -192,7 +196,7 @@ fun HardwareSettingsScreen(onBack: () -> Unit) {
                             .clip(RoundedCornerShape(16.dp))
                             .background(Mascot.color(0xDD0A1E26))
                             .border(1.dp, if (allowUsbAudio) Color(0xFFFF9100) else HioneCyan, RoundedCornerShape(16.dp))
-                            .padding(14.dp)
+                            .padding(16.dp)
                     ) {
                         Row(
                             Modifier.fillMaxWidth(),
@@ -200,8 +204,9 @@ fun HardwareSettingsScreen(onBack: () -> Unit) {
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Column(Modifier.weight(1f)) {
-                                Text("CAR AND ANDROID AUTO", color = HioneCyan, fontSize = 12.sp, fontWeight = FontWeight.Bold, fontFamily = AudiowideFont)
-                                Text("Keeps audio on the 3.5mm/4.4mm AUX output in car mode instead of USB.", color = HioneTextSecondary, fontSize = 10.sp)
+                                Text("CAR AND ANDROID AUTO", color = HioneCyan, fontSize = 14.5.sp, fontWeight = FontWeight.Bold, fontFamily = AudiowideFont)
+                                Spacer(Modifier.height(4.dp))
+                                Text("Keeps audio on the 3.5mm/4.4mm AUX output in car mode instead of USB.", color = HioneTextSecondary, fontSize = 13.5.sp, lineHeight = 18.sp)
                             }
                         }
 
@@ -213,14 +218,15 @@ fun HardwareSettingsScreen(onBack: () -> Unit) {
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Column(Modifier.weight(1f)) {
-                                Text("Block USB Audio in Car / Android Auto", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                Text("Block USB Audio in Car / Android Auto", color = Color.White, fontSize = 15.5.sp, fontWeight = FontWeight.Bold)
                                 Text(
                                     if (!allowUsbAudio) "On: audio stays on the 3.5mm/4.4mm AUX jack (recommended)."
                                     else "Off: audio goes to the car head unit over USB.",
                                     color = if (!allowUsbAudio) HioneCyan else Color(0xFFFF9100),
-                                    fontSize = 10.sp
+                                    fontSize = 13.5.sp, lineHeight = 18.sp
                                 )
                             }
+                            Spacer(Modifier.width(10.dp))
                             Switch(
                                 checked = !allowUsbAudio,
                                 onCheckedChange = { blockUsb ->
@@ -247,17 +253,18 @@ fun HardwareSettingsScreen(onBack: () -> Unit) {
                             .border(1.dp, HioneCyan.copy(alpha = 0.35f), RoundedCornerShape(16.dp))
                             .padding(16.dp)
                     ) {
-                        Text("DIRECT TRANSPORT AUDIO (DTA)", color = HioneCyan, fontSize = 13.sp, fontWeight = FontWeight.Black, fontFamily = AudiowideFont)
+                        Text("DIRECT TRANSPORT AUDIO (DTA)", color = HioneCyan, fontSize = 15.sp, fontWeight = FontWeight.Black, fontFamily = AudiowideFont)
+                        Spacer(Modifier.height(4.dp))
                         Text(
                             "Bit-perfect route: the native sample rate goes straight to the dual CS43198 DACs and skips the Android 48 kHz mixer. The state below is read back live from the audio HAL.",
-                            color = HioneTextSecondary, fontSize = 10.sp
+                            color = HioneTextSecondary, fontSize = 13.5.sp, lineHeight = 18.sp
                         )
                         Spacer(Modifier.height(10.dp))
                         val st = dtaStatus
                         val direct = st?.weHoldDirect == true
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Box(
-                                Modifier.size(10.dp).clip(CircleShape)
+                                Modifier.size(11.dp).clip(CircleShape)
                                     .background(if (direct) Color(0xFF00E676) else if (st?.directFlagEnabled == true) Color(0xFFFFD600) else Color(0xFFFF1744))
                             )
                             Spacer(Modifier.width(8.dp))
@@ -269,18 +276,18 @@ fun HardwareSettingsScreen(onBack: () -> Unit) {
                                     else -> "MIXED: Android 48 kHz pipeline (no direct route active)"
                                 },
                                 color = if (direct) Color(0xFF00E676) else Color.White,
-                                fontSize = 11.sp, fontWeight = FontWeight.Bold
+                                fontSize = 14.5.sp, fontWeight = FontWeight.Bold
                             )
                         }
-                        Spacer(Modifier.height(4.dp))
+                        Spacer(Modifier.height(6.dp))
                         Text(
                             "Allow-list: " + if (st?.allowListed == true) "com.hione.player granted ✓" else "NOT in direct_support_app_list ✗",
                             color = if (st?.allowListed == true) HioneCyan else Color(0xFFFF1744),
-                            fontSize = 9.5.sp
+                            fontSize = 13.5.sp
                         )
                         Text(
                             "Direct engages while music is PLAYING on a wired output (never A2DP/speaker).",
-                            color = HioneTextSecondary, fontSize = 9.sp
+                            color = HioneTextSecondary, fontSize = 13.sp, lineHeight = 17.sp
                         )
                         if (st?.allowListed != true) {
                             Spacer(Modifier.height(8.dp))
@@ -293,7 +300,7 @@ fun HardwareSettingsScreen(onBack: () -> Unit) {
                                 },
                                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF00A86B)),
                                 modifier = Modifier.fillMaxWidth()
-                            ) { Text("GRANT DIRECT ROUTE", fontWeight = FontWeight.Black, fontFamily = AudiowideFont, fontSize = 10.sp) }
+                            ) { Text("GRANT DIRECT ROUTE", fontWeight = FontWeight.Black, fontFamily = AudiowideFont, fontSize = 13.sp) }
                         }
 
                         Spacer(Modifier.height(14.dp))
@@ -307,9 +314,10 @@ fun HardwareSettingsScreen(onBack: () -> Unit) {
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Column(Modifier.weight(1f)) {
-                                Text("Pause on headphone unplug", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                                Text("Stock HiBy behavior: pulling the jack pauses playback instead of switching to the speaker.", color = HioneTextSecondary, fontSize = 10.sp)
+                                Text("Pause on headphone unplug", color = Color.White, fontSize = 15.5.sp, fontWeight = FontWeight.Bold)
+                                Text("Stock HiBy behavior: pulling the jack pauses playback instead of switching to the speaker.", color = HioneTextSecondary, fontSize = 13.5.sp, lineHeight = 18.sp)
                             }
+                            Spacer(Modifier.width(10.dp))
                             Switch(
                                 checked = pauseOnUnplug,
                                 onCheckedChange = {
@@ -326,34 +334,30 @@ fun HardwareSettingsScreen(onBack: () -> Unit) {
                 // SECTION 1.6: AUDIO PLAYBACK ENGINE ("SWAPPABLE BONE")
                 // ============================================================
                 item {
-                    // The playback core is NOT swappable any more. The old "LibVLC (OpenSL ES + SoX)"
-                    // alternative was a 16-bit, resampled pipeline — a silent audio downgrade one
-                    // accidental tap away. Only the bit-perfect DirectPCM DTA sink exists now, and
-                    // PlayerHolder re-asserts it on every player creation.
                     Column(
                         Modifier
                             .fillMaxWidth()
                             .clip(RoundedCornerShape(16.dp))
                             .background(Mascot.color(0xDD0A1E26))
                             .border(1.dp, CyberGlassBorder, RoundedCornerShape(16.dp))
-                            .padding(14.dp)
+                            .padding(16.dp)
                     ) {
                         Text(
                             "PLAYBACK ENGINE",
                             color = HioneCyan,
-                            fontSize = 11.sp,
+                            fontSize = 14.5.sp,
                             fontWeight = FontWeight.Bold,
                             fontFamily = AudiowideFont
                         )
                         Spacer(Modifier.height(6.dp))
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Default.Lock, contentDescription = null, tint = HioneCyan, modifier = Modifier.size(16.dp))
+                            Icon(Icons.Default.Lock, contentDescription = null, tint = HioneCyan, modifier = Modifier.size(18.dp))
                             Spacer(Modifier.width(8.dp))
                             Column {
-                                Text("DirectPCM Bit-Perfect DTA (ExoPlayer)", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                Text("DirectPCM Bit-Perfect DTA (ExoPlayer)", color = Color.White, fontSize = 15.5.sp, fontWeight = FontWeight.Bold)
                                 Text(
                                     "Plays straight to the dual CS43198 DACs: 24/32-bit integer passthrough, float to 24-bit, no resampling, and the DTA direct route when granted. There is no fallback engine.",
-                                    color = HioneTextSecondary, fontSize = 10.sp, lineHeight = 13.5.sp
+                                    color = HioneTextSecondary, fontSize = 13.5.sp, lineHeight = 18.sp
                                 )
                             }
                         }
@@ -372,48 +376,52 @@ fun HardwareSettingsScreen(onBack: () -> Unit) {
                             .clip(RoundedCornerShape(16.dp))
                             .background(Mascot.color(0xDD0A1E26))
                             .border(1.dp, if (routed) HioneCyan.copy(alpha = 0.6f) else CyberGlassBorder, RoundedCornerShape(16.dp))
-                            .padding(14.dp)
+                            .padding(16.dp)
                     ) {
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                             Column(Modifier.weight(1f)) {
-                                Text("USB DAC OUTPUT", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                Text("USB DAC OUTPUT", color = Color.White, fontSize = 15.5.sp, fontWeight = FontWeight.Bold)
                                 Text(
                                     if (dac == null) "Plug a USB DAC / dongle into the M500 (OTG). Playback follows it bit-perfect at the DAC's native rate."
                                     else HioneUsbDacOutput.statusLine(),
-                                    color = accent, fontSize = 10.sp
+                                    color = accent, fontSize = 13.5.sp, lineHeight = 18.sp
                                 )
                             }
-                            Text(if (routed) "● LIVE" else if (dac != null) "○ IDLE" else "—", color = accent, fontSize = 11.sp, fontWeight = FontWeight.Black, fontFamily = AudiowideFont)
+                            Spacer(Modifier.width(10.dp))
+                            Text(if (routed) "● LIVE" else if (dac != null) "○ IDLE" else "—", color = accent, fontSize = 13.5.sp, fontWeight = FontWeight.Black, fontFamily = AudiowideFont)
                         }
                         if (dac != null) {
                             Spacer(Modifier.height(8.dp))
                             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                                Text("Device", color = HioneTextSecondary, fontSize = 10.5.sp)
-                                Text(dac.name, color = Color.White, fontSize = 10.5.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+                                Text("Device", color = HioneTextSecondary, fontSize = 13.5.sp)
+                                Text(dac.name, color = Color.White, fontSize = 13.5.sp, fontWeight = FontWeight.Bold, maxLines = 1)
                             }
                             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                                Text("Supported", color = HioneTextSecondary, fontSize = 10.5.sp)
-                                Text("${dac.bitsLabel} · ${dac.ratesLabel}" + (if (dac.sampleRates.isNotEmpty()) " (${dac.sampleRates.sorted().joinToString("/") { if (it % 1000 == 0) "${it / 1000}" else "%.1f".format(it / 1000f) }} kHz)" else ""), color = HioneCyan, fontSize = 10.5.sp, fontWeight = FontWeight.Bold, maxLines = 2)
+                                Text("Supported", color = HioneTextSecondary, fontSize = 13.5.sp)
+                                Text("${dac.bitsLabel} · ${dac.ratesLabel}" + (if (dac.sampleRates.isNotEmpty()) " (${dac.sampleRates.sorted().joinToString("/") { if (it % 1000 == 0) "${it / 1000}" else "%.1f".format(it / 1000f) }} kHz)" else ""), color = HioneCyan, fontSize = 13.5.sp, fontWeight = FontWeight.Bold, maxLines = 2)
                             }
                             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                                Text("Mixer", color = HioneTextSecondary, fontSize = 10.5.sp)
-                                Text(HioneUsbDacOutput.mixerMode.ifBlank { "not routed" }, color = if (HioneUsbDacOutput.mixerMode == "BIT-PERFECT") HioneCyan else HioneTextSecondary, fontSize = 10.5.sp, fontWeight = FontWeight.Bold)
+                                Text("Mixer", color = HioneTextSecondary, fontSize = 13.5.sp)
+                                Text(HioneUsbDacOutput.mixerMode.ifBlank { "not routed" }, color = if (HioneUsbDacOutput.mixerMode == "BIT-PERFECT") HioneCyan else HioneTextSecondary, fontSize = 13.5.sp, fontWeight = FontWeight.Bold)
                             }
+                        }
+                        Spacer(Modifier.height(8.dp))
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                            Column(Modifier.weight(1f)) {
+                                Text("Prefer USB DAC (exclusive, bit-perfect)", color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                                Text("Route playback to the USB DAC when attached; native rate / 24-32-bit, no resampling", color = HioneTextSecondary, fontSize = 13.5.sp, lineHeight = 18.sp)
+                            }
+                            Spacer(Modifier.width(10.dp))
+                            Switch(checked = HioneUsbDacOutput.preferUsb, onCheckedChange = { HioneUsbDacOutput.setPreferUsb(ctx, it) },
+                                colors = SwitchDefaults.colors(checkedThumbColor = HioneCyan, checkedTrackColor = Mascot.color(0xFF00695C)))
                         }
                         Spacer(Modifier.height(6.dp))
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                             Column(Modifier.weight(1f)) {
-                                Text("Prefer USB DAC (exclusive, bit-perfect)", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                                Text("Route playback to the USB DAC when attached; native rate / 24-32-bit, no resampling", color = HioneTextSecondary, fontSize = 9.5.sp)
+                                Text("Volume passthrough", color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                                Text("Hold media volume at 100% and let the DAC's own control set loudness", color = HioneTextSecondary, fontSize = 13.5.sp, lineHeight = 18.sp)
                             }
-                            Switch(checked = HioneUsbDacOutput.preferUsb, onCheckedChange = { HioneUsbDacOutput.setPreferUsb(ctx, it) },
-                                colors = SwitchDefaults.colors(checkedThumbColor = HioneCyan, checkedTrackColor = Mascot.color(0xFF00695C)))
-                        }
-                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                            Column(Modifier.weight(1f)) {
-                                Text("Volume passthrough", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                                Text("Hold media volume at 100% and let the DAC's own control set loudness", color = HioneTextSecondary, fontSize = 9.5.sp)
-                            }
+                            Spacer(Modifier.width(10.dp))
                             Switch(checked = HioneUsbDacOutput.volumePassthrough, onCheckedChange = { HioneUsbDacOutput.setVolumePassthrough(ctx, it) },
                                 colors = SwitchDefaults.colors(checkedThumbColor = HioneCyan, checkedTrackColor = Mascot.color(0xFF00695C)))
                         }

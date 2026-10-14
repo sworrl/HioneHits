@@ -12,7 +12,7 @@ import kotlin.math.exp
 import kotlin.math.sin
 
 /**
- * Low-latency real-time PCM Synthesizer for Hatsune Hione Vocaloid & Cyber Rhythm sound effects.
+ * Low-latency real-time PCM Synthesizer for Oki Hione Vocaloid & Cyber Rhythm sound effects.
  *
  * Generates FM-synth / DX7 style chimes, level-up fanfares, and golden leek jingles
  * without requiring external sound files.

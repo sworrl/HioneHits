@@ -60,6 +60,282 @@ object LikeStore {
             for (k in ar) if (!likedArtists.contains(k)) likedArtists.add(k)
             for (id in rf) if (!refusedTracks.contains(id)) refusedTracks.add(id)
         }
+        recoverLikesAndHistoryAsync(ctx.applicationContext)
+    }
+
+    private data class MediaRow(
+        val id: Long,
+        val title: String,
+        val artist: String,
+        val album: String,
+        val durationMs: Long,
+        val path: String
+    )
+
+    private fun normLookup(s: String): String =
+        s.lowercase()
+            .replace(Regex("\\((feat|ft|from|with|prod|remix|live|bonus|single)[^)]*\\)"), "")
+            .replace(Regex("\\[(feat|ft|from|with|prod|remix|live|bonus|single)[^]]*\\]"), "")
+            .replace(Regex("[^a-z0-9\\p{L}]+"), " ")
+            .trim()
+
+    /**
+     * Self-heals Liked Songs, Heart Counts, Play History, and ListenStatsDb from:
+     *  1. Settings.Global legacy & current keys (`miku_current_liked_track_id`, `hione_current_liked_track_id`)
+     *  2. Local SQLite `hione_listens.db` ([com.hione.player.stats.ListenStatsDb])
+     *  3. Last.fm (`DEAD_REAvER`) `user.getlovedtracks`, `user.gettoptracks`, and `user.getrecenttracks`
+     */
+    private fun recoverLikesAndHistoryAsync(appCtx: Context) {
+        Thread({
+            try {
+                val byId = HashMap<Long, MediaRow>(22_000)
+                val byExact = HashMap<String, MediaRow>(22_000)
+                val byNorm = HashMap<String, MediaRow>(22_000)
+                val byNormTitle = HashMap<String, MediaRow>(22_000)
+
+                runCatching {
+                    appCtx.contentResolver.query(
+                        android.provider.MediaStore.Audio.Media.EXTERNAL_CONTENT_URI,
+                        arrayOf(
+                            android.provider.MediaStore.Audio.Media._ID,
+                            android.provider.MediaStore.Audio.Media.TITLE,
+                            android.provider.MediaStore.Audio.Media.ARTIST,
+                            android.provider.MediaStore.Audio.Media.ALBUM,
+                            android.provider.MediaStore.Audio.Media.DURATION,
+                            android.provider.MediaStore.Audio.Media.DATA
+                        ),
+                        null, null, null
+                    )?.use { c ->
+                        while (c.moveToNext()) {
+                            val id = c.getLong(0)
+                            val title = c.getString(1) ?: ""
+                            val artist = c.getString(2) ?: ""
+                            val album = c.getString(3) ?: ""
+                            val dur = c.getLong(4)
+                            val path = c.getString(5) ?: ""
+                            if (id <= 0L || title.isBlank()) continue
+                            val row = MediaRow(id, title, artist, album, dur, path)
+                            byId[id] = row
+                            byExact["${title.lowercase().trim()}\u0000${artist.lowercase().trim()}"] = row
+                            val nt = normLookup(title)
+                            val na = normLookup(artist)
+                            if (nt.isNotEmpty()) {
+                                byNorm["$nt\u0000$na"] = row
+                                byNormTitle.putIfAbsent(nt, row)
+                            }
+                        }
+                    }
+                }
+                if (byId.isEmpty()) return@Thread
+
+                fun matchTrack(title: String, artist: String): MediaRow? {
+                    if (title.isBlank()) return null
+                    val exact = byExact["${title.lowercase().trim()}\u0000${artist.lowercase().trim()}"]
+                    if (exact != null) return exact
+                    val nt = normLookup(title)
+                    val na = normLookup(artist)
+                    if (nt.isEmpty()) return null
+                    byNorm["$nt\u0000$na"]?.let { return it }
+                    // Check primary artist before comma/&/feat
+                    val primaryArtist = normLookup(artist.split(",", "&", "feat.", "ft.", "/").firstOrNull() ?: artist)
+                    if (primaryArtist.isNotEmpty()) {
+                        byNorm["$nt\u0000$primaryArtist"]?.let { return it }
+                    }
+                    return byNormTitle[nt]
+                }
+
+                val recoveredHearts = LinkedHashMap<Long, Int>()
+                val recoveredPlayCounts = HashMap<Long, Int>()
+                val recoveredLastPlayed = HashMap<Long, Long>()
+                val recoveredHistory = ArrayList<Long>()
+                val refused = PlayerPreferences.loadRefusedTracks(appCtx)
+
+                // 1. Recover from Settings.Global (`miku_current_liked_track_id` & `hione_current_liked_track_id`)
+                for (key in listOf("hione_current_liked_track_id", "miku_current_liked_track_id")) {
+                    val gid = runCatching {
+                        android.provider.Settings.Global.getLong(appCtx.contentResolver, key, -1L)
+                    }.getOrDefault(-1L)
+                    if (gid > 0L && byId.containsKey(gid)) {
+                        recoveredHearts[gid] = maxOf(recoveredHearts[gid] ?: 0, 1)
+                    }
+                }
+
+                // 2. Recover from local SQLite `hione_listens.db`
+                var localDbRowCount = 0
+                runCatching {
+                    val db = com.hione.player.stats.ListenStatsDb.get(appCtx).readableDatabase
+                    db.rawQuery(
+                        """
+                        SELECT track_id, title, artist, MAX(started_at), COUNT(*),
+                               SUM(hearts_during), MAX(heart_count_after), MAX(qualified)
+                        FROM listens
+                        GROUP BY track_id, title, artist
+                        ORDER BY MAX(started_at) DESC
+                        """.trimIndent(),
+                        null
+                    )?.use { c ->
+                        while (c.moveToNext()) {
+                            localDbRowCount++
+                            val rawId = c.getLong(0)
+                            val title = c.getString(1) ?: ""
+                            val artist = c.getString(2) ?: ""
+                            val maxStarted = c.getLong(3)
+                            val playCnt = c.getInt(4)
+                            val heartsDuring = c.getInt(5)
+                            val heartAfter = c.getInt(6)
+                            val qualified = c.getInt(7)
+
+                            val matched = byId[rawId] ?: matchTrack(title, artist) ?: continue
+                            recoveredHistory.add(matched.id)
+                            recoveredPlayCounts[matched.id] = maxOf(recoveredPlayCounts[matched.id] ?: 0, playCnt)
+                            recoveredLastPlayed[matched.id] = maxOf(recoveredLastPlayed[matched.id] ?: 0L, maxStarted)
+                            val h = maxOf(heartsDuring, heartAfter, if (qualified > 0) 1 else 0)
+                            if (h > 0) {
+                                recoveredHearts[matched.id] = maxOf(recoveredHearts[matched.id] ?: 0, h)
+                            }
+                        }
+                    }
+                }
+
+                // 3. Recover Loved Tracks, Top Tracks, and Recent Play History from Last.fm (`DEAD_REAvER`)
+                val apiKey = com.hione.player.scrobble.LastFmCredentials.apiKey()
+                    .ifBlank { "4b92d5702263277b5e5481044d6185fa" }
+                val user = (LastFmPreferences.loadUsername(appCtx) ?: "DEAD_REAvER").ifBlank { "DEAD_REAvER" }
+
+                fun fetchJson(url: String): org.json.JSONObject? = runCatching {
+                    val conn = java.net.URL(url).openConnection() as java.net.HttpURLConnection
+                    conn.connectTimeout = 7_000
+                    conn.readTimeout = 7_000
+                    try {
+                        val txt = conn.inputStream.bufferedReader().use { it.readText() }
+                        org.json.JSONObject(txt)
+                    } finally {
+                        conn.disconnect()
+                    }
+                }.getOrNull()
+
+                val uEnc = java.net.URLEncoder.encode(user, "UTF-8")
+
+                // 3a. Loved Tracks on Last.fm
+                fetchJson("https://ws.audioscrobbler.com/2.0/?method=user.getlovedtracks&user=$uEnc&api_key=$apiKey&limit=200&format=json")
+                    ?.optJSONObject("lovedtracks")?.optJSONArray("track")?.let { arr ->
+                        for (i in 0 until arr.length()) {
+                            val obj = arr.optJSONObject(i) ?: continue
+                            val title = obj.optString("name")
+                            val artist = obj.optJSONObject("artist")?.optString("name").orEmpty()
+                            val matched = matchTrack(title, artist) ?: continue
+                            recoveredHearts[matched.id] = maxOf(recoveredHearts[matched.id] ?: 0, 2)
+                        }
+                    }
+
+                // 3b. Top Tracks (3-Month & Overall) -> Playcounts + Qualifying-Play Hearts
+                for (period in listOf("3month", "overall")) {
+                    fetchJson("https://ws.audioscrobbler.com/2.0/?method=user.gettoptracks&user=$uEnc&api_key=$apiKey&period=$period&limit=200&format=json")
+                        ?.optJSONObject("toptracks")?.optJSONArray("track")?.let { arr ->
+                            for (i in 0 until arr.length()) {
+                                val obj = arr.optJSONObject(i) ?: continue
+                                val title = obj.optString("name")
+                                val artist = obj.optJSONObject("artist")?.optString("name").orEmpty()
+                                val pc = obj.optString("playcount").toIntOrNull() ?: 1
+                                val matched = matchTrack(title, artist) ?: continue
+                                recoveredPlayCounts[matched.id] = maxOf(recoveredPlayCounts[matched.id] ?: 0, pc)
+                                if (period == "3month" || pc >= 2) {
+                                    recoveredHearts[matched.id] = maxOf(recoveredHearts[matched.id] ?: 0, pc.coerceIn(1, 5))
+                                }
+                            }
+                        }
+                }
+
+                // 3c. Recent Tracks (Pages 1 & 2 = 400 recent scrobbles) -> Play History, Last Played, Hearts & ListenStatsDb
+                val dbToSeed = if (localDbRowCount < 30) com.hione.player.stats.ListenStatsDb.get(appCtx) else null
+                val scrobbleTallies = HashMap<Long, Int>()
+                for (page in 1..2) {
+                    val arr = fetchJson("https://ws.audioscrobbler.com/2.0/?method=user.getrecenttracks&user=$uEnc&api_key=$apiKey&limit=200&page=$page&format=json")
+                        ?.optJSONObject("recenttracks")?.optJSONArray("track") ?: continue
+                    for (i in 0 until arr.length()) {
+                        val obj = arr.optJSONObject(i) ?: continue
+                        val uts = obj.optJSONObject("date")?.optString("uts")?.toLongOrNull() ?: continue
+                        val playedAtMs = uts * 1000L
+                        val title = obj.optString("name")
+                        val artist = obj.optJSONObject("artist")?.optString("#text").orEmpty()
+                        val matched = matchTrack(title, artist) ?: continue
+
+                        recoveredHistory.add(matched.id)
+                        recoveredLastPlayed[matched.id] = maxOf(recoveredLastPlayed[matched.id] ?: 0L, playedAtMs)
+                        val newTally = (scrobbleTallies[matched.id] ?: 0) + 1
+                        scrobbleTallies[matched.id] = newTally
+                        recoveredPlayCounts[matched.id] = maxOf(recoveredPlayCounts[matched.id] ?: 0, newTally)
+                        recoveredHearts[matched.id] = maxOf(recoveredHearts[matched.id] ?: 0, 1)
+
+                        if (dbToSeed != null && page == 1 && i < 120) {
+                            runCatching {
+                                val cal = java.util.Calendar.getInstance().apply { timeInMillis = playedAtMs }
+                                val dur = if (matched.durationMs > 0L) matched.durationMs else 210_000L
+                                dbToSeed.openListen(
+                                    com.hione.player.stats.ListenStatsDb.Listen(
+                                        trackId = matched.id,
+                                        path = matched.path.ifBlank { null },
+                                        title = matched.title,
+                                        artist = matched.artist,
+                                        album = matched.album.ifBlank { null },
+                                        durationMs = dur,
+                                        startedAt = playedAtMs - dur,
+                                        endedAt = playedAtMs,
+                                        playedMs = dur,
+                                        fraction = 1.0f,
+                                        qualified = true,
+                                        skipped = false,
+                                        seekCount = 0,
+                                        source = "lastfm_sync",
+                                        output = "4.4mm",
+                                        volume = null,
+                                        volumeMax = null,
+                                        sampleRateHz = 44100,
+                                        bitDepth = 16,
+                                        lat = null,
+                                        lon = null,
+                                        locationLabel = null,
+                                        dayOfWeek = cal.get(java.util.Calendar.DAY_OF_WEEK),
+                                        hour = cal.get(java.util.Calendar.HOUR_OF_DAY),
+                                        heartsDuring = 1,
+                                        heartCountAfter = newTally,
+                                        endReason = "auto"
+                                    )
+                                )
+                            }
+                        }
+                    }
+                }
+
+                // 4. Persist recovered Play History, Play Counts, Last Played, and Liked Songs
+                if (recoveredHistory.isNotEmpty() || recoveredPlayCounts.isNotEmpty()) {
+                    PlayerPreferences.restorePlayStats(appCtx, recoveredHistory, recoveredPlayCounts, recoveredLastPlayed)
+                }
+
+                val newlyLikedIds = ArrayList<Long>()
+                for ((id, hearts) in recoveredHearts) {
+                    if (id in refused) continue
+                    val row = byId[id] ?: continue
+                    val cur = PlayerPreferences.getHeartCount(appCtx, id)
+                    val target = maxOf(cur, hearts)
+                    if (target > 0) {
+                        PlayerPreferences.setHeartCount(appCtx, id, target)
+                        PlayerPreferences.saveLikedTrackMeta(appCtx, id, row.title, row.artist)
+                        newlyLikedIds.add(id)
+                    }
+                }
+
+                if (newlyLikedIds.isNotEmpty()) {
+                    mutateOnMain {
+                        for (id in newlyLikedIds) {
+                            if (!liked.contains(id)) liked.add(id)
+                        }
+                    }
+                }
+            } catch (t: Throwable) {
+                android.util.Log.w("LikeStore", "recoverLikesAndHistoryAsync failed", t)
+            }
+        }, "HioneLikeHistoryRecovery").start()
     }
 
     /**

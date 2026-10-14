@@ -91,7 +91,7 @@ object HioneVibeAlchemyEngine {
             subgenres = setOf("vocaloid", "j-pop", "anime ost", "city pop", "j-rock", "touhou", "doujin", "utaite", "denpa", "future funk"),
             relatedGenres = setOf("Cyberpunk, Synth & Electronic", "Pop", "Rock, Punk & Alternative"),
             canonicalArtists = setOf(
-                "hatsune hione", "hione", "deco*27", "wowaka", "mitchie m", "pinocchiop", "kikuo", "eve", "yoasobi", "kenshi yonezu", "king gnu", "radwimps", "lisa", "aimer", "tatsuro yamashita", "mariya takeuchi", "anri", "miki matsubara", "neru", "cosmo@bousoup", "maretu", "inabakumori", "kanaria", "syudou", "chinozo", "tuyu", "zutomayo", "yorushika", "ado", "minami", "clariS", "supercell", "egoist", "garnidelia", "flow", "asian kung-fu generation", "one ok rock", "man with a mission", "polkadot stingray", "myth & roid", "sawano hiroyuki", "hiroyuki sawano", "yuki kajiura", "reol", "giga", "kz", "livetune", "hachioji p", "ryo", "doriko", "40mp", "jin", "kemu"
+                "hatsune miku", "hione", "deco*27", "wowaka", "mitchie m", "pinocchiop", "kikuo", "eve", "yoasobi", "kenshi yonezu", "king gnu", "radwimps", "lisa", "aimer", "tatsuro yamashita", "mariya takeuchi", "anri", "miki matsubara", "neru", "cosmo@bousoup", "maretu", "inabakumori", "kanaria", "syudou", "chinozo", "tuyu", "zutomayo", "yorushika", "ado", "minami", "clariS", "supercell", "egoist", "garnidelia", "flow", "asian kung-fu generation", "one ok rock", "man with a mission", "polkadot stingray", "myth & roid", "sawano hiroyuki", "hiroyuki sawano", "yuki kajiura", "reol", "giga", "kz", "livetune", "hachioji p", "ryo", "doriko", "40mp", "jin", "kemu"
             ),
             typicalBpmRange = 120..190,
             energyWeight = 0.80f
@@ -412,7 +412,7 @@ object HioneVibeAlchemyEngine {
     private val RANDOM_PRESETS = listOf(
         Pair("Cyberpunk night", "cyberpunk darksynth industrial electronic fast bass future tokyo"),
         Pair("Metal shred", "heavy metal thrash progressive metalcore guitar solo distortion brutal"),
-        Pair("Upbeat Vocaloid", "hatsune hione vocaloid anime cute upbeat jpop idol"),
+        Pair("Upbeat Vocaloid", "hatsune miku vocaloid anime cute upbeat jpop idol"),
         Pair("Lo-fi for focus", "lofi chill relax ambient calm night rain soft piano beats"),
         Pair("90s grunge and alt-rock", "grunge 90s alternative rock nirvana guitars heavy distortion raw"),
         Pair("Hi-res acoustic", "audiophile dsd flac acoustic vocal master reference lossless"),

@@ -53,7 +53,7 @@ import java.util.*
 import kotlin.math.*
 
 /**
- * Hatsune Hione Meteorological Observatory & Live Telemetry Modal.
+ * Oki Hione Meteorological Observatory & Live Telemetry Modal.
  * Lifted directly from the OnThe8s (RetroWeather) meteorological pipeline:
  * 1. National Weather Service (NWS) direct station observations & lookaheads.
  * 2. Astronomical Solar Arc sunrise/sunset progression & day/night transit.

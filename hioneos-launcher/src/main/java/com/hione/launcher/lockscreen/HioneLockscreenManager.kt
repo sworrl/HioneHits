@@ -14,7 +14,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
 /**
- * OS-level manager for the bespoke Hatsune Hione Custom Lockscreen — ported from the music app
+ * OS-level manager for the bespoke Oki Hione Custom Lockscreen — ported from the music app
  * into the HioneOS launcher so the lockscreen lives on the **system** surface, not inside the
  * player.
  *

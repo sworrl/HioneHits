@@ -6,7 +6,7 @@ import android.service.notification.StatusBarNotification
 import android.util.Log
 
 /**
- * Hatsune Hione Notification Sentinel Service.
+ * Oki Hione Notification Sentinel Service.
  * Automatically intercepts and dismisses intrusive carrier activation nags,
  * IMS VoLTE errors on data-only SIMs, and Google Fi setup prompts on the M500 DAP.
  */

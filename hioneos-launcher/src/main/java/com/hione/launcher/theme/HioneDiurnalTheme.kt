@@ -10,9 +10,9 @@ import java.util.Calendar
 import kotlin.math.sin
 
 /**
- * Hatsune Hione 24-Hour Diurnal 24-Bit Truecolor Shifting Engine.
+ * Oki Hione 24-Hour Diurnal 24-Bit Truecolor Shifting Engine.
  * Modulates the entire UI palette across a 24-hour continuous cycle with second-level micro-drift.
- * Clamped strictly to the Hatsune Hione Cyber Spectrum:
+ * Clamped strictly to the Oki Hione Cyber Spectrum:
  * Cyan (180°) -> Turquoise (160°) -> Emerald (140°) -> Violet (270°) -> Neon Pink/Magenta (320°) -> Sakura (340°) -> Solar (50°) -> Cyan.
  */
 object HioneDiurnalTheme {

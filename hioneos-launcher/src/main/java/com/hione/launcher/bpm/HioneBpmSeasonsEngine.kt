@@ -13,7 +13,7 @@ import java.util.*
 // the tier table and the millisecond windows are one design and have to be tuned together.
 
 /**
- * Hatsune Hione BPM Tap Observatory Lifetime & Monthly Seasons Engine.
+ * Oki Hione BPM Tap Observatory Lifetime & Monthly Seasons Engine.
  *
  * Tracks:
  * - Lifetime Cumulative Rhythm Metrics (Total Taps, Score, Max Combo, Perfect Ratio).

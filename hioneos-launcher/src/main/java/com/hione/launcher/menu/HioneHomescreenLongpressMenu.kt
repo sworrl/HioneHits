@@ -28,7 +28,7 @@ import com.hione.launcher.*
 import com.hione.launcher.ui.swipeUpFromBottomToDismiss
 
 /**
- * Hatsune Hione Lifted AOSP Launcher3 Long-Press Desktop Options Menu.
+ * Oki Hione Lifted AOSP Launcher3 Long-Press Desktop Options Menu.
  * Replaces stock AOSP OptionsPopupView with a bespoke, themed Kotlin Compose implementation
  * featuring Wallpaper & Style, Widgets, and HioneOS Home Settings.
  */
@@ -38,6 +38,8 @@ fun HioneHomescreenLongpressMenu(
     onQuiltOptions: () -> Unit = {},
     onWidgets: () -> Unit,
     onHomeSettings: () -> Unit,
+    onOpenProfile: () -> Unit = {},
+    onToggleArtworkPeek: () -> Unit = {},
     onDismiss: () -> Unit
 ) {
     // Pixel popup feel: the card scales 0.85 → 1 with a slight overshoot (~150 ms) and fades in.
@@ -163,6 +165,26 @@ fun HioneHomescreenLongpressMenu(
                         onClick = {
                             onDismiss()
                             onQuiltOptions()
+                        }
+                    )
+                    AospMenuItem(
+                        title = "User profile",
+                        subtitle = "Switch user, avatar and telemetry",
+                        icon = Icons.Default.AccountCircle,
+                        iconTint = HioneCyan,
+                        onClick = {
+                            onDismiss()
+                            onOpenProfile()
+                        }
+                    )
+                    AospMenuItem(
+                        title = "Peek artwork",
+                        subtitle = "Collapse widgets to reveal Hione",
+                        icon = Icons.Default.Visibility,
+                        iconTint = HioneNeonPink,
+                        onClick = {
+                            onDismiss()
+                            onToggleArtworkPeek()
                         }
                     )
                     AospMenuItem(

@@ -64,7 +64,7 @@ fun FnLockSettingsScreen(onBack: () -> Unit) {
             .fillMaxSize()
             .background(CyberDarkBg)
     ) {
-        // Bespoke Hatsune Hione Pose Backdrop
+        // Bespoke Oki Hione Pose Backdrop
         Image(
             painter = mascotPainter(id = R.drawable.hione_pose_headphones),
             contentDescription = "${Mascot.name} artwork",

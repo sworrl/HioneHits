@@ -41,7 +41,7 @@ import com.hione.launcher.*
 import kotlin.math.absoluteValue
 
 /**
- * Hatsune Hione Beryl / Compiz-Enhanced Multi-Tasking Recents Carousel.
+ * Oki Hione Beryl / Compiz-Enhanced Multi-Tasking Recents Carousel.
  * Provides a 1:1 Pixel-style horizontal multitasking switcher featuring:
  * - Styled task cards (icon + label + package; NOT screen snapshots — no TaskSnapshot is read)
  * - Beryl 3D Perspective Tilt & Coverflow Curve

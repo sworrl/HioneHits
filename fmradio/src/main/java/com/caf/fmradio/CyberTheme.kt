@@ -3,7 +3,7 @@ package com.caf.fmradio
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontFamily
 
-// Cyber Hatsune Hione Palette Tokens
+// Cyber Oki Hione Palette Tokens
 val CyberDarkBg = Color(0xFF0C0D10)
 val CyberGlassCard = Color(0xDD0A1E26)
 val CyberGlassBorder = Color(0x33FFC56B)

@@ -205,20 +205,84 @@ object PlayerPreferences {
         val newPc = loadPlayCount(context, trackId) + 1
         playCountCache[trackId] = newPc
         lastPlayedCache[trackId] = nowMs
+        val histJson = org.json.JSONArray(hist).toString()
         p.edit()
-            .putString(KEY_HISTORY, org.json.JSONArray(hist).toString())
+            .putString(KEY_HISTORY, histJson)
             .putInt("pc_$trackId", newPc)
             .putLong("lp_$trackId", nowMs)
             .apply()
+        runCatching {
+            android.provider.Settings.Global.putString(
+                context.contentResolver,
+                "hione_play_history_v1",
+                histJson
+            )
+        }
     }
 
     /** Recently played trackIds, most-recent first. */
     fun loadHistory(context: Context): List<Long> {
-        val raw = prefs(context).getString(KEY_HISTORY, null) ?: return emptyList()
+        var raw = prefs(context).getString(KEY_HISTORY, null)
+        if (raw.isNullOrBlank()) {
+            raw = runCatching {
+                android.provider.Settings.Global.getString(context.contentResolver, "hione_play_history_v1")
+            }.getOrNull()
+            if (!raw.isNullOrBlank()) {
+                prefs(context).edit().putString(KEY_HISTORY, raw).apply()
+            }
+        }
+        if (raw.isNullOrBlank()) return emptyList()
         return try {
             val arr = org.json.JSONArray(raw)
             (0 until arr.length()).map { arr.getLong(it) }
         } catch (_: Throwable) { emptyList() }
+    }
+
+    /** Batch-restore play history, play counts, and last-played timestamps recovered from ListenStatsDb & Last.fm. */
+    fun restorePlayStats(
+        context: Context,
+        recoveredHistory: List<Long>,
+        recoveredPlayCounts: Map<Long, Int>,
+        recoveredLastPlayed: Map<Long, Long>
+    ) {
+        val p = prefs(context)
+        val ed = p.edit()
+        val existingHist = loadHistory(context)
+        val mergedHist = LinkedHashSet<Long>()
+        // Keep most recent items first by sorting union by lastPlayed timestamp
+        val combinedIds = (existingHist + recoveredHistory).distinct().filter { it > 0L }
+        val sortedIds = combinedIds.sortedByDescending { id ->
+            maxOf(loadLastPlayedAt(context, id), recoveredLastPlayed[id] ?: 0L)
+        }
+        for (id in sortedIds) {
+            if (mergedHist.size < HISTORY_CAP) mergedHist.add(id)
+        }
+        if (mergedHist.isNotEmpty()) {
+            val histJson = org.json.JSONArray(mergedHist.toList()).toString()
+            ed.putString(KEY_HISTORY, histJson)
+            runCatching {
+                android.provider.Settings.Global.putString(
+                    context.contentResolver,
+                    "hione_play_history_v1",
+                    histJson
+                )
+            }
+        }
+        for ((id, count) in recoveredPlayCounts) {
+            val best = maxOf(loadPlayCount(context, id), count)
+            if (best > 0) {
+                playCountCache[id] = best
+                ed.putInt("pc_$id", best)
+            }
+        }
+        for ((id, ts) in recoveredLastPlayed) {
+            val best = maxOf(loadLastPlayedAt(context, id), ts)
+            if (best > 0L) {
+                lastPlayedCache[id] = best
+                ed.putLong("lp_$id", best)
+            }
+        }
+        ed.apply()
     }
 
     /** Per-track last-listen location "lat,lon,timestamp" (single coarse fix; see LocationLogger). */
@@ -311,11 +375,36 @@ object PlayerPreferences {
         if (isLiked) current.add(trackId) else current.remove(trackId)
         val strSet = current.map { it.toString() }.toSet()
         prefs(context).edit().putStringSet(KEY_LIKED_TRACKS, strSet).apply()
+        runCatching {
+            android.provider.Settings.Global.putString(
+                context.contentResolver,
+                "hione_liked_tracks_v1",
+                current.joinToString(",")
+            )
+        }
     }
 
     fun loadLikedTracks(context: Context): Set<Long> {
         val strSet = prefs(context).getStringSet(KEY_LIKED_TRACKS, emptySet()) ?: emptySet()
-        return strSet.mapNotNull { it.toLongOrNull() }.toSet()
+        var set = strSet.mapNotNull { it.toLongOrNull() }.toSet()
+        if (set.isEmpty()) {
+            runCatching {
+                val globalStr = android.provider.Settings.Global.getString(
+                    context.contentResolver,
+                    "hione_liked_tracks_v1"
+                )
+                if (!globalStr.isNullOrBlank()) {
+                    set = globalStr.split(",")
+                        .mapNotNull { it.trim().toLongOrNull() }
+                        .filter { it > 0 }
+                        .toSet()
+                    if (set.isNotEmpty()) {
+                        prefs(context).edit().putStringSet(KEY_LIKED_TRACKS, set.map { it.toString() }.toSet()).apply()
+                    }
+                }
+            }
+        }
+        return set
     }
 
     // A liked track is keyed on MediaStore's numeric _id — which is usually stable, but NOT

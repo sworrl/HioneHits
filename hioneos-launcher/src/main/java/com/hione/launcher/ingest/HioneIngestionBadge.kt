@@ -29,7 +29,7 @@ import com.hione.launcher.HioneCyan
 import com.hione.launcher.HioneNeonPink
 
 /**
- * Hatsune Hione Ingestion & File System Telemetry Badge for Top-Bar Quilt.
+ * Oki Hione Ingestion & File System Telemetry Badge for Top-Bar Quilt.
  * Displays real-time library ingestion state, track counter (e.g. 11k), format tiers (DSD/FLAC),
  * and live pulsing animation during active MediaScanner / Rsync runs.
  */

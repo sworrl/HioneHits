@@ -279,7 +279,7 @@ private fun Float?.fmt1(suffix: String = ""): String = this?.let { String.format
 private fun minutesLabel(min: Int?): String = min?.let { "${it / 60}h ${it % 60}m" } ?: NA
 
 /**
- * Hatsune Hione Quantum Power Cell & Battery Observatory Cockpit Modal.
+ * Oki Hione Quantum Power Cell & Battery Observatory Cockpit Modal.
  * 100% full-screen high-density telemetry utilizing real CW2015 / MP2731 hardware metrics.
  */
 @Composable

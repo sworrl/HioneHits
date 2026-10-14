@@ -10,7 +10,7 @@ import java.util.concurrent.locks.ReentrantLock
 import kotlin.concurrent.withLock
 
 /**
- * Hatsune Hione Telemetry & Historical Metrics Database.
+ * Oki Hione Telemetry & Historical Metrics Database.
  * Persists high-granularity weather history, RF network telemetry (Wi-Fi/Cellular dBm),
  * CS43198 audio hardware telemetry, and launcher configuration keys.
  */

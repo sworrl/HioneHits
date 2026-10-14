@@ -17,7 +17,7 @@ import kotlin.math.roundToInt
 import org.json.JSONObject
 
 /**
- * Hatsune Hione BPM & Rhythm Calibration Database.
+ * Oki Hione BPM & Rhythm Calibration Database.
  *
  * Features:
  * 1. Persistent track BPM storage with multi-source tracking (ONLINE_DB, USER_CALIBRATED, DSP_ANALYZER).
@@ -81,13 +81,13 @@ class HioneBpmDatabase private constructor(context: Context) :
             "beck|loser" to 85.0f,
             "beck|e-pro" to 96.0f,
             "supercell|world is mine" to 165.0f,
-            "supercell feat. hatsune hione|world is mine" to 165.0f,
+            "supercell feat. hatsune miku|world is mine" to 165.0f,
             "supercell|melt" to 170.0f,
-            "supercell feat. hatsune hione|melt" to 170.0f,
+            "supercell feat. hatsune miku|melt" to 170.0f,
             "kurousa-p|senbonzakura" to 154.0f,
-            "whiteflame feat. hatsune hione|senbonzakura" to 154.0f,
+            "whiteflame feat. hatsune miku|senbonzakura" to 154.0f,
             "kz|tell your world" to 150.0f,
-            "livetune feat. hatsune hione|tell your world" to 150.0f,
+            "livetune feat. hatsune miku|tell your world" to 150.0f,
             "lamaze-p|popipo" to 140.0f,
             "wowaka|rolling girl" to 195.0f,
             "wowaka|world's end dancehall" to 165.0f,

@@ -134,6 +134,8 @@ object HioneVolumeManager {
         }
     }
 
+    @Volatile private var lastReportedVolume = -1
+
     fun init(ctx: Context) {
         updateFromSystem(ctx)
         getVolumeHudStyle(ctx)
@@ -143,13 +145,18 @@ object HioneVolumeManager {
 
         val observer = object : ContentObserver(Handler(Looper.getMainLooper())) {
             override fun onChange(selfChange: Boolean) {
-                updateFromSystem(ctx)
-                triggerHud(ctx)
+                val changed = updateFromSystem(ctx)
+                if (changed) {
+                    triggerHud(ctx)
+                }
             }
         }
         try {
+            val volumeUri = Settings.System.getUriFor("volume_music_speaker")
+                ?: Settings.System.getUriFor("volume_music")
+                ?: Settings.System.CONTENT_URI
             ctx.applicationContext.contentResolver.registerContentObserver(
-                Settings.System.CONTENT_URI,
+                volumeUri,
                 true,
                 observer
             )
@@ -157,11 +164,7 @@ object HioneVolumeManager {
 
         val volumeReceiver = object : android.content.BroadcastReceiver() {
             override fun onReceive(context: Context?, intent: android.content.Intent?) {
-                updateFromSystem(ctx)
-                // Only POP the HUD when the music volume actually changed. HiBy re-applies the
-                // master volume on scene/route changes, firing MASTER_VOLUME_CHANGED (and the
-                // framework fires VOLUME_CHANGED for other streams too) with no real change -
-                // popping on those had the modal appearing on every scene switch.
+                val changed = updateFromSystem(ctx)
                 if (intent?.action == "android.media.VOLUME_CHANGED_ACTION") {
                     val stream = intent.getIntExtra("android.media.EXTRA_VOLUME_STREAM_TYPE", -1)
                     val now = intent.getIntExtra("android.media.EXTRA_VOLUME_STREAM_VALUE", -1)
@@ -180,12 +183,15 @@ object HioneVolumeManager {
         } catch (_: Throwable) {}
     }
 
-    fun updateFromSystem(ctx: Context) {
-        val am = ctx.getSystemService(Context.AUDIO_SERVICE) as? AudioManager ?: return
+    fun updateFromSystem(ctx: Context): Boolean {
+        val am = ctx.getSystemService(Context.AUDIO_SERVICE) as? AudioManager ?: return false
         val max = am.getStreamMaxVolume(AudioManager.STREAM_MUSIC).coerceAtLeast(1)
         val cur = am.getStreamVolume(AudioManager.STREAM_MUSIC)
         val isMuted = cur == 0 || (android.os.Build.VERSION.SDK_INT >= 23 && am.isStreamMute(AudioManager.STREAM_MUSIC))
         val pct = ((cur.toFloat() / max.toFloat()) * 100f).toInt().coerceIn(0, 100)
+
+        val changed = (lastReportedVolume != -1 && lastReportedVolume != cur)
+        lastReportedVolume = cur
 
         _state.value = _state.value.copy(
             volumePct = pct,
@@ -193,6 +199,7 @@ object HioneVolumeManager {
             currentVolume = cur,
             isMuted = isMuted
         )
+        return changed
     }
 
     fun triggerHud(ctx: Context, delta: Int = 0) {

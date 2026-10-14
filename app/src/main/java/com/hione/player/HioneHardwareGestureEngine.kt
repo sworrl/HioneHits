@@ -200,7 +200,7 @@ object HioneHardwareGestureEngine {
         val title = currentItem?.mediaMetadata?.title?.toString()
             ?.takeIf { it.isNotBlank() }
             ?: try { android.provider.Settings.Global.getString(context.contentResolver, "hione_now_playing_title")?.takeIf { it.isNotBlank() } } catch (_: Throwable) { null }
-        // NO fabricated artist. This fell back to the literal "Hatsune Hione" for any track with no
+        // NO fabricated artist. This fell back to the literal "Oki Hione" for any track with no
         // artist tag, and the branch below then called LikeStore.toggleArtist with it: a like
         // gesture on a tag-less file or a third-party stream PERSISTED a like against her name.
         // Same defect as the lockscreen attribution bug fixed in 2.0.263, different call site.
@@ -268,7 +268,7 @@ object HioneHardwareGestureEngine {
 
     /**
      * [title] and [artist] are nullable because "not tagged" is a real state and the callers used
-     * to paper over it with the literals "Current Track" and "Hatsune Hione". The HUD renders the
+     * to paper over it with the literals "Current Track" and "Oki Hione". The HUD renders the
      * absence instead of a name that was never in the file.
      */
     private fun showHeartToast(isLiked: Boolean, title: String?, artist: String?) {

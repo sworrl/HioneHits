@@ -287,7 +287,7 @@ fun readRealHardwareBattery(context: Context): RealHardwareBatteryTelemetry {
 }
 
 /**
- * Hatsune Hione Quantum Power Cell & Battery Observatory Cockpit Modal.
+ * Oki Hione Quantum Power Cell & Battery Observatory Cockpit Modal.
  * High-density telemetry utilizing real CW2015 / MP2731 hardware metrics with large typography and live histograms.
  */
 @Composable

@@ -87,7 +87,7 @@ import kotlin.math.roundToInt
 import kotlin.math.sin
 
 /**
- * OS-level Hatsune Hione Custom Lockscreen (Compose UI) — ported into the HioneOS launcher and
+ * OS-level Oki Hione Custom Lockscreen (Compose UI) — ported into the HioneOS launcher and
  * decoupled from the music app:
  *  - Now-Playing is read from a media3 [MediaController] connected to the music app's
  *    MediaSession (`com.hione.player/.PlaybackService`) rather than an in-process PlayerHolder.
@@ -728,7 +728,7 @@ fun HioneKawaiiLockscreenScreen(
                         isPlaying = try { Settings.Global.getInt(cr, "hione_is_playing", 0) == 1 } catch (_: Throwable) { true }
                     }
                 }
-                // NO fabricated artist. This used to force artist = "Hatsune Hione" for any session
+                // NO fabricated artist. This used to force artist = "Oki Hione" for any session
                 // without artist metadata — a Spotify/Tidal stream or a tag-less file was attributed
                 // to her on screen AND written into the persisted play history. A blank artist stays
                 // blank; the renderer shows "Unknown artist".
@@ -1381,6 +1381,10 @@ fun HioneLockscreenMegaClock(time: String) {
         )
 
         // Chromatic offset 1
+        val bpmState by com.hione.launcher.bpm.HioneBpmEngine.state.collectAsState()
+        val isMusicPlaying = bpmState.isPlaying
+        val liveBpm = bpmState.bpm.toInt()
+
         Row(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.offset(x = (-2.0).dp + (shimmerPhase * 0.3f).dp, y = (-1.2).dp)
@@ -1390,15 +1394,11 @@ fun HioneLockscreenMegaClock(time: String) {
                 color = cyber24BitColorShift(colorShiftPhase + 180f, saturation = 0.9f, brightness = 0.95f, alpha = glowAlpha * 0.85f),
                 fontSize = 72.sp
             )
-            Text(
-                text = ":",
-                color = colonHaloColor.copy(alpha = 0.9f),
-                fontSize = 40.sp,
-                fontWeight = FontWeight.Black,
-                fontFamily = FontFamily.SansSerif,
-                modifier = Modifier
-                    .padding(horizontal = 4.dp, vertical = 2.dp)
-                    .scale(heartbeatScale.value)
+            com.hione.launcher.ui.HioneRainbowHeartColon(
+                isPlaying = isMusicPlaying,
+                bpm = liveBpm,
+                size = 18.dp,
+                modifier = Modifier.padding(horizontal = 6.dp)
             )
             LockscreenKawaiiDigitPair(
                 digits = timeParts.second,
@@ -1417,15 +1417,11 @@ fun HioneLockscreenMegaClock(time: String) {
                 color = cyber24BitColorShift(colorShiftPhase + 290f, saturation = 0.9f, brightness = 0.95f, alpha = glowAlpha * 0.75f),
                 fontSize = 72.sp
             )
-            Text(
-                text = ":",
-                color = colonHaloColor.copy(alpha = 0.85f),
-                fontSize = 40.sp,
-                fontWeight = FontWeight.Black,
-                fontFamily = FontFamily.SansSerif,
-                modifier = Modifier
-                    .padding(horizontal = 4.dp, vertical = 2.dp)
-                    .scale(heartbeatScale.value)
+            com.hione.launcher.ui.HioneRainbowHeartColon(
+                isPlaying = isMusicPlaying,
+                bpm = liveBpm,
+                size = 18.dp,
+                modifier = Modifier.padding(horizontal = 6.dp)
             )
             LockscreenKawaiiDigitPair(
                 digits = timeParts.second,
@@ -1441,15 +1437,11 @@ fun HioneLockscreenMegaClock(time: String) {
                 color = hoursCoreColor,
                 fontSize = 72.sp
             )
-            Text(
-                text = ":",
-                color = colonColor,
-                fontSize = 40.sp,
-                fontWeight = FontWeight.Black,
-                fontFamily = FontFamily.SansSerif,
-                modifier = Modifier
-                    .padding(horizontal = 4.dp, vertical = 2.dp)
-                    .scale(heartbeatScale.value)
+            com.hione.launcher.ui.HioneRainbowHeartColon(
+                isPlaying = isMusicPlaying,
+                bpm = liveBpm,
+                size = 18.dp,
+                modifier = Modifier.padding(horizontal = 6.dp)
             )
             LockscreenKawaiiDigitPair(
                 digits = timeParts.second,

@@ -57,7 +57,7 @@ data class ThermalChronologicalPoint(
 )
 
 /**
- * Hatsune Hione Hardware Thermal Chronological Waveform & Histogram Observatory Modal.
+ * Oki Hione Hardware Thermal Chronological Waveform & Histogram Observatory Modal.
  * Polls all 24 HiBy M500 Qualcomm Snapdragon & PMIC thermal zones (thermal_zone0..23)
  * with a live chronological rolling time-series graph, multi-bin thermal histogram,
  * and DVFS governor controls.

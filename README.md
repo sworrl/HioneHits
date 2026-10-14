@@ -1,6 +1,6 @@
-<h1 align="center">Hione Music</h1>
+<h1 align="center">Hione Hits</h1>
 
-<p align="center"><em>A bit-perfect music player for the HiBy Digital M500 x Hatsune Hione. Real DACs, real numbers, no invented readings.</em></p>
+<p align="center"><em>A bit-perfect music player for the HiBy Digital M500 and high-end Android DACs. Real DACs, real numbers, no invented readings.</em></p>
 
 <p align="center">
   <img alt="License" src="https://img.shields.io/badge/license-GPL--3.0--or--later-blue">
@@ -15,13 +15,14 @@
 > requests are welcome. The [What is verified](#what-is-verified) table is the honest line between
 > what has been confirmed on hardware and what has not.
 
-Hione Music is the music player for [HioneOS](https://github.com/sworrl/HioneOS), a platform-signed
-Android 14 replacement for the HiBy Digital M500 x Hatsune Hione DAP. It plays local files straight
+Hione Hits is the music player for [HioneOS](https://github.com/sworrl/HioneOS), a platform-signed
+Android 14 replacement for the HiBy Digital M500 DAP. It plays local files straight
 to the device's dual Cirrus Logic CS43198 DACs with no resampling and no mixer in the path, draws
 its visuals with real libprojectM, and does not display a number it did not measure.
 
-It is a normal Android app and it builds with Gradle. It expects the M500's hardware, so most of it
-runs anywhere and the parts that talk to the DAC do not.
+It is a normal Android app and it builds with Gradle. On standard Android devices (such as Pixel or
+other phones with internal or USB DACs), it uses sub-100ms direct buffers and integer PCM passthrough
+to bypass Android's deep-buffer resampler wherever hardware permits.
 
 **Why it exists.** The M500 is very good hardware running software that hides it. Stock firmware
 routes music through Android's mixer, so a 44.1kHz file gets resampled to whatever the mixer happens
@@ -37,6 +38,11 @@ not shown at all. There is a dash where other players guess.
   <img src="docs/screenshots/01-now-playing-hires.png" width="30%" alt="Now Playing during a 24-bit 96kHz FLAC: FLAC / 24-BIT / 96KHZ / HI-RES badges">
   <img src="docs/screenshots/03-tape-mode.png" width="30%" alt="Tape mode grading itself TYPE IV from the real 24-bit 96kHz stream">
   <img src="docs/screenshots/02-fullscreen-visualizer.png" width="30%" alt="Fullscreen libprojectM 4.2.0 visualizer">
+</p>
+<p align="center">
+  <img src="docs/screenshots/16-player-home.png" width="30%" alt="Player Home with Liked Songs and Recently Played shelves">
+  <img src="docs/screenshots/07-hardware-observatory.png" width="30%" alt="Hardware settings and live Blackjack DAC telemetry">
+  <img src="docs/screenshots/08-bpm-game-played.png" width="30%" alt="Phase-locked 2-lane BPM rhythm game">
 </p>
 
 ---
@@ -205,8 +211,8 @@ Last.fm API account, Settings has fields for it and user credentials win over th
 ## Build from source
 
 ```bash
-git clone https://github.com/sworrl/HioneMusic
-cd HioneMusic
+git clone https://github.com/sworrl/HioneHits
+cd HioneHits
 
 # Minimum local.properties
 cat > local.properties <<'EOF'
@@ -242,10 +248,10 @@ scans an APK and exits non-zero if anything is over. Run it before shipping.
 
 ## Install
 
-On a HioneOS device the apps come with the ROM. To install a build over the top:
+On a HioneOS device the apps come with the ROM and update over the air through Hione Update. To install a build over ADB:
 
 ```bash
-adb install -r -d HioneMusic-v2.0.287.apk
+adb install -r -d HioneMusic-v2.2.1.apk
 ```
 
 The debug and release builds must be signed with the same key or the install is refused, and
@@ -257,13 +263,15 @@ uninstalling takes your likes and history with it. Back up `/data/data/com.hione
 
 | Path | What it is |
 |---|---|
-| `app/` | Hione Music itself, `com.hione.player` |
+| `app/` | Hione Hits itself, `com.hione.player` |
 | `app/src/main/java/androidx/media3/exoplayer/audio/` | `HioneDirectAudioSink`, the bit-perfect sink |
 | `app/src/main/cpp/` | The projectM JNI bridge |
 | `app/src/main/assets/hione_presets/` | The 80 presets |
 | `hioneos-launcher/` | The HioneOS home screen, `com.hione.launcher` |
 | `hioneos-systemui/` | Navigation gestures, shade, idle dim, `com.hione.systemui` |
-| `hioneos-settings/` | The HioneOS settings app |
+| `hioneos-settings/` | The HioneOS settings app, `com.hione.settings` |
+| `hioneos-update/` | Over-the-air app and content pack updater, `com.hione.update` |
+| `hioneos-tv/` | Hione Cast raw PCM receiver for Android TV, `com.hione.tv` |
 | `hardware-settings/` | DAC and hardware controls, `com.m500.hardware` |
 | `fmradio/` | FM tuner UI, shipped as `com.caf.fmradio` so vendor SELinux rules apply |
 
@@ -274,8 +282,8 @@ same build and share the theme and motion code with the player.
 
 ## The device
 
-HiBy Digital M500 x Hatsune Hione edition, product `khaje`. Android 14 base, 3.2 inch 720x1280
-portrait panel at 270dpi. Dual Cirrus Logic CS43198 in the "HIONE DAC" configuration. 3.5mm single
+HiBy Digital M500, product `khaje`. Android 14 base, 3.2 inch 720x1280
+portrait panel at 270dpi. Dual Cirrus Logic CS43198 DACs. 3.5mm single
 ended and 4.4mm balanced out, plus USB DAC. Snapdragon 665, four little cores that matter more than
 you would expect. Physical power, volume wheel, play/pause, next, previous and Fn on the right edge.
 

@@ -162,7 +162,9 @@ fun resolveCustomAppIcon(pkg: String, label: String = "", activityName: String =
         p.contains("magisk") || p.contains("topjohnwu") -> R.drawable.ic_magisk_sakura
         p.contains("spotify") -> R.drawable.ic_spotify_pink_hione
         p.contains("setting") -> R.drawable.ic_hione_settings_bespoke
-        p.contains("fmradio") || p.contains("radio") || p.contains("fm") -> R.drawable.ic_fm_hione
+        p.contains("last.fm") || p.contains("lastfm") || pkg.contains("last.fm") -> R.drawable.ic_lastfm_hione
+        p.contains("rioriot") || p.contains("rio riot") || p.contains("riot") || pkg.contains("riot") -> R.drawable.ic_rio_riot
+        p.contains("fmradio") || p.contains("com.caf.fmradio") || (p.contains("fm") && p.contains("radio")) || (p.contains("radio") && !p.contains("last")) -> R.drawable.ic_hione_fm_boombox
         p.contains("hione.player") || p.contains("hione player") || p.contains("hione music") || (pkg == "com.hione.player") -> R.drawable.ic_hione_music_brand
         p.contains("hiby.music") || p.contains("hibymusic") -> R.drawable.ic_hiby_music_hione
         p.contains("roon") -> R.drawable.ic_hiby_roon_ready_hione
@@ -592,8 +594,15 @@ fun HioneLauncherScreen() {
     val deckWallTarget = com.hione.launcher.ui.HioneDeck.wallpaperTarget(deckConfig.mode)
 
     var isOnboardingOpen by remember {
-        mutableStateOf(!prefs.getBoolean("hione_onboarding_completed", false))
+        val prefsCompleted = prefs.getBoolean("hione_onboarding_completed", false)
+        val globalCompleted = runCatching {
+            android.provider.Settings.Global.getInt(ctx.contentResolver, "hione_onboarding_completed", 0) == 1
+        }.getOrDefault(false)
+        mutableStateOf(!prefsCompleted && !globalCompleted)
     }
+
+    var isProfileModalOpen by remember { mutableStateOf(false) }
+    var isArtworkPeekActive by remember { mutableStateOf(false) }
 
     var isBpmObservatoryOpen by remember { mutableStateOf(false) }
 
@@ -1115,7 +1124,23 @@ fun HioneLauncherScreen() {
                     onOpenShade = { expandNotificationShade(ctx) }
                 )
             }
-            if (deckConfig.mode == com.hione.launcher.ui.HioneDeckMode.TOP) hioneDeckCard()
+            if (isArtworkPeekActive) {
+                Box(
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 24.dp, vertical = 6.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(Mascot.color(0x44000000))
+                        .border(1.dp, HioneCyan.copy(alpha = 0.6f), RoundedCornerShape(12.dp))
+                        .clickable { isArtworkPeekActive = false }
+                        .padding(horizontal = 14.dp, vertical = 6.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text("ARTWORK PEEK ACTIVE · TAP TO EXPAND WIDGETS", color = HioneCyan, fontSize = 9.5.sp, fontWeight = FontWeight.Bold, fontFamily = AudiowideFont)
+                }
+            } else if (deckConfig.mode == com.hione.launcher.ui.HioneDeckMode.TOP) {
+                hioneDeckCard()
+            }
 
             // ============================================================
             // PAGINATED DESKTOP WORKSPACE
@@ -1200,6 +1225,10 @@ fun HioneLauncherScreen() {
             isWifiConnected = isWifiConnected,
             currentTime = currentTime,
             currentDate = currentDate,
+            onOpenProfile = {
+                isCyberQuickSettingsOpen = false
+                isProfileModalOpen = true
+            },
             showUsbHostModal = showUsbHostModal,
             onDismissUsbHostModal = { showUsbHostModal = false },
             isWallpaperPickerOpen = isWallpaperPickerOpen,
@@ -1286,8 +1315,15 @@ fun HioneLauncherScreen() {
             isOnboardingOpen = isOnboardingOpen,
             onFinishOnboarding = {
                 prefs.edit().putBoolean("hione_onboarding_completed", true).apply()
+                runCatching {
+                    android.provider.Settings.Global.putInt(ctx.contentResolver, "hione_onboarding_completed", 1)
+                }
                 isOnboardingOpen = false
             },
+            isProfileModalOpen = isProfileModalOpen,
+            onCloseProfile = { isProfileModalOpen = false },
+            onOpenProfile = { isProfileModalOpen = true },
+            onToggleArtworkPeek = { isArtworkPeekActive = !isArtworkPeekActive },
             prefs = prefs
         )
     }
@@ -2318,10 +2354,19 @@ fun DesktopAppIconItem(
                     modifier = Modifier.fillMaxSize()
                 )
             } else if (iconBitmap != null) {
+                // Color-shift 3rd party app icons to Hione cyberpunk palette
+                val cyberFilter = remember {
+                    val matrix = android.graphics.ColorMatrix().apply {
+                        setSaturation(0.70f)
+                    }
+                    val cm = androidx.compose.ui.graphics.ColorMatrix(matrix.array)
+                    androidx.compose.ui.graphics.ColorFilter.colorMatrix(cm)
+                }
                 Image(
                     bitmap = iconBitmap,
                     contentDescription = app.label,
-                    modifier = Modifier.fillMaxSize()
+                    colorFilter = cyberFilter,
+                    modifier = Modifier.fillMaxSize().padding(3.dp)
                 )
             }
         }
@@ -3204,7 +3249,7 @@ fun HioneCyberWeatherGpsBadge(
 }
 
 /**
- * Hatsune Hione Connected Dual-RF Network Capsule (Wi-Fi & Cellular/LTE Dual Pod).
+ * Oki Hione Connected Dual-RF Network Capsule (Wi-Fi & Cellular/LTE Dual Pod).
  * Interlocks live high-granularity Wi-Fi and Cellular/LTE radio status into
  * a single unified, connected dual-pod cyber badge with individual status pods
  * joined seamlessly by an illuminated tech-seam.
@@ -3391,7 +3436,7 @@ fun ConnectedRfNetworkCapsule(
 }
 
 /**
- * Hatsune Hione Unified Joined Weather & Geodesic GPS Cyber Capsule.
+ * Oki Hione Unified Joined Weather & Geodesic GPS Cyber Capsule.
  * Seamlessly bonds the real-time atmospheric observatory pod and the
  * high-precision GPS geodesic fix pod into a single interlocking cyber capsule
  * with live fuzzy location (County, City, State), altitude, and radar link.
@@ -3597,7 +3642,7 @@ fun UnifiedWeatherGpsCapsule(
 }
 
 /**
- * Hatsune Hione Dynamic Cyber Thermal Telemetry Badge.
+ * Oki Hione Dynamic Cyber Thermal Telemetry Badge.
  * Dynamically displays CPU core temp and Battery cell temp with thermocline coloring.
  */
 @Composable
@@ -3652,7 +3697,7 @@ fun HioneThermalBadge(
 }
 
 /**
- * Hatsune Hione Real-Time BPM Engine Telemetry Badge.
+ * Oki Hione Real-Time BPM Engine Telemetry Badge.
  */
 @Composable
 fun HioneBpmEngineBadge(
@@ -3700,7 +3745,7 @@ fun HioneBpmEngineBadge(
 }
 
 /**
- * Hatsune Hione Intricate Quantum Power Core Battery Badge.
+ * Oki Hione Intricate Quantum Power Core Battery Badge.
  * Features 3D beveled housing, 3 discrete energy core segments, electron sparks, and thermocline colors.
  */
 @Composable
@@ -3762,9 +3807,15 @@ fun HioneQuantumBatteryBadge(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.Center
         ) {
-            // NEGI BATTERY (a BPM-game secret): the level drawn as a leek instead of four bars.
+            // PKCELL or NEGI BATTERY (BPM-game secrets)
+            val pkcell = rememberUnlockEnabled(com.hione.launcher.bpm.HioneSecrets.DANKPODS_PKCELL)
             val negi = rememberUnlockEnabled(com.hione.launcher.bpm.HioneSecrets.NEGI_BATTERY)
-            if (negi) {
+            if (pkcell) {
+                HionePkcellBatteryGlyph(
+                    pct = batteryPct, charging = isCharging,
+                    low = batteryKnown && batteryPct <= 20 && !isCharging
+                )
+            } else if (negi) {
                 HioneNegiBatteryGlyph(
                     pct = batteryPct, charging = isCharging,
                     low = batteryKnown && batteryPct <= 20 && !isCharging
@@ -3825,7 +3876,7 @@ fun HioneQuantumBatteryBadge(
 }
 
 /**
- * Hatsune Hione Bespoke Chamfered Cyber Badge.
+ * Oki Hione Bespoke Chamfered Cyber Badge.
  * High-tech domain-inspired geometry, custom shape, holographic rim lighting,
  * and individual color theming.
  */
@@ -4133,7 +4184,7 @@ fun CyberHeartGlyph(
 }
 
 /**
- * Hatsune Hione Ephemeral Cyber Plasma Glow Clock.
+ * Oki Hione Ephemeral Cyber Plasma Glow Clock.
  * Features 24-bit continuous Truecolor spectrum shifting across digits and colon,
  * kawaii rolling-bounce number transitions, animated floating cyber stardust particles,
  * sweeping holographic laser scanlines, 5-layer volumetric bloom, chromatic aberration fringe,
@@ -4572,7 +4623,7 @@ fun CyberPlasmaGlowClock(
 }
 
 /**
- * Hatsune Hione Full Cyber Notification Shade & Quick Settings Modal.
+ * Oki Hione Full Cyber Notification Shade & Quick Settings Modal.
  * Features 3D embossed quick hardware tiles, Now Playing telemetry,
  * Ingress sync stream card, and Data-Only SIM Shield indicator.
  */
@@ -4585,7 +4636,8 @@ fun CyberNotificationShadeModal(
     isCharging: Boolean,
     isWifiConnected: Boolean,
     currentTime: String,
-    currentDate: String
+    currentDate: String,
+    onOpenProfile: () -> Unit = {}
 ) {
     Box(
         Modifier
@@ -4706,6 +4758,18 @@ fun CyberNotificationShadeModal(
                                 .border(1.dp, HioneCyan, CircleShape)
                         ) {
                             Icon(Icons.Default.Settings, contentDescription = "Settings", tint = HioneCyan, modifier = Modifier.size(16.dp))
+                        }
+
+                        // User Profile Button
+                        IconButton(
+                            onClick = onOpenProfile,
+                            modifier = Modifier
+                                .size(32.dp)
+                                .clip(CircleShape)
+                                .background(Mascot.color(0x336FB0FF))
+                                .border(1.dp, HioneNeonPink, CircleShape)
+                        ) {
+                            Icon(Icons.Default.AccountCircle, contentDescription = "Profile", tint = HioneNeonPink, modifier = Modifier.size(18.dp))
                         }
                     }
                 }
@@ -6000,6 +6064,7 @@ private fun HioneLauncherShadeAndWallpaperModals(
     isWifiConnected: Boolean,
     currentTime: String,
     currentDate: String,
+    onOpenProfile: () -> Unit = {},
     showUsbHostModal: Boolean,
     onDismissUsbHostModal: () -> Unit,
     isWallpaperPickerOpen: Boolean,
@@ -6056,7 +6121,8 @@ private fun HioneLauncherShadeAndWallpaperModals(
             isCharging = isCharging,
             isWifiConnected = isWifiConnected,
             currentTime = currentTime,
-            currentDate = currentDate
+            currentDate = currentDate,
+            onOpenProfile = onOpenProfile
         )
     }
 
@@ -6367,6 +6433,10 @@ private fun BoxScope.HioneLauncherObservatoryModals(
     isCharging: Boolean,
     isOnboardingOpen: Boolean,
     onFinishOnboarding: () -> Unit,
+    isProfileModalOpen: Boolean = false,
+    onCloseProfile: () -> Unit = {},
+    onOpenProfile: () -> Unit = {},
+    onToggleArtworkPeek: () -> Unit = {},
     prefs: SharedPreferences
 ) {
     val ctx = LocalContext.current
@@ -6410,6 +6480,8 @@ private fun BoxScope.HioneLauncherObservatoryModals(
                     }
                 if (intent != null) ctx.startActivity(intent, HioneCompositing.optionsFor(ctx, HioneTransitionEvent.SETTINGS))
             },
+            onOpenProfile = onOpenProfile,
+            onToggleArtworkPeek = onToggleArtworkPeek,
             onDismiss = onCloseDesktopContextMenu
         )
     }
@@ -6522,6 +6594,12 @@ private fun BoxScope.HioneLauncherObservatoryModals(
         com.hione.launcher.onboarding.HioneOnboardingWizardModal(
             prefs = prefs,
             onFinish = onFinishOnboarding
+        )
+    }
+
+    if (isProfileModalOpen) {
+        com.hione.launcher.profile.HioneProfileModal(
+            onDismiss = onCloseProfile
         )
     }
 }

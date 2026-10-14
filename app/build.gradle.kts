@@ -18,8 +18,8 @@ android {
         applicationId = "com.hione.player"
         minSdk = 26
         targetSdk = 34
-        versionCode = 2316
-        versionName = "2.2.0"
+        versionCode = 2317
+        versionName = "2.2.1"
 
         // Last.fm API credentials — read from local.properties (gitignored, never committed) so
         // the key/secret never live in source. Register a free app at

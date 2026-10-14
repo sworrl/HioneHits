@@ -152,13 +152,13 @@ fun UpdateScreen() {
 private fun Header(s: OtaEngine.State) {
     Column(Modifier.fillMaxWidth().padding(vertical = 6.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text("${Mascot.nameUpper}", color = HioneTealBright, fontSize = 20.sp, fontWeight = FontWeight.Black, letterSpacing = 2.sp)
+            Text("${Mascot.nameUpper}", color = HioneTealBright, fontSize = 22.sp, fontWeight = FontWeight.Black, letterSpacing = 2.sp)
             Spacer(Modifier.width(6.dp))
-            Text("UPDATE", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold, letterSpacing = 2.sp)
+            Text("UPDATE", color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold, letterSpacing = 2.sp)
         }
         Spacer(Modifier.height(2.dp))
         val build = s.deviceBuild?.let { "HioneOS $it" } ?: "${Mascot.osName} build unknown"
-        Text("$build  ·  ${Prefs(LocalContext.current).channel} channel", color = HioneMuted, fontSize = 11.5.sp)
+        Text("$build  ·  ${Prefs(LocalContext.current).channel} channel", color = HioneMuted, fontSize = 14.sp)
     }
 }
 
@@ -180,7 +180,7 @@ private fun StatusCard(ctx: Context, s: OtaEngine.State, prefs: Prefs) {
             if (s.busy != null) {
                 CircularProgressIndicator(Modifier.padding(end = 10.dp).width(18.dp).height(18.dp), color = HioneTealBright, strokeWidth = 2.dp)
             }
-            Text(headline, color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+            Text(headline, color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
         }
         s.error?.let {
             Spacer(Modifier.height(4.dp))
@@ -250,7 +250,7 @@ private fun SystemUpdateCard(
                     )
                     Text(
                         if (ab.phase == AbUpdater.Phase.DOWNLOADING) "${size(ctx, ab.done)} of ${size(ctx, ab.total)}" else "${(frac * 100).toInt()}%",
-                        color = HioneMuted, fontSize = 10.5.sp,
+                        color = HioneMuted, fontSize = 13.5.sp,
                     )
                 } else {
                     LinearProgressIndicator(Modifier.fillMaxWidth().height(4.dp).clip(RoundedCornerShape(2.dp)), color = HioneTealBright, trackColor = HioneSurface1)
@@ -307,7 +307,7 @@ private fun SystemUpdateCard(
                 Spacer(Modifier.height(6.dp))
                 Text(
                     if (showPc) "Hide the computer option" else "Or put it on from a computer",
-                    color = HioneMuted, fontSize = 11.5.sp, fontWeight = FontWeight.Bold,
+                    color = HioneMuted, fontSize = 14.sp, fontWeight = FontWeight.Bold,
                     modifier = Modifier.clickable { showPc = !showPc }.padding(vertical = 4.dp),
                 )
             }
@@ -352,7 +352,7 @@ private fun WebInstallerBlock(ctx: Context, path: WebInstallerPath) {
         QrCode(path.link(), 132.dp)
         Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f)) {
-            Text(path.link(), color = HioneTealBright, fontSize = 11.sp, fontFamily = FontFamily.Monospace, lineHeight = 14.sp)
+            Text(path.link(), color = HioneTealBright, fontSize = 13.5.sp, fontFamily = FontFamily.Monospace, lineHeight = 17.sp)
             Spacer(Modifier.height(8.dp))
             ActionButton(path.actionLabel) {
                 try {
@@ -373,12 +373,12 @@ private fun UpdatesCard(ctx: Context, s: OtaEngine.State) {
             var open by remember { mutableStateOf(false) }
             Text(
                 if (open) "Hide what changed" else "What changed",
-                color = HionePinkBright, fontSize = 12.sp, fontWeight = FontWeight.Bold,
+                color = HionePinkBright, fontSize = 14.5.sp, fontWeight = FontWeight.Bold,
                 modifier = Modifier.clickable { open = !open }.padding(vertical = 4.dp),
             )
             if (open) {
                 Text(
-                    m.changelog, color = HioneWhite, fontSize = 11.5.sp, lineHeight = 15.sp,
+                    m.changelog, color = HioneWhite, fontSize = 14.sp, lineHeight = 18.sp,
                     modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp)).background(HioneSurface2).padding(10.dp),
                 )
             }
@@ -396,10 +396,10 @@ private fun UpdateRow(ctx: Context, item: OtaEngine.Item, idle: Boolean) {
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
-                Text(item.name, color = Color.White, fontSize = 13.5.sp, fontWeight = FontWeight.SemiBold)
+                Text(item.name, color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
                 Text(
                     "${item.installedVersionName.ifBlank { item.installedVersionCode.toString() }} to ${e.versionName.ifBlank { e.versionCode.toString() }}  ·  ${size(ctx, e.size)}",
-                    color = HioneMuted, fontSize = 11.sp,
+                    color = HioneMuted, fontSize = 13.5.sp,
                 )
             }
             when (item.phase) {
@@ -411,7 +411,7 @@ private fun UpdateRow(ctx: Context, item: OtaEngine.Item, idle: Boolean) {
                 Phase.VERIFYING -> Badge("Checking", HioneTealBright)
                 Phase.INSTALLING -> Badge("Installing", HioneTealBright)
                 Phase.READY -> Text(
-                    "Install", color = HioneTealBright, fontSize = 12.sp, fontWeight = FontWeight.Bold,
+                    "Install", color = HioneTealBright, fontSize = 14.5.sp, fontWeight = FontWeight.Bold,
                     modifier = Modifier.clip(RoundedCornerShape(8.dp)).clickable(enabled = idle) {
                         MainActivity.appScope.launch { OtaEngine.installOne(ctx, e.packageName) }
                     }.padding(horizontal = 10.dp, vertical = 6.dp),
@@ -426,18 +426,18 @@ private fun UpdateRow(ctx: Context, item: OtaEngine.Item, idle: Boolean) {
                     modifier = Modifier.fillMaxWidth().height(4.dp).clip(RoundedCornerShape(2.dp)),
                     color = HionePink, trackColor = HioneSurface1,
                 )
-                Text("${size(ctx, item.done)} of ${size(ctx, e.size)}", color = HioneMuted, fontSize = 10.5.sp)
+                Text("${size(ctx, item.done)} of ${size(ctx, e.size)}", color = HioneMuted, fontSize = 13.5.sp)
             } else {
                 LinearProgressIndicator(Modifier.fillMaxWidth().height(4.dp).clip(RoundedCornerShape(2.dp)), color = HioneTealBright, trackColor = HioneSurface1)
             }
         }
         if (item.message.isNotBlank()) {
             Spacer(Modifier.height(4.dp))
-            Text(item.message, color = if (item.phase == Phase.FAILED) HionePinkBright else HioneMuted, fontSize = 11.sp, lineHeight = 14.sp)
+            Text(item.message, color = if (item.phase == Phase.FAILED) HionePinkBright else HioneMuted, fontSize = 13.5.sp, lineHeight = 17.sp)
         }
         if (item.phase == Phase.HELD && idle) {
             Text(
-                "Install anyway", color = HioneTealBright, fontSize = 12.sp, fontWeight = FontWeight.Bold,
+                "Install anyway", color = HioneTealBright, fontSize = 14.5.sp, fontWeight = FontWeight.Bold,
                 modifier = Modifier.clickable { MainActivity.appScope.launch { OtaEngine.installOne(ctx, e.packageName) } }.padding(top = 6.dp),
             )
         }
@@ -462,7 +462,7 @@ private fun PackRow(ctx: Context, p: OtaEngine.PackItem, idle: Boolean) {
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
-                Text(p.name, color = Color.White, fontSize = 13.5.sp, fontWeight = FontWeight.SemiBold)
+                Text(p.name, color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
                 val have = when {
                     p.installedVersion != null -> "Downloaded, version ${p.installedVersion}"
                     p.builtInVersion != null -> "Built in, version ${p.builtInVersion}"
@@ -470,12 +470,12 @@ private fun PackRow(ctx: Context, p: OtaEngine.PackItem, idle: Boolean) {
                 }
                 val offer = e?.let { "  ·  version ${it.version} is available, ${size(ctx, it.size)}" }
                     ?.takeIf { p.phase == Phase2.AVAILABLE || p.phase == Phase2.UPDATE || p.phase == Phase2.BLOCKED } ?: ""
-                Text(have + offer, color = HioneMuted, fontSize = 11.sp)
+                Text(have + offer, color = HioneMuted, fontSize = 13.5.sp)
             }
             when (p.phase) {
                 Phase2.AVAILABLE, Phase2.UPDATE, Phase2.FAILED -> if (e != null) Text(
                     if (p.phase == Phase2.UPDATE) "Update" else if (p.phase == Phase2.FAILED) "Try again" else "Download",
-                    color = HioneTealBright, fontSize = 12.sp, fontWeight = FontWeight.Bold,
+                    color = HioneTealBright, fontSize = 14.5.sp, fontWeight = FontWeight.Bold,
                     modifier = Modifier.clip(RoundedCornerShape(8.dp)).clickable(enabled = idle) {
                         MainActivity.appScope.launch { OtaEngine.installPack(ctx, p.id) }
                     }.padding(horizontal = 10.dp, vertical = 6.dp),
@@ -497,12 +497,12 @@ private fun PackRow(ctx: Context, p: OtaEngine.PackItem, idle: Boolean) {
         }
         if (p.message.isNotBlank()) {
             Spacer(Modifier.height(4.dp))
-            Text(p.message, color = if (p.phase == Phase2.FAILED) HionePinkBright else HioneMuted, fontSize = 11.sp, lineHeight = 14.sp)
+            Text(p.message, color = if (p.phase == Phase2.FAILED) HionePinkBright else HioneMuted, fontSize = 13.5.sp, lineHeight = 17.sp)
         }
         if (p.installedVersion != null && idle && p.phase != Phase2.DOWNLOADING && p.phase != Phase2.VERIFYING) {
             Text(
                 if (p.builtInVersion != null) "Remove the download (back to the built-in copy)" else "Remove",
-                color = HionePinkBright, fontSize = 12.sp, fontWeight = FontWeight.Bold,
+                color = HionePinkBright, fontSize = 14.5.sp, fontWeight = FontWeight.Bold,
                 modifier = Modifier.clickable {
                     val ok = OtaEngine.removePack(ctx, p.id)
                     toast(ctx, if (ok) "Removed" else "Could not remove it")
@@ -525,8 +525,8 @@ private fun InstalledCard(ctx: Context, s: OtaEngine.State) {
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
-                        Text(app.name, color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
-                        Text(app.versionName.ifBlank { app.versionCode.toString() }, color = HioneMuted, fontSize = 11.sp)
+                        Text(app.name, color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+                        Text(app.versionName.ifBlank { app.versionCode.toString() }, color = HioneMuted, fontSize = 13.5.sp)
                     }
                     if (app.pkg in OtaConfig.NEVER_UPDATE) Badge("Image only", HioneMuted)
                     else if (app.isUpdate) Badge("Updated", HionePinkBright) else Badge("Image", HioneTeal)
@@ -538,13 +538,13 @@ private fun InstalledCard(ctx: Context, s: OtaEngine.State) {
                         if (kept != null && app.pkg != ctx.packageName) {
                             Text(
                                 "Back to ${kept.versionName.ifBlank { kept.versionCode.toString() }}",
-                                color = HioneTealBright, fontSize = 12.sp, fontWeight = FontWeight.Bold,
+                                color = HioneTealBright, fontSize = 14.sp, fontWeight = FontWeight.Bold,
                                 modifier = Modifier.clickable { confirm = app to false },
                             )
                         }
                         Text(
                             "Back to image version" + (app.imageVersionName?.let { " ($it)" } ?: ""),
-                            color = HionePinkBright, fontSize = 12.sp, fontWeight = FontWeight.Bold,
+                            color = HionePinkBright, fontSize = 14.sp, fontWeight = FontWeight.Bold,
                             modifier = Modifier.clickable { confirm = app to true },
                         )
                     }
@@ -580,7 +580,7 @@ private fun SettingsCard(ctx: Context, prefs: Prefs, tick: Int, changed: () -> U
         changed()
     }
     Section(title = "Settings") {
-        Text("Channel", color = Color.White, fontSize = 13.5.sp, fontWeight = FontWeight.SemiBold)
+        Text("Channel", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
         val descriptions = mapOf(
             "stable" to "Tested builds. The right pick for most people.",
             "beta" to "Next release, mostly finished. Expect the odd rough edge.",
@@ -617,7 +617,7 @@ private fun AboutCard(ctx: Context, s: OtaEngine.State, prefs: Prefs, tick: Int,
     val keys = remember { runCatching { SignatureVerifier.load(ctx).keyInfo() }.getOrDefault(emptyList()) }
     var showDev by remember { mutableStateOf(prefs.baseUrlOverride.isNotBlank()) }
     Section(title = "About") {
-        Text("${Mascot.updateName} ${BuildConfig.VERSION_NAME}", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+        Text("${Mascot.updateName} ${BuildConfig.VERSION_NAME}", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
         Spacer(Modifier.height(4.dp))
         BodyText("Every update list is signed, and every app is checked against its signed hash and against the key the installed app was signed with before anything installs. The FM app is never updated here. It only comes with a system image.")
         Spacer(Modifier.height(6.dp))
@@ -629,7 +629,7 @@ private fun AboutCard(ctx: Context, s: OtaEngine.State, prefs: Prefs, tick: Int,
         Spacer(Modifier.height(6.dp))
         Text(
             if (showDev) "Hide test server" else "Test server",
-            color = HioneMuted, fontSize = 11.sp, fontWeight = FontWeight.Bold,
+            color = HioneMuted, fontSize = 14.sp, fontWeight = FontWeight.Bold,
             modifier = Modifier.clickable { showDev = !showDev }.padding(vertical = 4.dp),
         )
         if (showDev) {
@@ -640,11 +640,11 @@ private fun AboutCard(ctx: Context, s: OtaEngine.State, prefs: Prefs, tick: Int,
                 value = text,
                 onValueChange = { text = it },
                 singleLine = true,
-                textStyle = TextStyle(color = Color.White, fontSize = 12.sp, fontFamily = FontFamily.Monospace),
+                textStyle = TextStyle(color = Color.White, fontSize = 14.sp, fontFamily = FontFamily.Monospace),
                 cursorBrush = SolidColor(HioneTealBright),
                 modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp)).background(HioneSurface2).padding(10.dp),
                 decorationBox = { inner ->
-                    if (text.isEmpty()) Text(OtaConfig.DEFAULT_BASE_URL, color = HioneMuted, fontSize = 12.sp, fontFamily = FontFamily.Monospace)
+                    if (text.isEmpty()) Text(OtaConfig.DEFAULT_BASE_URL, color = HioneMuted, fontSize = 14.sp, fontFamily = FontFamily.Monospace)
                     inner()
                 },
             )

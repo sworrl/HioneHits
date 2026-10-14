@@ -106,110 +106,174 @@ fun HioneGamePopLayer(modifier: Modifier = Modifier) {
 }
 
 /**
- * The unlock moment. Full-sheet, confetti, the reward's real name and — the part that makes it a
- * reward instead of a notification — WHERE it is and HOW to use it. A secret is announced as a
- * secret ("you found one"); the player learns what it is only now.
+ * The unlock moment — rendered as a NON-BLOCKING top arcade banner so active rhythm gameplay
+ * on the note highway below is never interrupted, and rapid thumb beat-tapping never accidentally
+ * dismisses the unlock before the player can read it.
  *
- * Tap anywhere to continue; several unlocks on one tap queue up and show one after another.
+ * Features a 1.2s accidental-tap guard on the dismiss button and a 7.5s auto-advance progress bar.
  */
 @Composable
 fun HioneCelebrationOverlay(modifier: Modifier = Modifier) {
+    com.hione.launcher.HioneOneGritScreenBreakerOverlay(modifier)
     val queue by HioneCelebrations.queue.collectAsState()
     val item = queue.firstOrNull() ?: return
     val progress = remember(item) { Animatable(0f) }
     val enter = remember(item) { Animatable(0f) }
+    var canDismiss by remember(item) { mutableStateOf(false) }
+
     LaunchedEffect(item) {
+        canDismiss = false
         if (item.secret) HioneStagePerformance.onSecretFound()
-        launch { enter.animateTo(1f, spring(dampingRatio = 0.55f, stiffness = Spring.StiffnessMediumLow)) }
-        progress.animateTo(1f, tween(2600, easing = LinearEasing))
+        if (item.title.contains("1-Grit", ignoreCase = true)) {
+            com.hione.launcher.HioneOneGritScreenBreaker.smash()
+        }
+        launch { enter.animateTo(1f, spring(dampingRatio = 0.6f, stiffness = Spring.StiffnessMediumLow)) }
+        launch {
+            delay(1200L)
+            canDismiss = true
+        }
+        progress.animateTo(1f, tween(7500, easing = LinearEasing))
+        HioneCelebrations.dismiss()
     }
-    // Confetti, generated once per celebration (not per frame).
+
+    // Confetti, generated once per celebration (not per frame), drawn in a pass-through layer.
     val confetti = remember(item) {
         val palette = if (item.secret) listOf(0xFFFFAB2E, 0xFFFF4FA3, 0xFFB8FFF9, 0xFFFFD166)
         else listOf(0xFFFFD166, 0xFFFF85B3, 0xFFFFAB2E, 0xFFDFB8FF)
-        List(44) {
+        List(32) {
             floatArrayOf(
                 Random.nextFloat(),                       // x 0..1
-                -Random.nextFloat() * 0.3f,               // y start
-                (Random.nextFloat() - 0.5f) * 0.25f,      // drift
-                0.6f + Random.nextFloat() * 0.8f,         // fall speed
+                -Random.nextFloat() * 0.25f,              // y start
+                (Random.nextFloat() - 0.5f) * 0.20f,      // drift
+                0.5f + Random.nextFloat() * 0.7f,         // fall speed
                 Random.nextFloat() * 6.28f                // spin phase
             ) to Color(palette[it % palette.size])
         }
     }
+
+    // Pass-through outer Box: NO clickable on the full screen, so the note highway below keeps 100% of touches!
     Box(
-        modifier
-            .fillMaxSize()
-            .background(Color(0xCC07020A))
-            .clickable(
-                interactionSource = remember { MutableInteractionSource() },
-                indication = null
-            ) { HioneCelebrations.dismiss() },
-        contentAlignment = Alignment.Center
+        modifier.fillMaxSize(),
+        contentAlignment = Alignment.TopCenter
     ) {
         Canvas(Modifier.fillMaxSize()) {
             val t = progress.value
             for ((f, c) in confetti) {
                 val x = (f[0] + f[2] * t) * size.width
-                val y = (f[1] + f[3] * t) * size.height
+                val y = (f[1] + f[3] * t * 1.8f) * size.height
                 if (y < -10f || y > size.height + 10f) continue
-                val a = f[4] + t * 12f
-                val half = 7f
+                val a = f[4] + t * 18f
+                val half = 6f
                 drawLine(
-                    c.copy(alpha = (1f - t * 0.6f)),
+                    c.copy(alpha = (1f - t * 0.75f).coerceIn(0f, 1f)),
                     Offset(x - cos(a) * half, y - sin(a) * half),
                     Offset(x + cos(a) * half, y + sin(a) * half),
-                    strokeWidth = 5f
+                    strokeWidth = 4.5f
                 )
             }
         }
+
         Column(
             Modifier
-                .padding(horizontal = 22.dp)
+                .padding(top = 6.dp, start = 10.dp, end = 10.dp)
+                .fillMaxWidth()
                 .graphicsLayer {
                     val e = enter.value
-                    scaleX = 0.7f + 0.3f * e; scaleY = 0.7f + 0.3f * e; alpha = e.coerceIn(0f, 1f)
+                    scaleX = 0.88f + 0.12f * e
+                    scaleY = 0.88f + 0.12f * e
+                    translationY = (1f - e) * -80f
+                    alpha = e.coerceIn(0f, 1f)
                 }
-                .clip(RoundedCornerShape(22.dp))
+                .clip(RoundedCornerShape(18.dp))
                 .background(
                     Brush.verticalGradient(
-                        if (item.secret) listOf(Mascot.color(0xF2062A2C), Color(0xF2140818))
-                        else listOf(Color(0xF22A1A06), Color(0xF2140818))
+                        if (item.secret) listOf(Mascot.color(0xF5062A2C), Color(0xF5140818))
+                        else listOf(Color(0xF52A1A06), Color(0xF5140818))
                     )
                 )
-                .border(2.dp, if (item.secret) Mint else Gold, RoundedCornerShape(22.dp))
-                .padding(18.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
+                .border(2.dp, if (item.secret) Mint else Gold, RoundedCornerShape(18.dp))
+                .padding(horizontal = 14.dp, vertical = 10.dp)
         ) {
+            Row(
+                Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+                    Icon(
+                        if (item.secret) Icons.Default.LockOpen else Icons.Default.EmojiEvents,
+                        contentDescription = null,
+                        tint = if (item.secret) Mint else Gold,
+                        modifier = Modifier.size(28.dp)
+                    )
+                    Spacer(Modifier.width(10.dp))
+                    Column(Modifier.weight(1f)) {
+                        val remaining = queue.size - 1
+                        Text(
+                            text = (if (item.secret) "SECRET FOUND" else "REWARD UNLOCKED") +
+                                if (remaining > 0) " (+$remaining MORE)" else "",
+                            color = if (item.secret) Mint else Gold,
+                            fontSize = 10.5.sp,
+                            fontWeight = FontWeight.Black,
+                            fontFamily = AudiowideFont,
+                            letterSpacing = 1.sp
+                        )
+                        Text(
+                            text = item.title,
+                            color = Color.White,
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Black,
+                            fontFamily = AudiowideFont,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                }
+
+                Spacer(Modifier.width(8.dp))
+
+                Box(
+                    Modifier
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(if (canDismiss) (if (item.secret) Mint else Gold) else Color(0x33FFFFFF))
+                        .clickable(enabled = canDismiss) { HioneCelebrations.dismiss() }
+                        .padding(horizontal = 10.dp, vertical = 6.dp)
+                ) {
+                    Text(
+                        text = if (queue.size > 1) "NEXT ▸" else "GOT IT",
+                        color = if (canDismiss) Color(0xFF121318) else Muted,
+                        fontSize = 10.5.sp,
+                        fontWeight = FontWeight.Black,
+                        fontFamily = AudiowideFont
+                    )
+                }
+            }
+
+            Spacer(Modifier.height(4.dp))
             Text(
-                if (item.secret) "SECRET FOUND" else "REWARD UNLOCKED",
-                color = if (item.secret) Mint else Gold,
-                fontSize = 13.sp, fontWeight = FontWeight.Black, fontFamily = AudiowideFont,
-                letterSpacing = 1.5.sp
-            )
-            Spacer(Modifier.height(10.dp))
-            // A vector icon, not an emoji: an open lock for a secret, a trophy for a reward.
-            Icon(
-                if (item.secret) Icons.Default.LockOpen else Icons.Default.EmojiEvents,
-                contentDescription = null,
-                tint = if (item.secret) Mint else Gold,
-                modifier = Modifier.size(48.dp)
+                text = "${item.where} — ${item.howTo}",
+                color = Mascot.color(0xFFE8F4F2),
+                fontSize = 11.5.sp,
+                lineHeight = 14.5.sp,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
             )
             Spacer(Modifier.height(6.dp))
-            Text(
-                item.title, color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Black,
-                fontFamily = AudiowideFont, textAlign = TextAlign.Center
-            )
-            Spacer(Modifier.height(4.dp))
-            Text(item.where, color = Mascot.color(0xFF66E0D8), fontSize = 12.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
-            Spacer(Modifier.height(10.dp))
-            Text(item.howTo, color = Mascot.color(0xFFE8F4F2), fontSize = 12.sp, lineHeight = 16.sp, textAlign = TextAlign.Center)
-            Spacer(Modifier.height(14.dp))
-            val remaining = queue.size - 1
-            Text(
-                if (remaining > 0) "Tap for the next one ($remaining more)" else "Tap to continue",
-                color = Muted, fontSize = 10.sp, fontWeight = FontWeight.Black, fontFamily = AudiowideFont
-            )
+            // Auto-dismiss countdown progress bar
+            Box(
+                Modifier
+                    .fillMaxWidth()
+                    .height(3.dp)
+                    .clip(RoundedCornerShape(2.dp))
+                    .background(Color(0x33FFFFFF))
+            ) {
+                Box(
+                    Modifier
+                        .fillMaxHeight()
+                        .fillMaxWidth((1f - progress.value).coerceIn(0f, 1f))
+                        .background(if (item.secret) Mint else Gold)
+                )
+            }
         }
     }
 }
@@ -268,6 +332,21 @@ fun BpmSecretCard(secret: HioneSecrets.Secret) {
                     fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.weight(1f)
                 )
+                if (secret.id == HioneSecrets.DANKPODS_ONE_GRIT) {
+                    Text(
+                        "SMASH",
+                        color = Mascot.color(0xFF121318),
+                        fontSize = 9.sp, fontWeight = FontWeight.Black,
+                        modifier = Modifier
+                            .padding(end = 4.dp)
+                            .clip(RoundedCornerShape(6.dp))
+                            .background(Gold)
+                            .clickable {
+                                com.hione.launcher.HioneOneGritScreenBreaker.smash(ctx)
+                            }
+                            .padding(horizontal = 7.dp, vertical = 2.dp)
+                    )
+                }
                 val openIntent = remember(secret.id) { com.hione.launcher.secretOpenIntent(ctx, secret.id) }
                 if (openIntent != null) {
                     Text(

@@ -3860,7 +3860,7 @@ fun HioneEmptyState(
                                 Icon(Icons.Default.Shuffle, "Shuffle Artist", tint = HioneTealBright, modifier = Modifier.size(20.dp))
                             }
                             Spacer(Modifier.width(4.dp))
-                            ArtistRainbowHeart(artistLiked) { LikeStore.toggleArtist(rowCtx, a.name) }
+                            ArtistRainbowHeart(artistLiked, size = 48.dp) { LikeStore.toggleArtist(rowCtx, a.name) }
                             Spacer(Modifier.width(4.dp))
                             Icon(Icons.Default.ChevronRight, null, tint = Muted)
                         }
@@ -4185,7 +4185,7 @@ private fun ArtistSortSettingsModal(
 
                         Spacer(Modifier.width(10.dp))
 
-                        ArtistRainbowHeart(LikeStore.isArtistLiked(a.name, ctx)) { LikeStore.toggleArtist(ctx, a.name) }
+                        ArtistRainbowHeart(LikeStore.isArtistLiked(a.name, ctx), size = 54.dp) { LikeStore.toggleArtist(ctx, a.name) }
                     }
                 }
             }
@@ -4242,9 +4242,8 @@ private fun ArtistSortSettingsModal(
                                     size = 22.dp
                                 )
                             }
-                            Spacer(Modifier.height(6.dp))
-                            Text(al.name, color = Mascot.color(0xFFE8F4F2), fontSize = 12.5.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                            val yr = al.tracks.firstOrNull { it.year > 0 }?.year ?: 0
+                            val yr = al.tracks.firstNotNullOfOrNull { TrackYear.yearFor(ctx, it)?.takeIf { y -> y > 0 } ?: it.year.takeIf { y -> y > 0 } } ?: 0
+                            Text(al.name + if (yr > 0) "  ·  $yr" else "", color = Mascot.color(0xFFE8F4F2), fontSize = 12.5.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                             // Guarded — see the artist row: the breakdown resolves asynchronously.
                             if (alQuality.totalTracks > 0) Text(
                                 alQuality.specTag,
@@ -4479,7 +4478,7 @@ private fun ArtistSortSettingsModal(
                 // Like heart
                 if (likeAlbum != null) {
                     Box(Modifier.align(Alignment.TopEnd).statusBarsPadding().padding(12.dp)) {
-                        AlbumRainbowHeart(LikeStore.isAlbumLiked(albumArtist, likeAlbum, ctx)) { LikeStore.toggleAlbum(ctx, albumArtist, likeAlbum) }
+                        AlbumRainbowHeart(LikeStore.isAlbumLiked(albumArtist, likeAlbum, ctx), size = 54.dp) { LikeStore.toggleAlbum(ctx, albumArtist, likeAlbum) }
                     }
                 }
                 Column(

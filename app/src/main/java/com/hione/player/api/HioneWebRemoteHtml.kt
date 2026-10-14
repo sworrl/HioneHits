@@ -1,7 +1,7 @@
 package com.hione.player.api
 
 /**
- * Hatsune Hione Cyberpunk Web Remote & TV Big-Screen Stage Application.
+ * Oki Hione Cyberpunk Web Remote & TV Big-Screen Stage Application.
  * 
  * Embedded zero-dependency HTML5/CSS3/JavaScript SPA served directly by [HioneApiServer].
  * Provides a Spotify-Connect facsimile for phones, tablets, laptops, and TV sound systems.

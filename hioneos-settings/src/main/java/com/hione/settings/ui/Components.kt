@@ -50,10 +50,10 @@ fun PageList(content: LazyListScope.() -> Unit) {
 fun Section(title: String? = null, note: String? = null, content: @Composable ColumnScope.() -> Unit) {
     Column(Modifier.fillMaxWidth().hioneCard().padding(14.dp)) {
         if (title != null) {
-            Text(title.uppercase(), color = HioneTealBright, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+            Text(title.uppercase(), color = HioneTealBright, fontSize = 14.5.sp, fontWeight = FontWeight.Bold)
             if (note != null) {
-                Spacer(Modifier.height(2.dp))
-                Text(note, color = HioneMuted, fontSize = 10.5.sp, lineHeight = 13.sp)
+                Spacer(Modifier.height(3.dp))
+                Text(note, color = HioneMuted, fontSize = 13.5.sp, lineHeight = 18.sp)
             }
             Spacer(Modifier.height(8.dp))
         }
@@ -74,13 +74,13 @@ fun ToggleRow(
     onChange: (Boolean) -> Unit
 ) {
     Row(
-        Modifier.fillMaxWidth().padding(vertical = 6.dp),
+        Modifier.fillMaxWidth().padding(vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Column(Modifier.weight(1f)) {
-            Text(title, color = Color.White, fontSize = 13.5.sp, fontWeight = FontWeight.SemiBold)
+            Text(title, color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
             val s = if (checked == null) listOfNotNull(summary, UNKNOWN).joinToString(" · ") else summary
-            if (s != null) Text(s, color = HioneMuted, fontSize = 11.sp, lineHeight = 14.sp)
+            if (s != null) Text(s, color = HioneMuted, fontSize = 13.5.sp, lineHeight = 18.sp)
         }
         Spacer(Modifier.width(10.dp))
         Switch(
@@ -98,34 +98,34 @@ fun NavRow(title: String, summary: String? = null, icon: ImageVector? = null, on
     Row(
         Modifier
             .fillMaxWidth()
-            .padding(vertical = 3.dp)
+            .padding(vertical = 4.dp)
             .clip(RoundedCornerShape(12.dp))
             .background(HioneSurface2)
             .clickable(onClick = onClick)
-            .padding(12.dp),
+            .padding(14.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         if (icon != null) {
-            Icon(icon, contentDescription = null, tint = HioneTealBright, modifier = Modifier.size(20.dp))
+            Icon(icon, contentDescription = null, tint = HioneTealBright, modifier = Modifier.size(22.dp))
             Spacer(Modifier.width(12.dp))
         }
         Column(Modifier.weight(1f)) {
-            Text(title, color = Color.White, fontSize = 13.5.sp, fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis)
-            if (summary != null) Text(summary, color = HioneMuted, fontSize = 11.sp, lineHeight = 14.sp, maxLines = 3, overflow = TextOverflow.Ellipsis)
+            Text(title, color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis)
+            if (summary != null) Text(summary, color = HioneMuted, fontSize = 13.5.sp, lineHeight = 18.sp, maxLines = 3, overflow = TextOverflow.Ellipsis)
         }
         Icon(
             Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null, tint = HioneMuted,
-            modifier = Modifier.size(14.dp).graphicsLayer { rotationZ = 180f }
+            modifier = Modifier.size(16.dp).graphicsLayer { rotationZ = 180f }
         )
     }
 }
 
 @Composable
 fun InfoRow(label: String, value: String?) {
-    Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), horizontalArrangement = Arrangement.SpaceBetween) {
-        Text(label, color = HioneMuted, fontSize = 12.sp, modifier = Modifier.weight(0.45f))
+    Row(Modifier.fillMaxWidth().padding(vertical = 5.dp), horizontalArrangement = Arrangement.SpaceBetween) {
+        Text(label, color = HioneMuted, fontSize = 14.5.sp, modifier = Modifier.weight(0.45f))
         Text(
-            value?.takeIf { it.isNotBlank() } ?: UNKNOWN, color = Color.White, fontSize = 12.sp,
+            value?.takeIf { it.isNotBlank() } ?: UNKNOWN, color = Color.White, fontSize = 14.5.sp,
             fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(0.55f),
             textAlign = androidx.compose.ui.text.style.TextAlign.End
         )
@@ -134,7 +134,7 @@ fun InfoRow(label: String, value: String?) {
 
 @Composable
 fun BodyText(text: String) {
-    Text(text, color = HioneMuted, fontSize = 11.5.sp, lineHeight = 15.sp)
+    Text(text, color = HioneMuted, fontSize = 14.sp, lineHeight = 19.sp)
 }
 
 @Composable
@@ -147,8 +147,8 @@ fun ActionButton(text: String, danger: Boolean = false, enabled: Boolean = true,
             contentColor = if (danger) Color(0xFFFF8A80) else HioneTealBright
         ),
         shape = RoundedCornerShape(10.dp),
-        modifier = modifier.height(38.dp)
-    ) { Text(text, fontSize = 12.sp, fontWeight = FontWeight.Bold) }
+        modifier = modifier.height(44.dp)
+    ) { Text(text, fontSize = 14.5.sp, fontWeight = FontWeight.Bold) }
 }
 
 @Composable
@@ -156,14 +156,14 @@ fun RadioRow(title: String, summary: String? = null, selected: Boolean, onClick:
     Row(
         Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp))
             .background(if (selected) HioneTealBright.copy(alpha = 0.12f) else Color.Transparent)
-            .clickable(onClick = onClick).padding(6.dp),
+            .clickable(onClick = onClick).padding(8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         RadioButton(selected = selected, onClick = onClick, colors = RadioButtonDefaults.colors(selectedColor = HioneTealBright, unselectedColor = HioneMuted))
         Spacer(Modifier.width(6.dp))
         Column {
-            Text(title, color = Color.White, fontSize = 13.sp)
-            if (summary != null) Text(summary, color = HioneMuted, fontSize = 11.sp)
+            Text(title, color = Color.White, fontSize = 15.5.sp)
+            if (summary != null) Text(summary, color = HioneMuted, fontSize = 13.5.sp)
         }
     }
 }
@@ -217,7 +217,7 @@ fun TextInputDialog(
         title = { Text(title, fontWeight = FontWeight.Bold) },
         text = {
             Column {
-                if (message != null) { Text(message, color = HioneMuted, fontSize = 12.sp); Spacer(Modifier.height(8.dp)) }
+                if (message != null) { Text(message, color = HioneMuted, fontSize = 14.sp); Spacer(Modifier.height(8.dp)) }
                 OutlinedTextField(
                     value = value,
                     onValueChange = { value = it },
@@ -238,7 +238,7 @@ fun TextInputDialog(
                 if (password) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Checkbox(checked = show, onCheckedChange = { show = it }, colors = CheckboxDefaults.colors(checkedColor = HioneTealBright))
-                        Text("Show password", color = HioneMuted, fontSize = 12.sp)
+                        Text("Show password", color = HioneMuted, fontSize = 14.sp)
                     }
                 }
             }
@@ -283,8 +283,8 @@ fun <T> ChoiceDialog(
 fun SliderRow(title: String, valueLabel: String, value: Float, range: ClosedFloatingPointRange<Float>, steps: Int = 0, enabled: Boolean = true, onChange: (Float) -> Unit, onDone: (() -> Unit)? = null) {
     Column(Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            Text(title, color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
-            Text(valueLabel, color = HioneTealBright, fontSize = 12.sp)
+            Text(title, color = Color.White, fontSize = 15.5.sp, fontWeight = FontWeight.SemiBold)
+            Text(valueLabel, color = HioneTealBright, fontSize = 14.5.sp)
         }
         Slider(
             value = value.coerceIn(range.start, range.endInclusive),

@@ -24,7 +24,7 @@ import java.util.Locale
 import kotlin.math.roundToInt
 
 /**
- * Hatsune Hione Real-Time GPS & Weather Observatory Engine.
+ * Oki Hione Real-Time GPS & Weather Observatory Engine.
  * Incorporates the complete multi-source meteorological pipeline from OnThe8s (RetroWeather):
  * 1. National Weather Service (api.weather.gov) station resolution, direct observations, & forecast lookaheads.
  * 2. Open-Meteo high-resolution hourly/daily meteograms & global satellite fallbacks.

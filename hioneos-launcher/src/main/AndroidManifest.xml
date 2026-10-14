@@ -176,7 +176,7 @@
             </intent-filter>
         </activity>
 
-        <!-- OS-level Hatsune Hione Custom Lockscreen (ported out of the music app). Shows over the
+        <!-- OS-level Oki Hione Custom Lockscreen (ported out of the music app). Shows over the
              keyguard, fullscreen/no-title, excluded from recents, single instance. -->
         <activity
             android:name=".lockscreen.HioneLockscreenActivity"
@@ -425,5 +425,11 @@
             android:name=".HioneCompositingPreviewActivity"
             android:exported="false"
             android:theme="@style/Theme.HioneLockscreen" />
+        <activity
+            android:name=".bpm.HioneFrankSnakeActivity"
+            android:exported="true"
+            android:label="Frank the Snake"
+            android:screenOrientation="portrait"
+            android:theme="@android:style/Theme.NoTitleBar.Fullscreen" />
     </application>
 </manifest>

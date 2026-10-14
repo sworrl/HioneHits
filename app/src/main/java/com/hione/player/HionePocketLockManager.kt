@@ -15,7 +15,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 
 /**
- * Hatsune Hione System-Wide Pocket Lock & Hardware Fn Switch Manager.
+ * Oki Hione System-Wide Pocket Lock & Hardware Fn Switch Manager.
  * Solves the hardware limitation where Touch + Key Lock only executed one mode.
  * Simultaneously locks/unlocks:
  * 1. Touchscreen Digitizer (InputManager.disableInputDevice on "Goodix-CTP")

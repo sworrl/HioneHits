@@ -124,7 +124,7 @@ fun Cyber3dIconButton(
 }
 
 /**
- * Hatsune Hione Fully Interactive 3D Embossed RF Network & Wi-Fi Hardware Control Station.
+ * Oki Hione Fully Interactive 3D Embossed RF Network & Wi-Fi Hardware Control Station.
  * Full modern replacement for AOSP Wi-Fi Settings with unlimited hardware telemetry,
  * real-time deduplicated AP scanner, 3D embossed tactile controls, network auth/connect modal,
  * RF channel spectrogram, and low-level radio power controls.

@@ -1,8 +1,27 @@
-# Hione Music — Changelog
+# Hione Hits Changelog
 
-Native Kotlin/Compose player for the HiBy M500 HIONE (`com.hione.player`).
+Native Kotlin/Compose player and system app suite for the HiBy M500 (`com.hione.player`).
 
-## 0.9.17 — 2026-08-15 — tape materials + OS fn-lock
+## 2.2.1 (HioneOS 0.4.6) - 2026-10-14
+
+### Self-healing library and likes recovery
+- Automatic migration and recovery of liked tracks, cumulative heart counts, play history, and play counts across package updates and `com.miku.*` to `com.hione.*` transitions.
+- Reconstructs missing `SharedPreferences` entries from `ListenStatsDb` play event rows and `sdcard/HioneOS/migration/` backups on startup.
+
+### Multi-lane BPM note highway and non-blocking unlocks
+- Phase-locked vertical note highway with deterministic per-lane assignment (`1x` through `10x` keyways), distinct fret colors, and simultaneous 2-thumb Power Chords.
+- Fret-validated tap scoring: tapping the wrong lane registers a lane miss; hitting the active lane consumes the note with a particle burst.
+- Replaced full-screen blocking unlock modals with a non-blocking top banner with an accidental-tap cooldown guard and auto-advance timer.
+
+### DankPods easter eggs
+- **PKCELL battery icon (`DANKPODS_PKCELL`)**: Emerald-green and gold AA battery cell rendered in the status bar and launcher battery badge when unlocked and enabled.
+- **Frank the Snake (`DANKPODS_FRANK`)**: Playable arcade snake game (`HioneFrankSnakeActivity`) launched from the BPM Secrets strip.
+- **1-Grit screen smash (`DANKPODS_ONE_GRIT`)**: Full-screen concrete rock impact and radial shattered-glass crack animation.
+
+### Readability and typography
+- Increased small text sizes (`9.sp`-`12.sp` up to `13.5.sp`-`18.sp`) across Hardware Settings, Blackjack Monitor, DAC Response Curve cards, Playback Settings, HioneOS Settings, and Hione Update.
+
+## 0.9.17 - 2026-08-15 - tape materials + OS fn-lock
 
 ### Tape mode — de-slopped, themed
 - Rebuilt as a real cassette: gold **metal shell** with fine engraved ribbing + directional gradient,

@@ -213,6 +213,7 @@ fun NowPlayingScreen(
     // Viz is ALWAYS on while full Now Playing is open (the old 15s art→viz cross-fade is gone);
     // the manual button can still turn it off when auto-viz is disabled in settings.
     val castState by com.hione.player.cast.HioneCastServer.state.collectAsState()
+    var showCastTunnelView by remember { mutableStateOf(false) }
     var showViz by remember { mutableStateOf(true) }
     var currentPresetIndex by remember { mutableStateOf(PlayerPreferences.loadProjectMPreset(ctx)) }
     val presets = ProjectMPreset.entries
@@ -523,7 +524,7 @@ fun NowPlayingScreen(
                             Text(track.artist + "   ·   " + vizName,
                                 color = accent.copy(alpha = .9f), fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         }
-                        NowPlayingHeart(track, size = 50.dp)
+                        NowPlayingHeart(track, size = 54.dp)
                     }
                     Spacer(Modifier.height(8.dp))
                     if (NowPlayingLook.wavyBar) {
@@ -579,7 +580,11 @@ fun NowPlayingScreen(
             Spacer(Modifier.weight(1f))
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 HioneBrandMark(tint = accent, fontSize = 11.sp, glyphSize = 18.dp, letterSpacing = 1.2.sp)
-                Text(track.album.ifBlank { "Now Playing" }, color = Mascot.color(0xFFE8F4F2), fontSize = 12.sp, fontWeight = FontWeight.Medium, fontFamily = Baloo2Font, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                val displayYear = remember(track.id) { TrackYear.yearFor(ctx, track)?.takeIf { it > 0 } ?: track.year.takeIf { it > 0 } }
+                val topAlbumTitle = if (track.album.isNotBlank()) {
+                    if (displayYear != null && displayYear > 0) "${track.album}  ·  $displayYear" else track.album
+                } else "Now Playing"
+                Text(topAlbumTitle, color = Mascot.color(0xFFE8F4F2), fontSize = 12.sp, fontWeight = FontWeight.Medium, fontFamily = Baloo2Font, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
             Spacer(Modifier.weight(1f))
             HapticIconButton(onClick = { InstantRandom.start(ctx) }, flat = true) {
@@ -634,7 +639,7 @@ fun NowPlayingScreen(
                     ),
                 contentAlignment = Alignment.Center
             ) {
-                if (castState.connected) {
+                if (castState.connected && showCastTunnelView) {
                     com.hione.player.cast.HioneCyberTunnelVisualizer(
                         targetName = castState.clientLabel.ifBlank { "Sony Bravia 4K" },
                         targetAddress = castState.clientAddress,
@@ -666,6 +671,69 @@ fun NowPlayingScreen(
                     )
                 } else {
                     Icon(Icons.Default.Album, null, tint = accent.copy(alpha = .5f), modifier = Modifier.size(100.dp))
+                }
+
+                if (castState.connected) {
+                    Row(
+                        modifier = Modifier
+                            .align(Alignment.TopCenter)
+                            .padding(top = 10.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(Color(0xD90A181C))
+                            .border(1.dp, Color(0xFF00E5FF).copy(alpha = 0.5f), RoundedCornerShape(12.dp))
+                            .padding(horizontal = 8.dp, vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(7.dp)
+                                .clip(CircleShape)
+                                .background(Color(0xFF00FFCC))
+                        )
+                        Spacer(Modifier.width(5.dp))
+                        Text(
+                            "TV: ${castState.clientLabel.ifBlank { "Bravia" }.take(14)}",
+                            color = Color(0xFF00FFCC),
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold,
+                            fontFamily = Baloo2Font
+                        )
+                        Spacer(Modifier.width(6.dp))
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(6.dp))
+                                .background(Color(0x3300FFCC))
+                                .clickable { showCastTunnelView = !showCastTunnelView }
+                                .padding(horizontal = 6.dp, vertical = 2.dp)
+                        ) {
+                            Text(
+                                if (showCastTunnelView) "VIEW: TUNNEL" else "VIEW: ART",
+                                color = Color(0xFFE8F4F2),
+                                fontSize = 9.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                        Spacer(Modifier.width(5.dp))
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(6.dp))
+                                .background(Color(0x44FF2A4D))
+                                .clickable {
+                                    com.hione.player.cast.HioneCastServer.stop(ctx)
+                                    ctx.getSharedPreferences("hione_cast_prefs", android.content.Context.MODE_PRIVATE)
+                                        .edit().putBoolean("key_cast_enabled", false).apply()
+                                    android.widget.Toast.makeText(ctx, "Disconnected from TV", android.widget.Toast.LENGTH_SHORT).show()
+                                }
+                                .padding(horizontal = 6.dp, vertical = 2.dp)
+                        ) {
+                            Text(
+                                "DISCONNECT",
+                                color = Color(0xFFFF5277),
+                                fontSize = 9.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
                 }
 
                 // Interactive Gestures on Stage (Visualizer or Album Art or Streaming Card)
@@ -863,7 +931,7 @@ fun NowPlayingScreen(
                                 .basicMarquee(iterations = Int.MAX_VALUE, repeatDelayMillis = 0, initialDelayMillis = 0)
                         )
                         Spacer(Modifier.width(8.dp))
-                        NowPlayingHeart(track, size = 40.dp)
+                        NowPlayingHeart(track, size = 54.dp)
                     }
 
                     // Middle Section: Artist & Album with Year (occupies middle of card)
@@ -886,8 +954,11 @@ fun NowPlayingScreen(
                                 }
                         )
                         Spacer(Modifier.height(1.dp))
+                        val albumSubtitle = if (track.album.isNotBlank()) {
+                            if (displayYear != null && displayYear > 0) "${track.album}  ·  $displayYear" else track.album
+                        } else track.artist
                         Text(
-                            text = track.album.ifBlank { track.artist },
+                            text = albumSubtitle,
                             color = accent,
                             fontSize = 11.5.sp,
                             fontWeight = FontWeight.SemiBold,
@@ -922,9 +993,64 @@ fun NowPlayingScreen(
                         Row { TechBadgeRow(ctx, track, fontSize = 10.5.sp, spacing = 4.dp, includeFormat = true) }
                         if (track.bitrateKbps > 0) DataChip("${track.bitrateKbps} kbps", bitrateColor(track.bitrateKbps))
                         DataChip(qualityTier(track), bitrateColor(track.bitrateKbps))
+                        val displayYear = TrackYear.yearFor(ctx, track)?.takeIf { it > 0 } ?: track.year.takeIf { it > 0 }
+                        if (displayYear != null && displayYear > 0) DataChip("$displayYear", HioneGold)
                         releaseTag(track.album)?.let { DataChip(it, ReleaseTagColor) }
                         if (track.durationMs > 0) DataChip(fmtTime(track.durationMs), Mascot.color(0xFFD4ECE9))
                         if (track.sizeBytes > 0) DataChip("${"%.1f".format(track.sizeBytes / 1e6)} MB", Mascot.color(0xFFD4ECE9))
+                    }
+
+                    // Last.fm live scrobble feedback & stats
+                    val scrobbleState by com.hione.player.scrobble.ScrobbleManager.state.collectAsState()
+                    val lastfmUser = scrobbleState.username ?: "DEAD_REAvER"
+                    val isScrobblingNow = scrobbleState.flushing || (System.currentTimeMillis() - scrobbleState.lastScrobbleAt < 8000L)
+
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 4.dp)
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(Color(0x33000000))
+                            .border(
+                                1.dp,
+                                if (isScrobblingNow) Color(0xFFFF2A4D).copy(alpha = 0.8f) else Color(0x22FFFFFF),
+                                RoundedCornerShape(8.dp)
+                            )
+                            .clickable {
+                                Haptics.tick(ctx)
+                                com.hione.player.scrobble.ScrobbleManager.retryNow()
+                                android.widget.Toast.makeText(
+                                    ctx,
+                                    "Last.fm: @$lastfmUser · ${scrobbleState.acceptedTotal} scrobbles synced",
+                                    android.widget.Toast.LENGTH_SHORT
+                                ).show()
+                            }
+                            .padding(horizontal = 8.dp, vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(7.dp)
+                                .clip(CircleShape)
+                                .background(if (isScrobblingNow) Color(0xFFFF2A4D) else Color(0xFF00FFCC))
+                        )
+                        Spacer(Modifier.width(6.dp))
+                        Text(
+                            text = if (isScrobblingNow) "LAST.FM · SCROBBLING..." else "LAST.FM · @$lastfmUser",
+                            color = if (isScrobblingNow) Color(0xFFFF5277) else Color(0xFFC0DDD9),
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold,
+                            fontFamily = OrbitronFont,
+                            letterSpacing = 0.5.sp
+                        )
+                        Spacer(Modifier.weight(1f))
+                        Text(
+                            text = "${scrobbleState.acceptedTotal} SCROBBLES",
+                            color = HioneTealBright,
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold,
+                            fontFamily = OrbitronFont
+                        )
                     }
                 }
             }
@@ -1491,17 +1617,17 @@ private fun heartbeat(x: Float): Float {
 enum class LikeTier { TRACK, ALBUM, ARTIST }
 
 @Composable
-fun RainbowHeart(liked: Boolean, size: androidx.compose.ui.unit.Dp = 42.dp, onToggle: () -> Unit) =
+fun RainbowHeart(liked: Boolean, size: androidx.compose.ui.unit.Dp = 54.dp, onToggle: () -> Unit) =
     TieredRainbowHeart(LikeTier.TRACK, liked, size, onToggle)
 
 /** Ring-wrapped heart — "the whole collection wrapped together," a step up from a single track. */
 @Composable
-fun AlbumRainbowHeart(liked: Boolean, size: androidx.compose.ui.unit.Dp = 42.dp, onToggle: () -> Unit) =
+fun AlbumRainbowHeart(liked: Boolean, size: androidx.compose.ui.unit.Dp = 54.dp, onToggle: () -> Unit) =
     TieredRainbowHeart(LikeTier.ALBUM, liked, size, onToggle)
 
 /** Heart with a spark accent — "everything this person makes," the widest tier. */
 @Composable
-fun ArtistRainbowHeart(liked: Boolean, size: androidx.compose.ui.unit.Dp = 42.dp, onToggle: () -> Unit) =
+fun ArtistRainbowHeart(liked: Boolean, size: androidx.compose.ui.unit.Dp = 54.dp, onToggle: () -> Unit) =
     TieredRainbowHeart(LikeTier.ARTIST, liked, size, onToggle)
 
 @OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
@@ -1509,7 +1635,7 @@ fun ArtistRainbowHeart(liked: Boolean, size: androidx.compose.ui.unit.Dp = 42.dp
 fun TieredRainbowHeart(
     tier: LikeTier,
     liked: Boolean,
-    size: androidx.compose.ui.unit.Dp = 42.dp,
+    size: androidx.compose.ui.unit.Dp = 54.dp,
     onToggle: () -> Unit,
     earnable: Boolean = false,
     badgeCount: Int = 0,
@@ -1754,7 +1880,7 @@ fun TieredRainbowHeart(
  * score; long-press = clear all hearts. Shows the count badge and an earnable glow ring.
  */
 @Composable
-fun NowPlayingHeart(track: Track, size: androidx.compose.ui.unit.Dp = 42.dp) {
+fun NowPlayingHeart(track: Track, size: androidx.compose.ui.unit.Dp = 54.dp) {
     val ctx = LocalContext.current
     var count by remember(track.id) { mutableStateOf(LikeStore.heartCount(ctx, track.id)) }
     var earnable by remember(track.id) { mutableStateOf(HionePlayQualifier.isHeartable(track.id)) }

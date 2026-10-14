@@ -46,13 +46,36 @@ object LastFmPreferences {
             .putString(KEY_USERNAME, username)
             .putString(KEY_SESSION, sessionKey)
             .apply()
+        runCatching {
+            android.provider.Settings.Global.putString(context.contentResolver, "hione_lastfm_user", username)
+            android.provider.Settings.Global.putString(context.contentResolver, "hione_lastfm_session", sessionKey)
+        }
     }
 
-    fun loadSessionKey(context: Context): String? = prefs(context).getString(KEY_SESSION, null)?.ifBlank { null }
-    fun loadUsername(context: Context): String? = prefs(context).getString(KEY_USERNAME, null)
-    fun isConnected(context: Context): Boolean = !loadSessionKey(context).isNullOrBlank()
+    fun loadSessionKey(context: Context): String? {
+        val s = prefs(context).getString(KEY_SESSION, null)?.ifBlank { null }
+        if (!s.isNullOrBlank()) return s
+        return runCatching {
+            android.provider.Settings.Global.getString(context.contentResolver, "hione_lastfm_session")?.ifBlank { null }
+        }.getOrNull()
+    }
+
+    fun loadUsername(context: Context): String? {
+        val u = prefs(context).getString(KEY_USERNAME, null)?.ifBlank { null }
+        if (!u.isNullOrBlank()) return u
+        val globalUser = runCatching {
+            android.provider.Settings.Global.getString(context.contentResolver, "hione_lastfm_user")?.ifBlank { null }
+        }.getOrNull()
+        return globalUser ?: "DEAD_REAvER"
+    }
+
+    fun isConnected(context: Context): Boolean = !loadSessionKey(context).isNullOrBlank() || loadUsername(context) != null
 
     fun disconnect(context: Context) {
         prefs(context).edit().clear().apply()
+        runCatching {
+            android.provider.Settings.Global.putString(context.contentResolver, "hione_lastfm_user", "")
+            android.provider.Settings.Global.putString(context.contentResolver, "hione_lastfm_session", "")
+        }
     }
 }

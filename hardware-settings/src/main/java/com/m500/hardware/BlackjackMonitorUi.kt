@@ -153,15 +153,15 @@ fun BlackjackStatusCard(primary: Color, secondary: Color, bg: Color, onOpen: () 
             .padding(14.dp)
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text("DAC DRIVER", color = primary, fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+            Text("DAC DRIVER", color = primary, fontSize = 14.5.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
             Spacer(Modifier.weight(1f))
-            Text("Monitor", color = secondary, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+            Text("Monitor →", color = secondary, fontSize = 14.5.sp, fontWeight = FontWeight.Bold)
         }
         Spacer(Modifier.height(8.dp))
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Box(Modifier.size(10.dp).clip(CircleShape).background(drvColor))
+            Box(Modifier.size(11.dp).clip(CircleShape).background(drvColor))
             Spacer(Modifier.width(8.dp))
-            Text(drv, color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+            Text(drv, color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.Bold)
             Spacer(Modifier.width(10.dp))
             val power = when {
                 st.access != BlackjackMonitor.Access.OK -> null
@@ -169,11 +169,11 @@ fun BlackjackStatusCard(primary: Color, secondary: Color, bg: Color, onOpen: () 
                 st.powered == false -> "Off"
                 else -> null
             }
-            if (power != null) Text(power, color = if (st.powered == true) secondary else HwMuted, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+            if (power != null) Text(power, color = if (st.powered == true) secondary else HwMuted, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
         }
         Spacer(Modifier.height(6.dp))
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(path.line, color = Color.White, fontSize = 12.5.sp, modifier = Modifier.weight(1f, fill = false))
+            Text(path.line, color = Color.White, fontSize = 15.sp, modifier = Modifier.weight(1f, fill = false))
             path.verdict?.let {
                 Spacer(Modifier.width(8.dp))
                 BjPill(it, path.verdictColor)
@@ -184,7 +184,7 @@ fun BlackjackStatusCard(primary: Color, secondary: Color, bg: Color, onOpen: () 
             Text(
                 "Filter ${BlackjackMonitor.filterName(main.reg(0x090000))} · ${BlackjackMonitor.wordLength(main.reg(0x01000C))} · " +
                     "DRE ${BlackjackMonitor.dreText(main.reg(0x0C0001))} · Vol ${BlackjackMonitor.volumeText(main.reg(0x090002))}",
-                color = HwMuted, fontSize = 11.5.sp, lineHeight = 15.sp
+                color = HwMuted, fontSize = 14.sp, lineHeight = 19.sp
             )
         }
         val warns = st.problems.count { it.kind != BlackjackMonitor.Kind.ERROR || !it.text.startsWith("Write failed") }
@@ -193,11 +193,11 @@ fun BlackjackStatusCard(primary: Color, secondary: Color, bg: Color, onOpen: () 
             Spacer(Modifier.height(4.dp))
             Text(
                 if (issues == 0) "${st.writes} register writes, none failed" else "${st.failedWrites} of ${st.writes} writes failed, $warns warnings",
-                color = if (issues == 0) HwMuted else BjWarn, fontSize = 11.5.sp
+                color = if (issues == 0) HwMuted else BjWarn, fontSize = 14.sp
             )
         } else {
             Spacer(Modifier.height(4.dp))
-            Text("Open the Monitor for live power, rate and register state.", color = HwMuted, fontSize = 11.5.sp, lineHeight = 15.sp)
+            Text("Open the Monitor for live power, rate and register state.", color = HwMuted, fontSize = 14.sp, lineHeight = 19.sp)
         }
     }
 }
@@ -207,8 +207,8 @@ private fun BjPill(text: String, color: Color) {
     Box(
         Modifier.clip(RoundedCornerShape(50)).background(color.copy(alpha = 0.18f))
             .border(1.dp, color.copy(alpha = 0.7f), RoundedCornerShape(50))
-            .padding(horizontal = 8.dp, vertical = 2.dp)
-    ) { Text(text, color = color, fontSize = 11.sp, fontWeight = FontWeight.Bold) }
+            .padding(horizontal = 10.dp, vertical = 3.dp)
+    ) { Text(text, color = color, fontSize = 13.5.sp, fontWeight = FontWeight.Bold) }
 }
 
 class BlackjackMonitorActivity : ComponentActivity() {
@@ -254,7 +254,7 @@ fun BlackjackMonitorScreen(onBack: () -> Unit) {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("BLACKJACK MONITOR", color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.Bold) },
+                title = { Text("BLACKJACK MONITOR", color = Color.White, fontSize = 19.sp, fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = primary) }
                 },
@@ -278,7 +278,7 @@ fun BlackjackMonitorScreen(onBack: () -> Unit) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Box(Modifier.size(12.dp).clip(CircleShape).background(drvColor))
                         Spacer(Modifier.width(10.dp))
-                        Text(drv, color = Color.White, fontSize = 19.sp, fontWeight = FontWeight.Bold)
+                        Text(drv, color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
                     }
                     Spacer(Modifier.height(4.dp))
                     Text(
@@ -288,7 +288,7 @@ fun BlackjackMonitorScreen(onBack: () -> Unit) {
                             BlackjackMonitor.Driver.NONE -> "The DAC at 0x30 has no driver bound."
                             else -> "Reading the driver links in sysfs."
                         },
-                        color = HwMuted, fontSize = 12.sp
+                        color = HwMuted, fontSize = 14.5.sp
                     )
                     Spacer(Modifier.height(10.dp))
                     BjRow("Codec driver", id?.codecDriver ?: "not bound", primary)
@@ -314,7 +314,7 @@ fun BlackjackMonitorScreen(onBack: () -> Unit) {
                         primary
                     )
                     Spacer(Modifier.height(8.dp))
-                    Text("MODULE PARAMETERS", color = primary, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+                    Text("MODULE PARAMETERS", color = primary, fontSize = 13.5.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
                     Spacer(Modifier.height(4.dp))
                     val params = id?.params.orEmpty()
                     val inferred = inferParams(st)
@@ -324,7 +324,7 @@ fun BlackjackMonitorScreen(onBack: () -> Unit) {
                         BjRow("$owner $short", v ?: inferred[short]?.let { "$it (from the log)" } ?: "not readable here", primary)
                     }
                     if (params.values.any { it == null }) {
-                        Text("Module parameters are sysfs files this app may not read, so values come from what the log shows.", color = HwMuted, fontSize = 11.sp, lineHeight = 14.sp)
+                        Text("Module parameters are sysfs files this app may not read, so values come from what the log shows.", color = HwMuted, fontSize = 13.5.sp, lineHeight = 18.sp)
                     }
                 }
             }
@@ -339,20 +339,20 @@ fun BlackjackMonitorScreen(onBack: () -> Unit) {
                                 BlackjackMonitor.Access.STARTING -> "Reading the kernel log. Android asks once to allow log access: choose Allow one-time access."
                                 else -> st.accessNote ?: "The kernel log is not readable."
                             },
-                            color = BjWarn, fontSize = 12.5.sp, lineHeight = 16.sp
+                            color = BjWarn, fontSize = 14.5.sp, lineHeight = 19.sp
                         )
                         if (st.access == BlackjackMonitor.Access.DENIED || st.access == BlackjackMonitor.Access.FAILED) {
                             Spacer(Modifier.height(8.dp))
                             Box(
                                 Modifier.clip(RoundedCornerShape(8.dp)).background(primary)
                                     .clickable { BlackjackMonitor.retry() }
-                                    .padding(horizontal = 14.dp, vertical = 8.dp)
-                            ) { Text("Read the kernel log", color = Color.Black, fontSize = 12.5.sp, fontWeight = FontWeight.Bold) }
+                                    .padding(horizontal = 14.dp, vertical = 10.dp)
+                            ) { Text("Read the kernel log", color = Color.Black, fontSize = 14.5.sp, fontWeight = FontWeight.Bold) }
                         }
                         Spacer(Modifier.height(8.dp))
                     }
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(path.line, color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f, fill = false))
+                        Text(path.line, color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f, fill = false))
                         path.verdict?.let { Spacer(Modifier.width(8.dp)); BjPill(it, path.verdictColor) }
                     }
                     Spacer(Modifier.height(8.dp))
@@ -372,7 +372,7 @@ fun BlackjackMonitorScreen(onBack: () -> Unit) {
                         primary
                     )
                     if (st.hwRate != null && st.dacRate != null && st.hwRate != st.dacRate && st.powered == true && (st.poweredTarget == 2 || st.poweredTarget == 3)) {
-                        Text("The DAC rate does not match the backend rate.", color = BjBad, fontSize = 12.sp)
+                        Text("The DAC rate does not match the backend rate.", color = BjBad, fontSize = 14.sp)
                     }
                     BjRow("Word length", BlackjackMonitor.wordLength(main.reg(0x01000C)) + (st.chips[0x33]?.reg(0x01000C)?.let { if (it != main.reg(0x01000C)) ", 0x33: ${BlackjackMonitor.wordLength(it)}" else "" } ?: ""), primary)
                     BjRow("Filter", BlackjackMonitor.filterName(main.reg(0x090000)), primary)
@@ -385,7 +385,7 @@ fun BlackjackMonitorScreen(onBack: () -> Unit) {
                     Spacer(Modifier.height(6.dp))
                     Text(
                         "Register values are the last ones the driver wrote, from its log. Gain is an offset inside the volume value and high power is board switches, so both show the setting the DAC was last told.",
-                        color = HwMuted, fontSize = 11.sp, lineHeight = 14.sp
+                        color = HwMuted, fontSize = 13.5.sp, lineHeight = 18.sp
                     )
                 }
             }
@@ -395,22 +395,22 @@ fun BlackjackMonitorScreen(onBack: () -> Unit) {
                 BjSection("Registers", primary)
                 BjCard(primary, bg) {
                     Row {
-                        Text("Register", color = primary, fontSize = 11.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1.4f))
-                        Text("0x30", color = primary, fontSize = 11.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
-                        Text("0x33", color = primary, fontSize = 11.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+                        Text("Register", color = primary, fontSize = 13.5.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1.4f))
+                        Text("0x30", color = primary, fontSize = 13.5.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+                        Text("0x33", color = primary, fontSize = 13.5.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
                     }
                     Spacer(Modifier.height(4.dp))
                     KEY_REGS.forEach { (reg, name) ->
-                        Row(Modifier.padding(vertical = 2.dp)) {
-                            Text("%06X %s".format(reg, name), color = Color.White, fontSize = 11.5.sp, fontFamily = FontFamily.Monospace, modifier = Modifier.weight(1.4f))
+                        Row(Modifier.padding(vertical = 3.dp)) {
+                            Text("%06X %s".format(reg, name), color = Color.White, fontSize = 13.5.sp, fontFamily = FontFamily.Monospace, modifier = Modifier.weight(1.4f))
                             listOf(0x30, 0x33).forEach { a ->
                                 val v = st.chips[a]?.reg(reg)
-                                Text(v?.let { "%02X".format(it) } ?: "--", color = if (v == null) HwMuted else Color.White, fontSize = 11.5.sp, fontFamily = FontFamily.Monospace, modifier = Modifier.weight(1f))
+                                Text(v?.let { "%02X".format(it) } ?: "--", color = if (v == null) HwMuted else Color.White, fontSize = 13.5.sp, fontFamily = FontFamily.Monospace, modifier = Modifier.weight(1f))
                             }
                         }
                     }
                     Spacer(Modifier.height(6.dp))
-                    Text("Writes seen: 0x30 ${st.chips[0x30]?.writes ?: 0}, 0x33 ${st.chips[0x33]?.writes ?: 0}", color = HwMuted, fontSize = 11.sp)
+                    Text("Writes seen: 0x30 ${st.chips[0x30]?.writes ?: 0}, 0x33 ${st.chips[0x33]?.writes ?: 0}", color = HwMuted, fontSize = 13.5.sp)
                 }
             }
 
@@ -419,9 +419,9 @@ fun BlackjackMonitorScreen(onBack: () -> Unit) {
                 BjSection("Problems", primary)
                 BjCard(primary, bg) {
                     BjRow("Failed writes", "${st.failedWrites} of ${st.writes}", primary)
-                    st.lastFailure?.let { Text(it, color = BjBad, fontSize = 11.5.sp) }
+                    st.lastFailure?.let { Text(it, color = BjBad, fontSize = 14.sp) }
                     if (st.problems.isEmpty()) {
-                        Text("No Blackjack warnings or errors in the kernel log.", color = HwMuted, fontSize = 12.sp)
+                        Text("No Blackjack warnings or errors in the kernel log.", color = HwMuted, fontSize = 14.sp)
                     } else {
                         // Same message repeated (one per power-off, say): one row with a count.
                         st.problems.groupBy { it.text }.values
@@ -437,7 +437,7 @@ fun BlackjackMonitorScreen(onBack: () -> Unit) {
             item { BjSection("Timeline", primary) }
             val events = st.events.asReversed().take(120)
             if (events.isEmpty()) {
-                item { Text(if (liveOk) "No driver events in the kernel log yet." else "Waiting for the kernel log.", color = HwMuted, fontSize = 12.sp) }
+                item { Text(if (liveOk) "No driver events in the kernel log yet." else "Waiting for the kernel log.", color = HwMuted, fontSize = 14.sp) }
             }
             items(events) { e -> BjEventRow(e) }
 
@@ -445,7 +445,7 @@ fun BlackjackMonitorScreen(onBack: () -> Unit) {
                 Spacer(Modifier.height(8.dp))
                 Text(
                     "Sources: driver links in sysfs, the kernel log (logcat -b kernel), and AudioFlinger's output threads. Read-only: this screen never writes to the driver.",
-                    color = HwMuted, fontSize = 11.sp, lineHeight = 14.sp
+                    color = HwMuted, fontSize = 13.5.sp, lineHeight = 18.sp
                 )
                 Spacer(Modifier.height(24.dp))
             }
@@ -483,7 +483,7 @@ private fun inferParams(st: BlackjackMonitor.State): Map<String, String> {
 
 @Composable
 private fun BjSection(title: String, color: Color) {
-    Text(title.uppercase(), color = color, fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp, modifier = Modifier.padding(top = 4.dp, bottom = 2.dp))
+    Text(title.uppercase(), color = color, fontSize = 15.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp, modifier = Modifier.padding(top = 4.dp, bottom = 2.dp))
 }
 
 @Composable
@@ -499,12 +499,12 @@ private fun BjCard(primary: Color, bg: Color, brush: Brush? = null, content: @Co
 
 @Composable
 private fun BjRow(label: String, value: String, accent: Color, note: String = "") {
-    Row(Modifier.fillMaxWidth().padding(vertical = 3.dp), verticalAlignment = Alignment.Top) {
-        Text(label, color = HwMuted, fontSize = 12.sp, modifier = Modifier.width(118.dp))
-        Text(value, color = Color.White, fontSize = 12.5.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+    Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.Top) {
+        Text(label, color = HwMuted, fontSize = 14.sp, modifier = Modifier.width(126.dp))
+        Text(value, color = Color.White, fontSize = 14.5.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
         if (note.isNotEmpty()) {
             Spacer(Modifier.width(6.dp))
-            Text(note, color = accent.copy(alpha = 0.8f), fontSize = 11.sp)
+            Text(note, color = accent.copy(alpha = 0.8f), fontSize = 13.sp)
         }
     }
 }
@@ -518,8 +518,8 @@ private fun BjEventRow(e: BlackjackMonitor.Event) {
         BlackjackMonitor.Kind.STREAM -> HwHionePink
         else -> Color.White
     }
-    Row(Modifier.fillMaxWidth().padding(vertical = 2.dp)) {
-        Text(bjTime(e.atMs), color = HwMuted, fontSize = 11.sp, fontFamily = FontFamily.Monospace, modifier = Modifier.width(96.dp))
-        Text(e.text, color = c, fontSize = 12.sp, modifier = Modifier.weight(1f))
+    Row(Modifier.fillMaxWidth().padding(vertical = 3.dp)) {
+        Text(bjTime(e.atMs), color = HwMuted, fontSize = 13.sp, fontFamily = FontFamily.Monospace, modifier = Modifier.width(104.dp))
+        Text(e.text, color = c, fontSize = 14.sp, modifier = Modifier.weight(1f))
     }
 }

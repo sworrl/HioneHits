@@ -26,7 +26,7 @@ import com.hione.player.HioneArt
 import com.hione.player.HioneTealBright
 
 /**
- * System-wide Standard Hatsune Hione Branded Back Button.
+ * System-wide Standard Oki Hione Branded Back Button.
  * Replicates the exact size, placement, and springy haptic tactile feel across every screen.
  */
 @Composable
@@ -89,7 +89,7 @@ fun HioneBrandMark(
 }
 
 /**
- * System-wide Standard Hatsune Hione Top Bar Header.
+ * System-wide Standard Oki Hione Top Bar Header.
  * Combines the branded back button, Audiowide title, the Hione brand glyph, and optional actions.
  */
 @Composable

@@ -38,7 +38,7 @@ import kotlinx.coroutines.launch
 private val HioneMuted get() = Mascot.color(0xFF9EC4C7)
 
 /**
- * Hatsune Hione File System & Audio Ingestion Observatory Modal.
+ * Oki Hione File System & Audio Ingestion Observatory Modal.
  * High-legibility scaled dashboard for compact Hi-DPI DAP screens.
  * Displays storage volumes, codec taxonomy, live MediaScanner rescan,
  * rsync ingestion server telemetry, and real-time indexing logs.

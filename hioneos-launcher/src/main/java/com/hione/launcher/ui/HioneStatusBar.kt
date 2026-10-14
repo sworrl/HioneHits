@@ -317,10 +317,30 @@ fun HioneStatusBar(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(6.dp)
             ) {
-                // Only the clock opens the clock app. The notification icons beside it fall through
-                // to the bar's own click, which opens the shade.
-                Text(state.clock, color = textColor, fontSize = 12.5.sp, fontWeight = FontWeight.Bold, fontFamily = AudiowideFont, letterSpacing = 0.3.sp, maxLines = 1, softWrap = false,
-                    modifier = if (onClockClick != null) Modifier.clickable(interactionSource = clockInteraction, indication = null, onClick = onClockClick) else Modifier)
+                // Clock with Rainbow Beating Heart Colon
+                val clockParts = remember(state.clock) {
+                    if (state.clock.contains(":")) {
+                        val idx = state.clock.indexOf(":")
+                        Pair(state.clock.substring(0, idx), state.clock.substring(idx + 1))
+                    } else {
+                        Pair(state.clock, "")
+                    }
+                }
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = if (onClockClick != null) Modifier.clickable(interactionSource = clockInteraction, indication = null, onClick = onClockClick) else Modifier
+                ) {
+                    Text(clockParts.first, color = textColor, fontSize = 12.5.sp, fontWeight = FontWeight.Bold, fontFamily = AudiowideFont, letterSpacing = 0.3.sp, maxLines = 1, softWrap = false)
+                    if (clockParts.second.isNotEmpty()) {
+                        HioneRainbowHeartColon(
+                            isPlaying = state.isPlaying,
+                            bpm = state.bpm,
+                            size = 5.5.dp,
+                            modifier = Modifier.padding(horizontal = 2.dp)
+                        )
+                        Text(clockParts.second, color = textColor, fontSize = 12.5.sp, fontWeight = FontWeight.Bold, fontFamily = AudiowideFont, letterSpacing = 0.3.sp, maxLines = 1, softWrap = false)
+                    }
+                }
                 if (notificationApps.isNotEmpty()) {
                     HioneNotificationTrayIcons(notificationApps, max = trayMax, size = glyph, textColor = textColor)
                 }
@@ -409,19 +429,36 @@ fun HioneStatusBar(
                             }
                         ))
                 }
-                Box(contentAlignment = Alignment.Center) {
-                    Canvas(Modifier.width(20.dp).height(11.dp)) {
-                        val bodyW = size.width - 3.dp.toPx()
-                        val r = CornerRadius(2.dp.toPx(), 2.dp.toPx())
-                        drawRoundRect(color = batteryColor.copy(alpha = 0.85f), size = Size(bodyW, size.height), cornerRadius = r, style = Stroke(1.2.dp.toPx()))
-                        drawRoundRect(color = batteryColor.copy(alpha = 0.85f), topLeft = Offset(bodyW + 0.5.dp.toPx(), size.height * 0.3f), size = Size(2.dp.toPx(), size.height * 0.4f), cornerRadius = CornerRadius(1f, 1f))
-                        val inset = 2.dp.toPx()
-                        // No fill at all when the level is unknown (negative) — an empty cell, not 0 %.
-                        val fillW = if (batteryKnown)
-                            ((bodyW - inset * 2) * (state.batteryPct / 100f)).coerceAtLeast(0f) else 0f
-                        drawRoundRect(color = batteryColor, topLeft = Offset(inset, inset), size = Size(fillW, size.height - inset * 2), cornerRadius = CornerRadius(1.dp.toPx(), 1.dp.toPx()))
+                val pkcell = com.hione.launcher.rememberUnlockEnabled(com.hione.launcher.bpm.HioneSecrets.DANKPODS_PKCELL)
+                val negi = com.hione.launcher.rememberUnlockEnabled(com.hione.launcher.bpm.HioneSecrets.NEGI_BATTERY)
+                val isLowBat = batteryKnown && state.batteryPct <= 20 && !state.isCharging
+                if (pkcell) {
+                    com.hione.launcher.HionePkcellBatteryGlyph(
+                        pct = state.batteryPct,
+                        charging = state.isCharging,
+                        low = isLowBat
+                    )
+                } else if (negi) {
+                    com.hione.launcher.HioneNegiBatteryGlyph(
+                        pct = state.batteryPct,
+                        charging = state.isCharging,
+                        low = isLowBat
+                    )
+                } else {
+                    Box(contentAlignment = Alignment.Center) {
+                        Canvas(Modifier.width(20.dp).height(11.dp)) {
+                            val bodyW = size.width - 3.dp.toPx()
+                            val r = CornerRadius(2.dp.toPx(), 2.dp.toPx())
+                            drawRoundRect(color = batteryColor.copy(alpha = 0.85f), size = Size(bodyW, size.height), cornerRadius = r, style = Stroke(1.2.dp.toPx()))
+                            drawRoundRect(color = batteryColor.copy(alpha = 0.85f), topLeft = Offset(bodyW + 0.5.dp.toPx(), size.height * 0.3f), size = Size(2.dp.toPx(), size.height * 0.4f), cornerRadius = CornerRadius(1f, 1f))
+                            val inset = 2.dp.toPx()
+                            // No fill at all when the level is unknown (negative) — an empty cell, not 0 %.
+                            val fillW = if (batteryKnown)
+                                ((bodyW - inset * 2) * (state.batteryPct / 100f)).coerceAtLeast(0f) else 0f
+                            drawRoundRect(color = batteryColor, topLeft = Offset(inset, inset), size = Size(fillW, size.height - inset * 2), cornerRadius = CornerRadius(1.dp.toPx(), 1.dp.toPx()))
+                        }
+                        if (state.isCharging) Icon(Icons.Default.Bolt, contentDescription = "Charging", tint = Color.White, modifier = Modifier.size(9.dp))
                     }
-                    if (state.isCharging) Icon(Icons.Default.Bolt, contentDescription = "Charging", tint = Color.White, modifier = Modifier.size(9.dp))
                 }
             }
         }

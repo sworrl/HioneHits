@@ -97,7 +97,7 @@ data class MascotPack(
     /** Short mascot name: "Hione". */
     val name: String,
     val nameJa: String,
-    /** "Hatsune Hione", family name first. */
+    /** "Oki Hione", family name first. */
     val fullName: String,
     val fullNameJa: String,
     /** "HioneOS". */

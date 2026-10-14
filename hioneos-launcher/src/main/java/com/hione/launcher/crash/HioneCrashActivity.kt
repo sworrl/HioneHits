@@ -36,7 +36,7 @@ import com.hione.launcher.R
 import kotlin.system.exitProcess
 
 /**
- * Hatsune Hione OS Fullscreen Kernel & Subsystem Panic Crash Screen.
+ * Oki Hione OS Fullscreen Kernel & Subsystem Panic Crash Screen.
  * Renders Morty "Get your s**t together!" fullscreen with diagnostic telemetry
  * and instant recovery controls.
  */

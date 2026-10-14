@@ -76,10 +76,10 @@ fun HioneTheme(content: @Composable () -> Unit) {
 @Composable
 fun Section(title: String, note: String? = null, hot: Boolean = false, content: @Composable ColumnScope.() -> Unit) {
     Column(Modifier.fillMaxWidth().glassCard(hot).padding(14.dp)) {
-        Text(title.uppercase(), color = if (hot) HionePinkBright else HioneTealBright, fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+        Text(title.uppercase(), color = if (hot) HionePinkBright else HioneTealBright, fontSize = 15.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
         if (note != null) {
             Spacer(Modifier.height(2.dp))
-            Text(note, color = HioneMuted, fontSize = 10.5.sp, lineHeight = 13.sp)
+            Text(note, color = HioneMuted, fontSize = 13.5.sp, lineHeight = 17.sp)
         }
         Spacer(Modifier.height(8.dp))
         content()
@@ -88,7 +88,7 @@ fun Section(title: String, note: String? = null, hot: Boolean = false, content: 
 
 @Composable
 fun BodyText(text: String, color: Color = HioneMuted) {
-    Text(text, color = color, fontSize = 11.5.sp, lineHeight = 15.sp)
+    Text(text, color = color, fontSize = 14.5.sp, lineHeight = 19.sp)
 }
 
 @Composable
@@ -103,16 +103,16 @@ fun ActionButton(text: String, modifier: Modifier = Modifier, danger: Boolean = 
             disabledContentColor = HioneMuted,
         ),
         shape = RoundedCornerShape(10.dp),
-        modifier = modifier.height(38.dp),
-    ) { Text(text, fontSize = 12.sp, fontWeight = FontWeight.Bold) }
+        modifier = modifier.height(42.dp),
+    ) { Text(text, fontSize = 14.5.sp, fontWeight = FontWeight.Bold) }
 }
 
 @Composable
 fun ToggleRow(title: String, summary: String?, checked: Boolean, enabled: Boolean = true, onChange: (Boolean) -> Unit) {
     Row(Modifier.fillMaxWidth().padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
         Column(Modifier.weight(1f)) {
-            Text(title, color = Color.White, fontSize = 13.5.sp, fontWeight = FontWeight.SemiBold)
-            if (summary != null) Text(summary, color = HioneMuted, fontSize = 11.sp, lineHeight = 14.sp)
+            Text(title, color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+            if (summary != null) Text(summary, color = HioneMuted, fontSize = 13.5.sp, lineHeight = 17.sp)
         }
         Spacer(Modifier.width(10.dp))
         Switch(
@@ -135,8 +135,8 @@ fun RadioRow(title: String, summary: String?, selected: Boolean, onClick: () -> 
         RadioButton(selected = selected, onClick = onClick, colors = RadioButtonDefaults.colors(selectedColor = HioneTealBright, unselectedColor = HioneMuted))
         Spacer(Modifier.width(4.dp))
         Column {
-            Text(title, color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
-            if (summary != null) Text(summary, color = HioneMuted, fontSize = 11.sp, lineHeight = 14.sp)
+            Text(title, color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+            if (summary != null) Text(summary, color = HioneMuted, fontSize = 13.5.sp, lineHeight = 17.sp)
         }
     }
 }
@@ -146,7 +146,7 @@ fun Chip(text: String, selected: Boolean, onClick: () -> Unit) {
     Text(
         text,
         color = if (selected) HioneDarkBg else HioneTealBright,
-        fontSize = 11.5.sp,
+        fontSize = 14.sp,
         fontWeight = FontWeight.Bold,
         modifier = Modifier
             .clip(RoundedCornerShape(20.dp))
@@ -161,7 +161,7 @@ fun Badge(text: String, color: Color) {
     Text(
         text.uppercase(),
         color = color,
-        fontSize = 9.sp,
+        fontSize = 12.sp,
         fontWeight = FontWeight.Bold,
         letterSpacing = 0.8.sp,
         modifier = Modifier

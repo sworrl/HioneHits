@@ -65,7 +65,7 @@ private val KawaiiSurface = Color(0xF2200E26)
 private val KawaiiTextMuted = Color(0xFFD8B4E2)
 
 /**
- * Hatsune Hione Ultra-Kawaii BPM Observatory & Project DIVA Rhythm Arcade.
+ * Oki Hione Ultra-Kawaii BPM Observatory & Project DIVA Rhythm Arcade.
  * Packed with juicy tactile visual feedback, rainbow fever gauges, SSS+ performance grades,
  * particle explosions, and high-readability typography for the HiBy M500 DAP screen.
  */
@@ -2041,18 +2041,21 @@ private fun ColumnScope.BpmBeatNodeStage(
         lastTapTimeMs = now
         lastTappedLane = lane
 
-        // Tap tempo tracking
-        if (tapTimestamps.isNotEmpty() && now - tapTimestamps.last() > 2000L) {
-            tapTimestamps.clear()
-            tapCounter = 0
-        }
-        tapTimestamps.add(now)
-        tapCounter++
-        if (tapTimestamps.size > 8) tapTimestamps.removeAt(0)
-        if (tapTimestamps.size >= 2) {
-            val intervals = (1 until tapTimestamps.size).map { (tapTimestamps[it] - tapTimestamps[it - 1]).toDouble() }
-            val avg = intervals.average()
-            if (avg > 0) calculatedTapBpm = (60_000.0 / avg).toFloat().coerceIn(20f, 999f)
+        // Tap tempo tracking (ignore <90ms simultaneous 2-thumb chord delta)
+        val prevTap = tapTimestamps.lastOrNull() ?: 0L
+        if (now - prevTap >= 90L) {
+            if (tapTimestamps.isNotEmpty() && now - prevTap > 2000L) {
+                tapTimestamps.clear()
+                tapCounter = 0
+            }
+            tapTimestamps.add(now)
+            tapCounter++
+            if (tapTimestamps.size > 8) tapTimestamps.removeAt(0)
+            if (tapTimestamps.size >= 2) {
+                val intervals = (1 until tapTimestamps.size).map { (tapTimestamps[it] - tapTimestamps[it - 1]).toDouble() }
+                val avg = intervals.average()
+                if (avg > 0) calculatedTapBpm = (60_000.0 / avg).toFloat().coerceIn(20f, 999f)
+            }
         }
 
         val tier = HioneBeatClickerEngine.rhythmTier.value
@@ -2061,13 +2064,29 @@ private fun ColumnScope.BpmBeatNodeStage(
             leniency = tier.leniency * HioneStagePerformance.windowScale(),
             bonusMs = HioneBeatClickerEngine.timingWindowBonusMs
         )
-        val signedOffset: Int? = if (isPlaying) HioneRhythmTiming.signedOffsetToBeat(
-            tapEpochMs = System.currentTimeMillis(),
-            lastPulseEpochMs = HioneBpmEngine.state.value.lastPulseEpochMs,
-            beatPeriodMs = beatIntervalMs,
-            calibrationMs = HioneRhythmCalibration.offsetMs.value
-        ) else null
-        val accuracy: HitAccuracy? = signedOffset?.let { HioneRhythmTiming.judge(it, windows) }
+        val tapWallMs = System.currentTimeMillis()
+        val calMs = HioneRhythmCalibration.offsetMs.value
+        val targetEpochMs = tapWallMs - calMs
+        HioneHighwayGrid.syncAnchor(HioneBpmEngine.state.value.lastPulseEpochMs, beatIntervalMs, tapWallMs)
+        val absBeatIdx = HioneHighwayGrid.nearestBeatIndex(targetEpochMs, beatIntervalMs)
+        val nearestBeatEpoch = HioneHighwayGrid.beatEpochAt(absBeatIdx, beatIntervalMs)
+        val signedOffset: Int? = if (isPlaying && beatIntervalMs in 60L..3000L) {
+            (targetEpochMs - nearestBeatEpoch).toInt()
+        } else null
+
+        val rawAccuracy: HitAccuracy? = signedOffset?.let { HioneRhythmTiming.judge(it, windows) }
+        val reqLanes = if (activeLanes > 1) noteLanesForBeat(absBeatIdx.toInt(), activeLanes) else listOf(0)
+        val wrongFret = activeLanes > 1 && rawAccuracy != null && rawAccuracy != HitAccuracy.MISS && lane !in reqLanes
+        val accuracy: HitAccuracy? = if (wrongFret) HitAccuracy.MISS else rawAccuracy
+        var powerChordCompleted = false
+        if (accuracy != null && accuracy != HitAccuracy.MISS && !wrongFret) {
+            val wasAllHit = HioneHighwayGrid.areAllLanesHit(absBeatIdx, reqLanes)
+            HioneHighwayGrid.markLaneHit(absBeatIdx, lane)
+            if (reqLanes.size > 1 && !wasAllHit && HioneHighwayGrid.areAllLanesHit(absBeatIdx, reqLanes)) {
+                powerChordCompleted = true
+            }
+        }
+
         timingOffsetMs = if (signedOffset != null) HioneRhythmTiming.displayOffsetMs(signedOffset, windows) else 0
 
         com.hione.launcher.haptics.HioneHaptics.beat(ctx, accuracy?.hapticStrength ?: 0)
@@ -2082,15 +2101,22 @@ private fun ColumnScope.BpmBeatNodeStage(
             }
         } else {
             val comboBefore = clickerCombo
-            HioneRhythmCalibration.recordJudgedDeviation(signedOffset)
-            HioneBeatClickerEngine.tap(accuracy, liveBpm, tier.scoreScale)
+            if (!wrongFret) {
+                HioneRhythmCalibration.recordJudgedDeviation(signedOffset)
+            }
+            val chordMult = if (powerChordCompleted) 2.0f else 1.0f
+            HioneBeatClickerEngine.tap(accuracy, liveBpm, tier.scoreScale * chordMult)
+            if (powerChordCompleted) {
+                HioneGameFx.pop("⚡ POWER CHORD! +2x", 0xFF00FFCC, big = true)
+                com.hione.launcher.haptics.HioneHaptics.confirm(ctx)
+            }
             val comboAfter = HioneBeatClickerEngine.combo.value
             if (HioneBeatClickerEngine.comboMultiplier(comboAfter) >
                 HioneBeatClickerEngine.comboMultiplier(comboBefore)) {
                 com.hione.launcher.haptics.HioneHaptics.confirm(ctx)
             }
-            val pts = ((accuracy.seasonPoints * 5L +
-                comboBefore * (if (accuracy.isGreatOrBetter) 15L else 5L)) * tier.scoreScale).toLong()
+            val pts = (((accuracy.seasonPoints * 5L +
+                comboBefore * (if (accuracy.isGreatOrBetter) 15L else 5L)) * tier.scoreScale) * chordMult).toLong()
             HioneBpmSeasonsEngine.recordTap(
                 accuracy, comboBefore, pts,
                 if (hasLiveTempo) liveBpm else 0f
@@ -2130,8 +2156,13 @@ private fun ColumnScope.BpmBeatNodeStage(
             val nearMs = if (accuracy == HitAccuracy.GREAT) HioneRhythmTiming.nearPerfectMissMs(signedOffset, windows) else null
             if (nearMs != null) HioneStagePerformance.onNearPerfect()
             val coach = HioneRhythmTiming.nudgeHint(if (chaosNow.mirrorsBar) -timingOffsetMs else timingOffsetMs, windows)
-            judgmentTitle = if (nearMs != null) "SO CLOSE · ${nearMs}ms off PERFECT"
-                else "${accuracy.label} · $coach"
+            val fretTargetLabel = reqLanes.joinToString("+") { "L${it + 1}" }
+            judgmentTitle = when {
+                wrongFret -> "WRONG FRET · HIT $fretTargetLabel"
+                powerChordCompleted -> "⚡ POWER CHORD · ${accuracy.label}!"
+                nearMs != null -> "SO CLOSE · ${nearMs}ms off PERFECT"
+                else -> "${accuracy.label} · $coach"
+            }
             judgmentColor = when (accuracy) {
                 HitAccuracy.PERFECT -> KawaiiHotPink
                 HitAccuracy.GREAT -> KawaiiSakuraPink
@@ -2263,6 +2294,7 @@ private fun ColumnScope.BpmBeatNodeStage(
             hitFraction = 0.82f,
             laneCount = activeLanes,
             lastTappedLane = lastTappedLane,
+            isPlaying = isPlaying,
             onTapLane = { lane -> performTap(lane) },
             skin = skin,
             fever = feverSeconds > 0,

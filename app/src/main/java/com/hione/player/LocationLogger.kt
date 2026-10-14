@@ -13,7 +13,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
 /**
- * Hatsune Hione Per-Listen Context & Atmospheric Meteorological Logger.
+ * Oki Hione Per-Listen Context & Atmospheric Meteorological Logger.
  * Records precise listening events correlated with real-time Open-Meteo weather
  * metrics (temp, humidity, wind, condition code), GPS coordinates, and DAC hardware state
  * directly into HioneMetricDatabase for deep music telemetry intelligence.

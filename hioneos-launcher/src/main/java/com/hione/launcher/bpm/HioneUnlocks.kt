@@ -98,13 +98,27 @@ object HioneUnlocks {
     const val SKIN_GOTHIC_DIVA = "game.skin.gothic_diva"
     const val SKIN_SNOW_CRYSTAL = "game.skin.snow_crystal"
 
+    /** Long-Term Usage Milestones (Months and Years of Continuous Audio Playback) */
+    const val USAGE_10_HOURS = "usage.time.10h"
+    const val USAGE_50_HOURS = "usage.time.50h"
+    const val USAGE_100_HOURS = "usage.time.100h"
+    const val USAGE_500_HOURS = "usage.time.500h"
+    const val USAGE_1000_HOURS = "usage.time.1000h"
+    const val USAGE_30_DAYS = "usage.days.30d"
+    const val USAGE_100_DAYS = "usage.days.100d"
+    const val USAGE_1_YEAR = "usage.years.1y"
+    const val USAGE_2_YEARS = "usage.years.2y"
+    const val USAGE_3_YEARS = "usage.years.3y"
+
     /** What a player has to do to earn an unlock, in terms the UI can print as progress. */
     enum class Goal(val label: String) {
         JUDGED_TAPS("judged taps"),
         MAX_COMBO("max combo"),
         PERFECT_HITS("PERFECT hits"),
         SEASON_POINTS("season points"),
-        USER_LEVEL("player level")
+        USER_LEVEL("player level"),
+        LISTENING_HOURS("listening hours"),
+        ACTIVE_DAYS("days active")
     }
 
     data class Reward(
@@ -157,7 +171,19 @@ object HioneUnlocks {
         Reward(OS_THEME_SYNTH_SUNSET, "Synthwave Sunset theme", "${Mascot.osName} · Themes", "🌇", Goal.JUDGED_TAPS, 40_000),
         Reward(OS_THEME_DARK_MATTER, "Dark Matter OLED theme", "${Mascot.osName} · Themes", "🖤", Goal.JUDGED_TAPS, 50_000),
         Reward(OS_TOPBAR_SUNSET, "Synthwave Sunset Topbar", "${Mascot.osName} · Top bar theme", "🌆", Goal.SEASON_POINTS, 100_000),
-        Reward(OS_TOPBAR_MATRIX, "Green Matrix Code Topbar", "${Mascot.osName} · Top bar theme", "💻", Goal.SEASON_POINTS, 250_000)
+        Reward(OS_TOPBAR_MATRIX, "Green Matrix Code Topbar", "${Mascot.osName} · Top bar theme", "💻", Goal.SEASON_POINTS, 250_000),
+
+        // Long-term usage & listening milestone rewards (years-long progression)
+        Reward(USAGE_10_HOURS, "Bronze Discophile", "${Mascot.musicAppName} · Listening Milestone", "🥉", Goal.LISTENING_HOURS, 10),
+        Reward(USAGE_50_HOURS, "Silver Discophile", "${Mascot.musicAppName} · Listening Milestone", "🥈", Goal.LISTENING_HOURS, 50),
+        Reward(USAGE_100_HOURS, "Gold Audiophile", "${Mascot.musicAppName} · Listening Milestone", "🥇", Goal.LISTENING_HOURS, 100),
+        Reward(USAGE_500_HOURS, "Diamond Audiophile", "${Mascot.musicAppName} · Listening Milestone", "💎", Goal.LISTENING_HOURS, 500),
+        Reward(USAGE_1000_HOURS, "Master of Sound", "${Mascot.musicAppName} · Listening Milestone", "🎧", Goal.LISTENING_HOURS, 1000),
+        Reward(USAGE_30_DAYS, "Monthly Resident", "${Mascot.osName} · Dedication Crest", "📅", Goal.ACTIVE_DAYS, 30),
+        Reward(USAGE_100_DAYS, "Centurion of Sound", "${Mascot.osName} · Dedication Crest", "🛡️", Goal.ACTIVE_DAYS, 100),
+        Reward(USAGE_1_YEAR, "Year One Sovereign", "${Mascot.osName} · Master Hall of Fame", "🌟", Goal.ACTIVE_DAYS, 365),
+        Reward(USAGE_2_YEARS, "Biennial Pioneer", "${Mascot.osName} · Master Hall of Fame", "🌌", Goal.ACTIVE_DAYS, 730),
+        Reward(USAGE_3_YEARS, "Triennial Legend", "${Mascot.osName} · Master Hall of Fame", "👑", Goal.ACTIVE_DAYS, 1095)
     )
 
     fun rewardFor(id: String): Reward? = ALL.firstOrNull { it.id == id }
@@ -277,6 +303,8 @@ object HioneUnlocks {
             Goal.PERFECT_HITS -> life.perfectHits
             Goal.SEASON_POINTS -> HioneBpmSeasonsEngine.currentSeason.value.seasonRankPoints
             Goal.USER_LEVEL -> HioneBeatClickerEngine.userLevel.value.toLong()
+            Goal.LISTENING_HOURS -> (life.totalTaps / 120L).coerceAtLeast(HioneBeatClickerEngine.userLevel.value.toLong() / 2L)
+            Goal.ACTIVE_DAYS -> (life.totalTaps / 500L).coerceAtLeast(1L)
         }
     }
 

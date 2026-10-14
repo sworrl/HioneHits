@@ -192,7 +192,7 @@ fun HardwareSettingsScreen(onBack: () -> Unit) {
                     Text(
                         "M500 HARDWARE & DAC",
                         color = Color.White,
-                        fontSize = 17.sp,
+                        fontSize = 19.sp,
                         fontWeight = FontWeight.Bold
                     )
                 },
@@ -232,12 +232,12 @@ fun HardwareSettingsScreen(onBack: () -> Unit) {
                         .padding(16.dp)
                 ) {
                     // The combo in plain words, in the combo's own color.
-                    Text(dacPal.label, color = dacPrimary, fontSize = 16.sp, fontWeight = FontWeight.Bold, lineHeight = 20.sp)
+                    Text(dacPal.label, color = dacPrimary, fontSize = 18.sp, fontWeight = FontWeight.Bold, lineHeight = 23.sp)
                     Spacer(Modifier.height(10.dp))
                     // Status reflects what was actually probed: whether the bridge is installed,
                     // and the values the DAC was last told (persist.vendor.audio.hione.*).
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Box(Modifier.size(10.dp).clip(CircleShape).background(when (bridgeOk) { true -> Mascot.color(0xFF1ABC9C); false -> Color(0xFFF1C40F); null -> HwMuted }))
+                        Box(Modifier.size(11.dp).clip(CircleShape).background(when (bridgeOk) { true -> Mascot.color(0xFF1ABC9C); false -> Color(0xFFF1C40F); null -> HwMuted }))
                         Spacer(Modifier.width(8.dp))
                         Text(
                             when (bridgeOk) {
@@ -246,7 +246,7 @@ fun HardwareSettingsScreen(onBack: () -> Unit) {
                                 false -> "${Mascot.osName} system bridge not found"
                             },
                             color = if (bridgeOk == true) dacSecondary else HwMuted,
-                            fontSize = 13.sp,
+                            fontSize = 15.sp,
                             fontWeight = FontWeight.Bold
                         )
                     }
@@ -258,12 +258,12 @@ fun HardwareSettingsScreen(onBack: () -> Unit) {
                             null -> "Reading the DAC settings…"
                         },
                         color = HwMuted,
-                        fontSize = 12.sp,
-                        lineHeight = 16.sp
+                        fontSize = 14.sp,
+                        lineHeight = 19.sp
                     )
                     dacProblem?.let {
                         Spacer(Modifier.height(6.dp))
-                        Text(it, color = Color(0xFFF1C40F), fontSize = 12.sp, lineHeight = 16.sp)
+                        Text(it, color = Color(0xFFF1C40F), fontSize = 14.sp, lineHeight = 19.sp)
                     }
                 }
             }
@@ -280,7 +280,7 @@ fun HardwareSettingsScreen(onBack: () -> Unit) {
                         .border(1.dp, dacPrimary.copy(alpha = 0.2f), RoundedCornerShape(14.dp))
                         .padding(14.dp)
                 ) {
-                    Text("DIGITAL FILTER", color = dacPrimary, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    Text("DIGITAL FILTER", color = dacPrimary, fontSize = 14.5.sp, fontWeight = FontWeight.Bold)
                     Spacer(Modifier.height(8.dp))
 
                     CirrusLogicManager.DigitalFilter.values().forEach { filter ->
@@ -291,7 +291,7 @@ fun HardwareSettingsScreen(onBack: () -> Unit) {
                                     csFilter = filter
                                     applyDac { CirrusLogicManager.setDigitalFilter(ctx, filter) }
                                 }
-                                .padding(vertical = 6.dp),
+                                .padding(vertical = 8.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             RadioButton(
@@ -304,14 +304,14 @@ fun HardwareSettingsScreen(onBack: () -> Unit) {
                             )
                             Spacer(Modifier.width(8.dp))
                             Column {
-                                Text(filter.label, color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
-                                Text(filter.description, color = HwMuted, fontSize = 11.sp, lineHeight = 14.sp)
+                                Text(filter.label, color = Color.White, fontSize = 15.5.sp, fontWeight = FontWeight.SemiBold)
+                                Text(filter.description, color = HwMuted, fontSize = 13.5.sp, lineHeight = 18.sp)
                             }
                         }
                     }
 
                     Spacer(Modifier.height(14.dp))
-                    Text("HEADPHONE GAIN", color = dacPrimary, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    Text("HEADPHONE GAIN", color = dacPrimary, fontSize = 14.5.sp, fontWeight = FontWeight.Bold)
                     Spacer(Modifier.height(8.dp))
 
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -319,7 +319,7 @@ fun HardwareSettingsScreen(onBack: () -> Unit) {
                             Box(
                                 Modifier
                                     .weight(1f)
-                                    .height(42.dp)
+                                    .height(48.dp)
                                     .clip(RoundedCornerShape(8.dp))
                                     .background(if (csGain == gain) dacPrimary else HwSurface2)
                                     .clickable {
@@ -328,13 +328,13 @@ fun HardwareSettingsScreen(onBack: () -> Unit) {
                                     },
                                 contentAlignment = Alignment.Center
                             ) {
-                                Text(gain.label, color = if (csGain == gain) Color.Black else Color.White, fontSize = 12.5.sp, fontWeight = FontWeight.Bold)
+                                Text(gain.label, color = if (csGain == gain) Color.Black else Color.White, fontSize = 14.5.sp, fontWeight = FontWeight.Bold)
                             }
                         }
                     }
 
                     Spacer(Modifier.height(14.dp))
-                    Text("OUTPUT ROUTING (3.5mm SE / 4.4mm BAL)", color = dacPrimary, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    Text("OUTPUT ROUTING (3.5mm SE / 4.4mm BAL)", color = dacPrimary, fontSize = 14.5.sp, fontWeight = FontWeight.Bold)
                     Spacer(Modifier.height(8.dp))
 
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -342,7 +342,7 @@ fun HardwareSettingsScreen(onBack: () -> Unit) {
                             Box(
                                 Modifier
                                     .weight(1f)
-                                    .height(42.dp)
+                                    .height(48.dp)
                                     .clip(RoundedCornerShape(8.dp))
                                     .background(if (csOutput == mode) HwHionePink else HwSurface2)
                                     .clickable {
@@ -351,7 +351,7 @@ fun HardwareSettingsScreen(onBack: () -> Unit) {
                                     },
                                 contentAlignment = Alignment.Center
                             ) {
-                                Text(mode.label, color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                Text(mode.label, color = Color.White, fontSize = 14.5.sp, fontWeight = FontWeight.Bold)
                             }
                         }
                     }
@@ -379,14 +379,14 @@ fun HardwareSettingsScreen(onBack: () -> Unit) {
                     }
 
                     Spacer(Modifier.height(10.dp))
-                    Text(if (csDsdComp == null) "DSD GAIN COMPENSATION (not set)" else "DSD GAIN COMPENSATION", color = dacPrimary, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    Text(if (csDsdComp == null) "DSD GAIN COMPENSATION (not set)" else "DSD GAIN COMPENSATION", color = dacPrimary, fontSize = 14.5.sp, fontWeight = FontWeight.Bold)
                     Spacer(Modifier.height(8.dp))
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         listOf(0 to "0 dB (Direct)", 6 to "+6 dB (SACD level)").forEach { (db, label) ->
                             Box(
                                 Modifier
                                     .weight(1f)
-                                    .height(36.dp)
+                                    .height(44.dp)
                                     .clip(RoundedCornerShape(8.dp))
                                     .background(if (csDsdComp == db) dacPrimary else HwSurface2)
                                     .clickable {
@@ -395,14 +395,14 @@ fun HardwareSettingsScreen(onBack: () -> Unit) {
                                     },
                                 contentAlignment = Alignment.Center
                             ) {
-                                Text(label, color = if (csDsdComp == db) Color.Black else Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                Text(label, color = if (csDsdComp == db) Color.Black else Color.White, fontSize = 14.5.sp, fontWeight = FontWeight.Bold)
                             }
                         }
                     }
 
                     Spacer(Modifier.height(14.dp))
                     val bal = csBalance
-                    Text("L/R BALANCE (${when { bal == null -> "unknown"; bal.toInt() == 0 -> "Center"; bal > 0 -> "+${bal.toInt()} R"; else -> "${bal.toInt()} L" }})", color = dacPrimary, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    Text("L/R BALANCE (${when { bal == null -> "unknown"; bal.toInt() == 0 -> "Center"; bal > 0 -> "+${bal.toInt()} R"; else -> "${bal.toInt()} L" }})", color = dacPrimary, fontSize = 14.5.sp, fontWeight = FontWeight.Bold)
                     Slider(
                         value = bal ?: 0f,
                         enabled = bal != null,
@@ -494,7 +494,7 @@ fun HardwareSettingsScreen(onBack: () -> Unit) {
                     Spacer(Modifier.height(10.dp))
                     Text(
                         if (usbDacRate == null) "SAMPLE RATE  ·  NOT SET (gadget would use ${UsbDacManager.DEFAULT_SAMPLE_RATE / 1000}k)" else "SAMPLE RATE",
-                        color = HwHioneTeal, fontSize = 12.sp, fontWeight = FontWeight.Bold
+                        color = HwHioneTeal, fontSize = 14.5.sp, fontWeight = FontWeight.Bold
                     )
                     Spacer(Modifier.height(6.dp))
 
@@ -503,8 +503,8 @@ fun HardwareSettingsScreen(onBack: () -> Unit) {
                             Box(
                                 Modifier
                                     .weight(1f)
-                                    .height(34.dp)
-                                    .clip(RoundedCornerShape(6.dp))
+                                    .height(42.dp)
+                                    .clip(RoundedCornerShape(8.dp))
                                     .background(if (usbDacRate == rate) HwHioneTeal else HwSurface2)
                                     .clickable {
                                         usbDacRate = rate
@@ -514,7 +514,7 @@ fun HardwareSettingsScreen(onBack: () -> Unit) {
                                     },
                                 contentAlignment = Alignment.Center
                             ) {
-                                Text(label, color = if (usbDacRate == rate) Color.Black else Color.White, fontSize = 11.5.sp, fontWeight = FontWeight.Bold)
+                                Text(label, color = if (usbDacRate == rate) Color.Black else Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
                             }
                         }
                     }
@@ -522,7 +522,7 @@ fun HardwareSettingsScreen(onBack: () -> Unit) {
                     Spacer(Modifier.height(10.dp))
                     Text(
                         if (usbDacBits == null) "BIT DEPTH  ·  NOT SET (gadget would use ${UsbDacManager.DEFAULT_BIT_DEPTH}-bit)" else "BIT DEPTH",
-                        color = HwHioneTeal, fontSize = 12.sp, fontWeight = FontWeight.Bold
+                        color = HwHioneTeal, fontSize = 14.5.sp, fontWeight = FontWeight.Bold
                     )
                     Spacer(Modifier.height(6.dp))
 
@@ -531,8 +531,8 @@ fun HardwareSettingsScreen(onBack: () -> Unit) {
                             Box(
                                 Modifier
                                     .weight(1f)
-                                    .height(34.dp)
-                                    .clip(RoundedCornerShape(6.dp))
+                                    .height(42.dp)
+                                    .clip(RoundedCornerShape(8.dp))
                                     .background(if (usbDacBits == bits) HwHioneTeal else HwSurface2)
                                     .clickable {
                                         usbDacBits = bits
@@ -542,7 +542,7 @@ fun HardwareSettingsScreen(onBack: () -> Unit) {
                                     },
                                 contentAlignment = Alignment.Center
                             ) {
-                                Text(label, color = if (usbDacBits == bits) Color.Black else Color.White, fontSize = 11.5.sp, fontWeight = FontWeight.Bold)
+                                Text(label, color = if (usbDacBits == bits) Color.Black else Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
                             }
                         }
                     }
@@ -567,10 +567,10 @@ fun HardwareSettingsScreen(onBack: () -> Unit) {
                         effective != cpuProfile -> "Now: ${CpuPerformance.label(cpuProfile)}, running as Balanced while charging"
                         else -> "Now: ${CpuPerformance.label(cpuProfile)}"
                     }
-                    Text(nowLine, color = Color.White, fontSize = 13.5.sp, fontWeight = FontWeight.SemiBold)
+                    Text(nowLine, color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
                     Text(
                         "Max speed: little cores ${CpuPerformance.formatKhz(cpuCaps.first)}, big cores ${CpuPerformance.formatKhz(cpuCaps.second)}",
-                        color = HwMuted, fontSize = 11.5.sp, lineHeight = 15.sp
+                        color = HwMuted, fontSize = 14.sp, lineHeight = 19.sp
                     )
                     Spacer(Modifier.height(10.dp))
 
@@ -579,7 +579,7 @@ fun HardwareSettingsScreen(onBack: () -> Unit) {
                         Row(
                             Modifier
                                 .fillMaxWidth()
-                                .padding(vertical = 3.dp)
+                                .padding(vertical = 4.dp)
                                 .clip(RoundedCornerShape(8.dp))
                                 .background(if (selected) HwHioneTeal.copy(alpha = 0.18f) else HwSurface2)
                                 .border(1.dp, if (selected) HwHioneTeal else Color.Transparent, RoundedCornerShape(8.dp))
@@ -590,24 +590,24 @@ fun HardwareSettingsScreen(onBack: () -> Unit) {
                                         reloadCpu()
                                     }
                                 }
-                                .padding(horizontal = 12.dp, vertical = 8.dp),
+                                .padding(horizontal = 12.dp, vertical = 10.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Column(Modifier.weight(1f)) {
-                                Text(p.label, color = if (selected) HwHioneTeal else Color.White, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
-                                Text(p.summary, color = HwMuted, fontSize = 11.sp, lineHeight = 14.sp)
+                                Text(p.label, color = if (selected) HwHioneTeal else Color.White, fontSize = 15.5.sp, fontWeight = FontWeight.SemiBold)
+                                Text(p.summary, color = HwMuted, fontSize = 13.5.sp, lineHeight = 18.sp)
                             }
                         }
                     }
 
                     cpuProblem?.let {
                         Spacer(Modifier.height(6.dp))
-                        Text(it, color = HwHionePink, fontSize = 11.5.sp)
+                        Text(it, color = HwHionePink, fontSize = 14.sp)
                     }
                     Spacer(Modifier.height(8.dp))
                     Text(
                         "${Mascot.musicAppName} picks a profile on its own when playback, the screen or the charger changes, so a choice here lasts until then. While charging, Audio only and Idle run as Balanced.",
-                        color = HwMuted, fontSize = 11.sp, lineHeight = 14.sp
+                        color = HwMuted, fontSize = 13.5.sp, lineHeight = 18.sp
                     )
                 }
             }
@@ -621,7 +621,7 @@ fun HwSettingsSection(title: String) {
     Text(
         title.uppercase(),
         color = HwHioneTeal,
-        fontSize = 12.sp,
+        fontSize = 15.sp,
         fontWeight = FontWeight.Bold,
         letterSpacing = 1.sp,
         modifier = Modifier.padding(top = 8.dp, bottom = 4.dp)
@@ -640,12 +640,12 @@ fun HwSettingsToggleRow(
         Modifier
             .fillMaxWidth()
             .clickable { onCheckedChange(!checked) }
-            .padding(vertical = 6.dp),
+            .padding(vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Column(Modifier.weight(1f)) {
-            Text(title, color = Color.White, fontSize = 13.5.sp, fontWeight = FontWeight.SemiBold)
-            Text(subtitle, color = HwMuted, fontSize = 11.5.sp, lineHeight = 15.sp)
+            Text(title, color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+            Text(subtitle, color = HwMuted, fontSize = 14.sp, lineHeight = 19.sp)
         }
         Spacer(Modifier.width(12.dp))
         Switch(

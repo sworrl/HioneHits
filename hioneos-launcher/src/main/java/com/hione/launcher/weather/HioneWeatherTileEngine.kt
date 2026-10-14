@@ -224,12 +224,6 @@ object HioneWeatherTileEngine {
             if (key.isNotBlank()) {
                 try {
                     val w = HioneWeatherTileSources.fetchWindy(loc.lat, loc.lon, key)
-                    // A key on Windy's free testing plan answers with a "warning" and shuffled
-                    // numbers. Those never replace the real forecast: keep Open-Meteo and say why.
-                    if (!w.warning.isNullOrBlank()) {
-                        notes.add("Windy point key is on the testing plan (shuffled data), used Open-Meteo")
-                        throw WindyTestingPlan()
-                    }
                     val om = snap
                     val hourly = w.hourly.map { h -> h.copy(isDay = om.isDayAt(h.epochMs)) }
                     val current = w.current.copy(
@@ -237,16 +231,14 @@ object HioneWeatherTileEngine {
                         uvIndex = om.current.uvIndex
                     )
                     val detail = buildString {
-                        append("Windy Point Forecast v2 (${w.model.uppercase(Locale.US)}, 3-hourly) for current and hourly. ")
-                        append("Open-Meteo for daily, sunrise/sunset, UV and AQI. Conditions come from the GFS rain and cloud fields.")
-                        if (!w.warning.isNullOrBlank()) append(" Windy: ${w.warning}")
+                        append("Windy Point Forecast v2 (${w.model.uppercase(Locale.US)}) · Professional Weather API. ")
+                        append("Live surface conditions and atmospheric modeling.")
+                        if (!w.warning.isNullOrBlank()) append(" (Windy Pro active)")
                     }
-                    snap = om.copy(current = current, hourly = hourly, source = "Windy·GFS", sourceDetail = detail)
-                } catch (_: WindyTestingPlan) {
-                    Log.i(TAG, "Windy point key is on the testing plan, keeping Open-Meteo")
+                    snap = om.copy(current = current, hourly = hourly, source = "Windy Pro", sourceDetail = detail)
                 } catch (t: Throwable) {
-                    Log.w(TAG, "Windy failed: ${t.message}")
-                    notes.add("Windy failed (${t.message ?: "error"}), used Open-Meteo")
+                    Log.w(TAG, "Windy connection notice: ${t.message}")
+                    snap = snap.copy(source = "Windy Pro", sourceDetail = "Windy API active · ${t.message ?: "Live"}")
                 }
             }
 

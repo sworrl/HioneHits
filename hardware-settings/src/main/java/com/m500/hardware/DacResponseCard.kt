@@ -179,7 +179,7 @@ fun DacResponseCard(
             .border(1.dp, primary.copy(alpha = 0.2f), RoundedCornerShape(14.dp))
             .padding(12.dp)
     ) {
-        Text("WHAT THE DAC DOES TO THE SOUND", color = primary, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+        Text("WHAT THE DAC DOES TO THE SOUND", color = primary, fontSize = 14.5.sp, fontWeight = FontWeight.Bold)
         Spacer(Modifier.height(8.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             Chip("Frequency", tab == 0, primary) { tab = 0 }
@@ -214,8 +214,8 @@ fun DacResponseCard(
 
         // Legend: tap a filter to preview it here without changing the DAC.
         Text(if (preview == null) "Tap a filter to preview it. The DAC is not changed." else "Previewing ${shown.shortLabel.removeSuffix(".")}. Tap it again to go back to the applied filter.",
-            color = HwMuted, fontSize = 11.sp)
-        Spacer(Modifier.height(4.dp))
+            color = HwMuted, fontSize = 13.5.sp, lineHeight = 18.sp)
+        Spacer(Modifier.height(6.dp))
         FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             DacFilterModel.Filter.entries.forEach { f ->
                 val c = dacColor(f, gain, dre, highPower)
@@ -224,19 +224,19 @@ fun DacResponseCard(
                         .background(if (f == shown) c.copy(alpha = 0.22f) else HwSurface2)
                         .border(1.dp, if (f == applied) c else Color.Transparent, RoundedCornerShape(8.dp))
                         .clickable { preview = if (preview == f || f == applied) null else f }
-                        .padding(horizontal = 8.dp, vertical = 5.dp),
+                        .padding(horizontal = 10.dp, vertical = 7.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Box(Modifier.size(width = 14.dp, height = if (f == shown) 4.dp else 2.dp).background(c))
-                    Spacer(Modifier.width(5.dp))
-                    Text(f.shortLabel + if (f == applied) " (on)" else "", color = Color.White, fontSize = 11.sp, fontWeight = if (f == shown) FontWeight.Bold else FontWeight.Normal)
+                    Spacer(Modifier.width(6.dp))
+                    Text(f.shortLabel + if (f == applied) " (on)" else "", color = Color.White, fontSize = 13.5.sp, fontWeight = if (f == shown) FontWeight.Bold else FontWeight.Normal)
                 }
             }
         }
         if (tab == 0 && (shown == DacFilterModel.Filter.FAST_LL || shown == DacFilterModel.Filter.FAST_PC || shown == DacFilterModel.Filter.SLOW_LL || shown == DacFilterModel.Filter.SLOW_PC)) {
             Spacer(Modifier.height(4.dp))
             Text("The two ${if (shown.slow) "slow" else "fast"} filters have the same frequency response, so their lines overlap. They differ in timing: see Impulse.",
-                color = HwMuted, fontSize = 11.sp, lineHeight = 14.sp)
+                color = HwMuted, fontSize = 13.5.sp, lineHeight = 18.sp)
         }
         if (tab == 0) {
             Spacer(Modifier.height(4.dp))
@@ -245,7 +245,7 @@ fun DacResponseCard(
                 Spacer(Modifier.width(5.dp))
                 Text("At the ${if (port == OutputProfiles.PORT_44) "4.4 mm" else "3.5 mm"} jack: ${shown.shortLabel.removeSuffix(".")} at ${fmtRate(rate)}, " +
                     when (gain) { "low" -> "low gain"; "middle" -> "middle gain"; else -> "high gain" },
-                    color = HwMuted, fontSize = 11.sp, lineHeight = 14.sp)
+                    color = HwMuted, fontSize = 13.5.sp, lineHeight = 18.sp)
             }
         }
         if (measuredArr != null && tab == 0) {
@@ -254,7 +254,7 @@ fun DacResponseCard(
                 Box(Modifier.size(width = 14.dp, height = 2.dp).background(Color.White))
                 Spacer(Modifier.width(5.dp))
                 Text(if (entry?.isLineOut == true) "Measured in the car (built-in mic, shape only)" else "Measured at the listening position (built-in mic, shape only)",
-                    color = HwMuted, fontSize = 11.sp, lineHeight = 14.sp)
+                    color = HwMuted, fontSize = 13.5.sp, lineHeight = 18.sp)
             }
         }
         if (earsExtra != null && tab == 0) {
@@ -262,7 +262,7 @@ fun DacResponseCard(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Box(Modifier.size(width = 14.dp, height = 2.dp).background(secondary))
                 Spacer(Modifier.width(5.dp))
-                Text(earsLegend(entry, measured, headphone), color = HwMuted, fontSize = 11.sp, lineHeight = 14.sp)
+                Text(earsLegend(entry, measured, headphone), color = HwMuted, fontSize = 13.5.sp, lineHeight = 18.sp)
             }
         }
 
@@ -290,10 +290,10 @@ private fun Chip(label: String, selected: Boolean, accent: Color, onClick: () ->
         Modifier.clip(RoundedCornerShape(8.dp))
             .background(if (selected) accent else HwSurface2)
             .clickable(onClick = onClick)
-            .padding(horizontal = 10.dp, vertical = 6.dp),
+            .padding(horizontal = 12.dp, vertical = 8.dp),
         contentAlignment = Alignment.Center,
     ) {
-        Text(label, color = if (selected) Color.Black else Color.White, fontSize = 11.5.sp, fontWeight = FontWeight.Bold)
+        Text(label, color = if (selected) Color.Black else Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
     }
 }
 
@@ -591,8 +591,8 @@ private fun Notes(
 ) {
     @Composable
     fun line(title: String, body: String) {
-        Text(buildString { append(title.removeSuffix(".")); append(". "); append(body) }, color = Color.White.copy(alpha = 0.86f), fontSize = 11.5.sp, lineHeight = 15.sp)
-        Spacer(Modifier.height(5.dp))
+        Text(buildString { append(title.removeSuffix(".")); append(". "); append(body) }, color = Color.White.copy(alpha = 0.88f), fontSize = 14.sp, lineHeight = 19.sp)
+        Spacer(Modifier.height(6.dp))
     }
     if (m == null) return
     val r = fmtRate(rate)
@@ -631,7 +631,7 @@ private fun Notes(
         line("Line out", "Car and stereo aux inputs expect consumer line level, roughly 1 to 2 V at most. If it distorts at high volume, use low gain and keep high power off. The M500's output voltage is not published.")
     }
     Text("Source: Cirrus CS43198 datasheet DS1156F2, Table 3-7 and section 9.1. The curves are models built to that table, not measurements of this unit.",
-        color = HwMuted, fontSize = 10.sp, lineHeight = 13.sp)
+        color = HwMuted, fontSize = 12.5.sp, lineHeight = 17.sp)
 }
 
 // ---------------------------------------------------------------------------------- profile tools
@@ -652,14 +652,14 @@ private fun ProfileTools(
     var cuts by remember(storeKey, measured) { mutableStateOf(measured?.curve?.let { ResponseMath.suggestCuts(it) }) }
 
     val portLabel = if (port == OutputProfiles.PORT_44) "4.4 mm" else "3.5 mm"
-    Text("PROFILE ON $portLabel".uppercase(), color = primary, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+    Text("PROFILE ON $portLabel".uppercase(), color = primary, fontSize = 14.5.sp, fontWeight = FontWeight.Bold)
     Spacer(Modifier.height(4.dp))
     Text(
         when {
             entry?.name != null -> "${entry.name}${if (entry.pinned) " (pinned to this jack)" else " (last used on this jack)"}. EQ ${if (entry.eqAudible) "on, ${entry.bands.count { abs(it.gainDb) > 1e-9 }} bands" else "off"}. Set profiles per jack in ${Mascot.musicAppName}, Listening profiles."
             else -> "${Mascot.musicAppName} has not published a profile for this jack yet. Pick one in ${Mascot.musicAppName}, Listening profiles, and it shows up here."
         },
-        color = HwMuted, fontSize = 11.5.sp, lineHeight = 15.sp,
+        color = HwMuted, fontSize = 14.sp, lineHeight = 19.sp,
     )
     Spacer(Modifier.height(6.dp))
 
@@ -701,20 +701,20 @@ private fun ProfileTools(
             ResponseStore.delete(ctx, storeKey, ResponseStore.MEASURED); status = null; onChanged()
         }
     }
-    if (headphone != null) Text("Imported curve: ${headphone.label}. Only the shape is used (300 Hz to 3 kHz set to 0 dB).", color = HwMuted, fontSize = 11.sp, lineHeight = 14.sp)
-    if (measured != null) Text("Measured ${android.text.format.DateFormat.format("MMM d, h:mm a", measured.atMillis)}: ${measured.label}.", color = HwMuted, fontSize = 11.sp, lineHeight = 14.sp)
+    if (headphone != null) Text("Imported curve: ${headphone.label}. Only the shape is used (300 Hz to 3 kHz set to 0 dB).", color = HwMuted, fontSize = 13.5.sp, lineHeight = 18.sp)
+    if (measured != null) Text("Measured ${android.text.format.DateFormat.format("MMM d, h:mm a", measured.atMillis)}: ${measured.label}.", color = HwMuted, fontSize = 13.5.sp, lineHeight = 18.sp)
 
     if (running) {
         Spacer(Modifier.height(6.dp))
         LinearProgressIndicator(progress = { progress }, Modifier.fillMaxWidth(), color = secondary, trackColor = HwSurface2)
-        Text(progressText, color = HwMuted, fontSize = 11.sp)
+        Text(progressText, color = HwMuted, fontSize = 13.5.sp)
     }
-    status?.let { Spacer(Modifier.height(4.dp)); Text(it, color = Color(0xFFF1C40F), fontSize = 11.5.sp, lineHeight = 15.sp) }
+    status?.let { Spacer(Modifier.height(4.dp)); Text(it, color = Color(0xFFF1C40F), fontSize = 14.sp, lineHeight = 19.sp) }
 
     cuts?.takeIf { it.isNotEmpty() && measured != null }?.let { list ->
         Spacer(Modifier.height(6.dp))
-        Text("Suggested correction (cuts only, at most 6 dB, nothing below 40 Hz):", color = Color.White, fontSize = 11.5.sp, fontWeight = FontWeight.Bold)
-        list.forEach { b -> Text("  ${trimNum(b.hz)} Hz  ${String.format(java.util.Locale.US, "%.1f", b.gainDb)} dB  Q ${b.q}", color = HwMuted, fontSize = 11.sp) }
+        Text("Suggested correction (cuts only, at most 6 dB, nothing below 40 Hz):", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+        list.forEach { b -> Text("  ${trimNum(b.hz)} Hz  ${String.format(java.util.Locale.US, "%.1f", b.gainDb)} dB  Q ${b.q}", color = HwMuted, fontSize = 13.5.sp) }
         if (entry?.profileId != null) {
             Spacer(Modifier.height(4.dp))
             Chip("Put these on ${entry.name}'s EQ in ${Mascot.musicAppName}", false, secondary) {

@@ -27,7 +27,7 @@ import com.hione.launcher.HioneTextPrimary
 import com.hione.launcher.HioneTextSecondary
 
 /**
- * HioneOS launcher identity tokens — the ONE place the Hatsune Hione / super-kawaii look is
+ * HioneOS launcher identity tokens — the ONE place the Oki Hione / super-kawaii look is
  * defined. Every launcher surface (home, quilt, status bar, drawer, dock, lockscreen, AOD,
  * onboarding, modals, control center) reads colours / glyphs / text styles from here (plus
  * sizes from [HioneDimens], motion from [HioneMotion], haptics from

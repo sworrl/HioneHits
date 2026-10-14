@@ -28,7 +28,7 @@ import java.net.Inet4Address
 import java.net.NetworkInterface
 
 /**
- * Hatsune Hione High-Granularity RF Network Telemetry & Complete Hardware Control Service.
+ * Oki Hione High-Granularity RF Network Telemetry & Complete Hardware Control Service.
  * Provides unrestricted, raw hardware Wi-Fi radio management, live channel spectrum scanning,
  * active network authentication, routing tables, and cellular telemetry.
  */
@@ -218,7 +218,7 @@ object HioneNetworkService {
     }
 
     /**
-     * Permanent Hatsune Hione Wi-Fi Vault.
+     * Permanent Oki Hione Wi-Fi Vault.
      * Persists all known pre-shared keys and security profiles locally across updates,
      * so the user is NEVER asked to re-enter a password for a known network.
      */

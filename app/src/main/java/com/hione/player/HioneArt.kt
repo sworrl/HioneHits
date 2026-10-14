@@ -31,7 +31,7 @@ object HioneArt {
     val falconTechnixLogo = R.drawable.falcon_technix_logo // publisher mark — Settings "About" footer
     // clock_widget_hione_preview is referenced from XML as the widget picker preview image.
 
-    /** Dedicated pool of standalone character illustrations of Hatsune Hione */
+    /** Dedicated pool of standalone character illustrations of Oki Hione */
     val characters = listOf(
         R.drawable.hione_audiophile_art, R.drawable.hione_pose_vocal,
         R.drawable.hione_pose_headphones, R.drawable.hione_pose_peace,

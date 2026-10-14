@@ -17,7 +17,7 @@ import kotlin.math.cos
 import kotlin.math.sin
 
 /**
- * Ultra-Smooth Zero-Lag Hatsune Hione Sakura Blossom Particle Engine.
+ * Ultra-Smooth Zero-Lag Oki Hione Sakura Blossom Particle Engine.
  * Features frame-by-frame Choreographer physics, true 3D fluttering,
  * swirling wind breeze, and iridescent cherry blossom glow.
  *

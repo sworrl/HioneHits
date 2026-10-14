@@ -50,10 +50,13 @@ object HioneCastBridge {
         val app = ctx.applicationContext
         appContext = app
 
-        // Auto-start casting server so TV can immediately link
-        runCatching {
-            if (!HioneCastServer.state.value.active) {
-                HioneCastServer.start(app)
+        // Only start casting server if explicitly enabled by the user in Settings
+        val castPrefs = app.getSharedPreferences("hione_cast_prefs", Context.MODE_PRIVATE)
+        if (castPrefs.getBoolean("key_cast_enabled", false)) {
+            runCatching {
+                if (!HioneCastServer.state.value.active) {
+                    HioneCastServer.start(app)
+                }
             }
         }
 

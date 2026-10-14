@@ -56,9 +56,215 @@ fun secretOpenIntent(ctx: Context, id: String): Intent? {
         HioneSecrets.WHEEL_2001, HioneSecrets.WHEEL_2004, HioneSecrets.WHEEL_2005, HioneSecrets.WHEEL_2007 ->
             Intent("com.hione.wheel.action.ENTER").setPackage("com.hione.wheel")
                 .putExtra("era", id.substringAfterLast('.'))
+        HioneSecrets.DANKPODS_FRANK ->
+            Intent(ctx, com.hione.launcher.bpm.HioneFrankSnakeActivity::class.java)
         else -> return null
     }.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
     return if (i.resolveActivity(ctx.packageManager) != null) i else null
+}
+
+/**
+ * 1-GRIT SCREEN BREAKER: Global trigger & non-blocking shattered glass + concrete rock impact
+ * overlay! Fires automatically when [HioneSecrets.DANKPODS_ONE_GRIT] is unlocked or when the
+ * player taps "SMASH" on The 1-Grit secret card.
+ */
+object HioneOneGritScreenBreaker {
+    val lastSmashEpochMs = mutableLongStateOf(0L)
+
+    fun smash(ctx: Context? = null) {
+        lastSmashEpochMs.longValue = System.currentTimeMillis()
+        ctx?.let { com.hione.launcher.haptics.HioneHaptics.unlock(it) }
+    }
+}
+
+@Composable
+fun HioneOneGritScreenBreakerOverlay(modifier: Modifier = Modifier) {
+    val smashEpoch by HioneOneGritScreenBreaker.lastSmashEpochMs
+    if (smashEpoch <= 0L) return
+    val now = remember { mutableLongStateOf(System.currentTimeMillis()) }
+    val ageMs = now.longValue - smashEpoch
+    if (ageMs !in 0L..3400L) return
+
+    LaunchedEffect(smashEpoch) {
+        while (System.currentTimeMillis() - smashEpoch <= 3400L) {
+            now.longValue = System.currentTimeMillis()
+            delay(16L)
+        }
+    }
+
+    Canvas(modifier.fillMaxSize()) {
+        val w = size.width
+        val h = size.height
+        val cx = w * 0.5f
+        val cy = h * 0.44f
+        val t = (now.longValue - smashEpoch).coerceAtLeast(0L)
+
+        // Phase 1 (0..220ms): The 1-Grit Concrete Rock hurtles down from above and slams the glass
+        if (t < 240L) {
+            val dropFrac = (t / 220f).coerceIn(0f, 1f)
+            val rockY = -120f + (cy + 120f) * (dropFrac * dropFrac)
+            val rockR = 54f + 42f * (1f - dropFrac)
+            drawRoundRect(
+                color = Color(0xFF6E6B64),
+                topLeft = Offset(cx - rockR * 1.15f, rockY - rockR * 0.85f),
+                size = Size(rockR * 2.3f, rockR * 1.7f),
+                cornerRadius = androidx.compose.ui.geometry.CornerRadius(16f, 16f)
+            )
+            drawRoundRect(
+                color = Color(0xFFD0CCC2),
+                topLeft = Offset(cx - rockR * 1.15f, rockY - rockR * 0.85f),
+                size = Size(rockR * 2.3f, rockR * 1.7f),
+                cornerRadius = androidx.compose.ui.geometry.CornerRadius(16f, 16f),
+                style = Stroke(width = 4f)
+            )
+        }
+
+        // Phase 2 (190..3400ms): Impact Flash + Spiderweb Shattered Screen Cracks + Flying Grit Shards!
+        if (t >= 190L) {
+            val impactAge = (t - 190L).toFloat()
+            val fade = (1f - (impactAge / 3200f)).coerceIn(0f, 1f)
+
+            // Initial white/amber shock flash
+            if (impactAge < 180f) {
+                val flashAlpha = (1f - impactAge / 180f) * 0.55f
+                drawRect(Color(0xFFFFF4D0).copy(alpha = flashAlpha), size = size)
+            }
+
+            // Concentric spiderweb glass rings around the impact crater
+            val ringRadii = floatArrayOf(34f, 78f, 145f, 235f, 350f)
+            for (r in ringRadii) {
+                drawCircle(
+                    color = Color.White.copy(alpha = 0.65f * fade),
+                    radius = r,
+                    center = Offset(cx, cy),
+                    style = Stroke(width = 2.2f)
+                )
+            }
+
+            // 16 jagged radial glass fracture lines reaching the edges of the display
+            val maxReach = maxOf(w, h) * 0.85f
+            for (ray in 0 until 16) {
+                val baseAngle = (ray * (2.0 * PI / 16.0)) + 0.13 * (ray % 3)
+                var px = cx
+                var py = cy
+                val segments = 6
+                for (seg in 1..segments) {
+                    val dist = (seg.toFloat() / segments) * maxReach
+                    val jitter = ((ray * 17 + seg * 31) % 19 - 9) * 0.022
+                    val ang = baseAngle + jitter
+                    val nx = cx + kotlin.math.cos(ang).toFloat() * dist
+                    val ny = cy + kotlin.math.sin(ang).toFloat() * dist
+                    // Cyan/ice edge refraction + bright white fracture core
+                    drawLine(
+                        color = Color(0xFF00F0FF).copy(alpha = 0.45f * fade),
+                        start = Offset(px + 2f, py + 2f),
+                        end = Offset(nx + 2f, ny + 2f),
+                        strokeWidth = (5f - seg * 0.55f).coerceAtLeast(1.5f)
+                    )
+                    drawLine(
+                        color = Color.White.copy(alpha = 0.92f * fade),
+                        start = Offset(px, py),
+                        end = Offset(nx, ny),
+                        strokeWidth = (3.4f - seg * 0.42f).coerceAtLeast(1.2f)
+                    )
+                    px = nx
+                    py = ny
+                }
+            }
+
+            // Impact crater & 1-Grit rock resting in the center for the first 1.5s
+            if (impactAge < 1600f) {
+                val rockFade = (1f - impactAge / 1600f).coerceIn(0f, 1f)
+                drawRoundRect(
+                    color = Color(0xFF7B776F).copy(alpha = rockFade),
+                    topLeft = Offset(cx - 58f, cy - 42f),
+                    size = Size(116f, 84f),
+                    cornerRadius = androidx.compose.ui.geometry.CornerRadius(14f, 14f)
+                )
+                drawRoundRect(
+                    color = Color(0xFFFFD166).copy(alpha = rockFade),
+                    topLeft = Offset(cx - 58f, cy - 42f),
+                    size = Size(116f, 84f),
+                    cornerRadius = androidx.compose.ui.geometry.CornerRadius(14f, 14f),
+                    style = Stroke(width = 3.5f)
+                )
+            }
+
+            // Flying concrete & glass debris shards
+            for (s in 0 until 18) {
+                val ang = s * (2.0 * PI / 18.0) + 0.2
+                val speed = 0.22f + (s % 5) * 0.08f
+                val dist = 30f + impactAge * speed
+                val sx = cx + kotlin.math.cos(ang).toFloat() * dist
+                val sy = cy + kotlin.math.sin(ang).toFloat() * dist + 0.00018f * impactAge * impactAge
+                drawCircle(
+                    color = (if (s % 2 == 0) Color(0xFFD8D3C8) else Color(0xFF00F0FF)).copy(alpha = 0.85f * fade),
+                    radius = (4.5f + (s % 3) * 2f) * fade,
+                    center = Offset(sx, sy)
+                )
+            }
+        }
+    }
+}
+
+/**
+ * PKCELL BATTERY GLYPH: Replaces the status bar battery cell with an authentic metallic
+ * emerald-green & gold PKCELL AA battery when [HioneSecrets.DANKPODS_PKCELL] is enabled!
+ */
+@Composable
+fun HionePkcellBatteryGlyph(pct: Int, charging: Boolean, low: Boolean, modifier: Modifier = Modifier) {
+    Canvas(modifier.size(width = 26.dp, height = 11.dp)) {
+        val w = size.width
+        val h = size.height
+        val bodyW = w - 3.dp.toPx()
+        val r = androidx.compose.ui.geometry.CornerRadius(2.2.dp.toPx(), 2.2.dp.toPx())
+
+        val pkGreen = if (low && !charging) Color(0xFFFF3B5C) else Color(0xFF00A859)
+        val pkGold = Color(0xFFFFD166)
+        val pkSilver = Color(0xFFE6EEF8)
+
+        // Outer AA cylinder shell (metallic green base + gold top collar on right 26%)
+        drawRoundRect(
+            color = Color(0xFF062818),
+            topLeft = Offset.Zero,
+            size = Size(bodyW, h),
+            cornerRadius = r
+        )
+
+        // Charge fill inside the cylinder
+        val frac = if (pct < 0) 0f else (pct / 100f).coerceIn(0f, 1f)
+        if (frac > 0f) {
+            drawRoundRect(
+                color = if (charging) Color(0xFF5CFF9D) else pkGreen,
+                topLeft = Offset(1.dp.toPx(), 1.dp.toPx()),
+                size = Size((bodyW - 2.dp.toPx()) * frac, h - 2.dp.toPx()),
+                cornerRadius = r
+            )
+        }
+
+        // Authentic PKCELL gold stripe near the positive terminal
+        val goldW = bodyW * 0.24f
+        drawRect(
+            color = pkGold,
+            topLeft = Offset(bodyW - goldW - 1.dp.toPx(), 1.dp.toPx()),
+            size = Size(goldW, h - 2.dp.toPx())
+        )
+
+        // Crisp border & silver positive terminal nub
+        drawRoundRect(
+            color = pkGold.copy(alpha = 0.92f),
+            topLeft = Offset.Zero,
+            size = Size(bodyW, h),
+            cornerRadius = r,
+            style = Stroke(width = 1.2.dp.toPx())
+        )
+        drawRoundRect(
+            color = pkSilver,
+            topLeft = Offset(bodyW + 0.5.dp.toPx(), h * 0.26f),
+            size = Size(2.4.dp.toPx(), h * 0.48f),
+            cornerRadius = androidx.compose.ui.geometry.CornerRadius(1.2f, 1.2f)
+        )
+    }
 }
 
 /** The Hione Music icon to draw: gold once [HioneSecrets.GOLDEN_ICON] is earned and on. */
